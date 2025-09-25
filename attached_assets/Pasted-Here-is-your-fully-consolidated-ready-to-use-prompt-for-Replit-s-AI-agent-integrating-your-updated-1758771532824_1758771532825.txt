@@ -1,0 +1,75 @@
+Here is your fully consolidated, ready-to-use prompt for Replit’s AI agent, integrating your updated color palette, font selections, and strategy/template guidance:
+
+***
+
+**Prompt for Replit AI (“Mailman Media App”):**
+
+You are building a Visual Assistant App for my Liverpool FC YouTube channel, “Mailman Media.” Use the following specification:
+
+**Purpose:**  
+- Enable soccer/transfer/story analysis and content creation for YouTube  
+- Generate and deliver high-quality branded visuals (charts, thumbnails, infographics, heatmaps, metric dashboards)
+
+**Inputs & Tasks:**  
+- Accept written prompts, structured tasks, or raw research topics  
+- Capable of running live internet searches for soccer stats, player data, transfer info, and competition schedules  
+- Able to use the attached channel strategy guides and templates (“Mailman Monday,” “Data Dive Wednesday,” “Future Focus Friday”) for tone, analytical style, and key metrics  
+- Accept and process requests for research and content suggestions related to Liverpool FC and the Premier League  
+- Each visual/storyline should have a clear title, supporting evidence, “contrarian take,” key metrics, and predicted outcomes where relevant
+
+**Branding & Output:**  
+- Primary color palette:
+  - Navy (primary): #002147
+  - Red: #C8102E  
+  - Cream: #F5F1E9  
+  - Accent Blue: #4CA9E0
+- Fonts to use:  
+  - League Spartan (headlines, ALL CAPS, Bold/Black weight)  
+  - Libre Franklin (supporting text, Regular/Semibold)
+- All visuals must apply the above palette for backgrounds, accent elements, and text, and use fonts per the above rules for clear visual hierarchy.
+- Always include the channel logo (supplied or as SVG in templates) and ensure every asset is high legibility, YouTube-ready, and fits Mailman Media's house style.
+- Output must be PNG images, ready for YouTube upload. Minimum 1280x720px, maximum 1920x1080px, dark-mode first, with optional light version.
+
+**Visual Types Supported:**  
+- Thumbnails  
+- Infographics  
+- Statistical charts and metric dashboards  
+- Heatmaps  
+- Storyline trackers and “Community Challenge” features  
+- “Prediction” slides, with risk factors, evidence grids, and confidence meters
+
+**Analytics / Storytelling Features:**  
+- Unique, high-level analytics: squad rotation impacts, fixture congestion, transfer domino effects, tactical shifts, player integration scores, squad vulnerability indexes, etc.  
+- Incorporate “contrarian alert” features when big data or conventional narratives are challenged  
+- Always cite source dates and validate data freshness; display retrieval dates on visuals  
+- Optionally pull in live stats/news when “live update” mode is enabled
+
+**Self-Check:**  
+- Always cross-check info freshness (e.g., dates on stats/news) and flag out-of-date data  
+- Confirm successful logo insertion and palette match on all renders
+
+**Style Guidance:**  
+- Mimic the style and depth found in the “Mailman Monday”, “Data Dive Wednesday”, and “Future Focus Friday” templates  
+- Structure analysis by: punchy headline, evidence grid, Mailman Metric/methodology, prediction, counter-argument, community challenge, and call-to-action  
+- Focus on visual clarity, storytelling, and engagement—every visual should invite comments/predictions (“Help Build The Narrative”)
+
+**API & Automation:**  
+- Allow for automation with soccer/football stats APIs (e.g., transfermarkt, FBRef, EPL feeds), with fallback to manual search if APIs unavailable  
+- For each prompt/task, generate a short summary and display all created visuals in a carousel preview
+
+**Accessibility & Format:**  
+- Design for both desktop and mobile preview  
+- Support PNG image export (min 1280x720px, max 1920x1080px)  
+- Default is dark mode with optional toggle for light mode
+
+**Required Resources:**  
+- Use attached strategy docs/templates, logo SVG info (see HTML template attachments), and color/font data as detailed above  
+- Reference example scripts (attached) for Mailman Media analysis style
+
+***
+
+**Instructions:**  
+- Paste this entire block as your foundational prompt in Replit’s AI, attaching your branding files and templates.  
+- Update only if your brand/style or analysis needs change!
+
+Ready for you to deploy or finetune! If you add new templates or more brand assets, this prompt can easily be amended further.
