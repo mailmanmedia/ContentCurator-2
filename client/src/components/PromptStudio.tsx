@@ -23,10 +23,16 @@ import {
   Eye,
   Edit,
   CheckCircle,
-  FileText
+  FileText,
+  Presentation,
+  Save,
+  Play
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import PresentationViewer from "./PresentationViewer";
+import type { PresentationStyle, Report } from "@shared/schema";
 
 interface PromptData {
   text: string;
@@ -56,6 +62,12 @@ interface OutputVariation {
   confidence: number;
 }
 
+interface PresentationState {
+  selectedReportId: string | null;
+  selectedStyle: string;
+  isCreating: boolean;
+}
+
 export default function PromptStudio() {
   const [promptData, setPromptData] = useState<PromptData>({
     text: "",
@@ -78,7 +90,50 @@ export default function PromptStudio() {
   const [outputVariations, setOutputVariations] = useState<OutputVariation[]>([]);
   const [activeTab, setActiveTab] = useState("input");
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [presentationState, setPresentationState] = useState<PresentationState>({
+    selectedReportId: null,
+    selectedStyle: "claudeArtifact",
+    isCreating: false
+  });
   const { toast } = useToast();
+
+  // Fetch available presentation styles
+  const { data: stylesData } = useQuery({
+    queryKey: ['/api/presentation/styles'],
+    select: (response: any) => response.styles as PresentationStyle[]
+  });
+
+  // Fetch existing reports
+  const { data: reportsData } = useQuery({
+    queryKey: ['/api/reports'],
+    select: (response: any) => response.reports as Report[]
+  });
+
+  // Create report mutation
+  const createReportMutation = useMutation({
+    mutationFn: async (reportData: { title: string; bodyJson: any; contextJson?: any }) => {
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reportData)
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create report');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
+      setPresentationState(prev => ({ ...prev, selectedReportId: data.report.id }));
+      setActiveTab("presentations");
+      toast({
+        title: "Report Created",
+        description: "Your content has been saved as a report and is ready for presentation"
+      });
+    }
+  });
 
   const outputTypes = [
     { value: "infographic", label: "Infographic", icon: BarChart3 },
@@ -548,6 +603,52 @@ export default function PromptStudio() {
     }
   };
 
+  // Handler functions for presentation functionality
+  const handleCreatePresentation = (variation: OutputVariation) => {
+    const reportData = {
+      title: variation.title,
+      bodyJson: {
+        content: variation.description,
+        type: variation.type,
+        confidence: variation.confidence
+      },
+      contextJson: {
+        sourceType: 'variation',
+        variationId: variation.id
+      }
+    };
+    
+    createReportMutation.mutate(reportData);
+  };
+
+  const handleCreatePresentationFromPrompt = () => {
+    const titleInput = document.getElementById('report-title') as HTMLInputElement;
+    const title = titleInput?.value || `Report - ${new Date().toLocaleDateString()}`;
+    
+    const reportData = {
+      title,
+      bodyJson: {
+        content: promptData.text,
+        images: promptData.images,
+        stats: promptData.stats,
+        ideas: promptData.ideas,
+        outputType: promptData.outputType,
+        style: promptData.style,
+        priority: promptData.priority
+      },
+      contextJson: {
+        sourceType: 'prompt',
+        ...promptData
+      }
+    };
+    
+    createReportMutation.mutate(reportData);
+  };
+
+  const handleSelectExistingReport = (reportId: string) => {
+    setPresentationState(prev => ({ ...prev, selectedReportId: reportId }));
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <Card className="bg-card border-card-border">
@@ -561,7 +662,7 @@ export default function PromptStudio() {
         
         <CardContent className="px-4 sm:px-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-            <TabsList className="grid w-full grid-cols-2 bg-muted">
+            <TabsList className="grid w-full grid-cols-3 bg-muted">
               <TabsTrigger value="input" data-testid="tab-prompt-input" className="text-xs sm:text-sm">
                 <span className="hidden sm:inline">Input & Prompt</span>
                 <span className="sm:hidden">Input</span>
@@ -569,6 +670,10 @@ export default function PromptStudio() {
               <TabsTrigger value="output" data-testid="tab-output-variations" className="text-xs sm:text-sm">
                 <span className="hidden sm:inline">Variations & Output</span>
                 <span className="sm:hidden">Output</span>
+              </TabsTrigger>
+              <TabsTrigger value="presentations" data-testid="tab-presentations" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Presentations</span>
+                <span className="sm:hidden">Present</span>
               </TabsTrigger>
             </TabsList>
 
@@ -1028,6 +1133,17 @@ export default function PromptStudio() {
                               <span className="hidden sm:inline">Build Final</span>
                               <span className="sm:hidden">Build</span>
                             </Button>
+                            <Button 
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleCreatePresentation(variation)}
+                              data-testid={`button-present-${variation.id}`}
+                              className="w-full sm:w-auto text-xs"
+                            >
+                              <Presentation className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                              <span className="hidden sm:inline">Create Presentation</span>
+                              <span className="sm:hidden">Present</span>
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -1045,6 +1161,117 @@ export default function PromptStudio() {
                   </p>
                 </div>
               )}
+            </TabsContent>
+
+            {/* Presentations Tab */}
+            <TabsContent value="presentations" className="space-y-4 sm:space-y-6">
+              <div className="space-y-6">
+                {/* Quick Create from Current Prompt */}
+                {promptData.text && (
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="font-league-spartan font-bold text-lg text-primary flex items-center gap-2">
+                        <Save className="w-5 h-5" />
+                        Create Presentation from Current Prompt
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Save your current prompt as a report and create an interactive presentation
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Input
+                          placeholder="Report title..."
+                          className="flex-1"
+                          id="report-title"
+                          data-testid="input-report-title"
+                        />
+                        <Select value={presentationState.selectedStyle} onValueChange={(value) => setPresentationState(prev => ({ ...prev, selectedStyle: value }))}>
+                          <SelectTrigger className="w-full sm:w-48" data-testid="select-presentation-style-create">
+                            <SelectValue placeholder="Presentation style" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {stylesData?.map((style) => (
+                              <SelectItem key={style.key} value={style.key}>
+                                {style.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={handleCreatePresentationFromPrompt}
+                          disabled={createReportMutation.isPending}
+                          data-testid="button-create-presentation-from-prompt"
+                          className="w-full sm:w-auto"
+                        >
+                          <Play className="w-4 h-4 mr-2" />
+                          Create Presentation
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Existing Reports */}
+                {reportsData && reportsData.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="font-league-spartan font-bold text-lg flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        Existing Reports
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-3">
+                        {reportsData.slice(0, 5).map((report) => (
+                          <div key={report.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-sm">{report.title}</h4>
+                              <p className="text-xs text-muted-foreground">
+                                Created {new Date(report.createdAt).toLocaleDateString()} • Status: {report.status}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSelectExistingReport(report.id)}
+                              data-testid={`button-select-report-${report.id}`}
+                            >
+                              <Presentation className="w-4 h-4 mr-2" />
+                              View Presentation
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Presentation Viewer */}
+                {presentationState.selectedReportId && (
+                  <PresentationViewer 
+                    reportId={presentationState.selectedReportId}
+                    defaultStyle={presentationState.selectedStyle}
+                    showControls={true}
+                  />
+                )}
+
+                {/* Empty State */}
+                {!presentationState.selectedReportId && (!reportsData || reportsData.length === 0) && (
+                  <div className="text-center py-12">
+                    <Presentation className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-league-spartan font-bold text-lg uppercase text-foreground mb-2">
+                      No Presentations Yet
+                    </h3>
+                    <p className="font-libre-franklin text-base text-muted-foreground mb-4">
+                      Create your first presentation by saving content as a report
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Add content in the Input tab, then create a presentation here
+                    </p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

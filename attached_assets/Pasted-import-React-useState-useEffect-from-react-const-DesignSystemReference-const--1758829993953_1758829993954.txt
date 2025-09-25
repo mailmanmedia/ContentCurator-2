@@ -1,0 +1,909 @@
+import React, { useState, useEffect } from 'react';
+
+const DesignSystemReference = () => {
+  const [activeSection, setActiveSection] = useState('typography');
+  const [animationDemo, setAnimationDemo] = useState(false);
+
+  // Example of state management for interactions
+  const [countdownTime, setCountdownTime] = useState({
+    hours: 23,
+    minutes: 45,
+    seconds: 30
+  });
+
+  // Countdown timer logic - reusable pattern
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdownTime(prev => {
+        if (prev.seconds > 0) {
+          return { ...prev, seconds: prev.seconds - 1 };
+        } else if (prev.minutes > 0) {
+          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        } else if (prev.hours > 0) {
+          return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        }
+        return prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Brand colors as CSS custom properties - maintainable approach
+  const brandStyles = {
+    '--mailman-navy': '#1B365D',
+    '--mailman-red': '#C8102E',
+    '--mailman-cream': '#E8DCC6',
+    '--liverpool-red': '#C8102E',
+    '--success-green': '#2ECC71',
+    '--warning-orange': '#F39C12',
+    '--danger-red': '#E74C3C',
+    '--info-blue': '#3498DB'
+  };
+
+  // Reusable Logo Component with scaling
+  const MailmanLogo = ({ size = 60, opacity = 0.9 }) => (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 200 200" 
+      className={`opacity-${Math.round(opacity * 100)}`}
+      style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }}
+    >
+      {/* Outer rope border - consistent brand element */}
+      <circle 
+        cx="100" 
+        cy="100" 
+        r="95" 
+        fill="none" 
+        stroke="var(--mailman-cream)" 
+        strokeWidth="6" 
+        strokeDasharray="12,4"
+      />
+      
+      {/* Main circle with brand navy */}
+      <circle 
+        cx="100" 
+        cy="100" 
+        r="88" 
+        fill="var(--mailman-navy)" 
+        stroke="var(--mailman-cream)" 
+        strokeWidth="2"
+      />
+      
+      {/* Text paths for curved text - professional technique */}
+      <path id="top-curve" d="M 25 100 A 75 75 0 0 1 175 100" fill="none"/>
+      <text fontSize="18" fontWeight="700" fill="var(--mailman-cream)" letterSpacing="4" fontFamily="Arial">
+        <textPath href="#top-curve" startOffset="50%" textAnchor="middle">MAILMAN</textPath>
+      </text>
+      
+      <path id="bottom-curve" d="M 175 100 A 75 75 0 0 1 25 100" fill="none"/>
+      <text fontSize="18" fontWeight="700" fill="var(--mailman-cream)" letterSpacing="6" fontFamily="Arial">
+        <textPath href="#bottom-curve" startOffset="50%" textAnchor="middle">MEDIA</textPath>
+      </text>
+      
+      {/* Inner elements - Liverpool branding */}
+      <circle cx="100" cy="100" r="68" fill="var(--mailman-cream)"/>
+      <g fill="#5DADE2">
+        <polygon points="78,35 80,42 87,42 82,46 84,53 78,49 72,53 74,46 69,42 76,42"/>
+        <polygon points="100,35 102,42 109,42 104,46 106,53 100,49 94,53 96,46 91,42 98,42"/>
+        <polygon points="122,35 124,42 131,42 126,46 128,53 122,49 116,53 118,46 113,42 120,42"/>
+      </g>
+      <path d="M 35 80 L 165 80 L 165 85 L 160 140 Q 100 175 40 140 L 35 85 Z" fill="var(--liverpool-red)" stroke="var(--mailman-navy)" strokeWidth="3"/>
+    </svg>
+  );
+
+  // Reusable Metric Card Component - core design pattern
+  const MetricCard = ({ 
+    value, 
+    label, 
+    change, 
+    trend = 'neutral', 
+    size = 'medium',
+    animated = false 
+  }) => {
+    const sizeClasses = {
+      small: 'p-4 text-xl',
+      medium: 'p-5 text-3xl',
+      large: 'p-6 text-4xl'
+    };
+
+    const trendColors = {
+      positive: 'text-green-400 bg-green-400/20',
+      negative: 'text-red-400 bg-red-400/20',
+      neutral: 'text-blue-400 bg-blue-400/20',
+      warning: 'text-orange-400 bg-orange-400/20'
+    };
+
+    return (
+      <div className={`
+        bg-gradient-to-br from-white/10 to-white/5 
+        border border-white/10 
+        rounded-xl 
+        hover:bg-white/15 
+        transition-all duration-300 
+        hover:scale-105 
+        backdrop-blur-sm
+        ${sizeClasses[size]}
+        ${animated ? 'animate-pulse' : ''}
+      `}>
+        <div className={`font-black text-yellow-400 mb-2 ${sizeClasses[size].split(' ')[1]}`}>
+          {value}
+        </div>
+        <div className="text-sm font-semibold text-white/80 mb-2">
+          {label}
+        </div>
+        {change && (
+          <div className={`
+            text-xs font-bold px-2 py-1 rounded-full 
+            ${trendColors[trend]}
+          `}>
+            {change}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Progress Bar Component with smooth animations
+  const ProgressBar = ({ 
+    value, 
+    max = 100, 
+    label, 
+    color = 'blue', 
+    animated = true,
+    showValue = true 
+  }) => {
+    const percentage = Math.min((value / max) * 100, 100);
+    
+    const colorClasses = {
+      blue: 'from-blue-600 to-blue-700',
+      green: 'from-green-500 to-green-600',
+      red: 'from-red-500 to-red-600',
+      orange: 'from-orange-500 to-orange-600',
+      purple: 'from-purple-600 to-purple-700'
+    };
+
+    return (
+      <div className="space-y-2">
+        {label && (
+          <div className="flex justify-between items-center">
+            <span className="text-white font-semibold">{label}</span>
+            {showValue && <span className="text-white/70 text-sm">{value}</span>}
+          </div>
+        )}
+        <div className="w-full bg-slate-700 rounded-full h-4 overflow-hidden">
+          <div 
+            className={`
+              h-full rounded-full relative
+              bg-gradient-to-r ${colorClasses[color]}
+              ${animated ? 'transition-all duration-2000 ease-in-out' : ''}
+            `}
+            style={{ width: `${percentage}%` }}
+          >
+            {showValue && (
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white text-xs font-bold">
+                {Math.round(percentage)}%
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Countdown Timer Component - creates urgency
+  const CountdownTimer = ({ targetDate, size = 'large' }) => {
+    const sizeClasses = {
+      small: 'text-2xl',
+      medium: 'text-3xl', 
+      large: 'text-4xl'
+    };
+
+    return (
+      <div className="grid grid-cols-4 gap-4">
+        {Object.entries(countdownTime).map(([unit, value]) => (
+          <div key={unit} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/30 text-center">
+            <div className={`font-black text-yellow-300 ${sizeClasses[size]}`}>
+              {value.toString().padStart(2, '0')}
+            </div>
+            <div className="text-sm text-white/80 font-bold uppercase">
+              {unit}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Alert Component with different severity levels
+  const Alert = ({ 
+    type = 'info', 
+    title, 
+    children, 
+    animated = false,
+    icon 
+  }) => {
+    const typeStyles = {
+      info: 'from-blue-800/40 to-blue-700/30 border-blue-500/30 text-blue-300',
+      success: 'from-green-800/40 to-green-700/30 border-green-500/30 text-green-300',
+      warning: 'from-orange-800/40 to-orange-700/30 border-orange-500/30 text-orange-300',
+      danger: 'from-red-800/40 to-red-700/30 border-red-500/30 text-red-300'
+    };
+
+    return (
+      <div className={`
+        bg-gradient-to-r ${typeStyles[type]} 
+        border rounded-xl p-6 backdrop-blur-sm
+        ${animated ? 'animate-pulse' : ''}
+      `}>
+        <div className="flex items-center gap-3 mb-3">
+          {icon && <div className="text-2xl">{icon}</div>}
+          <h4 className="text-xl font-bold uppercase tracking-wide">
+            {title}
+          </h4>
+        </div>
+        <div className="text-white/90">
+          {children}
+        </div>
+      </div>
+    );
+  };
+
+  // Formation Display Component - football specific
+  const FormationDisplay = ({ 
+    formation = '4-3-3', 
+    players = [], 
+    teamColor = 'red' 
+  }) => {
+    const colorClasses = {
+      red: 'bg-red-600',
+      blue: 'bg-blue-600',
+      green: 'bg-green-600'
+    };
+
+    return (
+      <div className="bg-green-800 rounded-lg aspect-[2/3] relative p-4">
+        <div className="text-center mb-4 text-white font-bold">
+          {formation} Formation
+        </div>
+        
+        {/* Position players based on formation - simplified example */}
+        {players.map((player, index) => (
+          <div
+            key={index}
+            className={`
+              absolute transform -translate-x-1/2 -translate-y-1/2
+              ${colorClasses[teamColor]} text-white px-2 py-1 rounded text-xs font-bold
+              ${player.highlighted ? 'ring-2 ring-yellow-400' : ''}
+            `}
+            style={{
+              left: `${player.x}%`,
+              bottom: `${player.y}%`
+            }}
+          >
+            {player.name}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const sections = [
+    { id: 'typography', name: 'Typography System' },
+    { id: 'colors', name: 'Color Psychology' },
+    { id: 'components', name: 'Reusable Components' },
+    { id: 'animations', name: 'Animation Patterns' },
+    { id: 'layouts', name: 'Layout Systems' },
+    { id: 'interactions', name: 'Interactive Elements' }
+  ];
+
+  const renderTypographySection = () => (
+    <div className="space-y-8">
+      <h2 className="text-3xl font-bold mb-6">Typography Hierarchy</h2>
+      
+      {/* Typography scales demonstration */}
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-6xl font-black uppercase tracking-widest mb-2 text-white">
+            Massive Headers
+          </h1>
+          <code className="text-sm text-slate-400">
+            text-6xl font-black uppercase tracking-widest
+          </code>
+        </div>
+        
+        <div>
+          <h2 className="text-4xl font-bold mb-2 text-white">
+            Primary Headlines
+          </h2>
+          <code className="text-sm text-slate-400">
+            text-4xl font-bold
+          </code>
+        </div>
+        
+        <div>
+          <h3 className="text-2xl font-semibold mb-2 text-white">
+            Section Headers
+          </h3>
+          <code className="text-sm text-slate-400">
+            text-2xl font-semibold
+          </code>
+        </div>
+        
+        <div>
+          <p className="text-lg leading-relaxed text-white/90">
+            Body text optimized for readability with proper line height and contrast ratios for accessibility compliance.
+          </p>
+          <code className="text-sm text-slate-400">
+            text-lg leading-relaxed text-white/90
+          </code>
+        </div>
+        
+        <div>
+          <p className="text-sm text-white/70">
+            Supporting text and micro-copy for additional context.
+          </p>
+          <code className="text-sm text-slate-400">
+            text-sm text-white/70
+          </code>
+        </div>
+      </div>
+
+      {/* Font family examples */}
+      <div className="bg-slate-800 rounded-xl p-6">
+        <h3 className="text-xl font-bold mb-4">Font Family Usage</h3>
+        <div className="space-y-4">
+          <div>
+            <div className="font-black text-xl" style={{fontFamily: 'Oswald, sans-serif'}}>
+              Headers & Titles: Oswald
+            </div>
+            <code className="text-xs text-slate-400">font-family: 'Oswald', sans-serif</code>
+          </div>
+          <div>
+            <div className="text-lg" style={{fontFamily: 'Merriweather, serif'}}>
+              Body Text: Merriweather
+            </div>
+            <code className="text-xs text-slate-400">font-family: 'Merriweather', serif</code>
+          </div>
+          <div>
+            <div className="font-mono text-lg">
+              Data & Numbers: JetBrains Mono
+            </div>
+            <code className="text-xs text-slate-400">font-family: 'JetBrains Mono', monospace</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderColorsSection = () => (
+    <div className="space-y-8">
+      <h2 className="text-3xl font-bold mb-6">Color Psychology System</h2>
+      
+      {/* Brand colors */}
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="bg-slate-800 rounded-xl p-6">
+          <h3 className="text-xl font-bold mb-4">Brand Colors</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full" style={{backgroundColor: '#1B365D'}}></div>
+              <div>
+                <div className="font-semibold">Mailman Navy</div>
+                <code className="text-xs text-slate-400">#1B365D</code>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full" style={{backgroundColor: '#C8102E'}}></div>
+              <div>
+                <div className="font-semibold">Liverpool Red</div>
+                <code className="text-xs text-slate-400">#C8102E</code>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full" style={{backgroundColor: '#E8DCC6'}}></div>
+              <div>
+                <div className="font-semibold">Mailman Cream</div>
+                <code className="text-xs text-slate-400">#E8DCC6</code>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-800 rounded-xl p-6">
+          <h3 className="text-xl font-bold mb-4">Semantic Colors</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-green-500"></div>
+              <div>
+                <div className="font-semibold text-green-400">Success/Positive</div>
+                <div className="text-xs text-slate-400">Good metrics, wins</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-red-500"></div>
+              <div>
+                <div className="font-semibold text-red-400">Danger/Crisis</div>
+                <div className="text-xs text-slate-400">Problems, losses</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-orange-500"></div>
+              <div>
+                <div className="font-semibold text-orange-400">Warning/Caution</div>
+                <div className="text-xs text-slate-400">Concerns, risks</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500"></div>
+              <div>
+                <div className="font-semibold text-blue-400">Info/Analysis</div>
+                <div className="text-xs text-slate-400">Data, insights</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-800 rounded-xl p-6">
+          <h3 className="text-xl font-bold mb-4">Gradient Patterns</h3>
+          <div className="space-y-3">
+            <div className="h-12 rounded-lg bg-gradient-to-r from-red-600 to-red-700 flex items-center justify-center text-white font-bold">
+              Crisis/Urgent
+            </div>
+            <div className="h-12 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 flex items-center justify-center text-white font-bold">
+              Professional/Trust
+            </div>
+            <div className="h-12 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold">
+              Premium/Exclusive
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderComponentsSection = () => (
+    <div className="space-y-8">
+      <h2 className="text-3xl font-bold mb-6">Reusable Components</h2>
+      
+      {/* Component examples */}
+      <div className="space-y-8">
+        <div>
+          <h3 className="text-xl font-bold mb-4">Metric Cards</h3>
+          <div className="grid md:grid-cols-4 gap-4 mb-4">
+            <MetricCard value="89.1" label="Slot Index" change="+1.8" trend="positive" />
+            <MetricCard value="76%" label="Press Success" change="-16%" trend="negative" />
+            <MetricCard value="78.6" label="Integration" change="+4.4" trend="positive" />
+            <MetricCard value="7.8" label="Vulnerability" change="+0.6" trend="warning" />
+          </div>
+          <details className="bg-slate-800 rounded-lg p-4">
+            <summary className="cursor-pointer font-semibold mb-2">View MetricCard Code</summary>
+            <pre className="text-xs overflow-x-auto text-slate-300">
+{`const MetricCard = ({ 
+  value, label, change, trend = 'neutral', 
+  size = 'medium', animated = false 
+}) => {
+  const trendColors = {
+    positive: 'text-green-400 bg-green-400/20',
+    negative: 'text-red-400 bg-red-400/20',
+    neutral: 'text-blue-400 bg-blue-400/20',
+    warning: 'text-orange-400 bg-orange-400/20'
+  };
+
+  return (
+    <div className="bg-gradient-to-br from-white/10 to-white/5 
+                    border border-white/10 rounded-xl p-5
+                    hover:bg-white/15 transition-all duration-300 
+                    hover:scale-105 backdrop-blur-sm">
+      <div className="text-3xl font-black text-yellow-400 mb-2">
+        {value}
+      </div>
+      <div className="text-sm font-semibold text-white/80 mb-2">
+        {label}
+      </div>
+      {change && (
+        <div className={\`text-xs font-bold px-2 py-1 rounded-full 
+                        \${trendColors[trend]}\`}>
+          {change}
+        </div>
+      )}
+    </div>
+  );
+};`}
+            </pre>
+          </details>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-4">Progress Bars</h3>
+          <div className="space-y-4 mb-4">
+            <ProgressBar value={89} label="System Evolution" color="blue" />
+            <ProgressBar value={76} label="Performance Drop" color="red" />
+            <ProgressBar value={94} label="Win Rate" color="green" />
+          </div>
+          <details className="bg-slate-800 rounded-lg p-4">
+            <summary className="cursor-pointer font-semibold mb-2">View ProgressBar Code</summary>
+            <pre className="text-xs overflow-x-auto text-slate-300">
+{`const ProgressBar = ({ 
+  value, max = 100, label, color = 'blue', 
+  animated = true, showValue = true 
+}) => {
+  const percentage = Math.min((value / max) * 100, 100);
+  
+  const colorClasses = {
+    blue: 'from-blue-600 to-blue-700',
+    green: 'from-green-500 to-green-600',
+    red: 'from-red-500 to-red-600'
+  };
+
+  return (
+    <div className="space-y-2">
+      {label && (
+        <div className="flex justify-between items-center">
+          <span className="text-white font-semibold">{label}</span>
+          {showValue && <span className="text-white/70 text-sm">{value}</span>}
+        </div>
+      )}
+      <div className="w-full bg-slate-700 rounded-full h-4 overflow-hidden">
+        <div 
+          className={\`h-full rounded-full relative bg-gradient-to-r 
+                     \${colorClasses[color]}
+                     \${animated ? 'transition-all duration-2000 ease-in-out' : ''}\`}
+          style={{ width: \`\${percentage}%\` }}
+        />
+      </div>
+    </div>
+  );
+};`}
+            </pre>
+          </details>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-4">Alert Components</h3>
+          <div className="space-y-4 mb-4">
+            <Alert type="danger" title="Crisis Alert" icon="⚠️">
+              72 hours until Palace - all vulnerability factors aligned
+            </Alert>
+            <Alert type="success" title="Prediction Correct" icon="✅">
+              Isak integration score increased as predicted
+            </Alert>
+            <Alert type="warning" title="Squad Depth Concern" icon="🚨">
+              Rotation performance drops significantly
+            </Alert>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-4">Countdown Timer</h3>
+          <div className="bg-slate-800 rounded-xl p-6 mb-4">
+            <CountdownTimer />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAnimationsSection = () => (
+    <div className="space-y-8">
+      <h2 className="text-3xl font-bold mb-6">Animation Patterns</h2>
+      
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-xl font-bold mb-4">Hover Effects</h3>
+          <div className="grid md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-slate-800 rounded-xl p-6 hover:scale-105 transition-transform duration-300 cursor-pointer">
+              <h4 className="font-bold">Scale Transform</h4>
+              <code className="text-xs">hover:scale-105</code>
+            </div>
+            <div className="bg-slate-800 rounded-xl p-6 hover:bg-slate-700 transition-colors duration-300 cursor-pointer">
+              <h4 className="font-bold">Color Transition</h4>
+              <code className="text-xs">hover:bg-slate-700</code>
+            </div>
+            <div className="bg-slate-800 rounded-xl p-6 hover:shadow-xl transition-shadow duration-300 cursor-pointer">
+              <h4 className="font-bold">Shadow Effect</h4>
+              <code className="text-xs">hover:shadow-xl</code>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-4">Loading States</h3>
+          <div className="space-y-4">
+            <div className="bg-slate-800 rounded-xl p-6">
+              <div className="animate-pulse flex space-x-4">
+                <div className="rounded-full bg-slate-700 h-10 w-10"></div>
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="h-4 bg-slate-700 rounded w-3/4"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-slate-700 rounded"></div>
+                    <div className="h-4 bg-slate-700 rounded w-5/6"></div>
+                  </div>
+                </div>
+              </div>
+              <code className="text-xs text-slate-400 mt-2 block">animate-pulse</code>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-4">Attention Grabbers</h3>
+          <div className="space-y-4">
+            <button 
+              className="bg-red-600 text-white px-6 py-3 rounded-full font-bold animate-pulse"
+              onClick={() => setAnimationDemo(!animationDemo)}
+            >
+              Crisis Alert (Pulsing)
+            </button>
+            
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-xl">
+              <div className={`transform transition-transform duration-500 ${animationDemo ? 'rotate-12 scale-110' : ''}`}>
+                🎯 Interactive Demo Element
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-slate-800 rounded-xl p-6">
+        <h4 className="text-lg font-bold mb-4">Key Animation Principles</h4>
+        <ul className="space-y-2 text-slate-300">
+          <li>• <strong>Duration:</strong> 300ms for quick interactions, 2000ms for data reveals</li>
+          <li>• <strong>Easing:</strong> ease-in-out for natural feeling movements</li>
+          <li>• <strong>Purpose:</strong> Every animation serves user feedback or attention direction</li>
+          <li>• <strong>Performance:</strong> Use transform and opacity for GPU acceleration</li>
+          <li>• <strong>Accessibility:</strong> Respect prefers-reduced-motion settings</li>
+        </ul>
+      </div>
+    </div>
+  );
+
+  const renderLayoutsSection = () => (
+    <div className="space-y-8">
+      <h2 className="text-3xl font-bold mb-6">Layout Systems</h2>
+      
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-xl font-bold mb-4">Grid Patterns</h3>
+          
+          <div className="space-y-6">
+            <div>
+              <h4 className="font-semibold mb-2">Responsive Metric Grid</h4>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+                <div className="bg-slate-800 rounded-lg p-4 text-center">Item 1</div>
+                <div className="bg-slate-800 rounded-lg p-4 text-center">Item 2</div>
+                <div className="bg-slate-800 rounded-lg p-4 text-center">Item 3</div>
+                <div className="bg-slate-800 rounded-lg p-4 text-center">Item 4</div>
+              </div>
+              <code className="text-xs text-slate-400">
+                grid md:grid-cols-2 lg:grid-cols-4 gap-4
+              </code>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-2">Auto-fit Pattern</h4>
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-2">
+                <div className="bg-slate-800 rounded-lg p-4 text-center">Auto Item</div>
+                <div className="bg-slate-800 rounded-lg p-4 text-center">Auto Item</div>
+                <div className="bg-slate-800 rounded-lg p-4 text-center">Auto Item</div>
+              </div>
+              <code className="text-xs text-slate-400">
+                grid-cols-[repeat(auto-fit,minmax(200px,1fr))]
+              </code>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-4">Spacing System</h3>
+          <div className="bg-slate-800 rounded-xl p-6">
+            <h4 className="font-semibold mb-4">Consistent Spacing Scale</h4>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-1 h-4 bg-blue-500"></div>
+                <span>4px - Micro spacing</span>
+                <code className="text-xs">p-1, gap-1</code>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-2 h-4 bg-blue-500"></div>
+                <span>8px - Small spacing</span>
+                <code className="text-xs">p-2, gap-2</code>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-4 h-4 bg-blue-500"></div>
+                <span>16px - Standard spacing</span>
+                <code className="text-xs">p-4, gap-4</code>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-6 h-4 bg-blue-500"></div>
+                <span>24px - Section spacing</span>
+                <code className="text-xs">p-6, gap-6</code>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-4 bg-blue-500"></div>
+                <span>32px - Large spacing</span>
+                <code className="text-xs">p-8, gap-8</code>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-4">Container Patterns</h3>
+          <div className="space-y-4">
+            <div className="max-w-7xl mx-auto bg-slate-800/50 rounded-xl p-6">
+              <h4 className="font-semibold">Main Content Container</h4>
+              <code className="text-xs text-slate-400">max-w-7xl mx-auto px-6</code>
+            </div>
+            
+            <div className="max-w-4xl mx-auto bg-slate-800/50 rounded-xl p-6">
+              <h4 className="font-semibold">Article/Form Container</h4>
+              <code className="text-xs text-slate-400">max-w-4xl mx-auto</code>
+            </div>
+            
+            <div className="max-w-2xl mx-auto bg-slate-800/50 rounded-xl p-6">
+              <h4 className="font-semibold">Reading Width Container</h4>
+              <code className="text-xs text-slate-400">max-w-2xl mx-auto</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderInteractionsSection = () => (
+    <div className="space-y-8">
+      <h2 className="text-3xl font-bold mb-6">Interactive Elements</h2>
+      
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-xl font-bold mb-4">Tab Navigation</h3>
+          <div className="flex gap-2 mb-4">
+            {['Tab 1', 'Tab 2', 'Tab 3'].map((tab, index) => (
+              <button
+                key={tab}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                  index === 0
+                    ? 'bg-red-600 text-white shadow-lg'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-4">Form Elements</h3>
+          <div className="space-y-4 max-w-md">
+            <input
+              type="text"
+              placeholder="Your prediction..."
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg 
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                         transition-all duration-200"
+            />
+            <textarea
+              placeholder="Explain your reasoning..."
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg 
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                         transition-all duration-200 h-24 resize-none"
+            />
+            <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 
+                             text-white py-3 rounded-lg font-semibold
+                             hover:from-blue-700 hover:to-blue-800 
+                             transition-all duration-200 transform hover:scale-105">
+              Submit Prediction
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-4">State Management Example</h3>
+          <div className="bg-slate-800 rounded-xl p-6">
+            <pre className="text-sm overflow-x-auto text-slate-300">
+{`const [activeStoryline, setActiveStoryline] = useState(1);
+const [countdownTime, setCountdownTime] = useState({
+  hours: 23, minutes: 45, seconds: 30
+});
+
+// Countdown logic
+useEffect(() => {
+  const timer = setInterval(() => {
+    setCountdownTime(prev => {
+      if (prev.seconds > 0) {
+        return { ...prev, seconds: prev.seconds - 1 };
+      } else if (prev.minutes > 0) {
+        return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+      } else if (prev.hours > 0) {
+        return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
+      }
+      return prev;
+    });
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, []);`}
+            </pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-white" style={brandStyles}>
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <MailmanLogo size={80} />
+          <div>
+            <h1 className="text-4xl font-bold">Design System Code Reference</h1>
+            <p className="text-xl text-slate-400">Complete code patterns and components</p>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex flex-wrap gap-4 mb-8">
+          {sections.map(section => (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeSection === section.id
+                  ? 'bg-red-600 text-white shadow-lg'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {section.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="bg-slate-800 rounded-xl p-8">
+          {activeSection === 'typography' && renderTypographySection()}
+          {activeSection === 'colors' && renderColorsSection()}
+          {activeSection === 'components' && renderComponentsSection()}
+          {activeSection === 'animations' && renderAnimationsSection()}
+          {activeSection === 'layouts' && renderLayoutsSection()}
+          {activeSection === 'interactions' && renderInteractionsSection()}
+        </div>
+
+        {/* CSS Reference */}
+        <div className="mt-8 bg-slate-800 rounded-xl p-6">
+          <h3 className="text-xl font-bold mb-4">Key CSS Patterns Used</h3>
+          <div className="grid md:grid-cols-2 gap-6 text-sm">
+            <div>
+              <h4 className="font-semibold mb-2">Glassmorphism Effects</h4>
+              <code className="block bg-slate-900 p-2 rounded text-slate-300">
+                backdrop-blur-sm bg-white/10 border border-white/10
+              </code>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Professional Gradients</h4>
+              <code className="block bg-slate-900 p-2 rounded text-slate-300">
+                bg-gradient-to-br from-slate-800 to-slate-900
+              </code>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Smooth Transitions</h4>
+              <code className="block bg-slate-900 p-2 rounded text-slate-300">
+                transition-all duration-300 ease-in-out
+              </code>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Hover Scaling</h4>
+              <code className="block bg-slate-900 p-2 rounded text-slate-300">
+                hover:scale-105 transform-gpu
+              </code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DesignSystemReference;

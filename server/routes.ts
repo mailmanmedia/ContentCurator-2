@@ -1,7 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertImageSchema } from "@shared/schema";
+import { 
+  insertImageSchema, 
+  insertPresentationStyleSchema,
+  insertReportSchema,
+  insertReportRenderingSchema 
+} from "@shared/schema";
 import OpenAI from "openai";
 import { z } from "zod";
 import multer from "multer";
@@ -9,6 +14,7 @@ import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 import express from "express";
+import { renderPresentation, generateSecureExportHtml } from "./presentation/renderer";
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -31,11 +37,11 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Allow only image files
-    if (file.mimetype.startsWith('image/')) {
+    // Allow only image files but explicitly block SVGs for security
+    if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/svg+xml') {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'));
+      cb(new Error('Only safe image files are allowed (SVG files blocked for security)'));
     }
   }
 });
@@ -450,6 +456,272 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error('Error uploading image:', error);
       res.status(500).json({ error: "Failed to upload image" });
+    }
+  });
+
+  // ===== PRESENTATION ENGINE ROUTES =====
+
+  // Get all presentation styles
+  app.get("/api/presentation/styles", async (req, res) => {
+    try {
+      const styles = await storage.getPresentationStyles();
+      res.json({ styles });
+    } catch (error) {
+      console.error('Error getting presentation styles:', error);
+      res.status(500).json({ error: "Failed to get presentation styles" });
+    }
+  });
+
+  // Get presentation style by key
+  app.get("/api/presentation/styles/:key", async (req, res) => {
+    try {
+      const { key } = req.params;
+      const style = await storage.getPresentationStyleByKey(key);
+      
+      if (!style) {
+        return res.status(404).json({ error: "Presentation style not found" });
+      }
+      
+      res.json({ style });
+    } catch (error) {
+      console.error('Error getting presentation style:', error);
+      res.status(500).json({ error: "Failed to get presentation style" });
+    }
+  });
+
+  // Create presentation style
+  app.post("/api/presentation/styles", async (req, res) => {
+    try {
+      const validatedData = insertPresentationStyleSchema.parse(req.body);
+      const style = await storage.createPresentationStyle(validatedData);
+      res.status(201).json({ style });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid style data", details: error.errors });
+      }
+      console.error('Error creating presentation style:', error);
+      res.status(500).json({ error: "Failed to create presentation style" });
+    }
+  });
+
+  // Get all reports
+  app.get("/api/reports", async (req, res) => {
+    try {
+      const reports = await storage.getReports();
+      res.json({ reports });
+    } catch (error) {
+      console.error('Error getting reports:', error);
+      res.status(500).json({ error: "Failed to get reports" });
+    }
+  });
+
+  // Get report by ID
+  app.get("/api/reports/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const report = await storage.getReport(id);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      res.json({ report });
+    } catch (error) {
+      console.error('Error getting report:', error);
+      res.status(500).json({ error: "Failed to get report" });
+    }
+  });
+
+  // Create report
+  app.post("/api/reports", async (req, res) => {
+    try {
+      const validatedData = insertReportSchema.parse(req.body);
+      const report = await storage.createReport(validatedData);
+      res.status(201).json({ report });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid report data", details: error.errors });
+      }
+      console.error('Error creating report:', error);
+      res.status(500).json({ error: "Failed to create report" });
+    }
+  });
+
+  // Update report
+  app.patch("/api/reports/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertReportSchema.partial().parse(req.body);
+      const report = await storage.updateReport(id, validatedData);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      res.json({ report });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid report data", details: error.errors });
+      }
+      console.error('Error updating report:', error);
+      res.status(500).json({ error: "Failed to update report" });
+    }
+  });
+
+  // Delete report
+  app.delete("/api/reports/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteReport(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      res.status(500).json({ error: "Failed to delete report" });
+    }
+  });
+
+  // Render report in specific style
+  app.get("/api/reports/:id/render", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { style: styleKey = 'claudeArtifact' } = req.query as { style?: string };
+      
+      // Get report
+      const report = await storage.getReport(id);
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      // Get style
+      const style = await storage.getPresentationStyleByKey(styleKey);
+      if (!style) {
+        return res.status(404).json({ error: "Presentation style not found" });
+      }
+      
+      // Check for existing rendering
+      let rendering = await storage.getReportRendering(id, styleKey);
+      
+      if (!rendering) {
+        // Generate new rendering
+        const renderedContent = await renderPresentation(report, style);
+        
+        const renderingData = {
+          reportId: id,
+          styleKey: styleKey,
+          contentHtml: renderedContent.html,
+          blocksJson: renderedContent.blocks,
+          metaJson: renderedContent.meta
+        };
+        
+        const validatedData = insertReportRenderingSchema.parse(renderingData);
+        rendering = await storage.createReportRendering(validatedData);
+      }
+      
+      res.json({ 
+        rendering,
+        report,
+        style
+      });
+    } catch (error) {
+      console.error('Error rendering report:', error);
+      res.status(500).json({ error: "Failed to render report" });
+    }
+  });
+
+  // Re-render report (clear cache and generate new)
+  app.post("/api/reports/:id/render", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { style: styleKey = 'claudeArtifact' } = req.body;
+      
+      // Get report
+      const report = await storage.getReport(id);
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      // Get style
+      const style = await storage.getPresentationStyleByKey(styleKey);
+      if (!style) {
+        return res.status(404).json({ error: "Presentation style not found" });
+      }
+      
+      // Generate new rendering
+      const renderedContent = await renderPresentation(report, style);
+      
+      const renderingData = {
+        reportId: id,
+        styleKey: styleKey,
+        contentHtml: renderedContent.html,
+        blocksJson: renderedContent.blocks,
+        metaJson: renderedContent.meta
+      };
+      
+      const validatedData = insertReportRenderingSchema.parse(renderingData);
+      const rendering = await storage.createReportRendering(validatedData);
+      
+      res.json({ 
+        rendering,
+        report,
+        style
+      });
+    } catch (error) {
+      console.error('Error re-rendering report:', error);
+      res.status(500).json({ error: "Failed to re-render report" });
+    }
+  });
+
+  // Export report as secure HTML
+  app.get("/api/reports/:id/export", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { style: styleKey = 'claudeArtifact' } = req.query as { style?: string };
+      
+      // Get report
+      const report = await storage.getReport(id);
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      
+      // Get style
+      const style = await storage.getPresentationStyleByKey(styleKey);
+      if (!style) {
+        return res.status(404).json({ error: "Presentation style not found" });
+      }
+      
+      // Get or generate rendering
+      let rendering = await storage.getReportRendering(id, styleKey);
+      
+      if (!rendering) {
+        // Generate new rendering
+        const renderedContent = await renderPresentation(report, style);
+        
+        const renderingData = {
+          reportId: id,
+          styleKey: styleKey,
+          contentHtml: renderedContent.html,
+          blocksJson: renderedContent.blocks,
+          metaJson: renderedContent.meta
+        };
+        
+        const validatedData = insertReportRenderingSchema.parse(renderingData);
+        rendering = await storage.createReportRendering(validatedData);
+      }
+      
+      // Generate secure HTML with CSP headers
+      const secureHtml = generateSecureExportHtml(rendering.contentHtml, report.title);
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${report.title.replace(/[^a-zA-Z0-9]/g, '-')}-${styleKey}.html"`);
+      res.send(secureHtml);
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      res.status(500).json({ error: "Failed to export report" });
     }
   });
 
