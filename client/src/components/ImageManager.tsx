@@ -16,20 +16,14 @@ import {
   Filter
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import type { Image as ImageType } from "@shared/schema";
 
-interface ImageFile {
-  id: string;
-  name: string;
-  url: string;
-  thumbnail: string;
-  size: string;
-  type: string;
-  tags: string[];
-  category: string;
-  dateAdded: string;
-  isStarred: boolean;
-}
+// Using the Image type from shared schema
+type ImageFile = ImageType & {
+  dateAdded?: string; // For backward compatibility
+};
 
 interface ImageCategory {
   name: string;
@@ -38,44 +32,13 @@ interface ImageCategory {
 }
 
 export default function ImageManager() {
-  const [images, setImages] = useState<ImageFile[]>([
-    {
-      id: "1",
-      name: "arne-slot-portrait.jpg",
-      url: "/placeholder.jpg",
-      thumbnail: "/placeholder.jpg",
-      size: "2.3 MB",
-      type: "JPEG",
-      tags: ["arne slot", "manager", "portrait", "headshot"],
-      category: "Staff",
-      dateAdded: "2024-09-20",
-      isStarred: true
-    },
-    {
-      id: "2",
-      name: "salah-celebration.jpg",
-      url: "/placeholder.jpg",
-      thumbnail: "/placeholder.jpg",
-      size: "1.8 MB",
-      type: "JPEG",
-      tags: ["salah", "goal", "celebration", "premier league"],
-      category: "Players",
-      dateAdded: "2024-09-18",
-      isStarred: false
-    },
-    {
-      id: "3",
-      name: "anfield-atmosphere.jpg",
-      url: "/placeholder.jpg",
-      thumbnail: "/placeholder.jpg",
-      size: "3.1 MB",
-      type: "JPEG",
-      tags: ["anfield", "atmosphere", "crowd", "stadium"],
-      category: "Stadium",
-      dateAdded: "2024-09-15",
-      isStarred: true
-    }
-  ]);
+  // Use React Query to fetch images
+  const { data: imagesData, isLoading: isLoadingImages } = useQuery({
+    queryKey: ['/api/images'],
+    refetchOnWindowFocus: false
+  });
+  
+  const images = imagesData?.images || [];
   
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -83,6 +46,61 @@ export default function ImageManager() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Create image mutation
+  const createImageMutation = useMutation({
+    mutationFn: async (imageData: any) => {
+      const response = await apiRequest('POST', '/api/images', imageData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/images'] });
+      toast({
+        title: "Image Added",
+        description: "Image has been successfully added to your library"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to add image to library",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update image mutation
+  const updateImageMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      const response = await apiRequest('PATCH', `/api/images/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/images'] });
+    }
+  });
+
+  // Delete image mutation
+  const deleteImageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('DELETE', `/api/images/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/images'] });
+      toast({
+        title: "Image Deleted",
+        description: "Image has been removed from your collection"
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete image",
+        variant: "destructive"
+      });
+    }
+  });
 
   const categories: ImageCategory[] = [
     { name: "All", count: images.length, icon: "📁" },
@@ -119,8 +137,7 @@ export default function ImageManager() {
       }
       
       // Create new image entry
-      const newImage: ImageFile = {
-        id: Date.now().toString() + i,
+      const newImageData = {
         name: file.name,
         url: URL.createObjectURL(file),
         thumbnail: URL.createObjectURL(file),
@@ -128,18 +145,14 @@ export default function ImageManager() {
         type: file.type.split('/')[1].toUpperCase(),
         tags: [file.name.split('.')[0].replace(/[-_]/g, ' ')],
         category: "Uploads",
-        dateAdded: new Date().toISOString().split('T')[0],
         isStarred: false
       };
       
-      setImages(prev => [newImage, ...prev]);
+      // Use mutation to create image
+      createImageMutation.mutate(newImageData);
     }
     
     setUploadProgress(0);
-    toast({
-      title: "Upload Complete",
-      description: `Successfully uploaded ${files.length} image(s)`
-    });
   };
 
   const searchOnlineImages = async () => {
@@ -169,8 +182,7 @@ export default function ImageManager() {
       });
       
       // Mock adding found images to the collection
-      const mockFoundImage: ImageFile = {
-        id: Date.now().toString(),
+      const mockFoundImageData = {
         name: `${searchQuery.replace(/\s+/g, '-')}-search-result.jpg`,
         url: "/placeholder.jpg",
         thumbnail: "/placeholder.jpg",
@@ -178,11 +190,10 @@ export default function ImageManager() {
         type: "JPEG",
         tags: [searchQuery, "search result", "online"],
         category: "Search Results",
-        dateAdded: new Date().toISOString().split('T')[0],
         isStarred: false
       };
       
-      setImages(prev => [mockFoundImage, ...prev]);
+      createImageMutation.mutate(mockFoundImageData);
       
     } catch (error) {
       console.error('Error searching images:', error);
@@ -197,17 +208,17 @@ export default function ImageManager() {
   };
 
   const toggleStar = (imageId: string) => {
-    setImages(prev => prev.map(img => 
-      img.id === imageId ? { ...img, isStarred: !img.isStarred } : img
-    ));
+    const image = images.find(img => img.id === imageId);
+    if (image) {
+      updateImageMutation.mutate({
+        id: imageId,
+        updates: { isStarred: !image.isStarred }
+      });
+    }
   };
 
   const deleteImage = (imageId: string) => {
-    setImages(prev => prev.filter(img => img.id !== imageId));
-    toast({
-      title: "Image Deleted",
-      description: "Image has been removed from your collection"
-    });
+    deleteImageMutation.mutate(imageId);
   };
 
   const downloadImage = (image: ImageFile) => {
