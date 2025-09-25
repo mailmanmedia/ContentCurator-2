@@ -267,39 +267,43 @@ export default function ImageManager() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card className="bg-card border-card-border">
-        <CardHeader>
-          <CardTitle className="font-league-spartan font-bold text-xl uppercase tracking-wide text-card-foreground flex items-center gap-2">
-            <Image className="w-5 h-5" />
-            Image Management System
+        <CardHeader className="pb-4 sm:pb-6">
+          <CardTitle className="font-league-spartan font-bold text-lg sm:text-xl uppercase tracking-wide text-card-foreground flex items-center gap-2">
+            <Image className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Image Management System</span>
+            <span className="sm:hidden">Images</span>
           </CardTitle>
         </CardHeader>
         
-        <CardContent>
-          <Tabs defaultValue="library" className="space-y-6">
+        <CardContent className="px-4 sm:px-6">
+          <Tabs defaultValue="library" className="space-y-4 sm:space-y-6">
             <TabsList className="grid w-full grid-cols-3 bg-muted">
-              <TabsTrigger value="library" data-testid="tab-library">
-                Image Library
+              <TabsTrigger value="library" data-testid="tab-library" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Image Library</span>
+                <span className="sm:hidden">Library</span>
               </TabsTrigger>
-              <TabsTrigger value="upload" data-testid="tab-upload">
-                Upload Images
+              <TabsTrigger value="upload" data-testid="tab-upload" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Upload Images</span>
+                <span className="sm:hidden">Upload</span>
               </TabsTrigger>
-              <TabsTrigger value="search" data-testid="tab-search">
-                Find Online
+              <TabsTrigger value="search" data-testid="tab-search" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Find Online</span>
+                <span className="sm:hidden">Search</span>
               </TabsTrigger>
             </TabsList>
 
             {/* Image Library Tab */}
-            <TabsContent value="library" className="space-y-6">
+            <TabsContent value="library" className="space-y-4 sm:space-y-6">
               {/* Search and Filter */}
-              <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <div className="flex-1">
                   <Input
-                    placeholder="Search images by name or tags..."
+                    placeholder="Search images..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="font-libre-franklin"
+                    className="font-libre-franklin text-sm"
                     data-testid="input-search-images"
                   />
                 </div>
@@ -307,7 +311,7 @@ export default function ImageManager() {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-3 py-2 bg-card border border-card-border rounded-md font-libre-franklin text-sm"
+                    className="px-3 py-2 bg-card border border-card-border rounded-md font-libre-franklin text-xs sm:text-sm w-full sm:w-auto min-w-[120px]"
                     data-testid="select-category"
                   >
                     {categories.map(category => (
@@ -320,7 +324,7 @@ export default function ImageManager() {
               </div>
 
               {/* Image Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                 {filteredImages.map((image) => (
                   <Card key={image.id} className="group hover-elevate bg-card border-card-border overflow-hidden">
                     <div className="aspect-square relative overflow-hidden">
@@ -330,48 +334,51 @@ export default function ImageManager() {
                         className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                       />
                       
-                      {/* Overlay Actions */}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
+                      {/* Mobile: Simple tap actions */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 sm:group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1 sm:gap-2">
                         <Button
-                          size="sm"
+                          size="icon"
                           variant="secondary"
                           onClick={() => toggleStar(image.id)}
                           data-testid={`button-star-${image.id}`}
+                          className="h-8 w-8 sm:h-9 sm:w-9"
                         >
-                          <Star className={`w-4 h-4 ${image.isStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                          <Star className={`w-3 h-3 sm:w-4 sm:h-4 ${image.isStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                         </Button>
                         <Button
-                          size="sm"
+                          size="icon"
                           variant="secondary"
                           onClick={() => downloadImage(image)}
                           data-testid={`button-download-${image.id}`}
+                          className="h-8 w-8 sm:h-9 sm:w-9"
                         >
-                          <Download className="w-4 h-4" />
+                          <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                         <Button
-                          size="sm"
+                          size="icon"
                           variant="destructive"
                           onClick={() => deleteImage(image.id)}
                           data-testid={`button-delete-${image.id}`}
+                          className="h-8 w-8 sm:h-9 sm:w-9"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                       </div>
                       
                       {/* Star indicator */}
                       {image.isStarred && (
-                        <div className="absolute top-2 right-2">
-                          <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                        <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
+                          <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400" />
                         </div>
                       )}
                     </div>
                     
-                    <CardContent className="p-4">
-                      <h4 className="font-league-spartan font-bold text-sm text-card-foreground truncate mb-2">
+                    <CardContent className="p-2 sm:p-4">
+                      <h4 className="font-league-spartan font-bold text-xs sm:text-sm text-card-foreground truncate mb-1 sm:mb-2">
                         {image.name}
                       </h4>
                       
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                      <div className="hidden sm:flex items-center justify-between text-xs text-muted-foreground mb-2">
                         <span>{image.size}</span>
                         <span>{image.type}</span>
                       </div>
@@ -380,7 +387,7 @@ export default function ImageManager() {
                         {image.category}
                       </Badge>
                       
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="hidden sm:flex flex-wrap gap-1 mt-2">
                         {image.tags.slice(0, 2).map((tag, index) => (
                           <Badge key={index} variant="secondary" className="text-xs">
                             {tag}
@@ -414,14 +421,15 @@ export default function ImageManager() {
             </TabsContent>
 
             {/* Upload Tab */}
-            <TabsContent value="upload" className="space-y-6">
-              <div className="border-2 border-dashed border-card-border rounded-lg p-8 text-center">
-                <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-league-spartan font-bold text-lg uppercase text-foreground mb-2">
+            <TabsContent value="upload" className="space-y-4 sm:space-y-6">
+              <div className="border-2 border-dashed border-card-border rounded-lg p-6 sm:p-8 text-center">
+                <Upload className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                <h3 className="font-league-spartan font-bold text-base sm:text-lg uppercase text-foreground mb-2">
                   Upload Images
                 </h3>
-                <p className="font-libre-franklin text-muted-foreground mb-6">
-                  Drag and drop images here, or click to browse files
+                <p className="font-libre-franklin text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">
+                  <span className="hidden sm:inline">Drag and drop images here, or click to browse files</span>
+                  <span className="sm:hidden">Tap to select images</span>
                 </p>
                 
                 <input
@@ -436,11 +444,12 @@ export default function ImageManager() {
                 
                 <Button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="font-league-spartan font-bold uppercase tracking-wide"
+                  className="font-league-spartan font-bold uppercase tracking-wide w-full sm:w-auto"
                   data-testid="button-browse-files"
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Browse Files
+                  <span className="hidden sm:inline">Browse Files</span>
+                  <span className="sm:hidden">Select Images</span>
                 </Button>
                 
                 {uploadProgress > 0 && uploadProgress < 100 && (
@@ -458,13 +467,13 @@ export default function ImageManager() {
                 )}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="p-6">
-                    <h4 className="font-league-spartan font-bold text-primary mb-3">
+                  <CardContent className="p-4 sm:p-6">
+                    <h4 className="font-league-spartan font-bold text-sm sm:text-base text-primary mb-2 sm:mb-3">
                       Supported Formats
                     </h4>
-                    <ul className="font-libre-franklin text-sm text-card-foreground space-y-1">
+                    <ul className="font-libre-franklin text-xs sm:text-sm text-card-foreground space-y-1">
                       <li>• JPEG, JPG</li>
                       <li>• PNG</li>
                       <li>• WebP</li>
@@ -474,11 +483,11 @@ export default function ImageManager() {
                 </Card>
                 
                 <Card className="bg-accent/5 border-accent/20">
-                  <CardContent className="p-6">
-                    <h4 className="font-league-spartan font-bold text-accent mb-3">
+                  <CardContent className="p-4 sm:p-6">
+                    <h4 className="font-league-spartan font-bold text-sm sm:text-base text-accent mb-2 sm:mb-3">
                       Auto-Organization
                     </h4>
-                    <ul className="font-libre-franklin text-sm text-card-foreground space-y-1">
+                    <ul className="font-libre-franklin text-xs sm:text-sm text-card-foreground space-y-1">
                       <li>• Automatic categorization</li>
                       <li>• Tag extraction from filename</li>
                       <li>• Duplicate detection</li>
@@ -490,21 +499,21 @@ export default function ImageManager() {
             </TabsContent>
 
             {/* Search Online Tab */}
-            <TabsContent value="search" className="space-y-6">
+            <TabsContent value="search" className="space-y-4 sm:space-y-6">
               <div className="space-y-4">
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <Input
-                    placeholder="Search for Liverpool FC images online (e.g., 'Arne Slot')"
+                    placeholder="Search Liverpool FC images..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && searchOnlineImages()}
-                    className="font-libre-franklin"
+                    className="font-libre-franklin text-sm"
                     data-testid="input-online-search"
                   />
                   <Button 
                     onClick={searchOnlineImages}
                     disabled={isSearching}
-                    className="font-league-spartan font-bold uppercase tracking-wide"
+                    className="font-league-spartan font-bold uppercase tracking-wide w-full sm:w-auto"
                     data-testid="button-search-online"
                   >
                     <Search className="w-4 h-4 mr-2" />
@@ -512,10 +521,10 @@ export default function ImageManager() {
                   </Button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <Card className="bg-primary/5 border-primary/20">
-                    <CardContent className="p-4 text-center">
-                      <h5 className="font-league-spartan font-bold text-primary mb-2">
+                    <CardContent className="p-3 sm:p-4 text-center">
+                      <h5 className="font-league-spartan font-bold text-xs sm:text-sm text-primary mb-1 sm:mb-2">
                         AI-Powered Search
                       </h5>
                       <p className="font-libre-franklin text-xs text-card-foreground">
@@ -525,8 +534,8 @@ export default function ImageManager() {
                   </Card>
                   
                   <Card className="bg-accent/5 border-accent/20">
-                    <CardContent className="p-4 text-center">
-                      <h5 className="font-league-spartan font-bold text-accent mb-2">
+                    <CardContent className="p-3 sm:p-4 text-center">
+                      <h5 className="font-league-spartan font-bold text-xs sm:text-sm text-accent mb-1 sm:mb-2">
                         High Quality
                       </h5>
                       <p className="font-libre-franklin text-xs text-card-foreground">
@@ -536,8 +545,8 @@ export default function ImageManager() {
                   </Card>
                   
                   <Card className="bg-chart-2/5 border-chart-2/20">
-                    <CardContent className="p-4 text-center">
-                      <h5 className="font-league-spartan font-bold text-chart-2 mb-2">
+                    <CardContent className="p-3 sm:p-4 text-center">
+                      <h5 className="font-league-spartan font-bold text-xs sm:text-sm text-chart-2 mb-1 sm:mb-2">
                         Auto-Save
                       </h5>
                       <p className="font-libre-franklin text-xs text-card-foreground">
@@ -563,39 +572,45 @@ export default function ImageManager() {
               {/* Search Results Display */}
               {searchResults.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="font-league-spartan font-bold text-lg text-foreground">
+                  <h4 className="font-league-spartan font-bold text-base sm:text-lg text-foreground">
                     Image Suggestions for "{searchQuery}"
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {searchResults.map((suggestion: any, index: number) => (
                       <Card key={index} className="bg-card border-card-border hover-elevate">
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            <h5 className="font-league-spartan font-bold text-foreground">
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="space-y-2 sm:space-y-3">
+                            <h5 className="font-league-spartan font-bold text-sm sm:text-base text-foreground">
                               {suggestion.title}
                             </h5>
-                            <p className="font-libre-franklin text-sm text-muted-foreground">
+                            <p className="font-libre-franklin text-xs sm:text-sm text-muted-foreground">
                               {suggestion.description}
                             </p>
                             <div className="space-y-2">
-                              <Badge variant="secondary" className="mr-2">
+                              <Badge variant="secondary" className="text-xs">
                                 {suggestion.category}
                               </Badge>
                               <div className="flex flex-wrap gap-1">
-                                {suggestion.tags?.map((tag: string, tagIndex: number) => (
+                                {suggestion.tags?.slice(0, 3).map((tag: string, tagIndex: number) => (
                                   <Badge key={tagIndex} variant="outline" className="text-xs">
                                     {tag}
                                   </Badge>
                                 ))}
+                                {suggestion.tags?.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{suggestion.tags.length - 3}
+                                  </Badge>
+                                )}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                <strong>Suggested sources:</strong> {suggestion.suggestedSources?.join(', ')}
+                                <strong>Sources:</strong> {suggestion.suggestedSources?.slice(0, 2).join(', ')}
+                                {suggestion.suggestedSources?.length > 2 && '...'}
                               </div>
                             </div>
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              className="w-full"
+                              className="w-full text-xs"
                               onClick={() => {
                                 toast({
                                   title: "Image Source Info",

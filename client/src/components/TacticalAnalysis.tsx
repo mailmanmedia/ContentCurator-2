@@ -128,35 +128,39 @@ export default function TacticalAnalysis() {
   const currentPlayers = formations[selectedFormation];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card className="bg-card border-card-border">
-        <CardHeader>
-          <CardTitle className="font-league-spartan font-bold text-xl uppercase tracking-wide text-card-foreground flex items-center gap-2">
-            <Target className="w-5 h-5" />
-            Interactive Tactical Analysis
+        <CardHeader className="pb-4 sm:pb-6">
+          <CardTitle className="font-league-spartan font-bold text-lg sm:text-xl uppercase tracking-wide text-card-foreground flex items-center gap-2">
+            <Target className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Interactive Tactical Analysis</span>
+            <span className="sm:hidden">Tactical Analysis</span>
           </CardTitle>
         </CardHeader>
         
-        <CardContent>
-          <Tabs defaultValue="formation" className="space-y-6">
+        <CardContent className="px-4 sm:px-6">
+          <Tabs defaultValue="formation" className="space-y-4 sm:space-y-6">
             <TabsList className="grid w-full grid-cols-2 bg-muted">
-              <TabsTrigger value="formation" data-testid="tab-formation">
-                Formation Setup
+              <TabsTrigger value="formation" data-testid="tab-formation" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Formation Setup</span>
+                <span className="sm:hidden">Formation</span>
               </TabsTrigger>
-              <TabsTrigger value="analysis" data-testid="tab-analysis">
-                Live Analysis
+              <TabsTrigger value="analysis" data-testid="tab-analysis" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Live Analysis</span>
+                <span className="sm:hidden">Analysis</span>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="formation" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="space-y-4">
+            <TabsContent value="formation" className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+                {/* Mobile-first: Controls on top */}
+                <div className="xl:order-1 space-y-4">
                   <div className="space-y-2">
-                    <label className="font-libre-franklin font-semibold text-sm text-card-foreground">
+                    <label className="font-libre-franklin font-semibold text-xs sm:text-sm text-card-foreground">
                       Formation
                     </label>
                     <Select value={selectedFormation} onValueChange={handleFormationChange}>
-                      <SelectTrigger data-testid="select-formation">
+                      <SelectTrigger data-testid="select-formation" className="text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -167,21 +171,21 @@ export default function TacticalAnalysis() {
                   </div>
                   
                   <div className="space-y-3">
-                    <h4 className="font-league-spartan font-bold text-sm uppercase text-card-foreground">
+                    <h4 className="font-league-spartan font-bold text-xs sm:text-sm uppercase text-card-foreground">
                       Real-Time Stats
                     </h4>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-libre-franklin">Expected Goals</span>
-                        <Badge variant="outline">{currentStats.expectedGoals}</Badge>
+                        <span className="text-xs sm:text-sm font-libre-franklin">Expected Goals</span>
+                        <Badge variant="outline" className="text-xs">{currentStats.expectedGoals}</Badge>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-libre-franklin">Possession %</span>
-                        <Badge variant="outline">{currentStats.possessionPercent}%</Badge>
+                        <span className="text-xs sm:text-sm font-libre-franklin">Possession %</span>
+                        <Badge variant="outline" className="text-xs">{currentStats.possessionPercent}%</Badge>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-libre-franklin">Pressure</span>
-                        <Badge variant="outline">{currentStats.pressureIntensity}</Badge>
+                        <span className="text-xs sm:text-sm font-libre-franklin">Pressure</span>
+                        <Badge variant="outline" className="text-xs">{currentStats.pressureIntensity}</Badge>
                       </div>
                     </div>
                   </div>
@@ -191,19 +195,20 @@ export default function TacticalAnalysis() {
                     onClick={simulateMatch}
                     disabled={isSimulating}
                     data-testid="button-simulate"
-                    className="w-full"
+                    className="w-full text-xs sm:text-sm"
                   >
-                    <Play className="w-4 h-4 mr-1" />
+                    <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                     {isSimulating ? 'Simulating...' : 'Run Simulation'}
                   </Button>
                 </div>
 
-                <div className="lg:col-span-2">
+                {/* Tactical field spans 2 columns on xl, full width on smaller screens */}
+                <div className="xl:order-2 xl:col-span-2">
                   <Card className="bg-gradient-to-b from-green-600 to-green-700 border-green-500 relative overflow-hidden">
-                    <div className="aspect-[3/2] relative">
+                    <div className="aspect-[3/2] sm:aspect-[3/2] relative">
                       <div className="absolute inset-0">
                         <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/30"></div>
-                        <div className="absolute left-1/2 top-1/2 w-16 h-16 border border-white/30 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+                        <div className="absolute left-1/2 top-1/2 w-12 h-12 sm:w-16 sm:h-16 border border-white/30 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
                         <div className="absolute left-0 top-1/4 bottom-1/4 w-1/6 border-r border-white/30"></div>
                         <div className="absolute right-0 top-1/4 bottom-1/4 w-1/6 border-l border-white/30"></div>
                       </div>
@@ -213,17 +218,18 @@ export default function TacticalAnalysis() {
                         return (
                           <div
                             key={player.id}
-                            className={`absolute w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all duration-200 ${
+                            className={`absolute w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all duration-200 touch-manipulation ${
                               isSelected 
-                                ? 'bg-yellow-400 text-black ring-4 ring-yellow-300 scale-125 z-10' 
+                                ? 'bg-yellow-400 text-black ring-2 sm:ring-4 ring-yellow-300 scale-125 z-10' 
                                 : player.position === 'GK' 
-                                  ? 'bg-red-600 text-white hover:bg-red-500' 
-                                  : 'bg-primary text-primary-foreground hover:bg-primary/80'
+                                  ? 'bg-red-600 text-white hover:bg-red-500 active:bg-red-500' 
+                                  : 'bg-primary text-primary-foreground hover:bg-primary/80 active:bg-primary/80'
                             }`}
                             style={{
                               left: `${player.x}%`,
                               top: `${player.y}%`,
-                              transform: 'translate(-50%, -50%)'
+                              transform: 'translate(-50%, -50%)',
+                              fontSize: window.innerWidth < 640 ? '10px' : '12px'
                             }}
                             onClick={() => setSelectedPlayer(isSelected ? null : player.id)}
                             data-testid={`player-${player.id}`}
@@ -241,31 +247,31 @@ export default function TacticalAnalysis() {
                     
                     return (
                       <Card className="mt-4 bg-accent/10 border-accent/20">
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="space-y-2 sm:space-y-3">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-league-spartan font-bold text-accent">{player.name}</h4>
-                              <Badge variant="outline">{player.position}</Badge>
+                              <h4 className="font-league-spartan font-bold text-sm sm:text-base text-accent">{player.name}</h4>
+                              <Badge variant="outline" className="text-xs">{player.position}</Badge>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                              <div className="space-y-1 sm:space-y-2">
                                 <div className="flex justify-between">
-                                  <span className="text-sm">Pace</span>
-                                  <span className="text-sm font-mono">{player.stats.pace}</span>
+                                  <span className="text-xs sm:text-sm">Pace</span>
+                                  <span className="text-xs sm:text-sm font-mono">{player.stats.pace}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-sm">Defending</span>
-                                  <span className="text-sm font-mono">{player.stats.defending}</span>
+                                  <span className="text-xs sm:text-sm">Defending</span>
+                                  <span className="text-xs sm:text-sm font-mono">{player.stats.defending}</span>
                                 </div>
                               </div>
-                              <div className="space-y-2">
+                              <div className="space-y-1 sm:space-y-2">
                                 <div className="flex justify-between">
-                                  <span className="text-sm">Attacking</span>
-                                  <span className="text-sm font-mono">{player.stats.attacking}</span>
+                                  <span className="text-xs sm:text-sm">Attacking</span>
+                                  <span className="text-xs sm:text-sm font-mono">{player.stats.attacking}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-sm">Passing</span>
-                                  <span className="text-sm font-mono">{player.stats.passing}</span>
+                                  <span className="text-xs sm:text-sm">Passing</span>
+                                  <span className="text-xs sm:text-sm font-mono">{player.stats.passing}</span>
                                 </div>
                               </div>
                             </div>
@@ -278,8 +284,8 @@ export default function TacticalAnalysis() {
               </div>
             </TabsContent>
 
-            <TabsContent value="analysis" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <TabsContent value="analysis" className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {[
                   { label: 'Expected Goals', value: currentStats.expectedGoals, max: 5 },
                   { label: 'Possession %', value: currentStats.possessionPercent, max: 100 },
@@ -288,18 +294,18 @@ export default function TacticalAnalysis() {
                   { label: 'Attacking Width', value: currentStats.attackingWidth, max: 100 }
                 ].map((stat, index) => (
                   <Card key={index} className="bg-card border-card-border">
-                    <CardContent className="p-4">
-                      <h4 className="font-league-spartan font-bold text-sm uppercase text-card-foreground mb-2">
+                    <CardContent className="p-3 sm:p-4">
+                      <h4 className="font-league-spartan font-bold text-xs sm:text-sm uppercase text-card-foreground mb-1 sm:mb-2">
                         {stat.label}
                       </h4>
-                      <div className="flex items-end gap-2 mb-2">
-                        <span className="font-mono font-bold text-2xl text-primary">
+                      <div className="flex items-end gap-2 mb-1 sm:mb-2">
+                        <span className="font-mono font-bold text-lg sm:text-2xl text-primary">
                           {typeof stat.value === 'number' ? stat.value.toFixed(stat.max === 5 ? 1 : 0) : stat.value}
                         </span>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
+                      <div className="w-full bg-muted rounded-full h-1.5 sm:h-2">
                         <div 
-                          className="bg-primary rounded-full h-2 transition-all duration-300"
+                          className="bg-primary rounded-full h-1.5 sm:h-2 transition-all duration-300"
                           style={{ width: `${Math.min(100, (stat.value / stat.max) * 100)}%` }}
                         ></div>
                       </div>

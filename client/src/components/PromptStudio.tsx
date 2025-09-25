@@ -22,7 +22,8 @@ import {
   TrendingUp,
   Eye,
   Edit,
-  CheckCircle
+  CheckCircle,
+  FileText
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -35,6 +36,14 @@ interface PromptData {
   outputType: string;
   style: string;
   priority: 'low' | 'medium' | 'high';
+  // Professional editorial brief fields
+  opponent?: string;
+  competition?: string;
+  venue?: 'home' | 'away' | 'neutral';
+  matchTiming?: string;
+  hookFormula?: string;
+  targetAudience?: string;
+  contentGoal?: string;
 }
 
 interface OutputVariation {
@@ -55,7 +64,14 @@ export default function PromptStudio() {
     ideas: [],
     outputType: "",
     style: "",
-    priority: "medium"
+    priority: "medium",
+    opponent: "",
+    competition: "",
+    venue: undefined,
+    matchTiming: "",
+    hookFormula: "",
+    targetAudience: "",
+    contentGoal: ""
   });
   
   const [isGenerating, setIsGenerating] = useState(false);
@@ -83,6 +99,328 @@ export default function PromptStudio() {
     "Player Spotlight - Personal"
   ];
 
+  // Comprehensive template system for professional content creation
+  const getTemplatePrompts = (outputType: string, style: string) => {
+    const templates: { [key: string]: { [key: string]: string[] } } = {
+      "infographic": {
+        "Mailman Monday - Contrarian": [
+          "Challenge the popular opinion about Liverpool's transfer strategy with data-backed analysis",
+          "Compare Arne Slot's unconventional tactics against traditional Liverpool approaches",
+          "Analyze why Liverpool's 'controversial' decisions actually make sense using performance metrics"
+        ],
+        "Data Dive Wednesday - Analytical": [
+          "Break down Liverpool's defensive statistics compared to Premier League averages with key metrics",
+          "Analyze player performance data across different match situations and opponents",
+          "Compare Liverpool's pressing intensity data with top European clubs using heat maps"
+        ],
+        "Future Focus Friday - Predictive": [
+          "Project Liverpool's title chances based on current form, fixtures, and historical data",
+          "Predict which academy players will break into the first team using development metrics",
+          "Forecast how Arne Slot's tactical system will evolve over the next two seasons"
+        ],
+        "Breaking News - Urgent": [
+          "Create urgent infographic about Liverpool's latest transfer with fee breakdown and impact analysis",
+          "Design breaking injury update showing player importance and replacement options",
+          "Visualize match-changing moment with tactical implications and statistical context"
+        ],
+        "Match Preview - Tactical": [
+          "Design tactical infographic showing formation matchup and key battle zones",
+          "Create pre-match statistical comparison with tactical context and player roles",
+          "Build comprehensive match preview with opposition analysis and Liverpool advantages"
+        ],
+        "Player Spotlight - Personal": [
+          "Create player career journey infographic with key achievements and statistics",
+          "Design personal story infographic combining background, milestones, and impact data",
+          "Build player comparison infographic highlighting unique contributions and development"
+        ]
+      },
+      "thumbnail": {
+        "Breaking News - Urgent": [
+          "Create breaking news thumbnail for Liverpool transfer announcement with dramatic text overlay",
+          "Design urgent match reaction thumbnail with score, key moment, and emotional hook",
+          "Make breaking analysis thumbnail about controversial VAR decision with visual elements"
+        ],
+        "Match Preview - Tactical": [
+          "Design tactical preview thumbnail showing Liverpool's expected formation vs specific opponent",
+          "Create player duel thumbnail highlighting key individual battles and matchups",
+          "Show managerial tactical comparison with formation graphics and key strategies"
+        ],
+        "Player Spotlight - Personal": [
+          "Design player feature thumbnail with action shot and key statistics overlay",
+          "Create personal story thumbnail combining portrait and career milestone graphics",
+          "Show player development journey with before/after comparison and achievement highlights"
+        ]
+      },
+      "title": {
+        "Mailman Monday - Contrarian": [
+          "Craft contrarian title challenging popular Liverpool narrative with surprising angle",
+          "Create provocative headline questioning conventional wisdom about recent Liverpool decision",
+          "Write debate-starting title presenting unpopular but data-supported Liverpool opinion"
+        ],
+        "Data Dive Wednesday - Analytical": [
+          "Create analytical title focusing on specific Liverpool performance metric or trend",
+          "Write data-driven headline comparing Liverpool statistics to Premier League standards",
+          "Craft investigative title exploring hidden patterns in Liverpool's tactical approach"
+        ],
+        "Future Focus Friday - Predictive": [
+          "Write predictive title forecasting Liverpool's prospects for upcoming fixtures",
+          "Create forward-looking headline about emerging Liverpool talent or tactical evolution",
+          "Craft speculative title exploring potential Liverpool scenarios and their implications"
+        ],
+        "Breaking News - Urgent": [
+          "Create urgent title announcing Liverpool breaking news with immediate impact angle",
+          "Write breaking headline about Liverpool development with dramatic but accurate tone",
+          "Craft urgent title focusing on Liverpool news implications and fan reactions"
+        ],
+        "Match Preview - Tactical": [
+          "Write tactical preview title highlighting key battles and strategic elements",
+          "Create preview headline focusing on formation matchup and tactical intrigue",
+          "Craft match buildup title emphasizing tactical storylines and player matchups"
+        ],
+        "Player Spotlight - Personal": [
+          "Write compelling player feature title highlighting personal journey and achievements",
+          "Create character-driven headline exploring player's impact beyond statistics",
+          "Craft personal story title connecting player background to current Liverpool success"
+        ]
+      },
+      "chart": {
+        "Data Dive Wednesday - Analytical": [
+          "Create comprehensive chart comparing Liverpool's key performance indicators across seasons",
+          "Design statistical comparison showing Liverpool vs top-6 rivals in specific metrics",
+          "Build tactical effectiveness chart measuring formation success rates in different scenarios"
+        ],
+        "Match Preview - Tactical": [
+          "Design opponent comparison chart highlighting tactical strengths and weaknesses",
+          "Create head-to-head statistics chart for upcoming fixture with historical context",
+          "Build player performance chart comparing key performers from both teams"
+        ],
+        "Breaking News - Urgent": [
+          "Create immediate impact chart showing breaking news statistical implications",
+          "Design urgent comparison chart highlighting sudden change in team dynamics",
+          "Build breaking analysis chart showing before/after statistical comparison"
+        ],
+        "Player Spotlight - Personal": [
+          "Design career progression chart showing player development and key milestones",
+          "Create performance evolution chart tracking player improvement across seasons",
+          "Build achievement comparison chart highlighting player accomplishments and records"
+        ]
+      },
+      "heatmap": {
+        "Data Dive Wednesday - Analytical": [
+          "Create player positioning heatmap showing movement patterns during specific match phases",
+          "Design tactical heatmap comparing Liverpool's formation density in attack vs defense",
+          "Build performance heatmap showing player effectiveness across different pitch zones"
+        ],
+        "Match Preview - Tactical": [
+          "Generate opponent threat analysis heatmap for defensive preparation",
+          "Create attacking zones heatmap showing Liverpool's goal-scoring patterns",
+          "Design pressing intensity heatmap comparing home vs away performances"
+        ],
+        "Breaking News - Urgent": [
+          "Create urgent heatmap showing immediate impact of breaking team news on positioning",
+          "Design breaking analysis heatmap highlighting sudden tactical changes or player movements",
+          "Build immediate effect heatmap showing how breaking news affects team dynamics"
+        ],
+        "Player Spotlight - Personal": [
+          "Design player influence heatmap showing impact across different pitch zones",
+          "Create performance heatmap tracking player effectiveness in various positions",
+          "Build contribution heatmap highlighting player's unique tactical role and positioning"
+        ]
+      },
+      "formation": {
+        "Match Preview - Tactical": [
+          "Analyze Liverpool's formation setup to counter specific opponent tactical approach",
+          "Compare formation options Slot might deploy based on opponent weaknesses",
+          "Show tactical flexibility between Liverpool's 4-3-3 and 4-2-3-1 with player roles"
+        ],
+        "Data Dive Wednesday - Analytical": [
+          "Break down positional heat maps and player movement patterns within formation structure",
+          "Analyze formation effectiveness across different game states and score situations",
+          "Compare formation success rates in home vs away matches with statistical backing"
+        ],
+        "Breaking News - Urgent": [
+          "Analyze immediate formation impact of breaking team news or injury updates",
+          "Show urgent formation adjustments needed due to unexpected player availability",
+          "Compare formation options in light of breaking tactical developments"
+        ],
+        "Mailman Monday - Contrarian": [
+          "Challenge popular formation opinions with alternative tactical setups and reasoning",
+          "Present contrarian view on Liverpool's formation choices with tactical justification",
+          "Analyze unconventional formation benefits that contradict mainstream tactical opinion"
+        ],
+        "Future Focus Friday - Predictive": [
+          "Predict formation evolution under Arne Slot's tactical philosophy and system development",
+          "Forecast tactical adaptations Liverpool might make for upcoming fixture challenges",
+          "Project formation flexibility options for different competitions and opponent types"
+        ],
+        "Player Spotlight - Personal": [
+          "Analyze how specific player's attributes influence Liverpool's formation and tactical approach",
+          "Show formation adaptations built around featured player's strengths and positioning",
+          "Examine tactical role evolution and formation impact of spotlighted player"
+        ]
+      },
+      "tactical": {
+        "Match Preview - Tactical": [
+          "Design tactical map showing Liverpool's attacking patterns against specific defensive setup",
+          "Create defensive shape analysis with pressing triggers and coverage responsibilities",
+          "Map out set-piece tactical approach highlighting Liverpool's strengths and opponent vulnerabilities"
+        ],
+        "Breaking News - Urgent": [
+          "Create urgent tactical analysis map explaining immediate impact of player change or injury",
+          "Design tactical breakdown of match-changing substitution or formation switch",
+          "Map out tactical implications of breaking team news or lineup revelation"
+        ],
+        "Mailman Monday - Contrarian": [
+          "Create tactical map challenging conventional wisdom about Liverpool's approach",
+          "Design contrarian tactical analysis questioning popular formation opinions",
+          "Map out unconventional tactical advantages that others might miss"
+        ],
+        "Data Dive Wednesday - Analytical": [
+          "Design comprehensive tactical analysis map with statistical backing and zone effectiveness",
+          "Create detailed tactical breakdown showing data-driven insights and performance metrics",
+          "Map out tactical patterns with analytical depth and measurable outcomes"
+        ],
+        "Future Focus Friday - Predictive": [
+          "Create predictive tactical map showing evolution of Liverpool's system under Slot",
+          "Design forward-looking tactical analysis predicting formation adaptations",
+          "Map out potential tactical developments and their strategic implications"
+        ],
+        "Player Spotlight - Personal": [
+          "Design tactical map highlighting individual player's unique role and contributions",
+          "Create player-focused tactical analysis showing positional impact and movement patterns",
+          "Map out personal tactical story showing player development and tactical intelligence"
+        ]
+      }
+    };
+
+    return templates[outputType]?.[style] || [];
+  };
+
+  // Domain-aware professional content improvement engine
+  const getSmartSuggestions = (text: string, outputType: string, style: string, data?: PromptData) => {
+    const suggestions: string[] = [];
+    
+    // Domain knowledge rules for Liverpool FC content
+    const isMatchContent = text.includes("match") || text.includes("game") || text.includes("fixture");
+    const isPlayerContent = text.includes("player") || text.includes("performance") || text.includes("stats");
+    const hasTacticalTerms = text.includes("formation") || text.includes("tactical") || text.includes("pressing");
+    
+    // Output-specific professional guidance
+    if (outputType === "infographic") {
+      if (!text.includes("statistic") && !text.includes("data") && !text.includes("metric")) {
+        suggestions.push("Include specific Liverpool statistics, performance data, or comparative metrics");
+      }
+      if (style.includes("Analytical") && !text.includes("source") && !text.includes("comparison")) {
+        suggestions.push("Reference data sources and provide comparative analysis against benchmarks");
+      }
+    }
+    
+    if (outputType === "thumbnail") {
+      if (!text.includes("visual") && !text.includes("text overlay") && !text.includes("composition")) {
+        suggestions.push("Describe visual composition, text overlay placement, and graphic elements");
+      }
+      if (style.includes("Breaking News") && !text.includes("dramatic") && !text.includes("urgent")) {
+        suggestions.push("Emphasize dramatic visual elements and urgent design cues for breaking news");
+      }
+    }
+    
+    if (outputType === "title") {
+      if (style.includes("Contrarian") && !text.includes("challenge") && !text.includes("controversial")) {
+        suggestions.push("Include contrarian angle that challenges popular Liverpool narratives");
+      }
+      if (!text.includes("hook") && !text.includes("click") && !text.includes("compelling")) {
+        suggestions.push("Add compelling hook or attention-grabbing element for better engagement");
+      }
+    }
+    
+    if (outputType === "formation" || outputType === "tactical") {
+      if (!text.includes("player") && !text.includes("position") && !text.includes("role")) {
+        suggestions.push("Specify player names, positions, and tactical roles for accuracy");
+      }
+      if (!text.includes("opponent") && data?.opponent) {
+        suggestions.push(`Include ${data.opponent} tactical setup and defensive/offensive patterns`);
+      }
+    }
+    
+    // Editorial brief validation
+    if (isMatchContent && data?.opponent === "") {
+      suggestions.push("Specify opponent name for more targeted match-specific content");
+    }
+    
+    if (isMatchContent && data?.competition === "") {
+      suggestions.push("Add competition context (Premier League, Champions League, FA Cup, Carabao Cup)");
+    }
+    
+    if (isMatchContent && data?.venue === undefined) {
+      suggestions.push("Specify venue (home/away) for location-specific tactical analysis");
+    }
+    
+    // Style-specific professional guidance
+    if (style === "Breaking News - Urgent") {
+      if (!text.includes("immediate") && !text.includes("just") && !text.includes("breaking")) {
+        suggestions.push("Emphasize immediacy and breaking nature with time-sensitive language");
+      }
+    }
+    
+    if (style === "Data Dive Wednesday - Analytical") {
+      if (!text.includes("metric") && !text.includes("statistical") && !text.includes("analysis")) {
+        suggestions.push("Include specific analytical focus with measurable metrics and statistical depth");
+      }
+    }
+    
+    if (style === "Match Preview - Tactical") {
+      if (!text.includes("formation") && !text.includes("tactical") && !text.includes("system")) {
+        suggestions.push("Add tactical system analysis and formation matchup considerations");
+      }
+    }
+    
+    if (style === "Player Spotlight - Personal") {
+      if (!text.includes("journey") && !text.includes("story") && !text.includes("background")) {
+        suggestions.push("Include personal story elements and player development journey");
+      }
+    }
+    
+    // Liverpool FC brand and context rules
+    if (!text.includes("Liverpool") && !text.includes("LFC") && !text.includes("Reds") && !text.includes("Anfield")) {
+      suggestions.push("Add Liverpool FC brand context (LFC, Reds, Anfield) for channel alignment");
+    }
+    
+    // Competition-specific context rules
+    if (isMatchContent) {
+      const competitions = ["Premier League", "Champions League", "Europa League", "FA Cup", "Carabao Cup"];
+      const hasCompetition = competitions.some(comp => text.includes(comp));
+      if (!hasCompetition && data?.competition === "") {
+        suggestions.push("Specify competition for proper context and tactical importance");
+      }
+    }
+    
+    // Tactical content rules for Liverpool-specific analysis
+    if (hasTacticalTerms) {
+      if (!text.includes("Slot") && !text.includes("system") && !text.includes("philosophy")) {
+        suggestions.push("Reference Arne Slot's tactical philosophy and system implementation");
+      }
+      if (!text.includes("press") && !text.includes("intensity") && text.includes("tactical")) {
+        suggestions.push("Consider Liverpool's signature pressing intensity and high-line tactics");
+      }
+    }
+    
+    // Content depth and engagement rules
+    if (text.length < 40) {
+      suggestions.push("Expand prompt with more specific details for higher-quality AI generation");
+    }
+    
+    if (text.length > 200 && !text.includes("specific") && !text.includes("focus")) {
+      suggestions.push("Consider focusing on specific aspects to avoid overwhelming the AI prompt");
+    }
+    
+    // Audience and platform optimization
+    if (data?.targetAudience === "" && (style.includes("Personal") || outputType === "title")) {
+      suggestions.push("Define target audience (casual fans, tactical enthusiasts, general viewers)");
+    }
+    
+    return suggestions;
+  };
+
   const handleInputChange = (field: keyof PromptData, value: any) => {
     setPromptData(prev => ({ ...prev, [field]: value }));
   };
@@ -105,20 +443,31 @@ export default function PromptStudio() {
 
   const generateSuggestions = async () => {
     try {
+      // Enhanced prompt context based on selected output type and style
+      const enhancedContext = {
+        prompt: promptData.text,
+        context: "Liverpool FC YouTube content",
+        outputType: promptData.outputType,
+        style: promptData.style,
+        priority: promptData.priority,
+        existingData: {
+          images: promptData.images,
+          stats: promptData.stats,
+          ideas: promptData.ideas
+        }
+      };
+
       const response = await apiRequest(
         'POST',
         '/api/ai/suggestions',
-        { 
-          prompt: promptData.text,
-          context: "Liverpool FC YouTube content"
-        }
+        enhancedContext
       );
       
       const data = await response.json();
       setSuggestions(data.suggestions || []);
       toast({
-        title: "Suggestions Generated",
-        description: `Found ${data.suggestions?.length || 0} AI-powered suggestions`
+        title: "Enhanced Suggestions Generated",
+        description: `Found ${data.suggestions?.length || 0} contextual AI suggestions for ${promptData.outputType || 'your content'}`
       });
     } catch (error) {
       console.error('Error generating suggestions:', error);
@@ -200,72 +549,120 @@ export default function PromptStudio() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card className="bg-card border-card-border">
-        <CardHeader>
-          <CardTitle className="font-league-spartan font-bold text-xl uppercase tracking-wide text-card-foreground flex items-center gap-2">
-            <Wand2 className="w-5 h-5" />
-            AI Content Studio
+        <CardHeader className="pb-4 sm:pb-6">
+          <CardTitle className="font-league-spartan font-bold text-lg sm:text-xl uppercase tracking-wide text-card-foreground flex items-center gap-2">
+            <Wand2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">AI Content Studio</span>
+            <span className="sm:hidden">Content Studio</span>
           </CardTitle>
         </CardHeader>
         
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <CardContent className="px-4 sm:px-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
             <TabsList className="grid w-full grid-cols-2 bg-muted">
-              <TabsTrigger value="input" data-testid="tab-prompt-input">
-                Input & Prompt
+              <TabsTrigger value="input" data-testid="tab-prompt-input" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Input & Prompt</span>
+                <span className="sm:hidden">Input</span>
               </TabsTrigger>
-              <TabsTrigger value="output" data-testid="tab-output-variations">
-                Variations & Output
+              <TabsTrigger value="output" data-testid="tab-output-variations" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Variations & Output</span>
+                <span className="sm:hidden">Output</span>
               </TabsTrigger>
             </TabsList>
 
             {/* Input Tab */}
-            <TabsContent value="input" className="space-y-6">
+            <TabsContent value="input" className="space-y-4 sm:space-y-6">
               {/* Main Prompt */}
               <div className="space-y-3">
-                <label className="font-libre-franklin font-semibold text-sm text-card-foreground">
+                <label className="font-libre-franklin font-semibold text-xs sm:text-sm text-card-foreground">
                   Content Prompt
                 </label>
                 <Textarea
-                  placeholder="Describe your Liverpool FC content idea. For example: 'Analyze Arne Slot's tactical impact on Liverpool's pressing game this season compared to Klopp's final year, focusing on defensive transitions and goal prevention statistics...'"
+                  placeholder="Describe your Liverpool FC content idea..."
                   value={promptData.text}
                   onChange={(e) => handleInputChange('text', e.target.value)}
-                  className="min-h-[120px] font-libre-franklin"
+                  className="min-h-[100px] sm:min-h-[120px] font-libre-franklin text-sm"
                   data-testid="textarea-prompt"
                 />
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                   <Button 
                     size="sm" 
                     variant="outline" 
                     onClick={generateSuggestions}
                     data-testid="button-generate-suggestions"
+                    className="w-full sm:w-auto text-xs sm:text-sm"
                   >
-                    <Lightbulb className="w-4 h-4 mr-1" />
-                    Get AI Suggestions
+                    <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    <span className="hidden sm:inline">Get AI Suggestions</span>
+                    <span className="sm:hidden">AI Suggestions</span>
                   </Button>
                   {suggestions.length > 0 && (
-                    <Badge variant="secondary">{suggestions.length} suggestions</Badge>
+                    <Badge variant="secondary" className="text-xs">{suggestions.length} suggestions</Badge>
                   )}
                 </div>
+                
+                {/* Smart Suggestions */}
+                {promptData.text && promptData.outputType && (
+                  <div className="space-y-2">
+                    {getSmartSuggestions(promptData.text, promptData.outputType, promptData.style, promptData).map((suggestion, index) => (
+                      <div key={index} className="text-xs text-muted-foreground bg-accent/10 rounded p-2 flex items-start gap-2">
+                        <Lightbulb className="w-3 h-3 text-accent mt-0.5 flex-shrink-0" />
+                        {suggestion}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* AI Suggestions */}
+              {/* Template Prompts */}
+              {promptData.outputType && promptData.style && (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <h4 className="font-league-spartan font-bold text-xs sm:text-sm uppercase text-primary flex items-center gap-2">
+                      <Target className="w-3 h-3 sm:w-4 sm:h-4" />
+                      Template Ideas for {promptData.outputType}
+                    </h4>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {getTemplatePrompts(promptData.outputType, promptData.style).map((template, index) => (
+                      <div 
+                        key={index}
+                        className="p-2 sm:p-3 bg-card rounded border cursor-pointer hover-elevate touch-manipulation"
+                        onClick={() => handleInputChange('text', template)}
+                      >
+                        <p className="font-libre-franklin text-xs sm:text-sm text-card-foreground">
+                          {template}
+                        </p>
+                      </div>
+                    ))}
+                    {getTemplatePrompts(promptData.outputType, promptData.style).length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Template prompts will appear when you select both output type and content style.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Enhanced AI Suggestions */}
               {suggestions.length > 0 && (
                 <Card className="bg-accent/5 border-accent/20">
-                  <CardHeader className="pb-3">
-                    <h4 className="font-league-spartan font-bold text-sm uppercase text-accent">
-                      AI Suggestions
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <h4 className="font-league-spartan font-bold text-xs sm:text-sm uppercase text-accent flex items-center gap-2">
+                      <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
+                      AI-Enhanced Suggestions
                     </h4>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {suggestions.map((suggestion, index) => (
                       <div 
                         key={index}
-                        className="p-3 bg-card rounded border cursor-pointer hover-elevate"
+                        className="p-2 sm:p-3 bg-card rounded border cursor-pointer hover-elevate touch-manipulation"
                         onClick={() => handleInputChange('text', suggestion)}
                       >
-                        <p className="font-libre-franklin text-sm text-card-foreground">
+                        <p className="font-libre-franklin text-xs sm:text-sm text-card-foreground">
                           {suggestion}
                         </p>
                       </div>
@@ -274,17 +671,117 @@ export default function PromptStudio() {
                 </Card>
               )}
 
+              {/* Editorial Brief */}
+              <Card className="mb-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-accent" />
+                    Editorial Brief
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">Professional content context and requirements</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Opponent */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">Opponent</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Manchester City"
+                        value={promptData.opponent || ""}
+                        onChange={(e) => handleInputChange("opponent", e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
+                        data-testid="input-opponent"
+                      />
+                    </div>
+                    
+                    {/* Competition */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">Competition</label>
+                      <Select value={promptData.competition || ""} onValueChange={(value) => handleInputChange("competition", value)}>
+                        <SelectTrigger className="w-full h-9" data-testid="select-competition">
+                          <SelectValue placeholder="Select competition" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Premier League">Premier League</SelectItem>
+                          <SelectItem value="Champions League">Champions League</SelectItem>
+                          <SelectItem value="Europa League">Europa League</SelectItem>
+                          <SelectItem value="FA Cup">FA Cup</SelectItem>
+                          <SelectItem value="Carabao Cup">Carabao Cup</SelectItem>
+                          <SelectItem value="International">International</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Venue */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">Venue</label>
+                      <Select value={promptData.venue || ""} onValueChange={(value) => handleInputChange("venue", value as "home" | "away" | "neutral")}>
+                        <SelectTrigger className="w-full h-9" data-testid="select-venue">
+                          <SelectValue placeholder="Select venue" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="home">Home (Anfield)</SelectItem>
+                          <SelectItem value="away">Away</SelectItem>
+                          <SelectItem value="neutral">Neutral Venue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Target Audience */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">Target Audience</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Tactical enthusiasts"
+                        value={promptData.targetAudience || ""}
+                        onChange={(e) => handleInputChange("targetAudience", e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
+                        data-testid="input-target-audience"
+                      />
+                    </div>
+                    
+                    {/* Content Goal */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">Content Goal</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Drive engagement"
+                        value={promptData.contentGoal || ""}
+                        onChange={(e) => handleInputChange("contentGoal", e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
+                        data-testid="input-content-goal"
+                      />
+                    </div>
+                    
+                    {/* Match Timing */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">Match Timing</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Pre-match, Post-match"
+                        value={promptData.matchTiming || ""}
+                        onChange={(e) => handleInputChange("matchTiming", e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
+                        data-testid="input-match-timing"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Content Categories */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Images */}
                 <div className="space-y-3">
-                  <label className="font-libre-franklin font-semibold text-sm text-card-foreground flex items-center gap-2">
-                    <Image className="w-4 h-4" />
-                    Images & Media
+                  <label className="font-libre-franklin font-semibold text-xs sm:text-sm text-card-foreground flex items-center gap-2">
+                    <Image className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Images & Media</span>
+                    <span className="sm:hidden">Images</span>
                   </label>
                   <div className="space-y-2">
                     <Input
-                      placeholder="Image description or upload"
+                      placeholder="Image description..."
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           addToList('images', e.currentTarget.value);
@@ -292,15 +789,17 @@ export default function PromptStudio() {
                         }
                       }}
                       data-testid="input-images"
+                      className="text-sm"
                     />
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="flex-1">
-                        <Upload className="w-4 h-4 mr-1" />
+                      <Button size="sm" variant="outline" className="flex-1 text-xs">
+                        <Upload className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                         Upload
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1">
-                        <Search className="w-4 h-4 mr-1" />
-                        Find Online
+                      <Button size="sm" variant="outline" className="flex-1 text-xs">
+                        <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        <span className="hidden sm:inline">Find Online</span>
+                        <span className="sm:hidden">Find</span>
                       </Button>
                     </div>
                     <div className="space-y-1">
@@ -308,10 +807,10 @@ export default function PromptStudio() {
                         <Badge 
                           key={index}
                           variant="secondary" 
-                          className="cursor-pointer mr-1 mb-1"
+                          className="cursor-pointer mr-1 mb-1 text-xs"
                           onClick={() => removeFromList('images', index)}
                         >
-                          {image} ×
+                          {image.length > 20 ? `${image.substring(0, 20)}...` : image} ×
                         </Badge>
                       ))}
                     </div>
@@ -320,13 +819,14 @@ export default function PromptStudio() {
 
                 {/* Stats */}
                 <div className="space-y-3">
-                  <label className="font-libre-franklin font-semibold text-sm text-card-foreground flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    Statistics & Data
+                  <label className="font-libre-franklin font-semibold text-xs sm:text-sm text-card-foreground flex items-center gap-2">
+                    <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Statistics & Data</span>
+                    <span className="sm:hidden">Stats</span>
                   </label>
                   <div className="space-y-2">
                     <Input
-                      placeholder="Add stat or data point"
+                      placeholder="Add stat or data..."
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           addToList('stats', e.currentTarget.value);
@@ -334,16 +834,17 @@ export default function PromptStudio() {
                         }
                       }}
                       data-testid="input-stats"
+                      className="text-sm"
                     />
                     <div className="space-y-1">
                       {promptData.stats.map((stat, index) => (
                         <Badge 
                           key={index}
                           variant="outline" 
-                          className="cursor-pointer mr-1 mb-1"
+                          className="cursor-pointer mr-1 mb-1 text-xs"
                           onClick={() => removeFromList('stats', index)}
                         >
-                          {stat} ×
+                          {stat.length > 20 ? `${stat.substring(0, 20)}...` : stat} ×
                         </Badge>
                       ))}
                     </div>
@@ -351,14 +852,15 @@ export default function PromptStudio() {
                 </div>
 
                 {/* Ideas */}
-                <div className="space-y-3">
-                  <label className="font-libre-franklin font-semibold text-sm text-card-foreground flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4" />
-                    Ideas & Concepts
+                <div className="space-y-3 sm:col-span-2 lg:col-span-1">
+                  <label className="font-libre-franklin font-semibold text-xs sm:text-sm text-card-foreground flex items-center gap-2">
+                    <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Ideas & Concepts</span>
+                    <span className="sm:hidden">Ideas</span>
                   </label>
                   <div className="space-y-2">
                     <Input
-                      placeholder="Add creative idea"
+                      placeholder="Add creative idea..."
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           addToList('ideas', e.currentTarget.value);
@@ -366,16 +868,17 @@ export default function PromptStudio() {
                         }
                       }}
                       data-testid="input-ideas"
+                      className="text-sm"
                     />
                     <div className="space-y-1">
                       {promptData.ideas.map((idea, index) => (
                         <Badge 
                           key={index}
                           variant="default" 
-                          className="cursor-pointer mr-1 mb-1"
+                          className="cursor-pointer mr-1 mb-1 text-xs"
                           onClick={() => removeFromList('ideas', index)}
                         >
-                          {idea} ×
+                          {idea.length > 20 ? `${idea.substring(0, 20)}...` : idea} ×
                         </Badge>
                       ))}
                     </div>
@@ -386,13 +889,13 @@ export default function PromptStudio() {
               <Separator />
 
               {/* Output Configuration */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 <div className="space-y-2">
-                  <label className="font-libre-franklin font-semibold text-sm text-card-foreground">
+                  <label className="font-libre-franklin font-semibold text-xs sm:text-sm text-card-foreground">
                     Output Type
                   </label>
                   <Select value={promptData.outputType} onValueChange={(value) => handleInputChange('outputType', value)}>
-                    <SelectTrigger data-testid="select-output-type">
+                    <SelectTrigger data-testid="select-output-type" className="text-sm">
                       <SelectValue placeholder="Select output type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -409,11 +912,11 @@ export default function PromptStudio() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="font-libre-franklin font-semibold text-sm text-card-foreground">
+                  <label className="font-libre-franklin font-semibold text-xs sm:text-sm text-card-foreground">
                     Content Style
                   </label>
                   <Select value={promptData.style} onValueChange={(value) => handleInputChange('style', value)}>
-                    <SelectTrigger data-testid="select-style">
+                    <SelectTrigger data-testid="select-style" className="text-sm">
                       <SelectValue placeholder="Select style" />
                     </SelectTrigger>
                     <SelectContent>
@@ -426,12 +929,12 @@ export default function PromptStudio() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="font-libre-franklin font-semibold text-sm text-card-foreground">
+                <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                  <label className="font-libre-franklin font-semibold text-xs sm:text-sm text-card-foreground">
                     Priority Level
                   </label>
                   <Select value={promptData.priority} onValueChange={(value: 'low' | 'medium' | 'high') => handleInputChange('priority', value)}>
-                    <SelectTrigger data-testid="select-priority">
+                    <SelectTrigger data-testid="select-priority" className="text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -449,42 +952,42 @@ export default function PromptStudio() {
                   size="lg" 
                   onClick={generateVariations}
                   disabled={isGenerating || !promptData.text || !promptData.outputType}
-                  className="font-league-spartan font-bold uppercase tracking-wide"
+                  className="font-league-spartan font-bold uppercase tracking-wide w-full sm:w-auto"
                   data-testid="button-generate-variations"
                 >
-                  <Zap className="w-5 h-5 mr-2" />
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   {isGenerating ? 'Generating...' : 'Generate Variations'}
                 </Button>
               </div>
             </TabsContent>
 
             {/* Output Tab */}
-            <TabsContent value="output" className="space-y-6">
+            <TabsContent value="output" className="space-y-4 sm:space-y-6">
               {isGenerating ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <h3 className="font-league-spartan font-bold text-lg uppercase text-foreground mb-2">
+                <div className="text-center py-8 sm:py-12">
+                  <div className="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <h3 className="font-league-spartan font-bold text-base sm:text-lg uppercase text-foreground mb-2">
                     Generating Variations
                   </h3>
-                  <p className="font-libre-franklin text-muted-foreground">
+                  <p className="font-libre-franklin text-sm sm:text-base text-muted-foreground">
                     AI is creating multiple options for your content...
                   </p>
                 </div>
               ) : outputVariations.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-league-spartan font-bold text-lg uppercase text-foreground">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <h3 className="font-league-spartan font-bold text-base sm:text-lg uppercase text-foreground">
                       Generated Variations
                     </h3>
-                    <Badge className="bg-primary text-primary-foreground">
+                    <Badge className="bg-primary text-primary-foreground text-xs">
                       {outputVariations.length} Options
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                     {outputVariations.map((variation) => (
                       <Card key={variation.id} className="hover-elevate bg-card border-card-border">
-                        <CardHeader className="pb-3">
+                        <CardHeader className="pb-2 sm:pb-3">
                           <div className="flex items-center justify-between">
                             <Badge variant="outline" className="text-xs">
                               {variation.type}
@@ -493,33 +996,37 @@ export default function PromptStudio() {
                               {Math.round(variation.confidence)}% confidence
                             </Badge>
                           </div>
-                          <CardTitle className="font-league-spartan font-bold text-sm text-card-foreground">
+                          <CardTitle className="font-league-spartan font-bold text-sm sm:text-base text-card-foreground">
                             {variation.title}
                           </CardTitle>
                         </CardHeader>
                         
-                        <CardContent className="space-y-4">
-                          <p className="font-libre-franklin text-sm text-muted-foreground">
+                        <CardContent className="space-y-3 sm:space-y-4">
+                          <p className="font-libre-franklin text-xs sm:text-sm text-muted-foreground">
                             {variation.description}
                           </p>
                           
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <Button 
                               size="sm" 
                               variant="outline"
                               onClick={() => handleEditVariation(variation.id)}
                               data-testid={`button-edit-${variation.id}`}
+                              className="w-full sm:w-auto text-xs"
                             >
-                              <Edit className="w-4 h-4 mr-1" />
-                              Edit & Iterate
+                              <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                              <span className="hidden sm:inline">Edit & Iterate</span>
+                              <span className="sm:hidden">Edit</span>
                             </Button>
                             <Button 
                               size="sm"
                               onClick={() => handleBuildFinal(variation.id)}
                               data-testid={`button-build-${variation.id}`}
+                              className="w-full sm:w-auto text-xs"
                             >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Build Final
+                              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                              <span className="hidden sm:inline">Build Final</span>
+                              <span className="sm:hidden">Build</span>
                             </Button>
                           </div>
                         </CardContent>
@@ -528,12 +1035,12 @@ export default function PromptStudio() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <Eye className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-league-spartan font-bold text-lg uppercase text-foreground mb-2">
+                <div className="text-center py-8 sm:py-12">
+                  <Eye className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-league-spartan font-bold text-base sm:text-lg uppercase text-foreground mb-2">
                     No Variations Yet
                   </h3>
-                  <p className="font-libre-franklin text-muted-foreground">
+                  <p className="font-libre-franklin text-sm sm:text-base text-muted-foreground">
                     Generate variations from the Input tab to see them here
                   </p>
                 </div>

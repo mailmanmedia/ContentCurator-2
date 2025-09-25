@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings, Download, Palette, BarChart3 } from "lucide-react";
+import { Search, Settings, Download, Palette, BarChart3, Menu, Sun, Moon } from "lucide-react";
 import { useState } from "react";
+// Import logo - for now we'll use a fallback until we can properly configure the asset import
+const mailmanLogo = "/assets/847D1ED6-4A19-4001-B286-53F0D10F961E.png_1758823068354.PNG";
 
 export default function Header() {
   const [darkMode, setDarkMode] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -12,22 +15,42 @@ export default function Header() {
     console.log('Dark mode toggled:', !darkMode);
   };
 
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
   return (
-    <header className="bg-sidebar border-b border-sidebar-border px-6 py-4">
+    <header className="bg-sidebar border-b border-sidebar-border px-4 sm:px-6 py-3 sm:py-4">
       <div className="flex items-center justify-between">
         {/* Logo and Title */}
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-league-spartan font-black text-lg">M</span>
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Mobile: Logo icon only */}
+          <div className="sm:hidden">
+            <img 
+              src={mailmanLogo} 
+              alt="Mailman Media" 
+              className="w-8 h-8 object-contain"
+              data-testid="logo-mobile"
+            />
           </div>
-          <div>
-            <h1 className="text-sidebar-foreground font-league-spartan font-bold text-xl uppercase tracking-wide">Mailman Media</h1>
-            <p className="text-sidebar-foreground/70 font-libre-franklin text-sm">Visual Assistant</p>
+          
+          {/* Desktop: Full logo with text */}
+          <div className="hidden sm:flex items-center gap-4">
+            <img 
+              src={mailmanLogo} 
+              alt="Mailman Media Logo" 
+              className="w-10 h-10 lg:w-12 lg:h-12 object-contain"
+              data-testid="logo-desktop"
+            />
+            <div className="hidden md:block">
+              <h1 className="text-sidebar-foreground font-league-spartan font-bold text-lg lg:text-xl uppercase tracking-wide">Mailman Media</h1>
+              <p className="text-sidebar-foreground/70 font-libre-franklin text-xs lg:text-sm">Visual Assistant</p>
+            </div>
           </div>
         </div>
 
-        {/* Navigation Tools */}
-        <div className="flex items-center gap-2">
+        {/* Desktop Navigation */}
+        <div className="hidden lg:flex items-center gap-2">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -68,12 +91,12 @@ export default function Header() {
           {/* Dark Mode Toggle */}
           <Button 
             variant="ghost" 
-            size="sm"
+            size="icon"
             onClick={toggleDarkMode}
             className="text-sidebar-foreground hover:bg-sidebar-accent"
             data-testid="button-dark-mode"
           >
-            {darkMode ? '☀️' : '🌙'}
+            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
           
           {/* Status Badge */}
@@ -81,7 +104,94 @@ export default function Header() {
             Live Data
           </Badge>
         </div>
+
+        {/* Mobile Navigation */}
+        <div className="lg:hidden flex items-center gap-2">
+          {/* Essential actions for mobile */}
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={toggleDarkMode}
+            className="text-sidebar-foreground hover:bg-sidebar-accent"
+            data-testid="button-dark-mode-mobile"
+          >
+            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
+          
+          {/* Mobile Menu Toggle */}
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={toggleMobileMenu}
+            className="text-sidebar-foreground hover:bg-sidebar-accent"
+            data-testid="button-mobile-menu"
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden mt-4 pb-4 border-t border-sidebar-border">
+          <div className="flex flex-col gap-2 pt-4">
+            <Button 
+              variant="ghost" 
+              className="justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-templates-mobile"
+              onClick={() => {
+                console.log('Templates clicked');
+                setMobileMenuOpen(false);
+              }}
+            >
+              <Palette className="w-5 h-5 mr-3" />
+              Templates
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-analytics-mobile"
+              onClick={() => {
+                console.log('Analytics clicked');
+                setMobileMenuOpen(false);
+              }}
+            >
+              <BarChart3 className="w-5 h-5 mr-3" />
+              Analytics
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-export-mobile"
+              onClick={() => {
+                console.log('Export clicked');
+                setMobileMenuOpen(false);
+              }}
+            >
+              <Download className="w-5 h-5 mr-3" />
+              Export
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-settings-mobile"
+              onClick={() => {
+                console.log('Settings clicked');
+                setMobileMenuOpen(false);
+              }}
+            >
+              <Settings className="w-5 h-5 mr-3" />
+              Settings
+            </Button>
+            
+            <div className="mt-2 pt-2 border-t border-sidebar-border">
+              <Badge variant="secondary" className="bg-accent text-accent-foreground">
+                Live Data
+              </Badge>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
