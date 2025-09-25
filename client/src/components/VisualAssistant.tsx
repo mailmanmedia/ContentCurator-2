@@ -3,15 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Sparkles, Target, Calendar } from "lucide-react";
+import { Plus, Sparkles, Target, Calendar, Wand2 } from "lucide-react";
 import Header from "./Header";
 import SearchBar from "./SearchBar";
 import TemplateCard from "./TemplateCard";
 import DataChart from "./DataChart";
 import ExportPanel from "./ExportPanel";
+import PromptStudio from "./PromptStudio";
 
 export default function VisualAssistant() {
-  const [activeTab, setActiveTab] = useState("templates");
+  const [activeTab, setActiveTab] = useState("studio");
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
 
   // todo: remove mock functionality
@@ -176,7 +177,15 @@ export default function VisualAssistant() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-card border-card-border">
+          <TabsList className="grid w-full grid-cols-4 bg-card border-card-border">
+            <TabsTrigger 
+              value="studio" 
+              className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
+              data-testid="tab-studio"
+            >
+              <Wand2 className="w-4 h-4" />
+              AI Studio
+            </TabsTrigger>
             <TabsTrigger 
               value="templates" 
               className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
@@ -202,6 +211,11 @@ export default function VisualAssistant() {
               Export
             </TabsTrigger>
           </TabsList>
+
+          {/* AI Studio Tab */}
+          <TabsContent value="studio" className="space-y-6">
+            <PromptStudio />
+          </TabsContent>
 
           {/* Templates Tab */}
           <TabsContent value="templates" className="space-y-6">
