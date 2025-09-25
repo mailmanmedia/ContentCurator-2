@@ -1,0 +1,527 @@
+import { useState, useRef } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Upload, 
+  Search, 
+  Image, 
+  Folder, 
+  Download,
+  Eye,
+  Trash2,
+  Star,
+  Filter
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+
+interface ImageFile {
+  id: string;
+  name: string;
+  url: string;
+  thumbnail: string;
+  size: string;
+  type: string;
+  tags: string[];
+  category: string;
+  dateAdded: string;
+  isStarred: boolean;
+}
+
+interface ImageCategory {
+  name: string;
+  count: number;
+  icon: string;
+}
+
+export default function ImageManager() {
+  const [images, setImages] = useState<ImageFile[]>([
+    {
+      id: "1",
+      name: "arne-slot-portrait.jpg",
+      url: "/placeholder.jpg",
+      thumbnail: "/placeholder.jpg",
+      size: "2.3 MB",
+      type: "JPEG",
+      tags: ["arne slot", "manager", "portrait", "headshot"],
+      category: "Staff",
+      dateAdded: "2024-09-20",
+      isStarred: true
+    },
+    {
+      id: "2",
+      name: "salah-celebration.jpg",
+      url: "/placeholder.jpg",
+      thumbnail: "/placeholder.jpg",
+      size: "1.8 MB",
+      type: "JPEG",
+      tags: ["salah", "goal", "celebration", "premier league"],
+      category: "Players",
+      dateAdded: "2024-09-18",
+      isStarred: false
+    },
+    {
+      id: "3",
+      name: "anfield-atmosphere.jpg",
+      url: "/placeholder.jpg",
+      thumbnail: "/placeholder.jpg",
+      size: "3.1 MB",
+      type: "JPEG",
+      tags: ["anfield", "atmosphere", "crowd", "stadium"],
+      category: "Stadium",
+      dateAdded: "2024-09-15",
+      isStarred: true
+    }
+  ]);
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [isSearching, setIsSearching] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const categories: ImageCategory[] = [
+    { name: "All", count: images.length, icon: "📁" },
+    { name: "Players", count: images.filter(img => img.category === "Players").length, icon: "⚽" },
+    { name: "Staff", count: images.filter(img => img.category === "Staff").length, icon: "👔" },
+    { name: "Stadium", count: images.filter(img => img.category === "Stadium").length, icon: "🏟️" },
+    { name: "Matches", count: images.filter(img => img.category === "Matches").length, icon: "🎯" },
+    { name: "Training", count: images.filter(img => img.category === "Training").length, icon: "🏃" }
+  ];
+
+  const filteredImages = images.filter(image => {
+    const matchesSearch = searchQuery === "" || 
+      image.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      image.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesCategory = selectedCategory === "All" || image.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadProgress(0);
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Simulate upload progress
+      for (let progress = 0; progress <= 100; progress += 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setUploadProgress(progress);
+      }
+      
+      // Create new image entry
+      const newImage: ImageFile = {
+        id: Date.now().toString() + i,
+        name: file.name,
+        url: URL.createObjectURL(file),
+        thumbnail: URL.createObjectURL(file),
+        size: (file.size / (1024 * 1024)).toFixed(1) + " MB",
+        type: file.type.split('/')[1].toUpperCase(),
+        tags: [file.name.split('.')[0].replace(/[-_]/g, ' ')],
+        category: "Uploads",
+        dateAdded: new Date().toISOString().split('T')[0],
+        isStarred: false
+      };
+      
+      setImages(prev => [newImage, ...prev]);
+    }
+    
+    setUploadProgress(0);
+    toast({
+      title: "Upload Complete",
+      description: `Successfully uploaded ${files.length} image(s)`
+    });
+  };
+
+  const searchOnlineImages = async () => {
+    if (!searchQuery.trim()) {
+      toast({
+        title: "Search Query Required",
+        description: "Please enter a search term to find images online",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSearching(true);
+    
+    try {
+      const response = await apiRequest(
+        'POST',
+        '/api/ai/search-images',
+        { query: searchQuery }
+      );
+      
+      const data = await response.json();
+      
+      toast({
+        title: "Search Complete",
+        description: "Found relevant images. Check the results below."
+      });
+      
+      // Mock adding found images to the collection
+      const mockFoundImage: ImageFile = {
+        id: Date.now().toString(),
+        name: `${searchQuery.replace(/\s+/g, '-')}-search-result.jpg`,
+        url: "/placeholder.jpg",
+        thumbnail: "/placeholder.jpg",
+        size: "1.5 MB",
+        type: "JPEG",
+        tags: [searchQuery, "search result", "online"],
+        category: "Search Results",
+        dateAdded: new Date().toISOString().split('T')[0],
+        isStarred: false
+      };
+      
+      setImages(prev => [mockFoundImage, ...prev]);
+      
+    } catch (error) {
+      console.error('Error searching images:', error);
+      toast({
+        title: "Search Failed",
+        description: "Unable to search for images online",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const toggleStar = (imageId: string) => {
+    setImages(prev => prev.map(img => 
+      img.id === imageId ? { ...img, isStarred: !img.isStarred } : img
+    ));
+  };
+
+  const deleteImage = (imageId: string) => {
+    setImages(prev => prev.filter(img => img.id !== imageId));
+    toast({
+      title: "Image Deleted",
+      description: "Image has been removed from your collection"
+    });
+  };
+
+  const downloadImage = (image: ImageFile) => {
+    // Create download link
+    const link = document.createElement('a');
+    link.href = image.url;
+    link.download = image.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Download Started",
+      description: `Downloading ${image.name}`
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="bg-card border-card-border">
+        <CardHeader>
+          <CardTitle className="font-league-spartan font-bold text-xl uppercase tracking-wide text-card-foreground flex items-center gap-2">
+            <Image className="w-5 h-5" />
+            Image Management System
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent>
+          <Tabs defaultValue="library" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3 bg-muted">
+              <TabsTrigger value="library" data-testid="tab-library">
+                Image Library
+              </TabsTrigger>
+              <TabsTrigger value="upload" data-testid="tab-upload">
+                Upload Images
+              </TabsTrigger>
+              <TabsTrigger value="search" data-testid="tab-search">
+                Find Online
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Image Library Tab */}
+            <TabsContent value="library" className="space-y-6">
+              {/* Search and Filter */}
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search images by name or tags..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="font-libre-franklin"
+                    data-testid="input-search-images"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-3 py-2 bg-card border border-card-border rounded-md font-libre-franklin text-sm"
+                    data-testid="select-category"
+                  >
+                    {categories.map(category => (
+                      <option key={category.name} value={category.name}>
+                        {category.icon} {category.name} ({category.count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Image Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredImages.map((image) => (
+                  <Card key={image.id} className="group hover-elevate bg-card border-card-border overflow-hidden">
+                    <div className="aspect-square relative overflow-hidden">
+                      <img
+                        src={image.thumbnail}
+                        alt={image.name}
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      />
+                      
+                      {/* Overlay Actions */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => toggleStar(image.id)}
+                          data-testid={`button-star-${image.id}`}
+                        >
+                          <Star className={`w-4 h-4 ${image.isStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => downloadImage(image)}
+                          data-testid={`button-download-${image.id}`}
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deleteImage(image.id)}
+                          data-testid={`button-delete-${image.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      {/* Star indicator */}
+                      {image.isStarred && (
+                        <div className="absolute top-2 right-2">
+                          <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <CardContent className="p-4">
+                      <h4 className="font-league-spartan font-bold text-sm text-card-foreground truncate mb-2">
+                        {image.name}
+                      </h4>
+                      
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                        <span>{image.size}</span>
+                        <span>{image.type}</span>
+                      </div>
+                      
+                      <Badge variant="outline" className="text-xs">
+                        {image.category}
+                      </Badge>
+                      
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {image.tags.slice(0, 2).map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {image.tags.length > 2 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{image.tags.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              
+              {filteredImages.length === 0 && (
+                <div className="text-center py-12">
+                  <Image className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-league-spartan font-bold text-lg uppercase text-foreground mb-2">
+                    No Images Found
+                  </h3>
+                  <p className="font-libre-franklin text-muted-foreground">
+                    {searchQuery || selectedCategory !== "All" 
+                      ? "Try adjusting your search or filters" 
+                      : "Upload images or search online to get started"
+                    }
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Upload Tab */}
+            <TabsContent value="upload" className="space-y-6">
+              <div className="border-2 border-dashed border-card-border rounded-lg p-8 text-center">
+                <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="font-league-spartan font-bold text-lg uppercase text-foreground mb-2">
+                  Upload Images
+                </h3>
+                <p className="font-libre-franklin text-muted-foreground mb-6">
+                  Drag and drop images here, or click to browse files
+                </p>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  data-testid="input-file-upload"
+                />
+                
+                <Button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="font-league-spartan font-bold uppercase tracking-wide"
+                  data-testid="button-browse-files"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Browse Files
+                </Button>
+                
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="mt-4">
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary rounded-full h-2 transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Uploading... {uploadProgress}%
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="p-6">
+                    <h4 className="font-league-spartan font-bold text-primary mb-3">
+                      Supported Formats
+                    </h4>
+                    <ul className="font-libre-franklin text-sm text-card-foreground space-y-1">
+                      <li>• JPEG, JPG</li>
+                      <li>• PNG</li>
+                      <li>• WebP</li>
+                      <li>• SVG</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-accent/5 border-accent/20">
+                  <CardContent className="p-6">
+                    <h4 className="font-league-spartan font-bold text-accent mb-3">
+                      Auto-Organization
+                    </h4>
+                    <ul className="font-libre-franklin text-sm text-card-foreground space-y-1">
+                      <li>• Automatic categorization</li>
+                      <li>• Tag extraction from filename</li>
+                      <li>• Duplicate detection</li>
+                      <li>• Size optimization</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Search Online Tab */}
+            <TabsContent value="search" className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Search for Liverpool FC images online (e.g., 'Arne Slot')"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && searchOnlineImages()}
+                    className="font-libre-franklin"
+                    data-testid="input-online-search"
+                  />
+                  <Button 
+                    onClick={searchOnlineImages}
+                    disabled={isSearching}
+                    className="font-league-spartan font-bold uppercase tracking-wide"
+                    data-testid="button-search-online"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    {isSearching ? 'Searching...' : 'Search'}
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardContent className="p-4 text-center">
+                      <h5 className="font-league-spartan font-bold text-primary mb-2">
+                        AI-Powered Search
+                      </h5>
+                      <p className="font-libre-franklin text-xs text-card-foreground">
+                        Uses advanced AI to find relevant Liverpool FC images
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-accent/5 border-accent/20">
+                    <CardContent className="p-4 text-center">
+                      <h5 className="font-league-spartan font-bold text-accent mb-2">
+                        High Quality
+                      </h5>
+                      <p className="font-libre-franklin text-xs text-card-foreground">
+                        Filters for high-resolution, professional images
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-chart-2/5 border-chart-2/20">
+                    <CardContent className="p-4 text-center">
+                      <h5 className="font-league-spartan font-bold text-chart-2 mb-2">
+                        Auto-Save
+                      </h5>
+                      <p className="font-libre-franklin text-xs text-card-foreground">
+                        Automatically saves found images to your library
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+              
+              {isSearching && (
+                <div className="text-center py-8">
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <h3 className="font-league-spartan font-bold text-lg uppercase text-foreground mb-2">
+                    Searching Online
+                  </h3>
+                  <p className="font-libre-franklin text-muted-foreground">
+                    AI is finding the best Liverpool FC images for you...
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

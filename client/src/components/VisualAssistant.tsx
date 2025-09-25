@@ -3,13 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Sparkles, Target, Calendar, Wand2 } from "lucide-react";
+import { Plus, Sparkles, Target, Calendar, Wand2, Image } from "lucide-react";
 import Header from "./Header";
 import SearchBar from "./SearchBar";
 import TemplateCard from "./TemplateCard";
 import DataChart from "./DataChart";
 import ExportPanel from "./ExportPanel";
 import PromptStudio from "./PromptStudio";
+import ImageManager from "./ImageManager";
+import TacticalAnalysis from "./TacticalAnalysis";
 
 export default function VisualAssistant() {
   const [activeTab, setActiveTab] = useState("studio");
@@ -177,7 +179,7 @@ export default function VisualAssistant() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-card border-card-border">
+          <TabsList className="grid w-full grid-cols-6 bg-card border-card-border">
             <TabsTrigger 
               value="studio" 
               className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
@@ -185,6 +187,22 @@ export default function VisualAssistant() {
             >
               <Wand2 className="w-4 h-4" />
               AI Studio
+            </TabsTrigger>
+            <TabsTrigger 
+              value="images" 
+              className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
+              data-testid="tab-images"
+            >
+              <Image className="w-4 h-4" />
+              Images
+            </TabsTrigger>
+            <TabsTrigger 
+              value="tactical" 
+              className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
+              data-testid="tab-tactical"
+            >
+              <Target className="w-4 h-4" />
+              Tactical
             </TabsTrigger>
             <TabsTrigger 
               value="templates" 
@@ -215,6 +233,16 @@ export default function VisualAssistant() {
           {/* AI Studio Tab */}
           <TabsContent value="studio" className="space-y-6">
             <PromptStudio />
+          </TabsContent>
+
+          {/* Images Tab */}
+          <TabsContent value="images" className="space-y-6">
+            <ImageManager />
+          </TabsContent>
+
+          {/* Tactical Analysis Tab */}
+          <TabsContent value="tactical" className="space-y-6">
+            <TacticalAnalysis />
           </TabsContent>
 
           {/* Templates Tab */}
