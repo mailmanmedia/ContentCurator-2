@@ -12,6 +12,7 @@ export const users = pgTable("users", {
 export const images = pgTable("images", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  description: text("description").default(''),
   url: text("url").notNull(),
   thumbnail: text("thumbnail").notNull(),
   size: text("size").notNull(),
@@ -19,6 +20,9 @@ export const images = pgTable("images", {
   tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
   category: text("category").notNull().default('Uploads'),
   isStarred: boolean("is_starred").notNull().default(false),
+  fileSize: text("file_size"),
+  fileName: text("file_name"),
+  mimeType: text("mime_type"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 

@@ -13,7 +13,11 @@ import {
   Eye,
   Trash2,
   Star,
-  Filter
+  Filter,
+  Users,
+  Building,
+  Target,
+  Trophy
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -44,6 +48,7 @@ export default function ImageManager() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isSearching, setIsSearching] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -102,13 +107,26 @@ export default function ImageManager() {
     }
   });
 
+  // Get icon component for category
+  const getCategoryIcon = (category: string) => {
+    const iconMap: { [key: string]: React.ReactNode } = {
+      "All": <Folder className="w-4 h-4" />,
+      "Players": <Users className="w-4 h-4" />,
+      "Staff": <Users className="w-4 h-4" />,
+      "Stadium": <Building className="w-4 h-4" />,
+      "Matches": <Target className="w-4 h-4" />,
+      "Training": <Trophy className="w-4 h-4" />
+    };
+    return iconMap[category] || <Folder className="w-4 h-4" />;
+  };
+
   const categories: ImageCategory[] = [
-    { name: "All", count: images.length, icon: "📁" },
-    { name: "Players", count: images.filter(img => img.category === "Players").length, icon: "⚽" },
-    { name: "Staff", count: images.filter(img => img.category === "Staff").length, icon: "👔" },
-    { name: "Stadium", count: images.filter(img => img.category === "Stadium").length, icon: "🏟️" },
-    { name: "Matches", count: images.filter(img => img.category === "Matches").length, icon: "🎯" },
-    { name: "Training", count: images.filter(img => img.category === "Training").length, icon: "🏃" }
+    { name: "All", count: images.length, icon: "" },
+    { name: "Players", count: images.filter((img: any) => img.category === "Players").length, icon: "" },
+    { name: "Staff", count: images.filter((img: any) => img.category === "Staff").length, icon: "" },
+    { name: "Stadium", count: images.filter((img: any) => img.category === "Stadium").length, icon: "" },
+    { name: "Matches", count: images.filter((img: any) => img.category === "Matches").length, icon: "" },
+    { name: "Training", count: images.filter((img: any) => img.category === "Training").length, icon: "" }
   ];
 
   const filteredImages = images.filter(image => {
@@ -130,26 +148,49 @@ export default function ImageManager() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       
-      // Simulate upload progress
-      for (let progress = 0; progress <= 100; progress += 10) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        setUploadProgress(progress);
+      try {
+        // Create FormData for real file upload
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('title', file.name.split('.')[0].replace(/[-_]/g, ' '));
+        formData.append('description', `Uploaded image: ${file.name}`);
+        formData.append('category', 'Uploads');
+        
+        // Simulate upload progress
+        for (let progress = 0; progress <= 80; progress += 20) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          setUploadProgress(progress);
+        }
+        
+        // Use real file upload endpoint
+        const response = await fetch('/api/images/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        // Complete progress and invalidate cache to refresh the list
+        setUploadProgress(100);
+        queryClient.invalidateQueries({ queryKey: ['/api/images'] });
+        
+        toast({
+          title: "Upload Successful",
+          description: `${file.name} has been uploaded and processed`
+        });
+        
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        toast({
+          title: "Upload Failed",
+          description: `Failed to upload ${file.name}`,
+          variant: "destructive"
+        });
       }
-      
-      // Create new image entry
-      const newImageData = {
-        name: file.name,
-        url: URL.createObjectURL(file),
-        thumbnail: URL.createObjectURL(file),
-        size: (file.size / (1024 * 1024)).toFixed(1) + " MB",
-        type: file.type.split('/')[1].toUpperCase(),
-        tags: [file.name.split('.')[0].replace(/[-_]/g, ' ')],
-        category: "Uploads",
-        isStarred: false
-      };
-      
-      // Use mutation to create image
-      createImageMutation.mutate(newImageData);
     }
     
     setUploadProgress(0);
@@ -176,24 +217,13 @@ export default function ImageManager() {
       
       const data = await response.json();
       
+      // Set search results for display
+      setSearchResults(data.suggestions || []);
+      
       toast({
         title: "Search Complete",
-        description: "Found relevant images. Check the results below."
+        description: `Found ${data.suggestions?.length || 0} image suggestions for "${searchQuery}"`
       });
-      
-      // Mock adding found images to the collection
-      const mockFoundImageData = {
-        name: `${searchQuery.replace(/\s+/g, '-')}-search-result.jpg`,
-        url: "/placeholder.jpg",
-        thumbnail: "/placeholder.jpg",
-        size: "1.5 MB",
-        type: "JPEG",
-        tags: [searchQuery, "search result", "online"],
-        category: "Search Results",
-        isStarred: false
-      };
-      
-      createImageMutation.mutate(mockFoundImageData);
       
     } catch (error) {
       console.error('Error searching images:', error);
@@ -282,7 +312,7 @@ export default function ImageManager() {
                   >
                     {categories.map(category => (
                       <option key={category.name} value={category.name}>
-                        {category.icon} {category.name} ({category.count})
+                        {category.name} ({category.count})
                       </option>
                     ))}
                   </select>
@@ -527,6 +557,59 @@ export default function ImageManager() {
                   <p className="font-libre-franklin text-muted-foreground">
                     AI is finding the best Liverpool FC images for you...
                   </p>
+                </div>
+              )}
+              
+              {/* Search Results Display */}
+              {searchResults.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-league-spartan font-bold text-lg text-foreground">
+                    Image Suggestions for "{searchQuery}"
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {searchResults.map((suggestion: any, index: number) => (
+                      <Card key={index} className="bg-card border-card-border hover-elevate">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <h5 className="font-league-spartan font-bold text-foreground">
+                              {suggestion.title}
+                            </h5>
+                            <p className="font-libre-franklin text-sm text-muted-foreground">
+                              {suggestion.description}
+                            </p>
+                            <div className="space-y-2">
+                              <Badge variant="secondary" className="mr-2">
+                                {suggestion.category}
+                              </Badge>
+                              <div className="flex flex-wrap gap-1">
+                                {suggestion.tags?.map((tag: string, tagIndex: number) => (
+                                  <Badge key={tagIndex} variant="outline" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                <strong>Suggested sources:</strong> {suggestion.suggestedSources?.join(', ')}
+                              </div>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="w-full"
+                              onClick={() => {
+                                toast({
+                                  title: "Image Source Info",
+                                  description: `Check ${suggestion.suggestedSources?.[0] || 'official sources'} for ${suggestion.title}`,
+                                });
+                              }}
+                            >
+                              Find This Image
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               )}
             </TabsContent>
