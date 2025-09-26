@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -94,6 +94,83 @@ export const frameworkVersions = pgTable("framework_versions", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// RSS Intelligence System Schema
+export const rssSources = pgTable("rss_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  feedUrl: text("feed_url").notNull().unique(),
+  category: text("category").notNull(), // 'official', 'fan_site', 'media', 'podcast'
+  language: text("language").notNull().default('en'),
+  updateFrequency: integer("update_frequency").notNull().default(60), // minutes
+  isActive: boolean("is_active").notNull().default(true),
+  isVerified: boolean("is_verified").notNull().default(false),
+  totalArticles: integer("total_articles").notNull().default(0),
+  lastFetchedAt: timestamp("last_fetched_at"),
+  lastArticleDate: timestamp("last_article_date"),
+  fetchErrors: integer("fetch_errors").notNull().default(0),
+  metadataJson: jsonb("metadata_json").notNull().default('{}'),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const rssArticles = pgTable("rss_articles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceId: varchar("source_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  content: text("content"),
+  link: text("link").notNull(),
+  guid: text("guid"),
+  author: text("author"),
+  categories: text("categories").array().default(sql`'{}'::text[]`),
+  publishedAt: timestamp("published_at"),
+  imageUrl: text("image_url"),
+  wordCount: integer("word_count"),
+  readingTime: integer("reading_time"), // estimated minutes
+  sentiment: text("sentiment"), // 'positive', 'neutral', 'negative'
+  topics: text("topics").array().default(sql`'{}'::text[]`),
+  keywords: text("keywords").array().default(sql`'{}'::text[]`),
+  isAnalyzed: boolean("is_analyzed").notNull().default(false),
+  qualityScore: integer("quality_score"), // 1-100
+  engagementPotential: text("engagement_potential"), // 'low', 'medium', 'high'
+  contentHash: text("content_hash").unique(),
+  rawDataJson: jsonb("raw_data_json").notNull().default('{}'),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const rssAnalysis = pgTable("rss_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  articleId: varchar("article_id").notNull(),
+  analysisType: text("analysis_type").notNull(), // 'summary', 'sentiment', 'topics', 'tactical', 'transfer'
+  resultJson: jsonb("result_json").notNull(),
+  confidence: integer("confidence"), // 1-100
+  aiModel: text("ai_model").notNull().default('gpt-4'),
+  processingTime: integer("processing_time"), // milliseconds
+  tokensUsed: integer("tokens_used"),
+  status: text("status").notNull().default('pending'), // 'pending', 'completed', 'failed'
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const rssComparisons = pgTable("rss_comparisons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  articleIds: text("article_ids").array().notNull(),
+  comparisonType: text("comparison_type").notNull(), // 'sentiment', 'coverage', 'timing', 'bias'
+  timeRange: text("time_range").notNull(), // '24h', '7d', '30d'
+  resultJson: jsonb("result_json").notNull(),
+  insights: text("insights").array().default(sql`'{}'::text[]`),
+  visualizationConfig: jsonb("visualization_config").notNull().default('{}'),
+  isPublic: boolean("is_public").notNull().default(false),
+  generatedBy: text("generated_by").notNull().default('system'),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -136,6 +213,30 @@ export const insertFrameworkVersionSchema = createInsertSchema(frameworkVersions
   createdAt: true,
 });
 
+export const insertRssSourceSchema = createInsertSchema(rssSources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRssArticleSchema = createInsertSchema(rssArticles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRssAnalysisSchema = createInsertSchema(rssAnalysis).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRssComparisonSchema = createInsertSchema(rssComparisons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertImage = z.infer<typeof insertImageSchema>;
@@ -152,3 +253,11 @@ export type InsertFramework = z.infer<typeof insertFrameworkSchema>;
 export type Framework = typeof frameworks.$inferSelect;
 export type InsertFrameworkVersion = z.infer<typeof insertFrameworkVersionSchema>;
 export type FrameworkVersion = typeof frameworkVersions.$inferSelect;
+export type InsertRssSource = z.infer<typeof insertRssSourceSchema>;
+export type RssSource = typeof rssSources.$inferSelect;
+export type InsertRssArticle = z.infer<typeof insertRssArticleSchema>;
+export type RssArticle = typeof rssArticles.$inferSelect;
+export type InsertRssAnalysis = z.infer<typeof insertRssAnalysisSchema>;
+export type RssAnalysis = typeof rssAnalysis.$inferSelect;
+export type InsertRssComparison = z.infer<typeof insertRssComparisonSchema>;
+export type RssComparison = typeof rssComparisons.$inferSelect;

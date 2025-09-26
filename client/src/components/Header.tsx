@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings, Download, Palette, BarChart3, Menu, Sun, Moon, Folder, Home } from "lucide-react";
+import { Search, Settings, Download, Palette, BarChart3, Menu, Sun, Moon, Folder, Home, Rss } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 // Import logo - for now we'll use a fallback until we can properly configure the asset import
@@ -71,6 +71,16 @@ export default function Header() {
               data-testid="button-frameworks"
             >
               <Folder className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link href="/rss">
+            <Button 
+              variant={location === "/rss" ? "secondary" : "ghost"}
+              size="icon" 
+              className="text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-rss"
+            >
+              <Rss className="w-5 h-5" />
             </Button>
           </Link>
           <Button 
@@ -177,6 +187,17 @@ export default function Header() {
               >
                 <Folder className="w-5 h-5 mr-3" />
                 Framework Directory
+              </Button>
+            </Link>
+            <Link href="/rss">
+              <Button 
+                variant={location === "/rss" ? "secondary" : "ghost"}
+                className="justify-start text-sidebar-foreground hover:bg-sidebar-accent w-full"
+                data-testid="button-rss-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Rss className="w-5 h-5 mr-3" />
+                RSS Intelligence
               </Button>
             </Link>
             <Button 

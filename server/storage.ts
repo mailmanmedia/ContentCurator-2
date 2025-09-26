@@ -6,7 +6,11 @@ import {
   type ReportRendering, type InsertReportRendering,
   type FrameworkCategory, type InsertFrameworkCategory,
   type Framework, type InsertFramework,
-  type FrameworkVersion, type InsertFrameworkVersion
+  type FrameworkVersion, type InsertFrameworkVersion,
+  type RssSource, type InsertRssSource,
+  type RssArticle, type InsertRssArticle,
+  type RssAnalysis, type InsertRssAnalysis,
+  type RssComparison, type InsertRssComparison
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -70,6 +74,47 @@ export interface IStorage {
   createFrameworkVersion(version: InsertFrameworkVersion): Promise<FrameworkVersion>;
   updateFrameworkVersion(id: string, updates: Partial<InsertFrameworkVersion>): Promise<FrameworkVersion | undefined>;
   deleteFrameworkVersion(id: string): Promise<boolean>;
+
+  // RSS Source methods
+  getRssSources(): Promise<RssSource[]>;
+  getRssSource(id: string): Promise<RssSource | undefined>;
+  getRssSourceByUrl(feedUrl: string): Promise<RssSource | undefined>;
+  getActiveRssSources(): Promise<RssSource[]>;
+  getRssSourcesByCategory(category: string): Promise<RssSource[]>;
+  createRssSource(source: InsertRssSource): Promise<RssSource>;
+  updateRssSource(id: string, updates: Partial<InsertRssSource>): Promise<RssSource | undefined>;
+  deleteRssSource(id: string): Promise<boolean>;
+
+  // RSS Article methods
+  getRssArticles(): Promise<RssArticle[]>;
+  getRssArticle(id: string): Promise<RssArticle | undefined>;
+  getRssArticlesBySource(sourceId: string): Promise<RssArticle[]>;
+  getRssArticleByGuid(guid: string): Promise<RssArticle | undefined>;
+  getRssArticleByContentHash(contentHash: string): Promise<RssArticle | undefined>;
+  getRecentRssArticles(limit?: number): Promise<RssArticle[]>;
+  getRssArticlesByDateRange(startDate: Date, endDate: Date): Promise<RssArticle[]>;
+  searchRssArticles(query: string): Promise<RssArticle[]>;
+  createRssArticle(article: InsertRssArticle): Promise<RssArticle>;
+  updateRssArticle(id: string, updates: Partial<InsertRssArticle>): Promise<RssArticle | undefined>;
+  deleteRssArticle(id: string): Promise<boolean>;
+
+  // RSS Analysis methods
+  getRssAnalyses(): Promise<RssAnalysis[]>;
+  getRssAnalysis(id: string): Promise<RssAnalysis | undefined>;
+  getRssAnalysesByArticle(articleId: string): Promise<RssAnalysis[]>;
+  getRssAnalysesByType(analysisType: string): Promise<RssAnalysis[]>;
+  createRssAnalysis(analysis: InsertRssAnalysis): Promise<RssAnalysis>;
+  updateRssAnalysis(id: string, updates: Partial<InsertRssAnalysis>): Promise<RssAnalysis | undefined>;
+  deleteRssAnalysis(id: string): Promise<boolean>;
+
+  // RSS Comparison methods
+  getRssComparisons(): Promise<RssComparison[]>;
+  getRssComparison(id: string): Promise<RssComparison | undefined>;
+  getRssComparisonsByType(comparisonType: string): Promise<RssComparison[]>;
+  getPublicRssComparisons(): Promise<RssComparison[]>;
+  createRssComparison(comparison: InsertRssComparison): Promise<RssComparison>;
+  updateRssComparison(id: string, updates: Partial<InsertRssComparison>): Promise<RssComparison | undefined>;
+  deleteRssComparison(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -81,6 +126,10 @@ export class MemStorage implements IStorage {
   private frameworkCategories: Map<string, FrameworkCategory>;
   private frameworks: Map<string, Framework>;
   private frameworkVersions: Map<string, FrameworkVersion>;
+  private rssSources: Map<string, RssSource>;
+  private rssArticles: Map<string, RssArticle>;
+  private rssAnalyses: Map<string, RssAnalysis>;
+  private rssComparisons: Map<string, RssComparison>;
 
   constructor() {
     this.users = new Map();
@@ -91,6 +140,10 @@ export class MemStorage implements IStorage {
     this.frameworkCategories = new Map();
     this.frameworks = new Map();
     this.frameworkVersions = new Map();
+    this.rssSources = new Map();
+    this.rssArticles = new Map();
+    this.rssAnalyses = new Map();
+    this.rssComparisons = new Map();
     
     // Add some sample data
     this.seedData();
@@ -194,6 +247,134 @@ export class MemStorage implements IStorage {
 
     for (const categoryData of frameworkCategories) {
       await this.createFrameworkCategory(categoryData);
+    }
+
+    // Seed RSS sources for Liverpool FC
+    const rssSources: InsertRssSource[] = [
+      {
+        name: "This Is Anfield",
+        description: "The most popular Liverpool FC fan site with daily news, match reports, and analysis",
+        feedUrl: "https://www.thisisanfield.com/feed",
+        category: "fan_site",
+        language: "en",
+        updateFrequency: 30,
+        isActive: true,
+        isVerified: true,
+        metadataJson: {
+          website: "https://www.thisisanfield.com",
+          color: "#C8102E",
+          description: "Leading LFC fan community"
+        }
+      },
+      {
+        name: "Empire of the Kop",
+        description: "Liverpool FC fan site with breaking news and transfer updates",
+        feedUrl: "https://empireofthekop.com/feed",
+        category: "fan_site",
+        language: "en",
+        updateFrequency: 45,
+        isActive: true,
+        isVerified: true,
+        metadataJson: {
+          website: "https://empireofthekop.com",
+          color: "#00B2A9",
+          description: "Kop culture and news"
+        }
+      },
+      {
+        name: "LFC Globe",
+        description: "Liverpool FC news focusing on transfers and tactical analysis",
+        feedUrl: "https://lfcglobe.co.uk/feed",
+        category: "fan_site",
+        language: "en",
+        updateFrequency: 60,
+        isActive: true,
+        isVerified: true,
+        metadataJson: {
+          website: "https://lfcglobe.co.uk",
+          color: "#DC143C",
+          description: "Transfer news and tactical insights"
+        }
+      },
+      {
+        name: "BBC Sport Liverpool",
+        description: "Official BBC coverage of Liverpool FC news and match reports",
+        feedUrl: "https://feeds.bbci.co.uk/sport/football/teams/liverpool/rss.xml",
+        category: "media",
+        language: "en",
+        updateFrequency: 20,
+        isActive: true,
+        isVerified: true,
+        metadataJson: {
+          website: "https://www.bbc.com/sport/football/teams/liverpool",
+          color: "#BB1919",
+          description: "Official BBC sports coverage"
+        }
+      },
+      {
+        name: "Sky Sports Liverpool",
+        description: "Sky Sports dedicated Liverpool FC news and analysis",
+        feedUrl: "https://www.skysports.com/rss/football/teams/liverpool",
+        category: "media",
+        language: "en",
+        updateFrequency: 25,
+        isActive: true,
+        isVerified: true,
+        metadataJson: {
+          website: "https://www.skysports.com/liverpool-news",
+          color: "#00629B",
+          description: "Premier Sky Sports coverage"
+        }
+      },
+      {
+        name: "The Anfield Wrap",
+        description: "Independent Liverpool FC podcast and analysis platform",
+        feedUrl: "https://feeds.acast.com/public/shows/the-anfield-wrap",
+        category: "podcast",
+        language: "en",
+        updateFrequency: 120,
+        isActive: true,
+        isVerified: true,
+        metadataJson: {
+          website: "https://www.theanfieldwrap.com",
+          color: "#E31B23",
+          description: "Independent LFC analysis"
+        }
+      },
+      {
+        name: "The Official Liverpool FC Podcast",
+        description: "Official podcast from Liverpool Football Club",
+        feedUrl: "https://audioboom.com/channels/5027131.rss",
+        category: "official",
+        language: "en",
+        updateFrequency: 180,
+        isActive: true,
+        isVerified: true,
+        metadataJson: {
+          website: "https://www.liverpoolfc.com",
+          color: "#C8102E",
+          description: "Official club podcast"
+        }
+      },
+      {
+        name: "Liverpool.com",
+        description: "Local Liverpool news including LFC coverage",
+        feedUrl: "https://www.liverpool.com/liverpool-fc-news/?service=rss",
+        category: "media",
+        language: "en",
+        updateFrequency: 40,
+        isActive: true,
+        isVerified: true,
+        metadataJson: {
+          website: "https://www.liverpool.com/liverpool-fc-news/",
+          color: "#C41E3A",
+          description: "Local media coverage"
+        }
+      }
+    ];
+
+    for (const sourceData of rssSources) {
+      await this.createRssSource(sourceData);
     }
 
     // Seed sample images
@@ -622,6 +803,335 @@ export class MemStorage implements IStorage {
 
   async deleteFrameworkVersion(id: string): Promise<boolean> {
     return this.frameworkVersions.delete(id);
+  }
+
+  // RSS Source methods
+  async getRssSources(): Promise<RssSource[]> {
+    return Array.from(this.rssSources.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getRssSource(id: string): Promise<RssSource | undefined> {
+    return this.rssSources.get(id);
+  }
+
+  async getRssSourceByUrl(feedUrl: string): Promise<RssSource | undefined> {
+    return Array.from(this.rssSources.values()).find(source => source.feedUrl === feedUrl);
+  }
+
+  async getActiveRssSources(): Promise<RssSource[]> {
+    return Array.from(this.rssSources.values()).filter(source => source.isActive);
+  }
+
+  async getRssSourcesByCategory(category: string): Promise<RssSource[]> {
+    return Array.from(this.rssSources.values()).filter(source => source.category === category);
+  }
+
+  async createRssSource(insertSource: InsertRssSource): Promise<RssSource> {
+    const id = randomUUID();
+    const now = new Date();
+    const source: RssSource = {
+      id,
+      name: insertSource.name,
+      description: insertSource.description,
+      feedUrl: insertSource.feedUrl,
+      category: insertSource.category,
+      language: insertSource.language || 'en',
+      updateFrequency: insertSource.updateFrequency || 60,
+      isActive: insertSource.isActive ?? true,
+      isVerified: insertSource.isVerified ?? false,
+      totalArticles: insertSource.totalArticles || 0,
+      lastFetchedAt: insertSource.lastFetchedAt || null,
+      lastArticleDate: insertSource.lastArticleDate || null,
+      fetchErrors: insertSource.fetchErrors || 0,
+      metadataJson: insertSource.metadataJson || {},
+      createdAt: now,
+      updatedAt: now
+    };
+    this.rssSources.set(id, source);
+    return source;
+  }
+
+  async updateRssSource(id: string, updates: Partial<InsertRssSource>): Promise<RssSource | undefined> {
+    const existing = this.rssSources.get(id);
+    if (!existing) return undefined;
+    
+    const updated: RssSource = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.rssSources.set(id, updated);
+    return updated;
+  }
+
+  async deleteRssSource(id: string): Promise<boolean> {
+    const deleted = this.rssSources.delete(id);
+    if (deleted) {
+      // Also delete all articles and analyses for this source
+      const articlesToDelete = Array.from(this.rssArticles.entries()).filter(
+        ([_, article]) => article.sourceId === id
+      );
+      for (const [articleId, _] of articlesToDelete) {
+        await this.deleteRssArticle(articleId);
+      }
+    }
+    return deleted;
+  }
+
+  // RSS Article methods
+  async getRssArticles(): Promise<RssArticle[]> {
+    return Array.from(this.rssArticles.values())
+      .sort((a, b) => {
+        const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        return bDate - aDate;
+      });
+  }
+
+  async getRssArticle(id: string): Promise<RssArticle | undefined> {
+    return this.rssArticles.get(id);
+  }
+
+  async getRssArticlesBySource(sourceId: string): Promise<RssArticle[]> {
+    return Array.from(this.rssArticles.values())
+      .filter(article => article.sourceId === sourceId)
+      .sort((a, b) => {
+        const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        return bDate - aDate;
+      });
+  }
+
+  async getRssArticleByGuid(guid: string): Promise<RssArticle | undefined> {
+    return Array.from(this.rssArticles.values()).find(article => article.guid === guid);
+  }
+
+  async getRssArticleByContentHash(contentHash: string): Promise<RssArticle | undefined> {
+    return Array.from(this.rssArticles.values()).find(article => article.contentHash === contentHash);
+  }
+
+  async getRecentRssArticles(limit: number = 50): Promise<RssArticle[]> {
+    const articles = await this.getRssArticles();
+    return articles.slice(0, limit);
+  }
+
+  async getRssArticlesByDateRange(startDate: Date, endDate: Date): Promise<RssArticle[]> {
+    return Array.from(this.rssArticles.values()).filter(article => {
+      if (!article.publishedAt) return false;
+      const publishedAt = new Date(article.publishedAt);
+      return publishedAt >= startDate && publishedAt <= endDate;
+    }).sort((a, b) => {
+      const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return bDate - aDate;
+    });
+  }
+
+  async searchRssArticles(query: string): Promise<RssArticle[]> {
+    const lowerQuery = query.toLowerCase();
+    return Array.from(this.rssArticles.values()).filter(article => 
+      article.title.toLowerCase().includes(lowerQuery) ||
+      (article.description && article.description.toLowerCase().includes(lowerQuery)) ||
+      (article.content && article.content.toLowerCase().includes(lowerQuery)) ||
+      (article.author && article.author.toLowerCase().includes(lowerQuery)) ||
+      article.topics?.some(topic => topic.toLowerCase().includes(lowerQuery)) ||
+      article.keywords?.some(keyword => keyword.toLowerCase().includes(lowerQuery))
+    ).sort((a, b) => {
+      const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return bDate - aDate;
+    });
+  }
+
+  async createRssArticle(insertArticle: InsertRssArticle): Promise<RssArticle> {
+    const id = randomUUID();
+    const now = new Date();
+    const article: RssArticle = {
+      id,
+      sourceId: insertArticle.sourceId,
+      title: insertArticle.title,
+      description: insertArticle.description || null,
+      content: insertArticle.content || null,
+      link: insertArticle.link,
+      guid: insertArticle.guid || null,
+      author: insertArticle.author || null,
+      categories: insertArticle.categories || [],
+      publishedAt: insertArticle.publishedAt || null,
+      imageUrl: insertArticle.imageUrl || null,
+      wordCount: insertArticle.wordCount || null,
+      readingTime: insertArticle.readingTime || null,
+      sentiment: insertArticle.sentiment || null,
+      topics: insertArticle.topics || [],
+      keywords: insertArticle.keywords || [],
+      isAnalyzed: insertArticle.isAnalyzed ?? false,
+      qualityScore: insertArticle.qualityScore || null,
+      engagementPotential: insertArticle.engagementPotential || null,
+      contentHash: insertArticle.contentHash || null,
+      rawDataJson: insertArticle.rawDataJson || {},
+      createdAt: now,
+      updatedAt: now
+    };
+    this.rssArticles.set(id, article);
+    
+    // Update source article count
+    const source = await this.getRssSource(insertArticle.sourceId);
+    if (source) {
+      await this.updateRssSource(insertArticle.sourceId, { 
+        totalArticles: source.totalArticles + 1,
+        lastArticleDate: insertArticle.publishedAt || now
+      });
+    }
+    
+    return article;
+  }
+
+  async updateRssArticle(id: string, updates: Partial<InsertRssArticle>): Promise<RssArticle | undefined> {
+    const existing = this.rssArticles.get(id);
+    if (!existing) return undefined;
+    
+    const updated: RssArticle = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.rssArticles.set(id, updated);
+    return updated;
+  }
+
+  async deleteRssArticle(id: string): Promise<boolean> {
+    const deleted = this.rssArticles.delete(id);
+    if (deleted) {
+      // Also delete all analyses for this article
+      const analysesToDelete = Array.from(this.rssAnalyses.entries()).filter(
+        ([_, analysis]) => analysis.articleId === id
+      );
+      for (const [analysisId, _] of analysesToDelete) {
+        this.rssAnalyses.delete(analysisId);
+      }
+    }
+    return deleted;
+  }
+
+  // RSS Analysis methods
+  async getRssAnalyses(): Promise<RssAnalysis[]> {
+    return Array.from(this.rssAnalyses.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getRssAnalysis(id: string): Promise<RssAnalysis | undefined> {
+    return this.rssAnalyses.get(id);
+  }
+
+  async getRssAnalysesByArticle(articleId: string): Promise<RssAnalysis[]> {
+    return Array.from(this.rssAnalyses.values())
+      .filter(analysis => analysis.articleId === articleId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getRssAnalysesByType(analysisType: string): Promise<RssAnalysis[]> {
+    return Array.from(this.rssAnalyses.values())
+      .filter(analysis => analysis.analysisType === analysisType)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createRssAnalysis(insertAnalysis: InsertRssAnalysis): Promise<RssAnalysis> {
+    const id = randomUUID();
+    const now = new Date();
+    const analysis: RssAnalysis = {
+      id,
+      articleId: insertAnalysis.articleId,
+      analysisType: insertAnalysis.analysisType,
+      resultJson: insertAnalysis.resultJson,
+      confidence: insertAnalysis.confidence || null,
+      aiModel: insertAnalysis.aiModel || 'gpt-4',
+      processingTime: insertAnalysis.processingTime || null,
+      tokensUsed: insertAnalysis.tokensUsed || null,
+      status: insertAnalysis.status || 'pending',
+      errorMessage: insertAnalysis.errorMessage || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.rssAnalyses.set(id, analysis);
+    return analysis;
+  }
+
+  async updateRssAnalysis(id: string, updates: Partial<InsertRssAnalysis>): Promise<RssAnalysis | undefined> {
+    const existing = this.rssAnalyses.get(id);
+    if (!existing) return undefined;
+    
+    const updated: RssAnalysis = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.rssAnalyses.set(id, updated);
+    return updated;
+  }
+
+  async deleteRssAnalysis(id: string): Promise<boolean> {
+    return this.rssAnalyses.delete(id);
+  }
+
+  // RSS Comparison methods
+  async getRssComparisons(): Promise<RssComparison[]> {
+    return Array.from(this.rssComparisons.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getRssComparison(id: string): Promise<RssComparison | undefined> {
+    return this.rssComparisons.get(id);
+  }
+
+  async getRssComparisonsByType(comparisonType: string): Promise<RssComparison[]> {
+    return Array.from(this.rssComparisons.values())
+      .filter(comparison => comparison.comparisonType === comparisonType)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getPublicRssComparisons(): Promise<RssComparison[]> {
+    return Array.from(this.rssComparisons.values())
+      .filter(comparison => comparison.isPublic)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createRssComparison(insertComparison: InsertRssComparison): Promise<RssComparison> {
+    const id = randomUUID();
+    const now = new Date();
+    const comparison: RssComparison = {
+      id,
+      title: insertComparison.title,
+      description: insertComparison.description || null,
+      articleIds: insertComparison.articleIds,
+      comparisonType: insertComparison.comparisonType,
+      timeRange: insertComparison.timeRange,
+      resultJson: insertComparison.resultJson,
+      insights: insertComparison.insights || [],
+      visualizationConfig: insertComparison.visualizationConfig || {},
+      isPublic: insertComparison.isPublic ?? false,
+      generatedBy: insertComparison.generatedBy || 'system',
+      createdAt: now,
+      updatedAt: now
+    };
+    this.rssComparisons.set(id, comparison);
+    return comparison;
+  }
+
+  async updateRssComparison(id: string, updates: Partial<InsertRssComparison>): Promise<RssComparison | undefined> {
+    const existing = this.rssComparisons.get(id);
+    if (!existing) return undefined;
+    
+    const updated: RssComparison = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.rssComparisons.set(id, updated);
+    return updated;
+  }
+
+  async deleteRssComparison(id: string): Promise<boolean> {
+    return this.rssComparisons.delete(id);
   }
 }
 

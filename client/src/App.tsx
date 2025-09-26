@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import VisualAssistant from "@/components/VisualAssistant";
 import FrameworkDirectory from "@/pages/FrameworkDirectory";
 import CreateFramework from "@/pages/CreateFramework";
+import RssIntelligence from "@/pages/RssIntelligence";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={VisualAssistant} />
       <Route path="/frameworks" component={FrameworkDirectory} />
       <Route path="/frameworks/create" component={CreateFramework} />
+      <Route path="/rss" component={RssIntelligence} />
       <Route component={NotFound} />
     </Switch>
   );

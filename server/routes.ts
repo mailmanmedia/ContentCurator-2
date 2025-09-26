@@ -8,7 +8,11 @@ import {
   insertReportRenderingSchema,
   insertFrameworkCategorySchema,
   insertFrameworkSchema,
-  insertFrameworkVersionSchema
+  insertFrameworkVersionSchema,
+  insertRssSourceSchema,
+  insertRssArticleSchema,
+  insertRssAnalysisSchema,
+  insertRssComparisonSchema
 } from "@shared/schema";
 import OpenAI from "openai";
 import { z } from "zod";
@@ -18,6 +22,7 @@ import path from "path";
 import fs from "fs/promises";
 import express from "express";
 import { renderPresentation, generateSecureExportHtml } from "./presentation/renderer";
+import { rssService } from "./rss/rssService";
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -977,6 +982,444 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error tracking framework download:', error);
       res.status(500).json({ error: "Failed to track download" });
+    }
+  });
+
+  // ===== RSS Intelligence System Routes =====
+
+  // RSS Sources Management
+  app.get("/api/rss-sources", async (req, res) => {
+    try {
+      const { category, active } = req.query;
+      let sources;
+
+      if (category) {
+        sources = await storage.getRssSourcesByCategory(category as string);
+      } else if (active === 'true') {
+        sources = await storage.getActiveRssSources();
+      } else {
+        sources = await storage.getRssSources();
+      }
+
+      res.json({ sources });
+    } catch (error) {
+      console.error('Error fetching RSS sources:', error);
+      res.status(500).json({ error: "Failed to fetch RSS sources" });
+    }
+  });
+
+  app.get("/api/rss-sources/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const source = await storage.getRssSource(id);
+      
+      if (!source) {
+        return res.status(404).json({ error: "RSS source not found" });
+      }
+      
+      res.json({ source });
+    } catch (error) {
+      console.error('Error fetching RSS source:', error);
+      res.status(500).json({ error: "Failed to fetch RSS source" });
+    }
+  });
+
+  app.post("/api/rss-sources", async (req, res) => {
+    try {
+      const validatedData = insertRssSourceSchema.parse(req.body);
+      
+      // Check if source already exists
+      const existingSource = await storage.getRssSourceByUrl(validatedData.feedUrl);
+      if (existingSource) {
+        return res.status(400).json({ error: "RSS source with this URL already exists" });
+      }
+      
+      const source = await storage.createRssSource(validatedData);
+      res.json({ source });
+    } catch (error) {
+      console.error('Error creating RSS source:', error);
+      res.status(500).json({ error: "Failed to create RSS source" });
+    }
+  });
+
+  app.put("/api/rss-sources/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertRssSourceSchema.partial().parse(req.body);
+      const source = await storage.updateRssSource(id, validatedData);
+      
+      if (!source) {
+        return res.status(404).json({ error: "RSS source not found" });
+      }
+      
+      res.json({ source });
+    } catch (error) {
+      console.error('Error updating RSS source:', error);
+      res.status(500).json({ error: "Failed to update RSS source" });
+    }
+  });
+
+  app.delete("/api/rss-sources/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRssSource(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "RSS source not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting RSS source:', error);
+      res.status(500).json({ error: "Failed to delete RSS source" });
+    }
+  });
+
+  // RSS Feed Fetching
+  app.post("/api/rss-sources/:id/fetch", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await rssService.fetchFeed(id);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching RSS feed:', error);
+      res.status(500).json({ error: "Failed to fetch RSS feed" });
+    }
+  });
+
+  app.post("/api/rss-sources/fetch-all", async (req, res) => {
+    try {
+      const results = await rssService.fetchAllSources();
+      res.json({ results });
+    } catch (error) {
+      console.error('Error fetching all RSS feeds:', error);
+      res.status(500).json({ error: "Failed to fetch RSS feeds" });
+    }
+  });
+
+  // RSS Articles Management
+  app.get("/api/rss-articles", async (req, res) => {
+    try {
+      const { source, search, limit, start_date, end_date } = req.query;
+      let articles;
+
+      if (search) {
+        articles = await storage.searchRssArticles(search as string);
+      } else if (source) {
+        articles = await storage.getRssArticlesBySource(source as string);
+      } else if (start_date && end_date) {
+        articles = await storage.getRssArticlesByDateRange(
+          new Date(start_date as string),
+          new Date(end_date as string)
+        );
+      } else {
+        const articleLimit = limit ? parseInt(limit as string) : 50;
+        articles = await storage.getRecentRssArticles(articleLimit);
+      }
+
+      res.json({ articles });
+    } catch (error) {
+      console.error('Error fetching RSS articles:', error);
+      res.status(500).json({ error: "Failed to fetch RSS articles" });
+    }
+  });
+
+  app.get("/api/rss-articles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const article = await storage.getRssArticle(id);
+      
+      if (!article) {
+        return res.status(404).json({ error: "RSS article not found" });
+      }
+      
+      res.json({ article });
+    } catch (error) {
+      console.error('Error fetching RSS article:', error);
+      res.status(500).json({ error: "Failed to fetch RSS article" });
+    }
+  });
+
+  app.post("/api/rss-articles", async (req, res) => {
+    try {
+      const validatedData = insertRssArticleSchema.parse(req.body);
+      const article = await storage.createRssArticle(validatedData);
+      res.json({ article });
+    } catch (error) {
+      console.error('Error creating RSS article:', error);
+      res.status(500).json({ error: "Failed to create RSS article" });
+    }
+  });
+
+  app.put("/api/rss-articles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertRssArticleSchema.partial().parse(req.body);
+      const article = await storage.updateRssArticle(id, validatedData);
+      
+      if (!article) {
+        return res.status(404).json({ error: "RSS article not found" });
+      }
+      
+      res.json({ article });
+    } catch (error) {
+      console.error('Error updating RSS article:', error);
+      res.status(500).json({ error: "Failed to update RSS article" });
+    }
+  });
+
+  app.delete("/api/rss-articles/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRssArticle(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "RSS article not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting RSS article:', error);
+      res.status(500).json({ error: "Failed to delete RSS article" });
+    }
+  });
+
+  // RSS Article Analysis
+  app.post("/api/rss-articles/:id/analyze", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { analysisType = 'sentiment' } = req.body;
+      
+      const article = await storage.getRssArticle(id);
+      if (!article) {
+        return res.status(404).json({ error: "RSS article not found" });
+      }
+
+      if (analysisType === 'sentiment') {
+        const sentimentResult = await rssService.analyzeArticleSentiment(id);
+        
+        // Save analysis
+        const analysis = await storage.createRssAnalysis({
+          articleId: id,
+          analysisType: 'sentiment',
+          resultJson: sentimentResult,
+          confidence: sentimentResult.confidence,
+          status: 'completed'
+        });
+
+        // Update article with sentiment
+        await storage.updateRssArticle(id, {
+          sentiment: sentimentResult.sentiment,
+          isAnalyzed: true
+        });
+
+        res.json({ analysis, result: sentimentResult });
+      } else {
+        res.status(400).json({ error: "Unsupported analysis type" });
+      }
+    } catch (error) {
+      console.error('Error analyzing RSS article:', error);
+      res.status(500).json({ error: "Failed to analyze RSS article" });
+    }
+  });
+
+  // RSS Analysis Management
+  app.get("/api/rss-analyses", async (req, res) => {
+    try {
+      const { articleId, type } = req.query;
+      let analyses;
+
+      if (articleId) {
+        analyses = await storage.getRssAnalysesByArticle(articleId as string);
+      } else if (type) {
+        analyses = await storage.getRssAnalysesByType(type as string);
+      } else {
+        analyses = await storage.getRssAnalyses();
+      }
+
+      res.json({ analyses });
+    } catch (error) {
+      console.error('Error fetching RSS analyses:', error);
+      res.status(500).json({ error: "Failed to fetch RSS analyses" });
+    }
+  });
+
+  app.get("/api/rss-analyses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const analysis = await storage.getRssAnalysis(id);
+      
+      if (!analysis) {
+        return res.status(404).json({ error: "RSS analysis not found" });
+      }
+      
+      res.json({ analysis });
+    } catch (error) {
+      console.error('Error fetching RSS analysis:', error);
+      res.status(500).json({ error: "Failed to fetch RSS analysis" });
+    }
+  });
+
+  app.post("/api/rss-analyses", async (req, res) => {
+    try {
+      const validatedData = insertRssAnalysisSchema.parse(req.body);
+      const analysis = await storage.createRssAnalysis(validatedData);
+      res.json({ analysis });
+    } catch (error) {
+      console.error('Error creating RSS analysis:', error);
+      res.status(500).json({ error: "Failed to create RSS analysis" });
+    }
+  });
+
+  app.put("/api/rss-analyses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertRssAnalysisSchema.partial().parse(req.body);
+      const analysis = await storage.updateRssAnalysis(id, validatedData);
+      
+      if (!analysis) {
+        return res.status(404).json({ error: "RSS analysis not found" });
+      }
+      
+      res.json({ analysis });
+    } catch (error) {
+      console.error('Error updating RSS analysis:', error);
+      res.status(500).json({ error: "Failed to update RSS analysis" });
+    }
+  });
+
+  app.delete("/api/rss-analyses/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRssAnalysis(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "RSS analysis not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting RSS analysis:', error);
+      res.status(500).json({ error: "Failed to delete RSS analysis" });
+    }
+  });
+
+  // RSS Comparisons Management
+  app.get("/api/rss-comparisons", async (req, res) => {
+    try {
+      const { type, public_only } = req.query;
+      let comparisons;
+
+      if (public_only === 'true') {
+        comparisons = await storage.getPublicRssComparisons();
+      } else if (type) {
+        comparisons = await storage.getRssComparisonsByType(type as string);
+      } else {
+        comparisons = await storage.getRssComparisons();
+      }
+
+      res.json({ comparisons });
+    } catch (error) {
+      console.error('Error fetching RSS comparisons:', error);
+      res.status(500).json({ error: "Failed to fetch RSS comparisons" });
+    }
+  });
+
+  app.get("/api/rss-comparisons/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const comparison = await storage.getRssComparison(id);
+      
+      if (!comparison) {
+        return res.status(404).json({ error: "RSS comparison not found" });
+      }
+      
+      res.json({ comparison });
+    } catch (error) {
+      console.error('Error fetching RSS comparison:', error);
+      res.status(500).json({ error: "Failed to fetch RSS comparison" });
+    }
+  });
+
+  app.post("/api/rss-comparisons", async (req, res) => {
+    try {
+      const validatedData = insertRssComparisonSchema.parse(req.body);
+      const comparison = await storage.createRssComparison(validatedData);
+      res.json({ comparison });
+    } catch (error) {
+      console.error('Error creating RSS comparison:', error);
+      res.status(500).json({ error: "Failed to create RSS comparison" });
+    }
+  });
+
+  app.put("/api/rss-comparisons/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertRssComparisonSchema.partial().parse(req.body);
+      const comparison = await storage.updateRssComparison(id, validatedData);
+      
+      if (!comparison) {
+        return res.status(404).json({ error: "RSS comparison not found" });
+      }
+      
+      res.json({ comparison });
+    } catch (error) {
+      console.error('Error updating RSS comparison:', error);
+      res.status(500).json({ error: "Failed to update RSS comparison" });
+    }
+  });
+
+  app.delete("/api/rss-comparisons/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRssComparison(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "RSS comparison not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting RSS comparison:', error);
+      res.status(500).json({ error: "Failed to delete RSS comparison" });
+    }
+  });
+
+  // RSS Dashboard Analytics
+  app.get("/api/rss-dashboard", async (req, res) => {
+    try {
+      const sources = await storage.getRssSources();
+      const recentArticles = await storage.getRecentRssArticles(20);
+      const activeSources = await storage.getActiveRssSources();
+      
+      // Calculate stats
+      const totalArticles = (await storage.getRssArticles()).length;
+      const articlesThisWeek = (await storage.getRssArticlesByDateRange(
+        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        new Date()
+      )).length;
+
+      const dashboard = {
+        totalSources: sources.length,
+        activeSources: activeSources.length,
+        totalArticles,
+        articlesThisWeek,
+        recentArticles: recentArticles.slice(0, 10),
+        sourceStats: sources.map(source => ({
+          id: source.id,
+          name: source.name,
+          category: source.category,
+          totalArticles: source.totalArticles,
+          lastFetchedAt: source.lastFetchedAt,
+          fetchErrors: source.fetchErrors,
+          isActive: source.isActive
+        }))
+      };
+
+      res.json({ dashboard });
+    } catch (error) {
+      console.error('Error fetching RSS dashboard:', error);
+      res.status(500).json({ error: "Failed to fetch RSS dashboard" });
     }
   });
 
