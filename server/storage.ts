@@ -3,7 +3,10 @@ import {
   type Image, type InsertImage,
   type PresentationStyle, type InsertPresentationStyle,
   type Report, type InsertReport,
-  type ReportRendering, type InsertReportRendering
+  type ReportRendering, type InsertReportRendering,
+  type FrameworkCategory, type InsertFrameworkCategory,
+  type Framework, type InsertFramework,
+  type FrameworkVersion, type InsertFrameworkVersion
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -43,6 +46,30 @@ export interface IStorage {
   getReportRendering(reportId: string, styleKey: string): Promise<ReportRendering | undefined>;
   createReportRendering(rendering: InsertReportRendering): Promise<ReportRendering>;
   deleteReportRenderings(reportId: string): Promise<boolean>;
+
+  // Framework Category methods
+  getFrameworkCategories(): Promise<FrameworkCategory[]>;
+  getFrameworkCategory(id: string): Promise<FrameworkCategory | undefined>;
+  createFrameworkCategory(category: InsertFrameworkCategory): Promise<FrameworkCategory>;
+  updateFrameworkCategory(id: string, updates: Partial<InsertFrameworkCategory>): Promise<FrameworkCategory | undefined>;
+  deleteFrameworkCategory(id: string): Promise<boolean>;
+
+  // Framework methods
+  getFrameworks(): Promise<Framework[]>;
+  getFramework(id: string): Promise<Framework | undefined>;
+  getFrameworksByCategory(categoryId: string): Promise<Framework[]>;
+  createFramework(framework: InsertFramework): Promise<Framework>;
+  updateFramework(id: string, updates: Partial<InsertFramework>): Promise<Framework | undefined>;
+  deleteFramework(id: string): Promise<boolean>;
+  searchFrameworks(query: string): Promise<Framework[]>;
+
+  // Framework Version methods
+  getFrameworkVersions(frameworkId: string): Promise<FrameworkVersion[]>;
+  getFrameworkVersion(id: string): Promise<FrameworkVersion | undefined>;
+  getCurrentFrameworkVersion(frameworkId: string): Promise<FrameworkVersion | undefined>;
+  createFrameworkVersion(version: InsertFrameworkVersion): Promise<FrameworkVersion>;
+  updateFrameworkVersion(id: string, updates: Partial<InsertFrameworkVersion>): Promise<FrameworkVersion | undefined>;
+  deleteFrameworkVersion(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -51,6 +78,9 @@ export class MemStorage implements IStorage {
   private presentationStyles: Map<string, PresentationStyle>;
   private reports: Map<string, Report>;
   private reportRenderings: Map<string, ReportRendering>;
+  private frameworkCategories: Map<string, FrameworkCategory>;
+  private frameworks: Map<string, Framework>;
+  private frameworkVersions: Map<string, FrameworkVersion>;
 
   constructor() {
     this.users = new Map();
@@ -58,6 +88,9 @@ export class MemStorage implements IStorage {
     this.presentationStyles = new Map();
     this.reports = new Map();
     this.reportRenderings = new Map();
+    this.frameworkCategories = new Map();
+    this.frameworks = new Map();
+    this.frameworkVersions = new Map();
     
     // Add some sample data
     this.seedData();
@@ -118,6 +151,49 @@ export class MemStorage implements IStorage {
 
     for (const styleData of presentationStyles) {
       await this.createPresentationStyle(styleData);
+    }
+
+    // Seed framework categories
+    const frameworkCategories: InsertFrameworkCategory[] = [
+      {
+        name: "Match Analysis",
+        description: "Templates for analyzing individual match performances",
+        color: "#DC2626",
+        icon: "target",
+        isActive: true
+      },
+      {
+        name: "Player Profiles",
+        description: "Frameworks for detailed player analysis and statistics",
+        color: "#059669",
+        icon: "user",
+        isActive: true
+      },
+      {
+        name: "Tactical Breakdowns",
+        description: "Strategic analysis templates for formations and tactics",
+        color: "#7C3AED",
+        icon: "layout",
+        isActive: true
+      },
+      {
+        name: "Transfer Analysis",
+        description: "Templates for evaluating transfers and market moves",
+        color: "#EA580C",
+        icon: "refresh-cw",
+        isActive: true
+      },
+      {
+        name: "Season Reviews",
+        description: "Comprehensive season retrospective frameworks",
+        color: "#0284C7",
+        icon: "calendar",
+        isActive: true
+      }
+    ];
+
+    for (const categoryData of frameworkCategories) {
+      await this.createFrameworkCategory(categoryData);
     }
 
     // Seed sample images
@@ -378,6 +454,174 @@ export class MemStorage implements IStorage {
     }
     
     return deletedAny;
+  }
+
+  // Framework Category methods
+  async getFrameworkCategories(): Promise<FrameworkCategory[]> {
+    return Array.from(this.frameworkCategories.values()).filter(
+      category => category.isActive
+    ).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getFrameworkCategory(id: string): Promise<FrameworkCategory | undefined> {
+    return this.frameworkCategories.get(id);
+  }
+
+  async createFrameworkCategory(insertCategory: InsertFrameworkCategory): Promise<FrameworkCategory> {
+    const id = randomUUID();
+    const category: FrameworkCategory = {
+      id,
+      name: insertCategory.name,
+      description: insertCategory.description,
+      color: insertCategory.color || '#3B82F6',
+      icon: insertCategory.icon || 'folder',
+      isActive: insertCategory.isActive ?? true,
+      createdAt: new Date()
+    };
+    this.frameworkCategories.set(id, category);
+    return category;
+  }
+
+  async updateFrameworkCategory(id: string, updates: Partial<InsertFrameworkCategory>): Promise<FrameworkCategory | undefined> {
+    const existing = this.frameworkCategories.get(id);
+    if (!existing) return undefined;
+    
+    const updated: FrameworkCategory = { ...existing, ...updates };
+    this.frameworkCategories.set(id, updated);
+    return updated;
+  }
+
+  async deleteFrameworkCategory(id: string): Promise<boolean> {
+    return this.frameworkCategories.delete(id);
+  }
+
+  // Framework methods
+  async getFrameworks(): Promise<Framework[]> {
+    return Array.from(this.frameworks.values()).sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }
+
+  async getFramework(id: string): Promise<Framework | undefined> {
+    return this.frameworks.get(id);
+  }
+
+  async getFrameworksByCategory(categoryId: string): Promise<Framework[]> {
+    return Array.from(this.frameworks.values()).filter(
+      framework => framework.categoryId === categoryId
+    ).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async createFramework(insertFramework: InsertFramework): Promise<Framework> {
+    const id = randomUUID();
+    const now = new Date();
+    const framework: Framework = {
+      id,
+      name: insertFramework.name,
+      description: insertFramework.description,
+      categoryId: insertFramework.categoryId,
+      tags: insertFramework.tags || [],
+      isPublic: insertFramework.isPublic ?? false,
+      isStarred: insertFramework.isStarred ?? false,
+      totalDownloads: insertFramework.totalDownloads || '0',
+      currentVersionId: insertFramework.currentVersionId || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.frameworks.set(id, framework);
+    return framework;
+  }
+
+  async updateFramework(id: string, updates: Partial<InsertFramework>): Promise<Framework | undefined> {
+    const existing = this.frameworks.get(id);
+    if (!existing) return undefined;
+    
+    const updated: Framework = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.frameworks.set(id, updated);
+    return updated;
+  }
+
+  async deleteFramework(id: string): Promise<boolean> {
+    const deleted = this.frameworks.delete(id);
+    if (deleted) {
+      // Also delete all versions for this framework
+      const versionsToDelete = Array.from(this.frameworkVersions.entries()).filter(
+        ([_, version]) => version.frameworkId === id
+      );
+      for (const [versionId, _] of versionsToDelete) {
+        this.frameworkVersions.delete(versionId);
+      }
+    }
+    return deleted;
+  }
+
+  async searchFrameworks(query: string): Promise<Framework[]> {
+    const lowerQuery = query.toLowerCase();
+    return Array.from(this.frameworks.values()).filter(framework => 
+      framework.name.toLowerCase().includes(lowerQuery) ||
+      framework.description.toLowerCase().includes(lowerQuery) ||
+      framework.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+    ).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  // Framework Version methods
+  async getFrameworkVersions(frameworkId: string): Promise<FrameworkVersion[]> {
+    return Array.from(this.frameworkVersions.values()).filter(
+      version => version.frameworkId === frameworkId && version.isActive
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getFrameworkVersion(id: string): Promise<FrameworkVersion | undefined> {
+    return this.frameworkVersions.get(id);
+  }
+
+  async getCurrentFrameworkVersion(frameworkId: string): Promise<FrameworkVersion | undefined> {
+    const framework = await this.getFramework(frameworkId);
+    if (!framework?.currentVersionId) return undefined;
+    return this.getFrameworkVersion(framework.currentVersionId);
+  }
+
+  async createFrameworkVersion(insertVersion: InsertFrameworkVersion): Promise<FrameworkVersion> {
+    const id = randomUUID();
+    const version: FrameworkVersion = {
+      id,
+      frameworkId: insertVersion.frameworkId,
+      version: insertVersion.version,
+      title: insertVersion.title,
+      contentJson: insertVersion.contentJson,
+      templateStructure: insertVersion.templateStructure || {},
+      changelogMarkdown: insertVersion.changelogMarkdown || '',
+      isActive: insertVersion.isActive ?? true,
+      downloadCount: insertVersion.downloadCount || '0',
+      fileSize: insertVersion.fileSize || null,
+      createdAt: new Date()
+    };
+    this.frameworkVersions.set(id, version);
+    
+    // Update framework's current version if this is the first version
+    const framework = await this.getFramework(insertVersion.frameworkId);
+    if (framework && !framework.currentVersionId) {
+      await this.updateFramework(insertVersion.frameworkId, { currentVersionId: id });
+    }
+    
+    return version;
+  }
+
+  async updateFrameworkVersion(id: string, updates: Partial<InsertFrameworkVersion>): Promise<FrameworkVersion | undefined> {
+    const existing = this.frameworkVersions.get(id);
+    if (!existing) return undefined;
+    
+    const updated: FrameworkVersion = { ...existing, ...updates };
+    this.frameworkVersions.set(id, updated);
+    return updated;
+  }
+
+  async deleteFrameworkVersion(id: string): Promise<boolean> {
+    return this.frameworkVersions.delete(id);
   }
 }
 

@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings, Download, Palette, BarChart3, Menu, Sun, Moon } from "lucide-react";
+import { Search, Settings, Download, Palette, BarChart3, Menu, Sun, Moon, Folder, Home } from "lucide-react";
 import { useState } from "react";
+import { Link, useLocation } from "wouter";
 // Import logo - for now we'll use a fallback until we can properly configure the asset import
 const mailmanLogo = "/assets/847D1ED6-4A19-4001-B286-53F0D10F961E.png_1758823068354.PNG";
 
 export default function Header() {
   const [darkMode, setDarkMode] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [location] = useLocation();
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -51,6 +53,26 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-2">
+          <Link href="/">
+            <Button 
+              variant={location === "/" ? "secondary" : "ghost"}
+              size="icon" 
+              className="text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-home"
+            >
+              <Home className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link href="/frameworks">
+            <Button 
+              variant={location === "/frameworks" ? "secondary" : "ghost"}
+              size="icon" 
+              className="text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-frameworks"
+            >
+              <Folder className="w-5 h-5" />
+            </Button>
+          </Link>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -135,6 +157,28 @@ export default function Header() {
       {mobileMenuOpen && (
         <div className="lg:hidden mt-4 pb-4 border-t border-sidebar-border">
           <div className="flex flex-col gap-2 pt-4">
+            <Link href="/">
+              <Button 
+                variant={location === "/" ? "secondary" : "ghost"}
+                className="justify-start text-sidebar-foreground hover:bg-sidebar-accent w-full"
+                data-testid="button-home-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Home className="w-5 h-5 mr-3" />
+                Home
+              </Button>
+            </Link>
+            <Link href="/frameworks">
+              <Button 
+                variant={location === "/frameworks" ? "secondary" : "ghost"}
+                className="justify-start text-sidebar-foreground hover:bg-sidebar-accent w-full"
+                data-testid="button-frameworks-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Folder className="w-5 h-5 mr-3" />
+                Framework Directory
+              </Button>
+            </Link>
             <Button 
               variant="ghost" 
               className="justify-start text-sidebar-foreground hover:bg-sidebar-accent"

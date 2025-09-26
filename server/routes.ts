@@ -5,7 +5,10 @@ import {
   insertImageSchema, 
   insertPresentationStyleSchema,
   insertReportSchema,
-  insertReportRenderingSchema 
+  insertReportRenderingSchema,
+  insertFrameworkCategorySchema,
+  insertFrameworkSchema,
+  insertFrameworkVersionSchema
 } from "@shared/schema";
 import OpenAI from "openai";
 import { z } from "zod";
@@ -722,6 +725,258 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error exporting report:', error);
       res.status(500).json({ error: "Failed to export report" });
+    }
+  });
+
+  // Framework Categories API Routes
+  app.get("/api/framework-categories", async (req, res) => {
+    try {
+      const categories = await storage.getFrameworkCategories();
+      res.json({ categories });
+    } catch (error) {
+      console.error('Error fetching framework categories:', error);
+      res.status(500).json({ error: "Failed to fetch framework categories" });
+    }
+  });
+
+  app.post("/api/framework-categories", async (req, res) => {
+    try {
+      const validatedData = insertFrameworkCategorySchema.parse(req.body);
+      const category = await storage.createFrameworkCategory(validatedData);
+      res.json({ category });
+    } catch (error) {
+      console.error('Error creating framework category:', error);
+      res.status(500).json({ error: "Failed to create framework category" });
+    }
+  });
+
+  app.put("/api/framework-categories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertFrameworkCategorySchema.partial().parse(req.body);
+      const category = await storage.updateFrameworkCategory(id, validatedData);
+      
+      if (!category) {
+        return res.status(404).json({ error: "Framework category not found" });
+      }
+      
+      res.json({ category });
+    } catch (error) {
+      console.error('Error updating framework category:', error);
+      res.status(500).json({ error: "Failed to update framework category" });
+    }
+  });
+
+  app.delete("/api/framework-categories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteFrameworkCategory(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Framework category not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting framework category:', error);
+      res.status(500).json({ error: "Failed to delete framework category" });
+    }
+  });
+
+  // Framework API Routes
+  app.get("/api/frameworks", async (req, res) => {
+    try {
+      const { category, search } = req.query as { category?: string; search?: string };
+      
+      let frameworks;
+      if (search) {
+        frameworks = await storage.searchFrameworks(search);
+      } else if (category) {
+        frameworks = await storage.getFrameworksByCategory(category);
+      } else {
+        frameworks = await storage.getFrameworks();
+      }
+      
+      res.json({ frameworks });
+    } catch (error) {
+      console.error('Error fetching frameworks:', error);
+      res.status(500).json({ error: "Failed to fetch frameworks" });
+    }
+  });
+
+  app.get("/api/frameworks/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const framework = await storage.getFramework(id);
+      
+      if (!framework) {
+        return res.status(404).json({ error: "Framework not found" });
+      }
+      
+      // Get current version and category details
+      const currentVersion = framework.currentVersionId 
+        ? await storage.getFrameworkVersion(framework.currentVersionId)
+        : null;
+      const category = await storage.getFrameworkCategory(framework.categoryId);
+      
+      res.json({ 
+        framework,
+        currentVersion,
+        category
+      });
+    } catch (error) {
+      console.error('Error fetching framework:', error);
+      res.status(500).json({ error: "Failed to fetch framework" });
+    }
+  });
+
+  app.post("/api/frameworks", async (req, res) => {
+    try {
+      const validatedData = insertFrameworkSchema.parse(req.body);
+      const framework = await storage.createFramework(validatedData);
+      res.json({ framework });
+    } catch (error) {
+      console.error('Error creating framework:', error);
+      res.status(500).json({ error: "Failed to create framework" });
+    }
+  });
+
+  app.put("/api/frameworks/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertFrameworkSchema.partial().parse(req.body);
+      const framework = await storage.updateFramework(id, validatedData);
+      
+      if (!framework) {
+        return res.status(404).json({ error: "Framework not found" });
+      }
+      
+      res.json({ framework });
+    } catch (error) {
+      console.error('Error updating framework:', error);
+      res.status(500).json({ error: "Failed to update framework" });
+    }
+  });
+
+  app.delete("/api/frameworks/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteFramework(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Framework not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting framework:', error);
+      res.status(500).json({ error: "Failed to delete framework" });
+    }
+  });
+
+  // Framework Version API Routes
+  app.get("/api/frameworks/:id/versions", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const versions = await storage.getFrameworkVersions(id);
+      res.json({ versions });
+    } catch (error) {
+      console.error('Error fetching framework versions:', error);
+      res.status(500).json({ error: "Failed to fetch framework versions" });
+    }
+  });
+
+  app.get("/api/framework-versions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const version = await storage.getFrameworkVersion(id);
+      
+      if (!version) {
+        return res.status(404).json({ error: "Framework version not found" });
+      }
+      
+      res.json({ version });
+    } catch (error) {
+      console.error('Error fetching framework version:', error);
+      res.status(500).json({ error: "Failed to fetch framework version" });
+    }
+  });
+
+  app.post("/api/frameworks/:id/versions", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertFrameworkVersionSchema.parse({
+        ...req.body,
+        frameworkId: id
+      });
+      const version = await storage.createFrameworkVersion(validatedData);
+      res.json({ version });
+    } catch (error) {
+      console.error('Error creating framework version:', error);
+      res.status(500).json({ error: "Failed to create framework version" });
+    }
+  });
+
+  app.put("/api/framework-versions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertFrameworkVersionSchema.partial().parse(req.body);
+      const version = await storage.updateFrameworkVersion(id, validatedData);
+      
+      if (!version) {
+        return res.status(404).json({ error: "Framework version not found" });
+      }
+      
+      res.json({ version });
+    } catch (error) {
+      console.error('Error updating framework version:', error);
+      res.status(500).json({ error: "Failed to update framework version" });
+    }
+  });
+
+  app.delete("/api/framework-versions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteFrameworkVersion(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Framework version not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting framework version:', error);
+      res.status(500).json({ error: "Failed to delete framework version" });
+    }
+  });
+
+  // Framework Download/Usage tracking
+  app.post("/api/frameworks/:id/download", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { versionId } = req.body;
+      
+      // Increment download counts
+      const framework = await storage.getFramework(id);
+      if (!framework) {
+        return res.status(404).json({ error: "Framework not found" });
+      }
+      
+      const currentDownloads = parseInt(framework.totalDownloads) + 1;
+      await storage.updateFramework(id, { totalDownloads: currentDownloads.toString() });
+      
+      if (versionId) {
+        const version = await storage.getFrameworkVersion(versionId);
+        if (version) {
+          const versionDownloads = parseInt(version.downloadCount) + 1;
+          await storage.updateFrameworkVersion(versionId, { downloadCount: versionDownloads.toString() });
+        }
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error tracking framework download:', error);
+      res.status(500).json({ error: "Failed to track download" });
     }
   });
 
