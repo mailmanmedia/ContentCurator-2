@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search, Download, Star, Tag, Filter } from "lucide-react";
+import { Plus, Search, Download, Star, Tag, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
@@ -14,6 +15,7 @@ import type { Framework, FrameworkCategory } from "@shared/schema";
 export default function FrameworkDirectory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedFramework, setSelectedFramework] = useState<Framework | null>(null);
   const { toast } = useToast();
 
   // Fetch framework categories
@@ -61,6 +63,11 @@ export default function FrameworkDirectory() {
     } catch (error) {
       console.error('Download tracking failed:', error);
     }
+  };
+
+  const handleViewDetails = (framework: Framework) => {
+    console.log('View details for framework:', framework.id);
+    setSelectedFramework(framework);
   };
 
   const handleStar = async (frameworkId: string, isStarred: boolean) => {
@@ -266,6 +273,7 @@ export default function FrameworkDirectory() {
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
+                      onClick={() => handleViewDetails(framework)}
                       data-testid={`button-view-${framework.id}`}
                     >
                       View Details
@@ -286,6 +294,94 @@ export default function FrameworkDirectory() {
           })}
         </div>
       )}
+
+      {/* Framework Details Modal */}
+      <Dialog open={!!selectedFramework} onOpenChange={() => setSelectedFramework(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              {selectedFramework?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedFramework && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-2">
+                  Description
+                </h3>
+                <p className="text-foreground">
+                  {selectedFramework.description}
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-2">
+                  Category & Tags
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {(() => {
+                    const category = getCategoryById(selectedFramework.categoryId);
+                    return category ? (
+                      <Badge 
+                        variant="secondary"
+                        style={{ backgroundColor: `${category.color}20`, color: category.color }}
+                      >
+                        {category.name}
+                      </Badge>
+                    ) : null;
+                  })()}
+                  {selectedFramework.tags.map((tag) => (
+                    <Badge key={tag} variant="outline">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-1">
+                    Downloads
+                  </h3>
+                  <p className="text-lg font-bold text-foreground">
+                    {selectedFramework.totalDownloads}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-1">
+                    Last Updated
+                  </h3>
+                  <p className="text-lg font-bold text-foreground">
+                    {new Date(selectedFramework.updatedAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  onClick={() => handleDownload(selectedFramework.id)}
+                  className="flex-1"
+                  data-testid={`modal-download-${selectedFramework.id}`}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Use Framework
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => handleStar(selectedFramework.id, selectedFramework.isStarred)}
+                  data-testid={`modal-star-${selectedFramework.id}`}
+                >
+                  <Star 
+                    className={`w-4 h-4 ${selectedFramework.isStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} 
+                  />
+                  {selectedFramework.isStarred ? 'Unfavorite' : 'Favorite'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
