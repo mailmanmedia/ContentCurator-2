@@ -19,6 +19,10 @@ import type { FrameworkCategory } from "@shared/schema";
 
 // Form schema that extends the base framework schema
 const createFrameworkSchema = insertFrameworkSchema.extend({
+  // Override base schema to ensure proper validation
+  name: z.string().min(1, "Framework name is required"),
+  description: z.string().min(1, "Description is required"),
+  categoryId: z.string().min(1, "Category is required"),
   // Initial version data
   initialVersion: z.object({
     version: z.string().min(1, "Version is required"),
@@ -119,6 +123,24 @@ export default function CreateFramework() {
   });
 
   const onSubmit = (data: CreateFrameworkForm) => {
+    console.log('Form submission attempted with data:', data);
+    console.log('Form validation state:', form.formState.errors);
+    
+    // Additional client-side validation check
+    if (!data.name || !data.description || !data.categoryId) {
+      console.error('Validation failed: Required fields missing', {
+        name: !data.name,
+        description: !data.description,
+        categoryId: !data.categoryId
+      });
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields (Name, Description, Category)",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     createFrameworkMutation.mutate(data);
   };
 
