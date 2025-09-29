@@ -102,6 +102,8 @@ export default function VisualAssistant() {
 
   const handleCreateNew = () => {
     console.log('Create new visual');
+    // Switch to AI Studio tab to show creation interface
+    setActiveTab('studio');
   };
 
   const getTabIcon = (tab: string) => {

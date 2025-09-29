@@ -95,6 +95,7 @@ export default function PromptStudio() {
     selectedStyle: "claudeArtifact",
     isCreating: false
   });
+  const [buildingVariation, setBuildingVariation] = useState<OutputVariation | null>(null);
   const { toast } = useToast();
 
   // Fetch available presentation styles
@@ -596,9 +597,12 @@ export default function PromptStudio() {
   const handleBuildFinal = (variationId: string) => {
     const variation = outputVariations.find(v => v.id === variationId);
     if (variation) {
+      console.log('Clicked Build Final for variation', variationId.replace(/^var-/, ''));
+      setBuildingVariation(variation);
+      setActiveTab("presentations");
       toast({
         title: "Building Final Product",
-        description: `Creating production-ready ${variation.type}`
+        description: `Opening build workspace for ${variation.type}`
       });
     }
   };
