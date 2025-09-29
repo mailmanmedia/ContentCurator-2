@@ -9,6 +9,7 @@ import FrameworkDirectory from "@/pages/FrameworkDirectory";
 import CreateFramework from "@/pages/CreateFramework";
 import RssIntelligence from "@/pages/RssIntelligence";
 import TeamMatchupStudio from "@/pages/TeamMatchupStudio";
+import ContentLibrary from "@/pages/ContentLibrary";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/frameworks/create" component={CreateFramework} />
       <Route path="/rss" component={RssIntelligence} />
       <Route path="/team-matchup-studio" component={TeamMatchupStudio} />
+      <Route path="/content-library" component={ContentLibrary} />
       <Route component={NotFound} />
     </Switch>
   );

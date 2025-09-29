@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings, Download, Palette, BarChart3, Menu, Sun, Moon, Folder, Home, Rss, Users } from "lucide-react";
+import { Search, Settings, Download, Palette, BarChart3, Menu, Sun, Moon, Folder, Home, Rss, Users, Archive } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 // Import logo - for now we'll use a fallback until we can properly configure the asset import
@@ -83,14 +83,24 @@ export default function Header() {
               <Rss className="w-5 h-5" />
             </Button>
           </Link>
-          <Link href="/team-matchup">
+          <Link href="/team-matchup-studio">
             <Button 
-              variant={location === "/team-matchup" ? "secondary" : "ghost"}
+              variant={location === "/team-matchup-studio" ? "secondary" : "ghost"}
               size="icon" 
               className="text-sidebar-foreground hover:bg-sidebar-accent"
               data-testid="button-team-matchup"
             >
               <Users className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link href="/content-library">
+            <Button 
+              variant={location === "/content-library" ? "secondary" : "ghost"}
+              size="icon" 
+              className="text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-content-library"
+            >
+              <Archive className="w-5 h-5" />
             </Button>
           </Link>
           <Button 
@@ -208,6 +218,28 @@ export default function Header() {
               >
                 <Rss className="w-5 h-5 mr-3" />
                 RSS Intelligence
+              </Button>
+            </Link>
+            <Link href="/team-matchup-studio">
+              <Button 
+                variant={location === "/team-matchup-studio" ? "secondary" : "ghost"}
+                className="justify-start text-sidebar-foreground hover:bg-sidebar-accent w-full"
+                data-testid="button-team-matchup-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Users className="w-5 h-5 mr-3" />
+                Team Matchup Studio
+              </Button>
+            </Link>
+            <Link href="/content-library">
+              <Button 
+                variant={location === "/content-library" ? "secondary" : "ghost"}
+                className="justify-start text-sidebar-foreground hover:bg-sidebar-accent w-full"
+                data-testid="button-content-library-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Archive className="w-5 h-5 mr-3" />
+                Content Library
               </Button>
             </Link>
             <Button 
