@@ -18,7 +18,7 @@ function Router() {
       <Route path="/frameworks" component={FrameworkDirectory} />
       <Route path="/frameworks/create" component={CreateFramework} />
       <Route path="/rss" component={RssIntelligence} />
-      <Route path="/team-matchup" component={TeamMatchupStudio} />
+      <Route path="/team-matchup-studio" component={TeamMatchupStudio} />
       <Route component={NotFound} />
     </Switch>
   );

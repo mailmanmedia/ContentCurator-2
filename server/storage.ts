@@ -10,7 +10,12 @@ import {
   type RssSource, type InsertRssSource,
   type RssArticle, type InsertRssArticle,
   type RssAnalysis, type InsertRssAnalysis,
-  type RssComparison, type InsertRssComparison
+  type RssComparison, type InsertRssComparison,
+  type LibraryItem, type InsertLibraryItem,
+  type Scene, type InsertScene,
+  type PresentationSet, type InsertPresentationSet,
+  type TickerPlaylist, type InsertTickerPlaylist,
+  type LiveState
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
@@ -123,6 +128,46 @@ export interface IStorage {
   getFootballHeadToHead(homeTeamId: number, awayTeamId: number): Promise<any[]>;
   getFootballTeamStatistics(teamId: number, leagueId: number, season: number): Promise<any>;
   initializeFootballData(): Promise<void>;
+
+  // Library Item methods
+  getLibraryItems(): Promise<LibraryItem[]>;
+  getLibraryItem(id: string): Promise<LibraryItem | undefined>;
+  getLibraryItemsByType(type: string): Promise<LibraryItem[]>;
+  getLibraryItemsByCategory(category: string): Promise<LibraryItem[]>;
+  searchLibraryItems(query: string): Promise<LibraryItem[]>;
+  createLibraryItem(item: InsertLibraryItem): Promise<LibraryItem>;
+  updateLibraryItem(id: string, updates: Partial<InsertLibraryItem>): Promise<LibraryItem | undefined>;
+  deleteLibraryItem(id: string): Promise<boolean>;
+
+  // Scene methods
+  getScenes(): Promise<Scene[]>;
+  getScene(id: string): Promise<Scene | undefined>;
+  getScenesByLayout(layout: string): Promise<Scene[]>;
+  getSceneTemplates(): Promise<Scene[]>;
+  searchScenes(query: string): Promise<Scene[]>;
+  createScene(scene: InsertScene): Promise<Scene>;
+  updateScene(id: string, updates: Partial<InsertScene>): Promise<Scene | undefined>;
+  deleteScene(id: string): Promise<boolean>;
+
+  // Presentation Set methods
+  getPresentationSets(): Promise<PresentationSet[]>;
+  getPresentationSet(id: string): Promise<PresentationSet | undefined>;
+  getActivePresentationSets(): Promise<PresentationSet[]>;
+  createPresentationSet(set: InsertPresentationSet): Promise<PresentationSet>;
+  updatePresentationSet(id: string, updates: Partial<InsertPresentationSet>): Promise<PresentationSet | undefined>;
+  deletePresentationSet(id: string): Promise<boolean>;
+
+  // Ticker Playlist methods
+  getTickerPlaylists(): Promise<TickerPlaylist[]>;
+  getTickerPlaylist(id: string): Promise<TickerPlaylist | undefined>;
+  getActiveTickerPlaylists(): Promise<TickerPlaylist[]>;
+  createTickerPlaylist(playlist: InsertTickerPlaylist): Promise<TickerPlaylist>;
+  updateTickerPlaylist(id: string, updates: Partial<InsertTickerPlaylist>): Promise<TickerPlaylist | undefined>;
+  deleteTickerPlaylist(id: string): Promise<boolean>;
+
+  // Live State methods (in-memory only)
+  getLiveState(): Promise<LiveState>;
+  updateLiveState(updates: Partial<LiveState>): Promise<LiveState>;
 }
 
 export class MemStorage implements IStorage {
@@ -138,6 +183,11 @@ export class MemStorage implements IStorage {
   private rssArticles: Map<string, RssArticle>;
   private rssAnalyses: Map<string, RssAnalysis>;
   private rssComparisons: Map<string, RssComparison>;
+  private libraryItems: Map<string, LibraryItem>;
+  private scenes: Map<string, Scene>;
+  private presentationSets: Map<string, PresentationSet>;
+  private tickerPlaylists: Map<string, TickerPlaylist>;
+  private liveState: LiveState;
 
   constructor() {
     this.users = new Map();
@@ -152,6 +202,21 @@ export class MemStorage implements IStorage {
     this.rssArticles = new Map();
     this.rssAnalyses = new Map();
     this.rssComparisons = new Map();
+    this.libraryItems = new Map();
+    this.scenes = new Map();
+    this.presentationSets = new Map();
+    this.tickerPlaylists = new Map();
+    this.liveState = {
+      currentSetId: null,
+      programSceneId: null,
+      previewSceneId: null,
+      tickerOn: false,
+      tickerPlaylistId: null,
+      bannerOn: false,
+      bannerText: '',
+      transitionDuration: 500,
+      lastUpdate: new Date()
+    };
     
     // Add some sample data
     this.seedData();
@@ -1161,6 +1226,274 @@ export class MemStorage implements IStorage {
 
   async initializeFootballData(): Promise<void> {
     return footballService.initializeData();
+  }
+
+  // Library Item methods
+  async getLibraryItems(): Promise<LibraryItem[]> {
+    return Array.from(this.libraryItems.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getLibraryItem(id: string): Promise<LibraryItem | undefined> {
+    return this.libraryItems.get(id);
+  }
+
+  async getLibraryItemsByType(type: string): Promise<LibraryItem[]> {
+    return Array.from(this.libraryItems.values())
+      .filter(item => item.type === type)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getLibraryItemsByCategory(category: string): Promise<LibraryItem[]> {
+    return Array.from(this.libraryItems.values())
+      .filter(item => item.category === category)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async searchLibraryItems(query: string): Promise<LibraryItem[]> {
+    const lowerQuery = query.toLowerCase();
+    return Array.from(this.libraryItems.values())
+      .filter(item => 
+        item.name.toLowerCase().includes(lowerQuery) ||
+        item.description?.toLowerCase().includes(lowerQuery) ||
+        item.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+      )
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async createLibraryItem(insertItem: InsertLibraryItem): Promise<LibraryItem> {
+    const id = randomUUID();
+    const now = new Date();
+    const item: LibraryItem = {
+      id,
+      type: insertItem.type,
+      name: insertItem.name,
+      description: insertItem.description || '',
+      metaJson: insertItem.metaJson || {},
+      tags: insertItem.tags || [],
+      category: insertItem.category || 'General',
+      isStarred: insertItem.isStarred ?? false,
+      isActive: insertItem.isActive ?? true,
+      thumbnailUrl: insertItem.thumbnailUrl || null,
+      contentUrl: insertItem.contentUrl || null,
+      fileSize: insertItem.fileSize || null,
+      mimeType: insertItem.mimeType || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.libraryItems.set(id, item);
+    return item;
+  }
+
+  async updateLibraryItem(id: string, updates: Partial<InsertLibraryItem>): Promise<LibraryItem | undefined> {
+    const existing = this.libraryItems.get(id);
+    if (!existing) return undefined;
+    
+    const updated: LibraryItem = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.libraryItems.set(id, updated);
+    return updated;
+  }
+
+  async deleteLibraryItem(id: string): Promise<boolean> {
+    return this.libraryItems.delete(id);
+  }
+
+  // Scene methods
+  async getScenes(): Promise<Scene[]> {
+    return Array.from(this.scenes.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getScene(id: string): Promise<Scene | undefined> {
+    return this.scenes.get(id);
+  }
+
+  async getScenesByLayout(layout: string): Promise<Scene[]> {
+    return Array.from(this.scenes.values())
+      .filter(scene => scene.layout === layout)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getSceneTemplates(): Promise<Scene[]> {
+    return Array.from(this.scenes.values())
+      .filter(scene => scene.isTemplate)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async searchScenes(query: string): Promise<Scene[]> {
+    const lowerQuery = query.toLowerCase();
+    return Array.from(this.scenes.values())
+      .filter(scene => 
+        scene.name.toLowerCase().includes(lowerQuery) ||
+        scene.description?.toLowerCase().includes(lowerQuery) ||
+        scene.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+      )
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async createScene(insertScene: InsertScene): Promise<Scene> {
+    const id = randomUUID();
+    const now = new Date();
+    const scene: Scene = {
+      id,
+      name: insertScene.name,
+      description: insertScene.description || '',
+      layout: insertScene.layout,
+      elements: insertScene.elements || [],
+      backgroundConfig: insertScene.backgroundConfig || {},
+      transitionConfig: insertScene.transitionConfig || {},
+      aspectRatio: insertScene.aspectRatio || '16:9',
+      isTemplate: insertScene.isTemplate ?? false,
+      tags: insertScene.tags || [],
+      createdAt: now,
+      updatedAt: now
+    };
+    this.scenes.set(id, scene);
+    return scene;
+  }
+
+  async updateScene(id: string, updates: Partial<InsertScene>): Promise<Scene | undefined> {
+    const existing = this.scenes.get(id);
+    if (!existing) return undefined;
+    
+    const updated: Scene = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.scenes.set(id, updated);
+    return updated;
+  }
+
+  async deleteScene(id: string): Promise<boolean> {
+    return this.scenes.delete(id);
+  }
+
+  // Presentation Set methods
+  async getPresentationSets(): Promise<PresentationSet[]> {
+    return Array.from(this.presentationSets.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getPresentationSet(id: string): Promise<PresentationSet | undefined> {
+    return this.presentationSets.get(id);
+  }
+
+  async getActivePresentationSets(): Promise<PresentationSet[]> {
+    return Array.from(this.presentationSets.values())
+      .filter(set => set.isActive)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async createPresentationSet(insertSet: InsertPresentationSet): Promise<PresentationSet> {
+    const id = randomUUID();
+    const now = new Date();
+    const set: PresentationSet = {
+      id,
+      name: insertSet.name,
+      description: insertSet.description || '',
+      sceneIds: insertSet.sceneIds || [],
+      defaultTickerId: insertSet.defaultTickerId || null,
+      defaultTransition: insertSet.defaultTransition || 'fade',
+      isActive: insertSet.isActive ?? true,
+      tags: insertSet.tags || [],
+      createdAt: now,
+      updatedAt: now
+    };
+    this.presentationSets.set(id, set);
+    return set;
+  }
+
+  async updatePresentationSet(id: string, updates: Partial<InsertPresentationSet>): Promise<PresentationSet | undefined> {
+    const existing = this.presentationSets.get(id);
+    if (!existing) return undefined;
+    
+    const updated: PresentationSet = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.presentationSets.set(id, updated);
+    return updated;
+  }
+
+  async deletePresentationSet(id: string): Promise<boolean> {
+    return this.presentationSets.delete(id);
+  }
+
+  // Ticker Playlist methods
+  async getTickerPlaylists(): Promise<TickerPlaylist[]> {
+    return Array.from(this.tickerPlaylists.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getTickerPlaylist(id: string): Promise<TickerPlaylist | undefined> {
+    return this.tickerPlaylists.get(id);
+  }
+
+  async getActiveTickerPlaylists(): Promise<TickerPlaylist[]> {
+    return Array.from(this.tickerPlaylists.values())
+      .filter(playlist => playlist.isActive)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async createTickerPlaylist(insertPlaylist: InsertTickerPlaylist): Promise<TickerPlaylist> {
+    const id = randomUUID();
+    const now = new Date();
+    const playlist: TickerPlaylist = {
+      id,
+      name: insertPlaylist.name,
+      description: insertPlaylist.description || '',
+      items: insertPlaylist.items || [],
+      speed: insertPlaylist.speed || 50,
+      mode: insertPlaylist.mode || 'loop',
+      isActive: insertPlaylist.isActive ?? true,
+      backgroundColor: insertPlaylist.backgroundColor || '#1a1a1a',
+      textColor: insertPlaylist.textColor || '#ffffff',
+      fontSize: insertPlaylist.fontSize || 16,
+      height: insertPlaylist.height || 40,
+      autoRefresh: insertPlaylist.autoRefresh ?? true,
+      refreshInterval: insertPlaylist.refreshInterval || 300,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.tickerPlaylists.set(id, playlist);
+    return playlist;
+  }
+
+  async updateTickerPlaylist(id: string, updates: Partial<InsertTickerPlaylist>): Promise<TickerPlaylist | undefined> {
+    const existing = this.tickerPlaylists.get(id);
+    if (!existing) return undefined;
+    
+    const updated: TickerPlaylist = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.tickerPlaylists.set(id, updated);
+    return updated;
+  }
+
+  async deleteTickerPlaylist(id: string): Promise<boolean> {
+    return this.tickerPlaylists.delete(id);
+  }
+
+  // Live State methods (in-memory only)
+  async getLiveState(): Promise<LiveState> {
+    return { ...this.liveState };
+  }
+
+  async updateLiveState(updates: Partial<LiveState>): Promise<LiveState> {
+    this.liveState = {
+      ...this.liveState,
+      ...updates,
+      lastUpdate: new Date()
+    };
+    return { ...this.liveState };
   }
 }
 

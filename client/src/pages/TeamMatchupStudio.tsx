@@ -126,7 +126,12 @@ export default function TeamMatchupStudio() {
           </SelectTrigger>
           <SelectContent>
             {competitions.map((competition) => (
-              <SelectItem key={competition.id} value={competition.id.toString()}>
+              <SelectItem 
+                key={competition.id} 
+                value={competition.id.toString()}
+                data-testid={`competition-option-${competition.id}`}
+                className="cursor-pointer"
+              >
                 <div className="flex items-center gap-2">
                   {competition.logo && (
                     <img 
@@ -210,7 +215,12 @@ export default function TeamMatchupStudio() {
             </SelectTrigger>
             <SelectContent>
               {teams.map((team) => (
-                <SelectItem key={team.id} value={team.id.toString()}>
+                <SelectItem 
+                  key={team.id} 
+                  value={team.id.toString()}
+                  data-testid={`team-option-${team.id}`}
+                  className="cursor-pointer"
+                >
                   <div className="flex items-center gap-2">
                     {team.logo && (
                       <img 
@@ -246,7 +256,12 @@ export default function TeamMatchupStudio() {
               </SelectTrigger>
               <SelectContent>
                 {teams.filter(team => team.id !== selectedTeam1).map((team) => (
-                  <SelectItem key={team.id} value={team.id.toString()}>
+                  <SelectItem 
+                    key={team.id} 
+                    value={team.id.toString()}
+                    data-testid={`away-team-option-${team.id}`}
+                    className="cursor-pointer"
+                  >
                     <div className="flex items-center gap-2">
                       {team.logo && (
                         <img 

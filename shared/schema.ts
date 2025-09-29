@@ -381,3 +381,114 @@ export type InsertFootballStatistics = z.infer<typeof insertFootballStatisticsSc
 export type FootballStatistics = typeof footballStatistics.$inferSelect;
 export type InsertTeamMatchupAnalysis = z.infer<typeof insertTeamMatchupAnalysisSchema>;
 export type TeamMatchupAnalysis = typeof teamMatchupAnalysis.$inferSelect;
+
+// Live Presentation System Schema
+export const libraryItems = pgTable("library_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // 'image', 'template', 'dashboard', 'lower_third', 'ticker_item'
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  metaJson: jsonb("meta_json").notNull().default('{}'), // Contains type-specific metadata
+  tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+  category: text("category").notNull().default('General'),
+  isStarred: boolean("is_starred").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  thumbnailUrl: text("thumbnail_url"),
+  contentUrl: text("content_url"), // URL or reference to the actual content
+  fileSize: text("file_size"),
+  mimeType: text("mime_type"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const scenes = pgTable("scenes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  layout: text("layout").notNull(), // 'single', 'split', 'grid', 'stack'
+  elements: jsonb("elements").notNull().default('[]'), // Array of {itemId?, dataSource?, kind, slot, props}
+  backgroundConfig: jsonb("background_config").notNull().default('{}'), // Background styling
+  transitionConfig: jsonb("transition_config").notNull().default('{}'), // Transition effects
+  aspectRatio: text("aspect_ratio").notNull().default('16:9'),
+  isTemplate: boolean("is_template").notNull().default(false),
+  tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const presentationSets = pgTable("presentation_sets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  sceneIds: text("scene_ids").array().notNull().default(sql`'{}'::text[]`),
+  defaultTickerId: varchar("default_ticker_id"),
+  defaultTransition: text("default_transition").notNull().default('fade'),
+  isActive: boolean("is_active").notNull().default(true),
+  tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const tickerPlaylists = pgTable("ticker_playlists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  items: jsonb("items").notNull().default('[]'), // Array of {text, source: 'manual'|'rss'|'stat', iconUrl?, expiry?}
+  speed: integer("speed").notNull().default(50), // Pixels per second
+  mode: text("mode").notNull().default('loop'), // 'loop', 'once'
+  isActive: boolean("is_active").notNull().default(true),
+  backgroundColor: text("background_color").default('#1a1a1a'),
+  textColor: text("text_color").default('#ffffff'),
+  fontSize: integer("font_size").notNull().default(16),
+  height: integer("height").notNull().default(40),
+  autoRefresh: boolean("auto_refresh").notNull().default(true),
+  refreshInterval: integer("refresh_interval").notNull().default(300), // seconds
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Live state will be managed in-memory, not persisted
+export interface LiveState {
+  currentSetId: string | null;
+  programSceneId: string | null;
+  previewSceneId: string | null;
+  tickerOn: boolean;
+  tickerPlaylistId: string | null;
+  bannerOn: boolean;
+  bannerText: string;
+  transitionDuration: number;
+  lastUpdate: Date;
+}
+
+export const insertLibraryItemSchema = createInsertSchema(libraryItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSceneSchema = createInsertSchema(scenes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPresentationSetSchema = createInsertSchema(presentationSets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTickerPlaylistSchema = createInsertSchema(tickerPlaylists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertLibraryItem = z.infer<typeof insertLibraryItemSchema>;
+export type LibraryItem = typeof libraryItems.$inferSelect;
+export type InsertScene = z.infer<typeof insertSceneSchema>;
+export type Scene = typeof scenes.$inferSelect;
+export type InsertPresentationSet = z.infer<typeof insertPresentationSetSchema>;
+export type PresentationSet = typeof presentationSets.$inferSelect;
+export type InsertTickerPlaylist = z.infer<typeof insertTickerPlaylistSchema>;
+export type TickerPlaylist = typeof tickerPlaylists.$inferSelect;

@@ -12,7 +12,12 @@ import {
   insertRssSourceSchema,
   insertRssArticleSchema,
   insertRssAnalysisSchema,
-  insertRssComparisonSchema
+  insertRssComparisonSchema,
+  insertLibraryItemSchema,
+  insertSceneSchema,
+  insertPresentationSetSchema,
+  insertTickerPlaylistSchema,
+  type LiveState
 } from "@shared/schema";
 import OpenAI from "openai";
 import { z } from "zod";
@@ -54,6 +59,114 @@ const upload = multer({
     }
   }
 });
+
+// Server-Sent Events Manager for Live Presentation Control
+class LiveSSEManager {
+  private clients: Map<string, express.Response> = new Map();
+  private updateThrottle: Map<string, number> = new Map();
+  private readonly MAX_UPDATES_PER_SEC = 15;
+
+  addClient(clientId: string, res: express.Response) {
+    this.clients.set(clientId, res);
+    this.updateThrottle.set(clientId, 0);
+    
+    // Send initial connection event
+    this.sendToClient(clientId, 'connected', { 
+      timestamp: new Date().toISOString(),
+      clientId 
+    });
+    
+    console.log(`Live SSE client connected: ${clientId} (total: ${this.clients.size})`);
+  }
+
+  removeClient(clientId: string) {
+    this.clients.delete(clientId);
+    this.updateThrottle.delete(clientId);
+    console.log(`Live SSE client disconnected: ${clientId} (total: ${this.clients.size})`);
+  }
+
+  broadcast(eventType: string, data: any) {
+    const now = Date.now();
+    const message = {
+      type: eventType,
+      data,
+      timestamp: new Date().toISOString()
+    };
+
+    for (const [clientId, res] of Array.from(this.clients.entries())) {
+      // Throttle updates per client
+      const lastUpdate = this.updateThrottle.get(clientId) || 0;
+      if (now - lastUpdate < 1000 / this.MAX_UPDATES_PER_SEC) {
+        continue; // Skip if too frequent
+      }
+
+      try {
+        res.write(`data: ${JSON.stringify(message)}\n\n`);
+        this.updateThrottle.set(clientId, now);
+      } catch (error) {
+        console.error(`Error sending SSE to client ${clientId}:`, error);
+        this.removeClient(clientId);
+      }
+    }
+  }
+
+  sendToClient(clientId: string, eventType: string, data: any) {
+    const res = this.clients.get(clientId);
+    if (!res) return;
+
+    const message = {
+      type: eventType,
+      data,
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      res.write(`data: ${JSON.stringify(message)}\n\n`);
+    } catch (error) {
+      console.error(`Error sending SSE to client ${clientId}:`, error);
+      this.removeClient(clientId);
+    }
+  }
+
+  getClientCount(): number {
+    return this.clients.size;
+  }
+}
+
+const liveSSEManager = new LiveSSEManager();
+
+// Simple token-based authentication for live control commands
+const controlTokens = new Map<string, { expires: Date; permissions: string[] }>();
+
+function generateControlToken(permissions: string[] = ['basic']): string {
+  const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+  const expires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+  
+  controlTokens.set(token, { expires, permissions });
+  
+  // Cleanup expired tokens
+  setTimeout(() => {
+    for (const [key, value] of Array.from(controlTokens.entries())) {
+      if (value.expires < new Date()) {
+        controlTokens.delete(key);
+      }
+    }
+  }, 60000); // Check every minute
+
+  return token;
+}
+
+function validateControlToken(token: string, requiredPermission: string = 'basic'): boolean {
+  const tokenData = controlTokens.get(token);
+  if (!tokenData) return false;
+  
+  if (tokenData.expires < new Date()) {
+    controlTokens.delete(token);
+    return false;
+  }
+  
+  return tokenData.permissions.includes(requiredPermission) || tokenData.permissions.includes('admin');
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from uploads directory
@@ -1498,6 +1611,532 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error initializing football data:', error);
       res.status(500).json({ error: "Failed to initialize football data" });
+    }
+  });
+
+  // === LIVE PRESENTATION SYSTEM ROUTES ===
+
+  // Library Items routes
+  app.get("/api/library-items", async (req, res) => {
+    try {
+      const { type, category, search } = req.query;
+      
+      let items;
+      if (search) {
+        items = await storage.searchLibraryItems(search as string);
+      } else if (type) {
+        items = await storage.getLibraryItemsByType(type as string);
+      } else if (category) {
+        items = await storage.getLibraryItemsByCategory(category as string);
+      } else {
+        items = await storage.getLibraryItems();
+      }
+      
+      res.json({ libraryItems: items });
+    } catch (error) {
+      console.error('Error fetching library items:', error);
+      res.status(500).json({ error: "Failed to fetch library items" });
+    }
+  });
+
+  app.get("/api/library-items/:id", async (req, res) => {
+    try {
+      const item = await storage.getLibraryItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Library item not found" });
+      }
+      res.json({ libraryItem: item });
+    } catch (error) {
+      console.error('Error fetching library item:', error);
+      res.status(500).json({ error: "Failed to fetch library item" });
+    }
+  });
+
+  app.post("/api/library-items", async (req, res) => {
+    try {
+      const validatedData = insertLibraryItemSchema.parse(req.body);
+      const item = await storage.createLibraryItem(validatedData);
+      res.status(201).json({ libraryItem: item });
+    } catch (error) {
+      console.error('Error creating library item:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create library item" });
+      }
+    }
+  });
+
+  app.put("/api/library-items/:id", async (req, res) => {
+    try {
+      const updates = insertLibraryItemSchema.partial().parse(req.body);
+      const item = await storage.updateLibraryItem(req.params.id, updates);
+      if (!item) {
+        return res.status(404).json({ error: "Library item not found" });
+      }
+      res.json({ libraryItem: item });
+    } catch (error) {
+      console.error('Error updating library item:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update library item" });
+      }
+    }
+  });
+
+  app.delete("/api/library-items/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteLibraryItem(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Library item not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting library item:', error);
+      res.status(500).json({ error: "Failed to delete library item" });
+    }
+  });
+
+  // Scenes routes
+  app.get("/api/scenes", async (req, res) => {
+    try {
+      const { layout, templates, search } = req.query;
+      
+      let scenes;
+      if (search) {
+        scenes = await storage.searchScenes(search as string);
+      } else if (layout) {
+        scenes = await storage.getScenesByLayout(layout as string);
+      } else if (templates === 'true') {
+        scenes = await storage.getSceneTemplates();
+      } else {
+        scenes = await storage.getScenes();
+      }
+      
+      res.json({ scenes });
+    } catch (error) {
+      console.error('Error fetching scenes:', error);
+      res.status(500).json({ error: "Failed to fetch scenes" });
+    }
+  });
+
+  app.get("/api/scenes/:id", async (req, res) => {
+    try {
+      const scene = await storage.getScene(req.params.id);
+      if (!scene) {
+        return res.status(404).json({ error: "Scene not found" });
+      }
+      res.json({ scene });
+    } catch (error) {
+      console.error('Error fetching scene:', error);
+      res.status(500).json({ error: "Failed to fetch scene" });
+    }
+  });
+
+  app.post("/api/scenes", async (req, res) => {
+    try {
+      const validatedData = insertSceneSchema.parse(req.body);
+      const scene = await storage.createScene(validatedData);
+      res.status(201).json({ scene });
+    } catch (error) {
+      console.error('Error creating scene:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create scene" });
+      }
+    }
+  });
+
+  app.put("/api/scenes/:id", async (req, res) => {
+    try {
+      const updates = insertSceneSchema.partial().parse(req.body);
+      const scene = await storage.updateScene(req.params.id, updates);
+      if (!scene) {
+        return res.status(404).json({ error: "Scene not found" });
+      }
+      res.json({ scene });
+    } catch (error) {
+      console.error('Error updating scene:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update scene" });
+      }
+    }
+  });
+
+  app.delete("/api/scenes/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteScene(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Scene not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting scene:', error);
+      res.status(500).json({ error: "Failed to delete scene" });
+    }
+  });
+
+  // Presentation Sets routes
+  app.get("/api/presentation-sets", async (req, res) => {
+    try {
+      const { active } = req.query;
+      
+      let sets;
+      if (active === 'true') {
+        sets = await storage.getActivePresentationSets();
+      } else {
+        sets = await storage.getPresentationSets();
+      }
+      
+      res.json({ presentationSets: sets });
+    } catch (error) {
+      console.error('Error fetching presentation sets:', error);
+      res.status(500).json({ error: "Failed to fetch presentation sets" });
+    }
+  });
+
+  app.get("/api/presentation-sets/:id", async (req, res) => {
+    try {
+      const set = await storage.getPresentationSet(req.params.id);
+      if (!set) {
+        return res.status(404).json({ error: "Presentation set not found" });
+      }
+      res.json({ presentationSet: set });
+    } catch (error) {
+      console.error('Error fetching presentation set:', error);
+      res.status(500).json({ error: "Failed to fetch presentation set" });
+    }
+  });
+
+  app.post("/api/presentation-sets", async (req, res) => {
+    try {
+      const validatedData = insertPresentationSetSchema.parse(req.body);
+      const set = await storage.createPresentationSet(validatedData);
+      res.status(201).json({ presentationSet: set });
+    } catch (error) {
+      console.error('Error creating presentation set:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create presentation set" });
+      }
+    }
+  });
+
+  app.put("/api/presentation-sets/:id", async (req, res) => {
+    try {
+      const updates = insertPresentationSetSchema.partial().parse(req.body);
+      const set = await storage.updatePresentationSet(req.params.id, updates);
+      if (!set) {
+        return res.status(404).json({ error: "Presentation set not found" });
+      }
+      res.json({ presentationSet: set });
+    } catch (error) {
+      console.error('Error updating presentation set:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update presentation set" });
+      }
+    }
+  });
+
+  app.delete("/api/presentation-sets/:id", async (req, res) => {
+    try {
+      const success = await storage.deletePresentationSet(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Presentation set not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting presentation set:', error);
+      res.status(500).json({ error: "Failed to delete presentation set" });
+    }
+  });
+
+  // Ticker Playlists routes
+  app.get("/api/ticker-playlists", async (req, res) => {
+    try {
+      const { active } = req.query;
+      
+      let playlists;
+      if (active === 'true') {
+        playlists = await storage.getActiveTickerPlaylists();
+      } else {
+        playlists = await storage.getTickerPlaylists();
+      }
+      
+      res.json({ tickerPlaylists: playlists });
+    } catch (error) {
+      console.error('Error fetching ticker playlists:', error);
+      res.status(500).json({ error: "Failed to fetch ticker playlists" });
+    }
+  });
+
+  app.get("/api/ticker-playlists/:id", async (req, res) => {
+    try {
+      const playlist = await storage.getTickerPlaylist(req.params.id);
+      if (!playlist) {
+        return res.status(404).json({ error: "Ticker playlist not found" });
+      }
+      res.json({ tickerPlaylist: playlist });
+    } catch (error) {
+      console.error('Error fetching ticker playlist:', error);
+      res.status(500).json({ error: "Failed to fetch ticker playlist" });
+    }
+  });
+
+  app.post("/api/ticker-playlists", async (req, res) => {
+    try {
+      const validatedData = insertTickerPlaylistSchema.parse(req.body);
+      const playlist = await storage.createTickerPlaylist(validatedData);
+      res.status(201).json({ tickerPlaylist: playlist });
+    } catch (error) {
+      console.error('Error creating ticker playlist:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create ticker playlist" });
+      }
+    }
+  });
+
+  app.put("/api/ticker-playlists/:id", async (req, res) => {
+    try {
+      const updates = insertTickerPlaylistSchema.partial().parse(req.body);
+      const playlist = await storage.updateTickerPlaylist(req.params.id, updates);
+      if (!playlist) {
+        return res.status(404).json({ error: "Ticker playlist not found" });
+      }
+      res.json({ tickerPlaylist: playlist });
+    } catch (error) {
+      console.error('Error updating ticker playlist:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update ticker playlist" });
+      }
+    }
+  });
+
+  app.delete("/api/ticker-playlists/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteTickerPlaylist(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Ticker playlist not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting ticker playlist:', error);
+      res.status(500).json({ error: "Failed to delete ticker playlist" });
+    }
+  });
+
+  // Live State routes
+  app.get("/api/live/state", async (req, res) => {
+    try {
+      const liveState = await storage.getLiveState();
+      res.json({ liveState });
+    } catch (error) {
+      console.error('Error fetching live state:', error);
+      res.status(500).json({ error: "Failed to fetch live state" });
+    }
+  });
+
+  app.put("/api/live/state", async (req, res) => {
+    try {
+      const updates = z.object({
+        currentSetId: z.string().nullable().optional(),
+        programSceneId: z.string().nullable().optional(),
+        previewSceneId: z.string().nullable().optional(),
+        tickerOn: z.boolean().optional(),
+        tickerPlaylistId: z.string().nullable().optional(),
+        bannerOn: z.boolean().optional(),
+        bannerText: z.string().optional(),
+        transitionDuration: z.number().optional()
+      }).parse(req.body);
+      
+      const liveState = await storage.updateLiveState(updates);
+      
+      // Broadcast the update to all connected SSE clients
+      liveSSEManager.broadcast('state-update', liveState);
+      
+      res.json({ liveState });
+    } catch (error) {
+      console.error('Error updating live state:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update live state" });
+      }
+    }
+  });
+
+  // Server-Sent Events endpoint for real-time live presentation updates
+  app.get("/api/live/stream", (req, res) => {
+    const clientId = req.query.clientId as string || `client-${Date.now()}-${Math.random().toString(36).substring(2)}`;
+    
+    // Set SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    // Add client to SSE manager
+    liveSSEManager.addClient(clientId, res);
+
+    // Send initial state
+    storage.getLiveState().then(liveState => {
+      liveSSEManager.sendToClient(clientId, 'initial-state', liveState);
+    }).catch(error => {
+      console.error('Error getting initial live state:', error);
+    });
+
+    // Handle client disconnect
+    req.on('close', () => {
+      liveSSEManager.removeClient(clientId);
+    });
+
+    req.on('error', (error) => {
+      console.error('SSE connection error:', error);
+      liveSSEManager.removeClient(clientId);
+    });
+  });
+
+  // Live control commands endpoint
+  app.post("/api/live/commands", async (req, res) => {
+    try {
+      const { command, token, params } = req.body;
+      
+      // Validate control token
+      if (!validateControlToken(token)) {
+        return res.status(401).json({ error: "Invalid or expired control token" });
+      }
+
+      const commandSchema = z.object({
+        command: z.enum(['take', 'next', 'previous', 'set-scene', 'toggle-ticker', 'set-ticker', 'toggle-banner', 'set-banner']),
+        params: z.any().optional()
+      });
+
+      const { command: cmd, params: cmdParams } = commandSchema.parse({ command, params });
+
+      let updates: Partial<LiveState> = {};
+      
+      switch (cmd) {
+        case 'take':
+          // Take current preview to program
+          const currentState = await storage.getLiveState();
+          if (currentState.previewSceneId) {
+            updates.programSceneId = currentState.previewSceneId;
+          }
+          break;
+          
+        case 'set-scene':
+          if (cmdParams?.sceneId && cmdParams?.target) {
+            if (cmdParams.target === 'program') {
+              updates.programSceneId = cmdParams.sceneId;
+            } else if (cmdParams.target === 'preview') {
+              updates.previewSceneId = cmdParams.sceneId;
+            }
+          }
+          break;
+          
+        case 'toggle-ticker':
+          const state = await storage.getLiveState();
+          updates.tickerOn = !state.tickerOn;
+          break;
+          
+        case 'set-ticker':
+          if (cmdParams?.playlistId !== undefined) {
+            updates.tickerPlaylistId = cmdParams.playlistId;
+            updates.tickerOn = cmdParams.playlistId !== null;
+          }
+          break;
+          
+        case 'toggle-banner':
+          const bannerState = await storage.getLiveState();
+          updates.bannerOn = !bannerState.bannerOn;
+          break;
+          
+        case 'set-banner':
+          if (cmdParams?.text !== undefined) {
+            updates.bannerText = cmdParams.text;
+            updates.bannerOn = cmdParams.text.length > 0;
+          }
+          break;
+          
+        default:
+          return res.status(400).json({ error: "Unknown command" });
+      }
+
+      // Update live state
+      const newState = await storage.updateLiveState(updates);
+      
+      // Broadcast to all connected clients
+      liveSSEManager.broadcast('command-executed', {
+        command: cmd,
+        params: cmdParams,
+        newState
+      });
+
+      res.json({ 
+        success: true, 
+        command: cmd,
+        newState 
+      });
+    } catch (error) {
+      console.error('Error executing live command:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid command data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to execute command" });
+      }
+    }
+  });
+
+  // Generate control token endpoint (for authenticated users)
+  app.post("/api/live/token", async (req, res) => {
+    try {
+      const { permissions } = req.body;
+      const validPermissions = ['basic', 'admin'];
+      const requestedPermissions = Array.isArray(permissions) 
+        ? permissions.filter(p => validPermissions.includes(p))
+        : ['basic'];
+      
+      const token = generateControlToken(requestedPermissions);
+      
+      res.json({ 
+        token,
+        permissions: requestedPermissions,
+        expiresIn: '30 minutes'
+      });
+    } catch (error) {
+      console.error('Error generating control token:', error);
+      res.status(500).json({ error: "Failed to generate control token" });
+    }
+  });
+
+  // Live status endpoint
+  app.get("/api/live/status", async (req, res) => {
+    try {
+      const liveState = await storage.getLiveState();
+      const connectedClients = liveSSEManager.getClientCount();
+      
+      res.json({
+        liveState,
+        connectedClients,
+        serverTime: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error fetching live status:', error);
+      res.status(500).json({ error: "Failed to fetch live status" });
     }
   });
 

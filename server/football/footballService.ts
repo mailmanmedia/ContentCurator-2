@@ -15,6 +15,7 @@ import {
   type TeamMatchupAnalysis
 } from "@shared/schema";
 import { eq, and, gte, lte, desc, inArray } from "drizzle-orm";
+import { smartFootballCache } from "./cacheService";
 
 export interface FootballAPIResponse<T> {
   get: string;
@@ -503,43 +504,63 @@ class FootballService {
   }
 
   async getCompetitions(): Promise<FootballCompetition[]> {
-    return await db.select()
-      .from(footballCompetitions)
-      .where(eq(footballCompetitions.isActive, true))
-      .orderBy(footballCompetitions.name);
+    return await smartFootballCache.get(
+      'competitions',
+      async () => {
+        return await db.select()
+          .from(footballCompetitions)
+          .where(eq(footballCompetitions.isActive, true))
+          .orderBy(footballCompetitions.name);
+      },
+      'competitions'
+    );
   }
 
   async getTeamsByCompetition(competitionId: number): Promise<FootballTeam[]> {
-    // Get teams that have played in this competition
-    const teamIds = await db.selectDistinct({ teamId: footballFixtures.homeTeamId })
-      .from(footballFixtures)
-      .where(eq(footballFixtures.leagueId, competitionId))
-      .union(
-        db.selectDistinct({ teamId: footballFixtures.awayTeamId })
+    return await smartFootballCache.get(
+      `teams_competition_${competitionId}`,
+      async () => {
+        // Get teams that have played in this competition
+        const teamIds = await db.selectDistinct({ teamId: footballFixtures.homeTeamId })
           .from(footballFixtures)
           .where(eq(footballFixtures.leagueId, competitionId))
-      );
+          .union(
+            db.selectDistinct({ teamId: footballFixtures.awayTeamId })
+              .from(footballFixtures)
+              .where(eq(footballFixtures.leagueId, competitionId))
+          );
 
-    if (teamIds.length === 0) {
-      // If no fixtures, try to sync teams for this competition
-      const competition = await db.select()
-        .from(footballCompetitions)
-        .where(eq(footballCompetitions.id, competitionId))
-        .limit(1);
+        if (teamIds.length === 0) {
+          // If no fixtures, try to sync teams for this competition
+          const competition = await db.select()
+            .from(footballCompetitions)
+            .where(eq(footballCompetitions.id, competitionId))
+            .limit(1);
 
-      if (competition.length > 0) {
-        return await this.syncTeamsForCompetition(competitionId, competition[0].season);
-      }
-      return [];
-    }
+          if (competition.length > 0) {
+            return await this.syncTeamsForCompetition(competitionId, competition[0].season);
+          }
+          return [];
+        }
 
-    return await db.select()
-      .from(footballTeams)
-      .where(inArray(footballTeams.id, teamIds.map(t => t.teamId)))
-      .orderBy(footballTeams.name);
+        return await db.select()
+          .from(footballTeams)
+          .where(inArray(footballTeams.id, teamIds.map(t => t.teamId)))
+          .orderBy(footballTeams.name);
+      },
+      'teams'
+    );
   }
 
   async getHeadToHeadStats(homeTeamId: number, awayTeamId: number, last: number = 10): Promise<FootballFixture[]> {
+    // Use smart cache's optimized head-to-head method
+    return await smartFootballCache.getHeadToHead(homeTeamId, awayTeamId, () => 
+      this.fetchHeadToHeadRaw(homeTeamId, awayTeamId, last)
+    );
+  }
+
+  // Raw uncached fetch method to prevent recursion
+  async fetchHeadToHeadRaw(homeTeamId: number, awayTeamId: number, last: number = 10): Promise<FootballFixture[]> {
     try {
       const response = await this.fetchFromAPI<APIFixture>('/fixtures/headtohead', {
         h2h: `${homeTeamId}-${awayTeamId}`,
@@ -648,18 +669,26 @@ class FootballService {
   }
 
   async getTeamStatistics(teamId: number, leagueId: number, season: number): Promise<any> {
-    try {
-      const response = await this.fetchFromAPI('/teams/statistics', {
-        team: teamId,
-        league: leagueId,
-        season: season
-      });
+    const cacheCategory = teamId === 40 ? 'liverpool' : 'general';
+    
+    return await smartFootballCache.get(
+      `team_stats_${teamId}_${leagueId}_${season}`,
+      async () => {
+        try {
+          const response = await this.fetchFromAPI('/teams/statistics', {
+            team: teamId,
+            league: leagueId,
+            season: season
+          });
 
-      return response.response;
-    } catch (error) {
-      console.error(`Failed to get team statistics:`, error);
-      return null;
-    }
+          return response.response;
+        } catch (error) {
+          console.error(`Failed to get team statistics:`, error);
+          return null;
+        }
+      },
+      cacheCategory
+    );
   }
 
   async getLineupForFixture(fixtureId: number): Promise<FootballLineup[]> {
