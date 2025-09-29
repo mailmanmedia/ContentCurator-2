@@ -46,10 +46,10 @@ interface PromptData {
   opponent?: string;
   competition?: string;
   venue?: 'home' | 'away' | 'neutral';
-  matchTiming?: string;
+  matchTiming?: string[];  // Changed to array for multiple selection
   hookFormula?: string;
-  targetAudience?: string;
-  contentGoal?: string;
+  targetAudience?: string[];  // Changed to array for multiple selection
+  contentGoal?: string[];  // Changed to array for multiple selection
 }
 
 interface OutputVariation {
@@ -80,10 +80,10 @@ export default function PromptStudio() {
     opponent: "",
     competition: "",
     venue: undefined,
-    matchTiming: "",
+    matchTiming: [],
     hookFormula: "",
-    targetAudience: "",
-    contentGoal: ""
+    targetAudience: [],
+    contentGoal: []
   });
   
   const [isGenerating, setIsGenerating] = useState(false);
@@ -108,6 +108,21 @@ export default function PromptStudio() {
   const { data: reportsData } = useQuery({
     queryKey: ['/api/reports'],
     select: (response: any) => response.reports as Report[]
+  });
+
+  // Fetch teams for selected competition
+  const competitionId = promptData.competition === "Premier League" ? 39 
+    : promptData.competition === "Champions League" ? 2
+    : promptData.competition === "Europa League" ? 3
+    : promptData.competition === "FA Cup" ? 45
+    : promptData.competition === "Carabao Cup" ? 48
+    : null;
+
+  const { data: teamsData } = useQuery({
+    queryKey: ['/api/football/competitions', competitionId, 'teams'],
+    enabled: !!competitionId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    select: (response: any) => response.teams || []
   });
 
   // Create report mutation
@@ -153,6 +168,43 @@ export default function PromptStudio() {
     "Breaking News - Urgent",
     "Match Preview - Tactical",
     "Player Spotlight - Personal"
+  ];
+
+  // Options for dropdown fields
+  const targetAudienceOptions = [
+    "Casual fans",
+    "Tactical enthusiasts", 
+    "Liverpool FC supporters",
+    "General football fans",
+    "New viewers",
+    "Fantasy football players",
+    "Data analysts",
+    "Young fans",
+    "International audience"
+  ];
+
+  const contentGoalOptions = [
+    "Drive engagement",
+    "Increase watch time",
+    "Build subscriber base",
+    "Educate viewers",
+    "Entertain audience",
+    "Generate discussion",
+    "Provide analysis",
+    "Create viral content",
+    "Support team narrative",
+    "Challenge opinions"
+  ];
+
+  const matchTimingOptions = [
+    "Pre-match",
+    "Live match",
+    "Post-match",
+    "Week buildup",
+    "Transfer window",
+    "International break",
+    "Season review",
+    "Historical analysis"
   ];
 
   // Comprehensive template system for professional content creation
@@ -470,7 +522,7 @@ export default function PromptStudio() {
     }
     
     // Audience and platform optimization
-    if (data?.targetAudience === "" && (style.includes("Personal") || outputType === "title")) {
+    if ((!data?.targetAudience || data.targetAudience.length === 0) && (style.includes("Personal") || outputType === "title")) {
       suggestions.push("Define target audience (casual fans, tactical enthusiasts, general viewers)");
     }
     
@@ -479,6 +531,28 @@ export default function PromptStudio() {
 
   const handleInputChange = (field: keyof PromptData, value: any) => {
     setPromptData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Helper function for multi-select fields
+  const handleMultiSelectChange = (field: 'targetAudience' | 'contentGoal' | 'matchTiming', value: string) => {
+    setPromptData(prev => {
+      const currentValues = prev[field] || [];
+      const isSelected = currentValues.includes(value);
+      
+      return {
+        ...prev,
+        [field]: isSelected 
+          ? currentValues.filter(item => item !== value)
+          : [...currentValues, value]
+      };
+    });
+  };
+
+  const removeMultiSelectItem = (field: 'targetAudience' | 'contentGoal' | 'matchTiming', value: string) => {
+    setPromptData(prev => ({
+      ...prev,
+      [field]: (prev[field] || []).filter(item => item !== value)
+    }));
   };
 
   const addToList = (field: 'images' | 'stats' | 'ideas', value: string) => {
@@ -794,14 +868,33 @@ export default function PromptStudio() {
                     {/* Opponent */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground">Opponent</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., Manchester City"
-                        value={promptData.opponent || ""}
-                        onChange={(e) => handleInputChange("opponent", e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
-                        data-testid="input-opponent"
-                      />
+                      <Select value={promptData.opponent || ""} onValueChange={(value) => handleInputChange("opponent", value)}>
+                        <SelectTrigger className="w-full h-9" data-testid="select-opponent">
+                          <SelectValue placeholder="Select opponent team" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {teamsData && teamsData.length > 0 ? (
+                            teamsData.map((team: any) => (
+                              <SelectItem key={team.id} value={team.name}>
+                                {team.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <>
+                              <SelectItem value="Manchester City">Manchester City</SelectItem>
+                              <SelectItem value="Arsenal">Arsenal</SelectItem>
+                              <SelectItem value="Chelsea">Chelsea</SelectItem>
+                              <SelectItem value="Manchester United">Manchester United</SelectItem>
+                              <SelectItem value="Tottenham">Tottenham</SelectItem>
+                              <SelectItem value="Newcastle United">Newcastle United</SelectItem>
+                              <SelectItem value="Brighton">Brighton</SelectItem>
+                              <SelectItem value="Aston Villa">Aston Villa</SelectItem>
+                              <SelectItem value="West Ham">West Ham</SelectItem>
+                              <SelectItem value="Everton">Everton</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                     
                     {/* Competition */}
@@ -837,43 +930,97 @@ export default function PromptStudio() {
                       </Select>
                     </div>
                     
-                    {/* Target Audience */}
+                    {/* Target Audience - Multi-select */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground">Target Audience</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., Tactical enthusiasts"
-                        value={promptData.targetAudience || ""}
-                        onChange={(e) => handleInputChange("targetAudience", e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
-                        data-testid="input-target-audience"
-                      />
+                      <Select onValueChange={(value) => handleMultiSelectChange("targetAudience", value)}>
+                        <SelectTrigger className="w-full h-9" data-testid="select-target-audience">
+                          <SelectValue placeholder="Select target audiences" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {targetAudienceOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {promptData.targetAudience && promptData.targetAudience.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {promptData.targetAudience.map((audience) => (
+                            <Badge 
+                              key={audience}
+                              variant="secondary" 
+                              className="cursor-pointer text-xs"
+                              onClick={() => removeMultiSelectItem("targetAudience", audience)}
+                            >
+                              {audience} ×
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     
-                    {/* Content Goal */}
+                    {/* Content Goal - Multi-select */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground">Content Goal</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., Drive engagement"
-                        value={promptData.contentGoal || ""}
-                        onChange={(e) => handleInputChange("contentGoal", e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
-                        data-testid="input-content-goal"
-                      />
+                      <Select onValueChange={(value) => handleMultiSelectChange("contentGoal", value)}>
+                        <SelectTrigger className="w-full h-9" data-testid="select-content-goal">
+                          <SelectValue placeholder="Select content goals" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contentGoalOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {promptData.contentGoal && promptData.contentGoal.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {promptData.contentGoal.map((goal) => (
+                            <Badge 
+                              key={goal}
+                              variant="secondary" 
+                              className="cursor-pointer text-xs"
+                              onClick={() => removeMultiSelectItem("contentGoal", goal)}
+                            >
+                              {goal} ×
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     
-                    {/* Match Timing */}
+                    {/* Match Timing - Multi-select */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-muted-foreground">Match Timing</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., Pre-match, Post-match"
-                        value={promptData.matchTiming || ""}
-                        onChange={(e) => handleInputChange("matchTiming", e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
-                        data-testid="input-match-timing"
-                      />
+                      <Select onValueChange={(value) => handleMultiSelectChange("matchTiming", value)}>
+                        <SelectTrigger className="w-full h-9" data-testid="select-match-timing">
+                          <SelectValue placeholder="Select match timing" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {matchTimingOptions.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {promptData.matchTiming && promptData.matchTiming.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {promptData.matchTiming.map((timing) => (
+                            <Badge 
+                              key={timing}
+                              variant="secondary" 
+                              className="cursor-pointer text-xs"
+                              onClick={() => removeMultiSelectItem("matchTiming", timing)}
+                            >
+                              {timing} ×
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
