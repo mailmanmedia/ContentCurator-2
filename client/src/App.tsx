@@ -8,6 +8,7 @@ import VisualAssistant from "@/components/VisualAssistant";
 import FrameworkDirectory from "@/pages/FrameworkDirectory";
 import CreateFramework from "@/pages/CreateFramework";
 import RssIntelligence from "@/pages/RssIntelligence";
+import TeamMatchupStudio from "@/pages/TeamMatchupStudio";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/frameworks" component={FrameworkDirectory} />
       <Route path="/frameworks/create" component={CreateFramework} />
       <Route path="/rss" component={RssIntelligence} />
+      <Route path="/team-matchup" component={TeamMatchupStudio} />
       <Route component={NotFound} />
     </Switch>
   );

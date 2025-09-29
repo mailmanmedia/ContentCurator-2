@@ -13,6 +13,7 @@ import {
   type RssComparison, type InsertRssComparison
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { footballService } from "./football/footballService";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -115,6 +116,13 @@ export interface IStorage {
   createRssComparison(comparison: InsertRssComparison): Promise<RssComparison>;
   updateRssComparison(id: string, updates: Partial<InsertRssComparison>): Promise<RssComparison | undefined>;
   deleteRssComparison(id: string): Promise<boolean>;
+
+  // Football methods (delegated to footballService)
+  getFootballCompetitions(): Promise<any[]>;
+  getFootballTeamsByCompetition(competitionId: number): Promise<any[]>;
+  getFootballHeadToHead(homeTeamId: number, awayTeamId: number): Promise<any[]>;
+  getFootballTeamStatistics(teamId: number, leagueId: number, season: number): Promise<any>;
+  initializeFootballData(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -1132,6 +1140,27 @@ export class MemStorage implements IStorage {
 
   async deleteRssComparison(id: string): Promise<boolean> {
     return this.rssComparisons.delete(id);
+  }
+
+  // Football methods (delegated to footballService)
+  async getFootballCompetitions(): Promise<any[]> {
+    return footballService.getCompetitions();
+  }
+
+  async getFootballTeamsByCompetition(competitionId: number): Promise<any[]> {
+    return footballService.getTeamsByCompetition(competitionId);
+  }
+
+  async getFootballHeadToHead(homeTeamId: number, awayTeamId: number): Promise<any[]> {
+    return footballService.getHeadToHeadStats(homeTeamId, awayTeamId);
+  }
+
+  async getFootballTeamStatistics(teamId: number, leagueId: number, season: number): Promise<any> {
+    return footballService.getTeamStatistics(teamId, leagueId, season);
+  }
+
+  async initializeFootballData(): Promise<void> {
+    return footballService.initializeData();
   }
 }
 

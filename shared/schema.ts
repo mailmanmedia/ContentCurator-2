@@ -261,3 +261,123 @@ export type InsertRssAnalysis = z.infer<typeof insertRssAnalysisSchema>;
 export type RssAnalysis = typeof rssAnalysis.$inferSelect;
 export type InsertRssComparison = z.infer<typeof insertRssComparisonSchema>;
 export type RssComparison = typeof rssComparisons.$inferSelect;
+
+// Team Matchup Studio Schema
+export const footballCompetitions = pgTable("football_competitions", {
+  id: integer("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // 'league', 'cup'
+  country: text("country").notNull(),
+  logo: text("logo"),
+  flag: text("flag"),
+  season: integer("season").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
+});
+
+export const footballTeams = pgTable("football_teams", {
+  id: integer("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code"),
+  country: text("country").notNull(),
+  founded: integer("founded"),
+  national: boolean("national").notNull().default(false),
+  logo: text("logo"),
+  venue: jsonb("venue"),
+  lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
+});
+
+export const footballPlayers = pgTable("football_players", {
+  id: integer("id").primaryKey(),
+  name: text("name").notNull(),
+  firstname: text("firstname"),
+  lastname: text("lastname"),
+  age: integer("age"),
+  birth: jsonb("birth"),
+  nationality: text("nationality"),
+  height: text("height"),
+  weight: text("weight"),
+  injured: boolean("injured").notNull().default(false),
+  photo: text("photo"),
+  lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
+});
+
+export const footballLineups = pgTable("football_lineups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fixtureId: integer("fixture_id").notNull(),
+  teamId: integer("team_id").notNull(),
+  formation: text("formation").notNull(),
+  startXI: jsonb("start_xi").notNull(),
+  substitutes: jsonb("substitutes").notNull(),
+  coach: jsonb("coach"),
+  lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
+});
+
+export const footballFixtures = pgTable("football_fixtures", {
+  id: integer("id").primaryKey(),
+  referee: text("referee"),
+  timezone: text("timezone").notNull(),
+  date: timestamp("date").notNull(),
+  timestamp: integer("timestamp"),
+  periods: jsonb("periods"),
+  venue: jsonb("venue"),
+  status: jsonb("status").notNull(),
+  leagueId: integer("league_id").notNull(),
+  season: integer("season").notNull(),
+  round: text("round"),
+  homeTeamId: integer("home_team_id").notNull(),
+  awayTeamId: integer("away_team_id").notNull(),
+  goals: jsonb("goals"),
+  score: jsonb("score"),
+  lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
+});
+
+export const footballStatistics = pgTable("football_statistics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fixtureId: integer("fixture_id").notNull(),
+  teamId: integer("team_id").notNull(),
+  statistics: jsonb("statistics").notNull(),
+  lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
+});
+
+export const teamMatchupAnalysis = pgTable("team_matchup_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  homeTeamId: integer("home_team_id").notNull(),
+  awayTeamId: integer("away_team_id").notNull(),
+  competitionId: integer("competition_id").notNull(),
+  analysisType: text("analysis_type").notNull(), // 'head_to_head', 'form', 'statistics'
+  resultJson: jsonb("result_json").notNull(),
+  fixtureIds: text("fixture_ids").array().default(sql`'{}'::text[]`),
+  seasonRange: text("season_range").notNull(),
+  generatedAt: timestamp("generated_at").notNull().default(sql`now()`),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const insertFootballCompetitionSchema = createInsertSchema(footballCompetitions);
+export const insertFootballTeamSchema = createInsertSchema(footballTeams);
+export const insertFootballPlayerSchema = createInsertSchema(footballPlayers);
+export const insertFootballLineupSchema = createInsertSchema(footballLineups).omit({
+  id: true,
+});
+export const insertFootballFixtureSchema = createInsertSchema(footballFixtures);
+export const insertFootballStatisticsSchema = createInsertSchema(footballStatistics).omit({
+  id: true,
+});
+export const insertTeamMatchupAnalysisSchema = createInsertSchema(teamMatchupAnalysis).omit({
+  id: true,
+});
+
+export type InsertFootballCompetition = z.infer<typeof insertFootballCompetitionSchema>;
+export type FootballCompetition = typeof footballCompetitions.$inferSelect;
+export type InsertFootballTeam = z.infer<typeof insertFootballTeamSchema>;
+export type FootballTeam = typeof footballTeams.$inferSelect;
+export type InsertFootballPlayer = z.infer<typeof insertFootballPlayerSchema>;
+export type FootballPlayer = typeof footballPlayers.$inferSelect;
+export type InsertFootballLineup = z.infer<typeof insertFootballLineupSchema>;
+export type FootballLineup = typeof footballLineups.$inferSelect;
+export type InsertFootballFixture = z.infer<typeof insertFootballFixtureSchema>;
+export type FootballFixture = typeof footballFixtures.$inferSelect;
+export type InsertFootballStatistics = z.infer<typeof insertFootballStatisticsSchema>;
+export type FootballStatistics = typeof footballStatistics.$inferSelect;
+export type InsertTeamMatchupAnalysis = z.infer<typeof insertTeamMatchupAnalysisSchema>;
+export type TeamMatchupAnalysis = typeof teamMatchupAnalysis.$inferSelect;

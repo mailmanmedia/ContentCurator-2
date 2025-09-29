@@ -23,6 +23,7 @@ import fs from "fs/promises";
 import express from "express";
 import { renderPresentation, generateSecureExportHtml } from "./presentation/renderer";
 import { rssService } from "./rss/rssService";
+import { footballService } from "./football/footballService";
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -1420,6 +1421,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching RSS dashboard:', error);
       res.status(500).json({ error: "Failed to fetch RSS dashboard" });
+    }
+  });
+
+  // Football API Routes for Team Matchup Studio
+  
+  // Get all competitions
+  app.get("/api/football/competitions", async (req, res) => {
+    try {
+      const competitions = await storage.getFootballCompetitions();
+      res.json({ competitions });
+    } catch (error) {
+      console.error('Error fetching competitions:', error);
+      res.status(500).json({ error: "Failed to fetch competitions" });
+    }
+  });
+
+  // Get teams by competition
+  app.get("/api/football/competitions/:competitionId/teams", async (req, res) => {
+    try {
+      const competitionId = parseInt(req.params.competitionId);
+      if (isNaN(competitionId)) {
+        return res.status(400).json({ error: "Invalid competition ID" });
+      }
+
+      const teams = await storage.getFootballTeamsByCompetition(competitionId);
+      res.json({ teams });
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+      res.status(500).json({ error: "Failed to fetch teams" });
+    }
+  });
+
+  // Get head-to-head statistics between two teams
+  app.get("/api/football/head-to-head/:homeTeamId/:awayTeamId", async (req, res) => {
+    try {
+      const homeTeamId = parseInt(req.params.homeTeamId);
+      const awayTeamId = parseInt(req.params.awayTeamId);
+      
+      if (isNaN(homeTeamId) || isNaN(awayTeamId)) {
+        return res.status(400).json({ error: "Invalid team IDs" });
+      }
+
+      const fixtures = await storage.getFootballHeadToHead(homeTeamId, awayTeamId);
+      res.json({ fixtures });
+    } catch (error) {
+      console.error('Error fetching head-to-head stats:', error);
+      res.status(500).json({ error: "Failed to fetch head-to-head statistics" });
+    }
+  });
+
+  // Get team statistics for a specific competition/season
+  app.get("/api/football/teams/:teamId/statistics", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const leagueId = parseInt(req.query.leagueId as string);
+      const season = parseInt(req.query.season as string);
+      
+      if (isNaN(teamId) || isNaN(leagueId) || isNaN(season)) {
+        return res.status(400).json({ error: "Invalid parameters" });
+      }
+
+      const statistics = await storage.getFootballTeamStatistics(teamId, leagueId, season);
+      res.json({ statistics });
+    } catch (error) {
+      console.error('Error fetching team statistics:', error);
+      res.status(500).json({ error: "Failed to fetch team statistics" });
+    }
+  });
+
+  // Initialize football data (sync from API)
+  app.post("/api/football/initialize", async (req, res) => {
+    try {
+      await storage.initializeFootballData();
+      res.json({ success: true, message: "Football data initialized successfully" });
+    } catch (error) {
+      console.error('Error initializing football data:', error);
+      res.status(500).json({ error: "Failed to initialize football data" });
     }
   });
 

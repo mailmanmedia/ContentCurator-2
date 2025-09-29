@@ -15,8 +15,16 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 32877
+externalPort = 3003
+
+[[ports]]
 localPort = 34417
 externalPort = 3001
+
+[[ports]]
+localPort = 35355
+externalPort = 3002
 
 [[ports]]
 localPort = 40955
@@ -47,4 +55,4 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_openai:1.0.0", "perplexity_v0:1.0.0"]
+integrations = ["javascript_openai:1.0.0", "perplexity_v0:1.0.0", "javascript_database:1.0.0"]
