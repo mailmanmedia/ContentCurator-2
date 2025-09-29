@@ -38,9 +38,8 @@ export default function RssIntelligence() {
   // Fetch specific source
   const fetchSourceMutation = useMutation({
     mutationFn: async (sourceId: string) => {
-      return apiRequest(`/api/rss-sources/${sourceId}/fetch`, {
-        method: 'POST'
-      });
+      const response = await apiRequest('POST', `/api/rss-sources/${sourceId}/fetch`);
+      return await response.json();
     },
     onSuccess: (data, sourceId) => {
       queryClient.invalidateQueries({ queryKey: ['/api/rss-articles'] });
@@ -63,9 +62,8 @@ export default function RssIntelligence() {
   // Fetch all sources
   const fetchAllMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/rss-sources/fetch-all', {
-        method: 'POST'
-      });
+      const response = await apiRequest('POST', '/api/rss-sources/fetch-all');
+      return await response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/rss-articles'] });
