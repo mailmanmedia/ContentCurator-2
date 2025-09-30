@@ -297,6 +297,7 @@ class FootballService {
   }
 
   private getFallbackCompetition(leagueId: number): FootballCompetition | null {
+    // Updated for 2025-26 season
     const fallbackData: Record<number, FootballCompetition> = {
       39: {
         id: 39,
@@ -305,7 +306,7 @@ class FootballService {
         country: "England",
         logo: "https://media.api-sports.io/football/leagues/39.png",
         flag: "https://media.api-sports.io/flags/gb.svg",
-        season: 2024,
+        season: 2025,
         isActive: true,
         lastUpdated: new Date()
       },
@@ -316,7 +317,18 @@ class FootballService {
         country: "World",
         logo: "https://media.api-sports.io/football/leagues/2.png",
         flag: "https://media.api-sports.io/flags/eu.svg",
-        season: 2024,
+        season: 2025,
+        isActive: true,
+        lastUpdated: new Date()
+      },
+      3: {
+        id: 3,
+        name: "UEFA Europa League",
+        type: "cup",
+        country: "World",
+        logo: "https://media.api-sports.io/football/leagues/3.png",
+        flag: "https://media.api-sports.io/flags/eu.svg",
+        season: 2025,
         isActive: true,
         lastUpdated: new Date()
       },
@@ -327,7 +339,7 @@ class FootballService {
         country: "England",
         logo: "https://media.api-sports.io/football/leagues/45.png",
         flag: "https://media.api-sports.io/flags/gb.svg",
-        season: 2024,
+        season: 2025,
         isActive: true,
         lastUpdated: new Date()
       },
@@ -338,7 +350,7 @@ class FootballService {
         country: "England",
         logo: "https://media.api-sports.io/football/leagues/48.png",
         flag: "https://media.api-sports.io/flags/gb.svg",
-        season: 2024,
+        season: 2025,
         isActive: true,
         lastUpdated: new Date()
       }
@@ -658,16 +670,28 @@ class FootballService {
   }
 
   private async insertFallbackChampionsLeagueTeams(): Promise<FootballTeam[]> {
+    // 2025-26 Champions League participants (36 teams)
     const fallbackTeams = [
       {
-        id: 541,
-        name: "Real Madrid",
-        code: "RMA",
-        country: "Spain",
-        founded: 1902,
+        id: 40,
+        name: "Liverpool",
+        code: "LIV",
+        country: "England",
+        founded: 1892,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/541.png",
-        venue: { id: 1456, name: "Santiago Bernabéu", city: "Madrid", capacity: 83000 },
+        logo: "https://media.api-sports.io/football/teams/40.png",
+        venue: { id: 550, name: "Anfield", city: "Liverpool", capacity: 61276 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 42,
+        name: "Arsenal",
+        code: "ARS",
+        country: "England",
+        founded: 1886,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/42.png",
+        venue: { id: 494, name: "Emirates Stadium", city: "London", capacity: 60704 },
         lastUpdated: new Date()
       },
       {
@@ -682,69 +706,47 @@ class FootballService {
         lastUpdated: new Date()
       },
       {
-        id: 157,
-        name: "Bayern Munich",
-        code: "BAY",
-        country: "Germany",
-        founded: 1900,
+        id: 49,
+        name: "Chelsea",
+        code: "CHE",
+        country: "England",
+        founded: 1905,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/157.png",
-        venue: { id: 700, name: "Allianz Arena", city: "Munich", capacity: 75000 },
+        logo: "https://media.api-sports.io/football/teams/49.png",
+        venue: { id: 519, name: "Stamford Bridge", city: "London", capacity: 41631 },
         lastUpdated: new Date()
       },
       {
-        id: 85,
-        name: "Paris Saint-Germain",
-        code: "PSG",
-        country: "France",
-        founded: 1970,
+        id: 47,
+        name: "Tottenham Hotspur",
+        code: "TOT",
+        country: "England",
+        founded: 1882,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/85.png",
-        venue: { id: 671, name: "Parc des Princes", city: "Paris", capacity: 47929 },
+        logo: "https://media.api-sports.io/football/teams/47.png",
+        venue: { id: 655, name: "Tottenham Hotspur Stadium", city: "London", capacity: 62850 },
         lastUpdated: new Date()
       },
       {
-        id: 40,
-        name: "Liverpool",
-        code: "LIV",
+        id: 34,
+        name: "Newcastle United",
+        code: "NEW",
         country: "England",
         founded: 1892,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/40.png",
-        venue: { id: 550, name: "Anfield", city: "Liverpool", capacity: 61276 },
+        logo: "https://media.api-sports.io/football/teams/34.png",
+        venue: { id: 525, name: "St. James' Park", city: "Newcastle", capacity: 52305 },
         lastUpdated: new Date()
       },
       {
-        id: 505,
-        name: "Inter Milan",
-        code: "INT",
-        country: "Italy",
-        founded: 1908,
+        id: 541,
+        name: "Real Madrid",
+        code: "RMA",
+        country: "Spain",
+        founded: 1902,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/505.png",
-        venue: { id: 900, name: "San Siro", city: "Milan", capacity: 80000 },
-        lastUpdated: new Date()
-      },
-      {
-        id: 165,
-        name: "Borussia Dortmund",
-        code: "DOR",
-        country: "Germany",
-        founded: 1909,
-        national: false,
-        logo: "https://media.api-sports.io/football/teams/165.png",
-        venue: { id: 736, name: "Signal Iduna Park", city: "Dortmund", capacity: 81365 },
-        lastUpdated: new Date()
-      },
-      {
-        id: 173,
-        name: "RB Leipzig",
-        code: "RBL",
-        country: "Germany",
-        founded: 2009,
-        national: false,
-        logo: "https://media.api-sports.io/football/teams/173.png",
-        venue: { id: 750, name: "Red Bull Arena", city: "Leipzig", capacity: 47069 },
+        logo: "https://media.api-sports.io/football/teams/541.png",
+        venue: { id: 1456, name: "Santiago Bernabéu", city: "Madrid", capacity: 83000 },
         lastUpdated: new Date()
       },
       {
@@ -759,6 +761,50 @@ class FootballService {
         lastUpdated: new Date()
       },
       {
+        id: 530,
+        name: "Atlético Madrid",
+        code: "ATM",
+        country: "Spain",
+        founded: 1903,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/530.png",
+        venue: { id: 1489, name: "Wanda Metropolitano", city: "Madrid", capacity: 68456 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 531,
+        name: "Athletic Club",
+        code: "ATH",
+        country: "Spain",
+        founded: 1898,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/531.png",
+        venue: { id: 1496, name: "San Mamés", city: "Bilbao", capacity: 53289 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 555,
+        name: "Villarreal",
+        code: "VIL",
+        country: "Spain",
+        founded: 1923,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/555.png",
+        venue: { id: 1557, name: "Estadio de la Cerámica", city: "Villarreal", capacity: 23500 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 157,
+        name: "Bayern München",
+        code: "BAY",
+        country: "Germany",
+        founded: 1900,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/157.png",
+        venue: { id: 700, name: "Allianz Arena", city: "Munich", capacity: 75000 },
+        lastUpdated: new Date()
+      },
+      {
         id: 168,
         name: "Bayer Leverkusen",
         code: "LEV",
@@ -770,14 +816,47 @@ class FootballService {
         lastUpdated: new Date()
       },
       {
-        id: 530,
-        name: "Atlético Madrid",
-        code: "ATM",
-        country: "Spain",
-        founded: 1903,
+        id: 165,
+        name: "Borussia Dortmund",
+        code: "DOR",
+        country: "Germany",
+        founded: 1909,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/530.png",
-        venue: { id: 1489, name: "Wanda Metropolitano", city: "Madrid", capacity: 68456 },
+        logo: "https://media.api-sports.io/football/teams/165.png",
+        venue: { id: 736, name: "Signal Iduna Park", city: "Dortmund", capacity: 81365 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 163,
+        name: "Eintracht Frankfurt",
+        code: "FRA",
+        country: "Germany",
+        founded: 1899,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/163.png",
+        venue: { id: 733, name: "Deutsche Bank Park", city: "Frankfurt", capacity: 51500 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 505,
+        name: "Inter Milan",
+        code: "INT",
+        country: "Italy",
+        founded: 1908,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/505.png",
+        venue: { id: 900, name: "San Siro", city: "Milan", capacity: 80000 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 492,
+        name: "Napoli",
+        code: "NAP",
+        country: "Italy",
+        founded: 1926,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/492.png",
+        venue: { id: 912, name: "Stadio Diego Armando Maradona", city: "Naples", capacity: 54726 },
         lastUpdated: new Date()
       },
       {
@@ -803,36 +882,36 @@ class FootballService {
         lastUpdated: new Date()
       },
       {
-        id: 211,
-        name: "Benfica",
-        code: "BEN",
-        country: "Portugal",
-        founded: 1904,
+        id: 85,
+        name: "Paris Saint-Germain",
+        code: "PSG",
+        country: "France",
+        founded: 1970,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/211.png",
-        venue: { id: 1488, name: "Estádio da Luz", city: "Lisbon", capacity: 64642 },
+        logo: "https://media.api-sports.io/football/teams/85.png",
+        venue: { id: 671, name: "Parc des Princes", city: "Paris", capacity: 47929 },
         lastUpdated: new Date()
       },
       {
-        id: 42,
-        name: "Arsenal",
-        code: "ARS",
-        country: "England",
-        founded: 1886,
+        id: 81,
+        name: "Marseille",
+        code: "MAR",
+        country: "France",
+        founded: 1899,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/42.png",
-        venue: { id: 494, name: "Emirates Stadium", city: "London", capacity: 60704 },
+        logo: "https://media.api-sports.io/football/teams/81.png",
+        venue: { id: 654, name: "Stade Vélodrome", city: "Marseille", capacity: 67394 },
         lastUpdated: new Date()
       },
       {
-        id: 228,
-        name: "Sporting CP",
-        code: "SPO",
-        country: "Portugal",
-        founded: 1906,
+        id: 497,
+        name: "AS Monaco",
+        code: "MON",
+        country: "Monaco",
+        founded: 1924,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/228.png",
-        venue: { id: 1504, name: "José Alvalade Stadium", city: "Lisbon", capacity: 50095 },
+        logo: "https://media.api-sports.io/football/teams/497.png",
+        venue: { id: 661, name: "Stade Louis II", city: "Monaco", capacity: 18523 },
         lastUpdated: new Date()
       },
       {
@@ -847,36 +926,146 @@ class FootballService {
         lastUpdated: new Date()
       },
       {
-        id: 66,
-        name: "Aston Villa",
-        code: "AST",
-        country: "England",
-        founded: 1874,
+        id: 610,
+        name: "Ajax",
+        code: "AJA",
+        country: "Netherlands",
+        founded: 1900,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/66.png",
-        venue: { id: 513, name: "Villa Park", city: "Birmingham", capacity: 42640 },
+        logo: "https://media.api-sports.io/football/teams/610.png",
+        venue: { id: 776, name: "Johan Cruijff ArenA", city: "Amsterdam", capacity: 54990 },
         lastUpdated: new Date()
       },
       {
-        id: 487,
-        name: "AC Milan",
-        code: "MIL",
-        country: "Italy",
-        founded: 1899,
+        id: 211,
+        name: "Benfica",
+        code: "BEN",
+        country: "Portugal",
+        founded: 1904,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/487.png",
-        venue: { id: 900, name: "San Siro", city: "Milan", capacity: 80000 },
+        logo: "https://media.api-sports.io/football/teams/211.png",
+        venue: { id: 1488, name: "Estádio da Luz", city: "Lisbon", capacity: 64642 },
         lastUpdated: new Date()
       },
       {
-        id: 49,
-        name: "Chelsea",
-        code: "CHE",
-        country: "England",
+        id: 228,
+        name: "Sporting CP",
+        code: "SPO",
+        country: "Portugal",
+        founded: 1906,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/228.png",
+        venue: { id: 1504, name: "José Alvalade Stadium", city: "Lisbon", capacity: 50095 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 569,
+        name: "Club Brugge",
+        code: "CLU",
+        country: "Belgium",
+        founded: 1891,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/569.png",
+        venue: { id: 776, name: "Jan Breydel Stadium", city: "Bruges", capacity: 29062 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 3842,
+        name: "Union Saint-Gilloise",
+        code: "USG",
+        country: "Belgium",
+        founded: 1897,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/3842.png",
+        venue: { id: 11863, name: "Stade Joseph Marien", city: "Brussels", capacity: 9400 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 645,
+        name: "Galatasaray",
+        code: "GAL",
+        country: "Turkey",
         founded: 1905,
         national: false,
-        logo: "https://media.api-sports.io/football/teams/49.png",
-        venue: { id: 519, name: "Stamford Bridge", city: "London", capacity: 41631 },
+        logo: "https://media.api-sports.io/football/teams/645.png",
+        venue: { id: 1584, name: "Ali Sami Yen Sports Complex", city: "Istanbul", capacity: 52223 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 614,
+        name: "Slavia Praha",
+        code: "SLP",
+        country: "Czech Republic",
+        founded: 1892,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/614.png",
+        venue: { id: 1129, name: "Sinobo Stadium", city: "Prague", capacity: 21000 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 635,
+        name: "Bodø/Glimt",
+        code: "BOD",
+        country: "Norway",
+        founded: 1916,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/635.png",
+        venue: { id: 1108, name: "Aspmyra Stadion", city: "Bodø", capacity: 8270 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 553,
+        name: "Olympiacos",
+        code: "OLY",
+        country: "Greece",
+        founded: 1925,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/553.png",
+        venue: { id: 1579, name: "Karaiskakis Stadium", city: "Piraeus", capacity: 33334 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 400,
+        name: "Copenhagen",
+        code: "COP",
+        country: "Denmark",
+        founded: 1992,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/400.png",
+        venue: { id: 996, name: "Parken", city: "Copenhagen", capacity: 38065 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 3849,
+        name: "Pafos",
+        code: "PAF",
+        country: "Cyprus",
+        founded: 2014,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/3849.png",
+        venue: { id: 11866, name: "Pafiako Stadium", city: "Paphos", capacity: 9394 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 551,
+        name: "Qarabağ",
+        code: "QAR",
+        country: "Azerbaijan",
+        founded: 1987,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/551.png",
+        venue: { id: 1577, name: "Azersun Arena", city: "Baku", capacity: 31200 },
+        lastUpdated: new Date()
+      },
+      {
+        id: 5953,
+        name: "Kairat Almaty",
+        code: "KAI",
+        country: "Kazakhstan",
+        founded: 1954,
+        national: false,
+        logo: "https://media.api-sports.io/football/teams/5953.png",
+        venue: { id: 3542, name: "Central Stadium", city: "Almaty", capacity: 23804 },
         lastUpdated: new Date()
       }
     ];
