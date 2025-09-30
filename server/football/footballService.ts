@@ -1101,10 +1101,11 @@ class FootballService {
             .where(eq(footballCompetitions.id, competitionId))
             .limit(1);
 
-          if (competition.length > 0) {
-            return await this.syncTeamsForCompetition(competitionId, competition[0].season);
-          }
-          return [];
+          // Use current season as default if competition not found
+          const season = competition.length > 0 ? competition[0].season : 2024;
+          const syncedTeams = await this.syncTeamsForCompetition(competitionId, season);
+          // Return synced/fallback teams directly
+          return syncedTeams;
         }
 
         return await db.select()
