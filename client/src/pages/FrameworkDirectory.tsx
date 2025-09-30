@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Plus, Search, Download, Star, Tag, Filter, X } from "lucide-react";
+import { useState, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, Search, Download, Star, Tag, Filter, X, Upload, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
@@ -16,7 +17,12 @@ export default function FrameworkDirectory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedFramework, setSelectedFramework] = useState<Framework | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch framework categories
   const { data: categoriesData } = useQuery({
@@ -96,6 +102,95 @@ export default function FrameworkDirectory() {
 
   const getCategoryById = (categoryId: string) => {
     return categoriesData?.find(cat => cat.id === categoryId);
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedFramework) return;
+
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a PDF or Word document (.pdf, .docx, .doc)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadedFileName(file.name);
+    setUploadProgress(0);
+
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+
+      // Simulate progress (since XMLHttpRequest is more complex with fetch)
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => Math.min(prev + 10, 90));
+      }, 200);
+
+      const response = await fetch(`/api/frameworks/${selectedFramework.id}/upload-document`, {
+        method: 'POST',
+        body: formData
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      const result = await response.json();
+
+      // Handle different response statuses
+      if (response.status === 422) {
+        // Extraction failed but file was uploaded
+        toast({
+          title: "Document Uploaded (Extraction Failed)",
+          description: result.extractionError || "Could not extract text from document",
+          variant: "destructive"
+        });
+      } else if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
+      } else if (result.processingStatus === 'completed') {
+        // Successful extraction
+        toast({
+          title: "Document Uploaded Successfully",
+          description: `Extracted ${result.extractedTextLength} characters from ${file.name}`,
+        });
+      }
+
+      // Invalidate framework versions query to refresh the list
+      await queryClient.invalidateQueries({ queryKey: ['/api/frameworks'] });
+      
+      // Reset upload state
+      setTimeout(() => {
+        setIsUploading(false);
+        setUploadProgress(0);
+        setUploadedFileName("");
+      }, 1000);
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload document",
+        variant: "destructive"
+      });
+      setIsUploading(false);
+      setUploadProgress(0);
+      setUploadedFileName("");
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -313,6 +408,64 @@ export default function FrameworkDirectory() {
                 <p className="text-foreground">
                   {selectedFramework.description}
                 </p>
+              </div>
+
+              {/* Document Upload Section */}
+              <div>
+                <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-2">
+                  Upload Document
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      data-testid="input-file-upload"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="flex-1"
+                      data-testid="button-browse-files"
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Browse Files
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {uploadedFileName && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <FileText className="w-4 h-4" />
+                      <span className="truncate">{uploadedFileName}</span>
+                    </div>
+                  )}
+                  
+                  {isUploading && (
+                    <div className="space-y-1">
+                      <Progress value={uploadProgress} className="h-2" />
+                      <p className="text-xs text-muted-foreground text-center">
+                        {uploadProgress < 100 ? 'Uploading and processing...' : 'Complete!'}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-muted-foreground">
+                    Upload PDF or Word documents to automatically extract and add content to this framework
+                  </p>
+                </div>
               </div>
               
               <div>

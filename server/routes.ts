@@ -60,6 +60,38 @@ const upload = multer({
   }
 });
 
+// Multer configuration for document uploads
+const document_storage_config = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/documents/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+
+const documentUpload = multer({
+  storage: document_storage_config,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB limit for documents
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only PDF and Word documents
+    const allowedMimes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/msword' // .doc
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF and Word documents are allowed'));
+    }
+  }
+});
+
 // Server-Sent Events Manager for Live Presentation Control
 class LiveSSEManager {
   private clients: Map<string, express.Response> = new Map();
@@ -1096,6 +1128,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error tracking framework download:', error);
       res.status(500).json({ error: "Failed to track download" });
+    }
+  });
+
+  // Document upload and processing for frameworks
+  app.post("/api/frameworks/:id/upload-document", documentUpload.single('document'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const framework = await storage.getFramework(id);
+      if (!framework) {
+        // Clean up uploaded file
+        await fs.unlink(file.path).catch(console.error);
+        return res.status(404).json({ error: "Framework not found" });
+      }
+
+      // Extract text from document
+      let extractedText = '';
+      let extractionError = null;
+
+      try {
+        const fileBuffer = await fs.readFile(file.path);
+        
+        if (file.mimetype === 'application/pdf') {
+          // Process PDF - use dynamic import to avoid require-time issues
+          const pdfParse = (await import('pdf-parse')).default;
+          const pdfData = await pdfParse(fileBuffer);
+          extractedText = pdfData.text;
+        } else {
+          // Process Word document (.doc or .docx) - use dynamic import
+          const officeParser = (await import('officeparser')).default;
+          extractedText = await new Promise<string>((resolve, reject) => {
+            officeParser.parseOffice(file.path, (err: Error | null, data: string) => {
+              if (err) reject(err);
+              else resolve(data);
+            });
+          });
+        }
+      } catch (error) {
+        console.error('Error extracting text from document:', error);
+        extractionError = error instanceof Error ? error.message : 'Failed to extract text from document';
+      }
+
+      // Get file size
+      const stats = await fs.stat(file.path);
+      const fileSizeKB = Math.round(stats.size / 1024);
+
+      // Create framework version from extracted text
+      const versionData = {
+        frameworkId: id,
+        version: '1.0.0', // Default version, can be incremented
+        title: file.originalname.replace(/\.[^/.]+$/, ''), // Remove file extension
+        contentJson: {
+          type: 'document',
+          content: extractedText,
+          source: file.originalname
+        },
+        templateStructure: {},
+        changelogMarkdown: `Uploaded from ${file.originalname}`,
+        isActive: true,
+        downloadCount: '0',
+        fileSize: `${fileSizeKB} KB`,
+        sourceType: 'upload',
+        sourceFileName: file.originalname,
+        sourceFileUrl: `/uploads/documents/${file.filename}`,
+        processingStatus: extractionError ? 'failed' : 'completed',
+        extractedText: extractedText,
+        extractionError: extractionError
+      };
+
+      const version = await storage.createFrameworkVersion(versionData);
+
+      // If extraction failed, return 422 to indicate processing issue
+      if (extractionError) {
+        return res.status(422).json({ 
+          error: "Document uploaded but text extraction failed",
+          version,
+          extractionError,
+          processingStatus: 'failed'
+        });
+      }
+
+      res.json({ 
+        version,
+        success: true,
+        extractedTextLength: extractedText.length,
+        processingStatus: 'completed'
+      });
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      // Clean up file if it exists
+      if (req.file) {
+        await fs.unlink(req.file.path).catch(console.error);
+      }
+      res.status(500).json({ error: "Failed to upload and process document" });
     }
   });
 
