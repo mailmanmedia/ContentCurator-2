@@ -57,6 +57,13 @@ Real-time broadcast control interface for managing live presentations:
 - Statistics include: Total Content, Frameworks, Images, and News Articles
 - Data fetched from /api/statistics endpoint using React Query
 
+### Football Data Integration
+- **Current Season**: 2025-26 season data (updated September 30, 2025)
+- **Team Rosters**: Comprehensive fallback data for all major competitions reflecting current season participants
+- **Champions League**: All 36 teams in 2025-26 league phase including Galatasaray, Napoli, Villarreal, Ajax, and all 6 English clubs
+- **Data Accuracy**: Fallback team data updated to match current season rosters ensuring content creation uses accurate, real team information
+- **API Integration**: RapidAPI Football API with smart caching and fallback system for rate limit resilience
+
 ## External Dependencies
 
 ### AI Integration
