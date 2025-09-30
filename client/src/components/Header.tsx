@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings, Download, Palette, BarChart3, Menu, Sun, Moon, Folder, Home, Rss, Users, Archive } from "lucide-react";
+import { Search, Settings, Download, Palette, BarChart3, Menu, Sun, Moon, Folder, Home, Rss, Users, Archive, Radio } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 // Import logo - for now we'll use a fallback until we can properly configure the asset import
@@ -101,6 +101,16 @@ export default function Header() {
               data-testid="button-content-library"
             >
               <Archive className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link href="/live-presentation">
+            <Button 
+              variant={location === "/live-presentation" ? "secondary" : "ghost"}
+              size="icon" 
+              className="text-sidebar-foreground hover:bg-sidebar-accent"
+              data-testid="button-live-presentation"
+            >
+              <Radio className="w-5 h-5" />
             </Button>
           </Link>
           <Button 
@@ -240,6 +250,17 @@ export default function Header() {
               >
                 <Archive className="w-5 h-5 mr-3" />
                 Content Library
+              </Button>
+            </Link>
+            <Link href="/live-presentation">
+              <Button 
+                variant={location === "/live-presentation" ? "secondary" : "ghost"}
+                className="justify-start text-sidebar-foreground hover:bg-sidebar-accent w-full"
+                data-testid="button-live-presentation-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Radio className="w-5 h-5 mr-3" />
+                Live Presentation
               </Button>
             </Link>
             <Button 

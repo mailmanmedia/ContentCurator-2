@@ -10,6 +10,7 @@ import CreateFramework from "@/pages/CreateFramework";
 import RssIntelligence from "@/pages/RssIntelligence";
 import TeamMatchupStudio from "@/pages/TeamMatchupStudio";
 import ContentLibrary from "@/pages/ContentLibrary";
+import LivePresentation from "@/pages/LivePresentation";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/rss" component={RssIntelligence} />
       <Route path="/team-matchup-studio" component={TeamMatchupStudio} />
       <Route path="/content-library" component={ContentLibrary} />
+      <Route path="/live-presentation" component={LivePresentation} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertFrameworkSchema, insertFrameworkVersionSchema } from "@shared/schema";
 import type { FrameworkCategory } from "@shared/schema";
+import Header from "@/components/Header";
 
 // Form schema that extends the base framework schema
 const createFrameworkSchema = insertFrameworkSchema.extend({
@@ -165,9 +166,11 @@ export default function CreateFramework() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Page Header */}
+        <div className="flex items-center gap-4 mb-8">
         <Button 
           variant="ghost" 
           onClick={() => setLocation('/frameworks')}
@@ -428,6 +431,7 @@ export default function CreateFramework() {
           </div>
         </form>
       </Form>
+      </div>
     </div>
   );
 }

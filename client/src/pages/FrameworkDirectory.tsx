@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import type { Framework, FrameworkCategory } from "@shared/schema";
+import Header from "@/components/Header";
 
 export default function FrameworkDirectory() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -194,9 +195,11 @@ export default function FrameworkDirectory() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="container mx-auto px-4 py-8">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="heading-framework-directory">
             Framework Directory
@@ -535,6 +538,7 @@ export default function FrameworkDirectory() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

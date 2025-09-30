@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { RssSource, RssArticle } from "@shared/schema";
+import Header from "@/components/Header";
 
 export default function RssIntelligence() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,11 +132,14 @@ export default function RssIntelligence() {
 
   if (dashboardLoading || sourcesLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading RSS Intelligence...</p>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading RSS Intelligence...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -143,9 +147,11 @@ export default function RssIntelligence() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="container mx-auto px-4 py-8">
+        {/* Page Header */}
+        <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="heading-rss-intelligence">
             <Rss className="w-8 h-8 text-primary" />
@@ -495,6 +501,7 @@ export default function RssIntelligence() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
     </div>
   );
 }

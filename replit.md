@@ -16,10 +16,13 @@ The application uses a React-based Single Page Application (SPA) architecture wi
 ### Component Structure
 The frontend follows a modular component architecture with specialized components for different content types:
 - **VisualAssistant**: Main orchestration component managing the overall application state and navigation
+- **LivePresentation**: Real-time broadcast control system for managing live presentations with Server-Sent Events
 - **PromptStudio**: AI-powered content generation interface for creating visual content from text prompts
 - **TemplateCard/DataChart**: Reusable components for displaying and managing template-based content
 - **ImageManager**: Asset management system for organizing and categorizing visual resources
 - **ExportPanel**: Output configuration and file generation management
+- **Header**: Global navigation component providing consistent access to all major features across pages
+- **ContentTabs**: Shared navigation tabs component for AI Studio, Images, Tactical Analysis, Templates, Analytics, and Export features
 
 ### Styling and Design System
 The application uses Tailwind CSS with custom configuration extending the base design system. Typography is managed through Google Fonts integration (League Spartan for headlines, Libre Franklin for body text, JetBrains Mono for code/data displays). The design follows the "New York" shadcn/ui style variant with custom border radius and spacing modifications.
@@ -32,6 +35,27 @@ Express.js server implementation with TypeScript providing RESTful API endpoints
 
 ### Database Integration
 Drizzle ORM with PostgreSQL database configuration, using Neon Database as the serverless PostgreSQL provider. The schema includes user management tables with UUID primary keys and includes Zod validation schemas for type safety. Database migrations are managed through Drizzle Kit.
+
+## Key Features
+
+### Live Presentation System
+Real-time broadcast control interface for managing live presentations:
+- **Server-Sent Events (SSE)**: Real-time updates via /api/live/stream endpoint
+- **Program & Preview Management**: Dual-display system for controlling live output and preparing next scenes
+- **Presentation Sets**: Organized collections of scenes for different broadcast types
+- **Live Controls**: Take to program, toggle ticker, banner management with real-time state synchronization
+- **Event Logging**: Comprehensive logging of all live control actions and state changes
+
+### Navigation System
+- **Global Header**: Consistent navigation bar present on all pages with icon-based buttons for major features
+- **Responsive Design**: Desktop icon navigation and mobile menu drawer for optimal experience on all devices
+- **Active State Indicators**: Visual feedback showing current page location
+- **Feature Access**: Home, Framework Directory, RSS Intelligence, Team Matchup Studio, Content Library, and Live Presentation
+
+### Real-Time Statistics
+- Homepage displays live database counts instead of placeholder data
+- Statistics include: Total Content, Frameworks, Images, and News Articles
+- Data fetched from /api/statistics endpoint using React Query
 
 ## External Dependencies
 
