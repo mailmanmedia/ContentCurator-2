@@ -29,7 +29,7 @@ import {
   Play
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueries } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import PresentationViewer from "./PresentationViewer";
 import type { PresentationStyle, Report } from "@shared/schema";
@@ -110,20 +110,25 @@ export default function PromptStudio() {
     select: (response: any) => response.reports as Report[]
   });
 
-  // Fetch teams for selected competition
-  const competitionId = promptData.competition === "Premier League" ? 39 
-    : promptData.competition === "Champions League" ? 2
-    : promptData.competition === "Europa League" ? 3
-    : promptData.competition === "FA Cup" ? 45
-    : promptData.competition === "Carabao Cup" ? 48
-    : null;
-
-  const { data: teamsData } = useQuery({
-    queryKey: ['/api/football/competitions', competitionId, 'teams'],
-    enabled: !!competitionId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    select: (response: any) => response.teams || []
+  // Fetch teams from all competitions for opponent dropdown
+  const allCompetitionIds = [39, 2, 3, 45, 48]; // Premier League, Champions League, Europa League, FA Cup, Carabao Cup
+  
+  const teamQueries = useQueries({
+    queries: allCompetitionIds.map(competitionId => ({
+      queryKey: ['/api/football/competitions', competitionId, 'teams'],
+      staleTime: 5 * 60 * 1000,
+      select: (response: any) => response.teams || []
+    }))
   });
+
+  // Combine and deduplicate teams from all competitions
+  const allTeams = teamQueries
+    .filter(query => query.data)
+    .flatMap(query => query.data as any[]);
+  
+  const uniqueTeams = Array.from(
+    new Map(allTeams.map(team => [team.id, team])).values()
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
   // Create report mutation
   const createReportMutation = useMutation({
