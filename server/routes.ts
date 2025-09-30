@@ -289,7 +289,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Generate Variations endpoint
   app.post("/api/ai/generate-variations", async (req, res) => {
-    const { text, images = [], stats = [], ideas = [], outputType, style, priority } = req.body;
+    const { 
+      text, 
+      images = [], 
+      stats = [], 
+      ideas = [], 
+      outputType, 
+      style, 
+      priority,
+      opponent,
+      competition,
+      venue,
+      hookFormula,
+      matchTiming = [],
+      targetAudience = [],
+      contentGoal = []
+    } = req.body;
     
     // Define fallback variations function accessible to both try and catch blocks
     const createFallbackVariations = () => [
@@ -320,23 +335,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ];
     
     try {
-      if (!text || !outputType) {
-        return res.status(400).json({ error: "Text and output type are required" });
+      // Check if at least one editorial brief field has content
+      const hasEditorialBriefContent = !!(
+        opponent ||
+        competition ||
+        venue ||
+        hookFormula ||
+        (matchTiming && matchTiming.length > 0) ||
+        (targetAudience && targetAudience.length > 0) ||
+        (contentGoal && contentGoal.length > 0)
+      );
+
+      // Require either custom prompt OR at least one editorial brief field, plus output type
+      const hasContent = text || hasEditorialBriefContent;
+      
+      if (!hasContent || !outputType) {
+        return res.status(400).json({ 
+          error: "Please provide either a custom prompt or fill at least one editorial brief field, and select an output type" 
+        });
       }
 
       if (!openai) {
         return res.json({ variations: createFallbackVariations() });
       }
 
+      // Build context prompt with both custom prompt and editorial brief fields
       const contextPrompt = `
-        Content: ${text}
+        Content: ${text || 'N/A'}
+        ${opponent ? `Opponent: ${opponent}` : ''}
+        ${competition ? `Competition: ${competition}` : ''}
+        ${venue ? `Venue: ${venue}` : ''}
+        ${hookFormula ? `Hook Formula: ${hookFormula}` : ''}
+        ${matchTiming.length > 0 ? `Match Timing: ${matchTiming.join(', ')}` : ''}
+        ${targetAudience.length > 0 ? `Target Audience: ${targetAudience.join(', ')}` : ''}
+        ${contentGoal.length > 0 ? `Content Goal: ${contentGoal.join(', ')}` : ''}
         Images: ${images.join(', ')}
         Stats: ${stats.join(', ')}
         Ideas: ${ideas.join(', ')}
         Output Type: ${outputType}
         Style: ${style}
         Priority: ${priority}
-      `;
+      `.trim();
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",

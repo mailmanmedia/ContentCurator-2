@@ -676,11 +676,27 @@ export default function PromptStudio() {
     }
   };
 
+  // Helper function to check if at least one editorial brief field has content
+  const hasEditorialBriefContent = () => {
+    return !!(
+      promptData.opponent ||
+      promptData.competition ||
+      promptData.venue ||
+      promptData.hookFormula ||
+      (promptData.matchTiming && promptData.matchTiming.length > 0) ||
+      (promptData.targetAudience && promptData.targetAudience.length > 0) ||
+      (promptData.contentGoal && promptData.contentGoal.length > 0)
+    );
+  };
+
   const generateVariations = async () => {
-    if (!promptData.text || !promptData.outputType) {
+    // Require either custom prompt OR at least one editorial brief field, plus output type
+    const hasContent = promptData.text || hasEditorialBriefContent();
+    
+    if (!hasContent || !promptData.outputType) {
       toast({
         title: "Missing Information",
-        description: "Please provide text content and select an output type",
+        description: "Please provide either a custom prompt or fill at least one editorial brief field, and select an output type",
         variant: "destructive"
       });
       return;
@@ -1280,7 +1296,7 @@ export default function PromptStudio() {
                 <Button 
                   size="lg" 
                   onClick={generateVariations}
-                  disabled={isGenerating || !promptData.text || !promptData.outputType}
+                  disabled={isGenerating || (!promptData.text && !hasEditorialBriefContent()) || !promptData.outputType}
                   className="font-league-spartan font-bold uppercase tracking-wide w-full sm:w-auto"
                   data-testid="button-generate-variations"
                 >
