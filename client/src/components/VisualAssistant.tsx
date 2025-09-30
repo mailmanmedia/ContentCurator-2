@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,21 @@ import TacticalAnalysis from "./TacticalAnalysis";
 export default function VisualAssistant() {
   const [activeTab, setActiveTab] = useState("studio");
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+
+  // Fetch real statistics from the API
+  const { data: stats } = useQuery<{
+    totalContent: number;
+    frameworks: number;
+    images: number;
+    rssArticles: number;
+    libraryItems: number;
+    scenes: number;
+    presentationSets: number;
+    tickerPlaylists: number;
+    reports: number;
+  }>({
+    queryKey: ['/api/statistics'],
+  });
 
   // todo: remove mock functionality
   const mockTemplates = [
@@ -147,26 +163,34 @@ export default function VisualAssistant() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
             <Card className="bg-primary/10 border-primary/20">
               <CardContent className="p-3 sm:p-4 text-center">
-                <div className="font-mono font-bold text-xl sm:text-2xl text-primary mb-1">47</div>
-                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Visuals Created</div>
+                <div className="font-mono font-bold text-xl sm:text-2xl text-primary mb-1" data-testid="stat-total-content">
+                  {stats?.totalContent ?? 0}
+                </div>
+                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Total Content</div>
               </CardContent>
             </Card>
             <Card className="bg-accent/10 border-accent/20">
               <CardContent className="p-3 sm:p-4 text-center">
-                <div className="font-mono font-bold text-xl sm:text-2xl text-accent mb-1">12</div>
-                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Active Templates</div>
+                <div className="font-mono font-bold text-xl sm:text-2xl text-accent mb-1" data-testid="stat-frameworks">
+                  {stats?.frameworks ?? 0}
+                </div>
+                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Frameworks</div>
               </CardContent>
             </Card>
             <Card className="bg-chart-2/10 border-chart-2/20">
               <CardContent className="p-3 sm:p-4 text-center">
-                <div className="font-mono font-bold text-xl sm:text-2xl text-chart-2 mb-1">94%</div>
-                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Data Accuracy</div>
+                <div className="font-mono font-bold text-xl sm:text-2xl text-chart-2 mb-1" data-testid="stat-images">
+                  {stats?.images ?? 0}
+                </div>
+                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Images</div>
               </CardContent>
             </Card>
             <Card className="bg-chart-5/10 border-chart-5/20">
               <CardContent className="p-3 sm:p-4 text-center">
-                <div className="font-mono font-bold text-xl sm:text-2xl text-chart-5 mb-1">Live</div>
-                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Data Status</div>
+                <div className="font-mono font-bold text-xl sm:text-2xl text-chart-5 mb-1" data-testid="stat-articles">
+                  {stats?.rssArticles ?? 0}
+                </div>
+                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">News Articles</div>
               </CardContent>
             </Card>
           </div>

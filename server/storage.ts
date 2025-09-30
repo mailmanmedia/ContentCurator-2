@@ -168,6 +168,19 @@ export interface IStorage {
   // Live State methods (in-memory only)
   getLiveState(): Promise<LiveState>;
   updateLiveState(updates: Partial<LiveState>): Promise<LiveState>;
+
+  // Statistics methods
+  getStatistics(): Promise<{
+    totalContent: number;
+    frameworks: number;
+    images: number;
+    rssArticles: number;
+    libraryItems: number;
+    scenes: number;
+    presentationSets: number;
+    tickerPlaylists: number;
+    reports: number;
+  }>;
 }
 
 export class MemStorage implements IStorage {
@@ -1494,6 +1507,42 @@ export class MemStorage implements IStorage {
       lastUpdate: new Date()
     };
     return { ...this.liveState };
+  }
+
+  // Statistics methods
+  async getStatistics(): Promise<{
+    totalContent: number;
+    frameworks: number;
+    images: number;
+    rssArticles: number;
+    libraryItems: number;
+    scenes: number;
+    presentationSets: number;
+    tickerPlaylists: number;
+    reports: number;
+  }> {
+    const frameworks = this.frameworks.size;
+    const images = this.images.size;
+    const rssArticles = this.rssArticles.size;
+    const libraryItems = this.libraryItems.size;
+    const scenes = this.scenes.size;
+    const presentationSets = this.presentationSets.size;
+    const tickerPlaylists = this.tickerPlaylists.size;
+    const reports = this.reports.size;
+    
+    const totalContent = frameworks + images + rssArticles + libraryItems + scenes + presentationSets + tickerPlaylists + reports;
+    
+    return {
+      totalContent,
+      frameworks,
+      images,
+      rssArticles,
+      libraryItems,
+      scenes,
+      presentationSets,
+      tickerPlaylists,
+      reports
+    };
   }
 }
 

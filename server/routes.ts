@@ -209,6 +209,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok" });
   });
 
+  // Statistics endpoint
+  app.get("/api/statistics", async (req, res) => {
+    try {
+      const stats = await storage.getStatistics();
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+      res.status(500).json({ error: 'Failed to fetch statistics' });
+    }
+  });
+
   // AI Suggestions endpoint
   app.post("/api/ai/suggestions", async (req, res) => {
     try {
