@@ -91,6 +91,12 @@ export const frameworkVersions = pgTable("framework_versions", {
   isActive: boolean("is_active").notNull().default(true),
   downloadCount: text("download_count").notNull().default('0'),
   fileSize: text("file_size"),
+  sourceType: text("source_type").notNull().default('manual'), // 'manual' or 'upload'
+  sourceFileName: text("source_file_name"),
+  sourceFileUrl: text("source_file_url"),
+  processingStatus: text("processing_status").default('completed'), // 'uploading', 'processing', 'completed', 'failed'
+  extractedText: text("extracted_text"),
+  extractionError: text("extraction_error"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
