@@ -1143,29 +1143,50 @@ export default function PromptStudio() {
                     <span className="sm:hidden">Stats</span>
                   </label>
                   <div className="space-y-2">
+                    <Select onValueChange={(value) => {
+                      if (!promptData.stats.includes(value)) {
+                        setPromptData(prev => ({ ...prev, stats: [...prev.stats, value] }));
+                      }
+                    }}>
+                      <SelectTrigger className="w-full text-sm" data-testid="select-metrics">
+                        <SelectValue placeholder="Select metrics from list" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {metricsOptions.map((metric) => (
+                          <SelectItem key={metric} value={metric}>
+                            {metric}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Input
-                      placeholder="Add stat or data..."
+                      placeholder="Or add custom metric..."
                       onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          addToList('stats', e.currentTarget.value);
+                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                          const customMetric = e.currentTarget.value.trim();
+                          if (!promptData.stats.includes(customMetric)) {
+                            addToList('stats', customMetric);
+                          }
                           e.currentTarget.value = '';
                         }
                       }}
-                      data-testid="input-stats"
+                      data-testid="input-custom-metric"
                       className="text-sm"
                     />
-                    <div className="space-y-1">
-                      {promptData.stats.map((stat, index) => (
-                        <Badge 
-                          key={index}
-                          variant="outline" 
-                          className="cursor-pointer mr-1 mb-1 text-xs"
-                          onClick={() => removeFromList('stats', index)}
-                        >
-                          {stat.length > 20 ? `${stat.substring(0, 20)}...` : stat} ×
-                        </Badge>
-                      ))}
-                    </div>
+                    {promptData.stats.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {promptData.stats.map((stat, index) => (
+                          <Badge 
+                            key={index}
+                            variant="outline" 
+                            className="cursor-pointer text-xs"
+                            onClick={() => removeFromList('stats', index)}
+                          >
+                            {stat.length > 30 ? `${stat.substring(0, 30)}...` : stat} ×
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
