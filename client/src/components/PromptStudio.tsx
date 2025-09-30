@@ -940,26 +940,11 @@ export default function PromptStudio() {
                           <SelectValue placeholder="Select opponent team" />
                         </SelectTrigger>
                         <SelectContent>
-                          {teamsData && teamsData.length > 0 ? (
-                            teamsData.map((team: any) => (
-                              <SelectItem key={team.id} value={team.name}>
-                                {team.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <>
-                              <SelectItem value="Manchester City">Manchester City</SelectItem>
-                              <SelectItem value="Arsenal">Arsenal</SelectItem>
-                              <SelectItem value="Chelsea">Chelsea</SelectItem>
-                              <SelectItem value="Manchester United">Manchester United</SelectItem>
-                              <SelectItem value="Tottenham">Tottenham</SelectItem>
-                              <SelectItem value="Newcastle United">Newcastle United</SelectItem>
-                              <SelectItem value="Brighton">Brighton</SelectItem>
-                              <SelectItem value="Aston Villa">Aston Villa</SelectItem>
-                              <SelectItem value="West Ham">West Ham</SelectItem>
-                              <SelectItem value="Everton">Everton</SelectItem>
-                            </>
-                          )}
+                          {uniqueTeams.map((team: any) => (
+                            <SelectItem key={team.id} value={team.name}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
