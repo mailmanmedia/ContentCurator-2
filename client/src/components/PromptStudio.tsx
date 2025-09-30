@@ -196,6 +196,68 @@ export default function PromptStudio() {
     "Challenge opinions"
   ];
 
+  const metricsOptions = [
+    // Attacking Metrics
+    "Goals",
+    "Assists",
+    "Shots",
+    "Shots on Target",
+    "xG (Expected Goals)",
+    "xA (Expected Assists)",
+    "Conversion Rate",
+    "Big Chances Created",
+    "Big Chances Missed",
+    "Goals per 90",
+    // Passing Metrics
+    "Pass Completion %",
+    "Progressive Passes",
+    "Key Passes",
+    "Crosses",
+    "Long Balls",
+    "Through Balls",
+    "Passes into Final Third",
+    "Passes into Penalty Area",
+    // Defensive Metrics
+    "Tackles",
+    "Interceptions",
+    "Clearances",
+    "Blocks",
+    "Clean Sheets",
+    "Goals Conceded",
+    "Tackles Won %",
+    "Aerial Duels Won",
+    "Defensive Actions",
+    // Physical Metrics
+    "Distance Covered (km)",
+    "Sprints",
+    "Top Speed (km/h)",
+    "Pressing Actions",
+    "Duels Won",
+    "Duels Won %",
+    "Ground Duels Won",
+    "Recovery Runs",
+    // Team/Possession Metrics
+    "Possession %",
+    "Pass Accuracy %",
+    "xG For",
+    "xG Against",
+    "PPDA (Passes Allowed Per Defensive Action)",
+    "Pressing Success Rate",
+    "Counter-Pressing Recoveries",
+    "High Turnovers",
+    "Touches in Opposition Box",
+    "Final Third Entries",
+    // Advanced Metrics
+    "xGBuildup",
+    "xGChain",
+    "Progressive Carries",
+    "Shot-Creating Actions",
+    "Goal-Creating Actions",
+    "Successful Take-Ons",
+    "Carries into Penalty Area",
+    "Progressive Passing Distance"
+  ];
+
   const matchTimingOptions = [
     "Pre-match",
     "Live match",
