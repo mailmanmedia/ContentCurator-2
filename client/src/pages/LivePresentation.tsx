@@ -10,6 +10,7 @@ import { queryClient } from "@/lib/queryClient";
 import SceneManager from "@/components/SceneManager";
 import PresentationSetManager from "@/components/PresentationSetManager";
 import VideoSourceManager from "@/components/VideoSourceManager";
+import VideoCompositor from "@/components/VideoCompositor";
 
 interface LiveState {
   currentSetId: string | null;
@@ -197,19 +198,18 @@ export default function LivePresentation() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="aspect-video bg-sidebar rounded-md flex items-center justify-center border-2 border-primary">
-                        <div className="text-center">
-                          {programScene ? (
-                            <>
-                              <h3 className="font-bold text-xl mb-2">{programScene.name}</h3>
-                              <p className="text-sm text-muted-foreground">{programScene.description}</p>
-                              <Badge className="mt-2">{programScene.layout}</Badge>
-                            </>
-                          ) : (
-                            <p className="text-muted-foreground">No scene on program</p>
-                          )}
-                        </div>
+                      <div className="aspect-video bg-black rounded-md border-2 border-primary overflow-hidden">
+                        <VideoCompositor 
+                          sceneId={liveState?.programSceneId || null}
+                          className="w-full h-full"
+                        />
                       </div>
+                      {programScene && (
+                        <div className="text-center">
+                          <h3 className="font-bold text-sm">{programScene.name}</h3>
+                          <Badge variant="outline" className="mt-1">{programScene.layout}</Badge>
+                        </div>
+                      )}
                       
                       {liveState?.tickerOn && (
                         <div className="bg-primary/20 border border-primary rounded p-2">
@@ -233,19 +233,18 @@ export default function LivePresentation() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="aspect-video bg-sidebar rounded-md flex items-center justify-center border-2 border-accent">
-                        <div className="text-center">
-                          {previewScene ? (
-                            <>
-                              <h3 className="font-bold text-lg mb-2">{previewScene.name}</h3>
-                              <p className="text-xs text-muted-foreground">{previewScene.description}</p>
-                              <Badge variant="outline" className="mt-2">{previewScene.layout}</Badge>
-                            </>
-                          ) : (
-                            <p className="text-muted-foreground text-sm">No scene in preview</p>
-                          )}
-                        </div>
+                      <div className="aspect-video bg-black rounded-md border-2 border-accent overflow-hidden">
+                        <VideoCompositor 
+                          sceneId={liveState?.previewSceneId || null}
+                          className="w-full h-full"
+                        />
                       </div>
+                      {previewScene && (
+                        <div className="text-center mt-2">
+                          <h3 className="font-bold text-sm">{previewScene.name}</h3>
+                          <Badge variant="outline" className="mt-1">{previewScene.layout}</Badge>
+                        </div>
+                      )}
                       
                       <div className="mt-4 flex gap-2">
                         <Button

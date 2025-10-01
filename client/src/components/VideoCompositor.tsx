@@ -1,0 +1,267 @@
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+interface VideoSource {
+  id: string;
+  name: string;
+  type: string;
+  deviceId?: string;
+  url?: string;
+  status: string;
+}
+
+interface SceneElement {
+  id: string;
+  type: 'video' | 'image' | 'text' | 'graphic';
+  zone: string;
+  position: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  content?: string;
+  sourceId?: string;
+}
+
+interface Scene {
+  id: string;
+  name: string;
+  description: string;
+  layout: string;
+  elements: SceneElement[];
+}
+
+interface VideoCompositorProps {
+  sceneId: string | null;
+  className?: string;
+}
+
+export default function VideoCompositor({ sceneId, className = "" }: VideoCompositorProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const animationFrameRef = useRef<number>();
+  const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
+
+  const { data: scene } = useQuery<Scene>({
+    queryKey: ['/api/live/scenes', sceneId],
+    enabled: !!sceneId,
+  });
+
+  const { data: videoSources } = useQuery<VideoSource[]>({
+    queryKey: ['/api/live/video-sources'],
+  });
+
+  const [mediaStreams, setMediaStreams] = useState<Map<string, MediaStream>>(new Map());
+  const cleanupRef = useRef<Map<string, MediaStream>>(new Map());
+
+  // Initialize video elements for camera sources
+  useEffect(() => {
+    if (!videoSources) return;
+
+    const initializeStreams = async () => {
+      // Stop any previous streams
+      cleanupRef.current.forEach(stream => {
+        stream.getTracks().forEach(track => track.stop());
+      });
+      cleanupRef.current.clear();
+
+      const newStreams = new Map<string, MediaStream>();
+
+      for (const source of videoSources) {
+        if (source.type === 'camera' && source.deviceId && source.status === 'active') {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { deviceId: { exact: source.deviceId } },
+              audio: false,
+            });
+            newStreams.set(source.id, stream);
+            cleanupRef.current.set(source.id, stream);
+          } catch (err) {
+            console.error(`Failed to get camera stream for ${source.name}:`, err);
+          }
+        }
+      }
+
+      setMediaStreams(newStreams);
+    };
+
+    initializeStreams();
+
+    return () => {
+      // Cleanup all streams when component unmounts or dependencies change
+      cleanupRef.current.forEach(stream => {
+        stream.getTracks().forEach(track => track.stop());
+      });
+      cleanupRef.current.clear();
+    };
+  }, [videoSources]);
+
+  // Create video elements from streams
+  useEffect(() => {
+    mediaStreams.forEach((stream, sourceId) => {
+      let video = videoRefs.current.get(sourceId);
+      if (!video) {
+        video = document.createElement('video');
+        video.autoplay = true;
+        video.muted = true;
+        videoRefs.current.set(sourceId, video);
+      }
+      video.srcObject = stream;
+    });
+  }, [mediaStreams]);
+
+  // Render composite scene
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Cancel any existing animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    if (!sceneId) {
+      // No scene selected - draw once and don't start loop
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No scene selected', canvas.width / 2, canvas.height / 2);
+      return;
+    }
+
+    const render = () => {
+      // Clear canvas with black background
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!scene) {
+        // Scene loading
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Loading scene...', canvas.width / 2, canvas.height / 2);
+        animationFrameRef.current = requestAnimationFrame(render);
+        return;
+      }
+
+      if (!scene.elements || scene.elements.length === 0) {
+        // Show "No Content" message
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('No layers configured', canvas.width / 2, canvas.height / 2);
+        animationFrameRef.current = requestAnimationFrame(render);
+        return;
+      }
+
+      // Sort elements by zone with explicit z-ordering
+      const zOrder: Record<string, number> = { 
+        background: 0, 
+        main: 1, 
+        overlay: 2, 
+        foreground: 3 
+      };
+      const sortedElements = [...scene.elements].sort((a, b) => {
+        const aOrder = zOrder[a.zone] ?? 1; // Default to main layer
+        const bOrder = zOrder[b.zone] ?? 1;
+        return aOrder - bOrder;
+      });
+
+      // Render each element
+      sortedElements.forEach((element: SceneElement) => {
+        const x = (element.position.x / 100) * canvas.width;
+        const y = (element.position.y / 100) * canvas.height;
+        const width = (element.position.width / 100) * canvas.width;
+        const height = (element.position.height / 100) * canvas.height;
+
+        if (element.type === 'video' && element.sourceId) {
+          const video = videoRefs.current.get(element.sourceId);
+          if (video && video.readyState >= 2) {
+            ctx.drawImage(video, x, y, width, height);
+          } else {
+            // Placeholder for video not ready
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeStyle = '#374151';
+            ctx.strokeRect(x, y, width, height);
+          }
+        } else if (element.type === 'text' && element.content) {
+          // Render text overlay
+          ctx.fillStyle = '#ffffff';
+          ctx.font = `${Math.floor(height * 0.6)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(element.content, x + width / 2, y + height / 2);
+        } else if (element.type === 'image' && element.content) {
+          // Render image from URL
+          let img = imageCache.current.get(element.content);
+          if (!img) {
+            img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = element.content;
+            imageCache.current.set(element.content, img);
+          }
+          if (img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, x, y, width, height);
+          } else {
+            // Placeholder while loading
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeStyle = '#34d399';
+            ctx.strokeRect(x, y, width, height);
+          }
+        } else if (element.type === 'graphic') {
+          // Render graphic placeholder (could be enhanced with actual graphic rendering)
+          ctx.fillStyle = '#3b82f6';
+          ctx.fillRect(x, y, width, height);
+          ctx.strokeStyle = '#60a5fa';
+          ctx.strokeRect(x, y, width, height);
+        }
+
+        // Debug: Draw zone label
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(x, y, 80, 20);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${element.zone}`, x + 4, y + 14);
+      });
+
+      animationFrameRef.current = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [sceneId, scene, mediaStreams]);
+
+  if (!sceneId) {
+    return (
+      <div className={`bg-black flex items-center justify-center ${className}`}>
+        <p className="text-muted-foreground text-sm">No scene selected</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`bg-black ${className}`}>
+      <canvas
+        ref={canvasRef}
+        width={1920}
+        height={1080}
+        className="w-full h-full object-contain"
+        data-testid="canvas-video-compositor"
+      />
+    </div>
+  );
+}
