@@ -64,6 +64,58 @@ Real-time broadcast control interface for managing live presentations:
 - **Data Accuracy**: Fallback team data updated to match current season rosters ensuring content creation uses accurate, real team information
 - **API Integration**: RapidAPI Football API with smart caching and fallback system for rate limit resilience
 
+### Team Matchup Studio - Advanced Stats & Squad Analysis
+Comprehensive team analysis system combining real-time statistics, squad information, and AI-powered insights for creating compelling YouTube content:
+
+**Performance Statistics Dashboard**
+- **Key Metrics Display**: Form guide (e.g., "WWDWL"), goals scored/conceded, clean sheets, win rate percentage
+- **Real-Time Data**: Statistics fetched from Football API with 15-minute cache TTL
+- **Competition Context**: Stats filtered by selected competition and 2025-26 season
+- **Visual Presentation**: Performance metrics displayed in organized card layout with icons
+
+**Interactive Performance Charts**
+- **Recharts Integration**: Bar charts visualizing team performance across multiple dimensions
+- **Data Points**: Goals scored, goals conceded, clean sheets, yellow cards, red cards
+- **Visual Design**: Charts styled with Liverpool FC color palette using shadcn ChartContainer
+- **Responsive Layout**: Charts adapt to different screen sizes and data ranges
+
+**Squad Roster Analysis**
+- **Position-Based Organization**: Players grouped by Goalkeeper, Defender, Midfielder, Attacker
+- **Player Details**: Name, squad number, age, player photo
+- **Real-Time Data**: Squad information fetched from Football API with smart caching
+- **Visual Cards**: Clean player card design with profile images and key stats
+
+**AI-Powered Tactical Analysis**
+- **OpenAI Integration**: GPT-4o-mini model generates Liverpool-focused narrative analysis
+- **Context-Aware Prompts**: Analysis tailored based on whether analyzing Liverpool (celebratory) or opponents (tactical exploitation)
+- **Generated Content**:
+  - **Narrative**: 2-3 sentence compelling story about team performance
+  - **Key Insights**: Bullet points highlighting statistical trends and patterns
+  - **Tactical Recommendations**: Strategic suggestions for Liverpool's approach
+  - **Confidence Score**: AI-generated confidence rating (0-100%)
+- **Fallback System**: Graceful degradation when OpenAI unavailable or rate limits hit
+- **User-Triggered**: Analysis generated on-demand via "Generate Insights" button
+
+**Technical Implementation**
+- **Backend Endpoints**:
+  - `GET /api/football/teams/:teamId/statistics?leagueId=X&season=2025` - Team performance stats
+  - `GET /api/football/teams/:teamId/squad?season=2025` - Squad roster with player details
+  - `POST /api/football/teams/:teamId/analyze` - AI analysis generation from statistics
+- **Smart Caching**: Multi-layer caching system (in-memory + database) to minimize API calls and handle rate limits
+- **Liverpool FC Context**: Team ID 40 flagged for Liverpool-specific analysis tone and recommendations
+- **Error Handling**: Comprehensive error handling with fallback data for API failures
+- **Data Validation**: Zod schemas validate API responses and request bodies
+
+**Content Creation Workflow**
+1. Select competition (Premier League, Champions League, FA Cup, etc.)
+2. Select team for analysis
+3. View comprehensive statistics and performance trends
+4. Review squad roster organized by position
+5. Generate AI-powered insights with tactical recommendations
+6. Use analysis for YouTube video scripts, thumbnails, and tactical breakdowns
+
+This feature transforms raw football statistics into engaging, Liverpool-focused narrative content suitable for YouTube video creation, combining quantitative data analysis with AI-generated storytelling.
+
 ## External Dependencies
 
 ### AI Integration
