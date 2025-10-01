@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Pause, SkipForward, Radio, Tv, AlertCircle } from "lucide-react";
+import { Play, Pause, Radio, Tv, AlertCircle, Settings, Video, Film } from "lucide-react";
 import Header from "@/components/Header";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import SceneManager from "@/components/SceneManager";
+import PresentationSetManager from "@/components/PresentationSetManager";
+import VideoSourceManager from "@/components/VideoSourceManager";
 
 interface LiveState {
   currentSetId: string | null;
@@ -16,7 +19,15 @@ interface LiveState {
   tickerPlaylistId: string | null;
   bannerOn: boolean;
   bannerText: string;
+  bannerConfig: {
+    position?: 'top' | 'bottom';
+    fontSize?: number;
+    backgroundColor?: string;
+    textColor?: string;
+  };
   transitionDuration: number;
+  transitionEffect: string;
+  activeVideoSources: Record<string, string>;
   lastUpdate: string;
 }
 
@@ -129,10 +140,10 @@ export default function LivePresentation() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="font-league-spartan font-black text-2xl sm:text-3xl lg:text-4xl uppercase tracking-wide text-foreground">
-                Live Presentation Control
+                Live Presentation System
               </h1>
               <p className="font-libre-franklin text-sm sm:text-base text-muted-foreground">
-                Broadcast-style control system for live presentations
+                Broadcast-quality control with camera integration and scene management
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -144,184 +155,283 @@ export default function LivePresentation() {
           </div>
         </div>
 
-        {stateLoading ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">Loading live state...</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid lg:grid-cols-2 gap-6">
-            <div className="space-y-6">
+        <Tabs defaultValue="control" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="control" className="flex items-center gap-2" data-testid="tab-control">
+              <Tv className="w-4 h-4" />
+              <span className="hidden sm:inline">Control</span>
+            </TabsTrigger>
+            <TabsTrigger value="scenes" className="flex items-center gap-2" data-testid="tab-scenes">
+              <Film className="w-4 h-4" />
+              <span className="hidden sm:inline">Scenes</span>
+            </TabsTrigger>
+            <TabsTrigger value="sets" className="flex items-center gap-2" data-testid="tab-sets">
+              <Film className="w-4 h-4" />
+              <span className="hidden sm:inline">Sets</span>
+            </TabsTrigger>
+            <TabsTrigger value="sources" className="flex items-center gap-2" data-testid="tab-sources">
+              <Video className="w-4 h-4" />
+              <span className="hidden sm:inline">Sources</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2" data-testid="tab-settings">
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="control" className="space-y-6">
+            {stateLoading ? (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Tv className="w-5 h-5" />
-                    Program Output
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="aspect-video bg-sidebar rounded-md flex items-center justify-center border-2 border-primary">
-                    <div className="text-center">
-                      {programScene ? (
-                        <>
-                          <h3 className="font-bold text-xl mb-2">{programScene.name}</h3>
-                          <p className="text-sm text-muted-foreground">{programScene.description}</p>
-                          <Badge className="mt-2">{programScene.layout}</Badge>
-                        </>
-                      ) : (
-                        <p className="text-muted-foreground">No scene on program</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {liveState?.tickerOn && (
-                    <div className="bg-primary/20 border border-primary rounded p-2">
-                      <p className="text-xs font-mono">Ticker: Active</p>
-                    </div>
-                  )}
-                  
-                  {liveState?.bannerOn && (
-                    <div className="bg-accent/20 border border-accent rounded p-2">
-                      <p className="text-xs font-mono">Banner: {liveState.bannerText}</p>
-                    </div>
-                  )}
+                <CardContent className="p-8 text-center">
+                  <p className="text-muted-foreground">Loading live state...</p>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5" />
-                    Preview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="aspect-video bg-sidebar rounded-md flex items-center justify-center border-2 border-accent">
-                    <div className="text-center">
-                      {previewScene ? (
-                        <>
-                          <h3 className="font-bold text-lg mb-2">{previewScene.name}</h3>
-                          <p className="text-xs text-muted-foreground">{previewScene.description}</p>
-                          <Badge variant="outline" className="mt-2">{previewScene.layout}</Badge>
-                        </>
-                      ) : (
-                        <p className="text-muted-foreground text-sm">No scene in preview</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 flex gap-2">
-                    <Button
-                      onClick={handleTakeToProgram}
-                      disabled={!liveState?.previewSceneId || updateStateMutation.isPending}
-                      className="flex-1"
-                      data-testid="button-take-to-program"
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Take to Program
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleToggleTicker}
-                      disabled={updateStateMutation.isPending}
-                      data-testid="button-toggle-ticker"
-                    >
-                      {liveState?.tickerOn ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Presentation Sets</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {presentationSets && presentationSets.length > 0 ? (
-                    presentationSets.map(set => (
-                      <Button
-                        key={set.id}
-                        variant={set.id === liveState?.currentSetId ? "default" : "outline"}
-                        className="w-full justify-start"
-                        onClick={() => handleLoadSet(set.id)}
-                        disabled={updateStateMutation.isPending}
-                        data-testid={`button-set-${set.id}`}
-                      >
-                        <div className="flex-1 text-left">
-                          <div className="font-bold">{set.name}</div>
-                          <div className="text-xs text-muted-foreground">{set.sceneIds.length} scenes</div>
+            ) : (
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Tv className="w-5 h-5" />
+                        Program Output
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="aspect-video bg-sidebar rounded-md flex items-center justify-center border-2 border-primary">
+                        <div className="text-center">
+                          {programScene ? (
+                            <>
+                              <h3 className="font-bold text-xl mb-2">{programScene.name}</h3>
+                              <p className="text-sm text-muted-foreground">{programScene.description}</p>
+                              <Badge className="mt-2">{programScene.layout}</Badge>
+                            </>
+                          ) : (
+                            <p className="text-muted-foreground">No scene on program</p>
+                          )}
                         </div>
-                      </Button>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No presentation sets available
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Scenes</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 max-h-96 overflow-y-auto">
-                  {activeSet && scenes ? (
-                    scenes
-                      .filter(s => activeSet.sceneIds.includes(s.id))
-                      .map(scene => (
-                        <Button
-                          key={scene.id}
-                          variant="outline"
-                          className="w-full justify-start"
-                          onClick={() => handleSetPreview(scene.id)}
-                          disabled={updateStateMutation.isPending}
-                          data-testid={`button-scene-${scene.id}`}
-                        >
-                          <div className="flex-1 text-left">
-                            <div className="font-bold text-sm">{scene.name}</div>
-                            <div className="text-xs text-muted-foreground">{scene.layout}</div>
-                          </div>
-                          {scene.id === liveState?.previewSceneId && (
-                            <Badge variant="secondary">Preview</Badge>
-                          )}
-                          {scene.id === liveState?.programSceneId && (
-                            <Badge>Live</Badge>
-                          )}
-                        </Button>
-                      ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Load a presentation set to view scenes
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Event Log</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-sidebar rounded p-2 max-h-48 overflow-y-auto">
-                    {eventLog.length > 0 ? (
-                      <div className="font-mono text-xs space-y-1">
-                        {eventLog.map((log, i) => (
-                          <div key={i} className="text-muted-foreground">{log}</div>
-                        ))}
                       </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No events yet</p>
-                    )}
+                      
+                      {liveState?.tickerOn && (
+                        <div className="bg-primary/20 border border-primary rounded p-2">
+                          <p className="text-xs font-mono">Ticker: Active</p>
+                        </div>
+                      )}
+                      
+                      {liveState?.bannerOn && (
+                        <div className="bg-accent/20 border border-accent rounded p-2">
+                          <p className="text-xs font-mono">Banner: {liveState.bannerText}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5" />
+                        Preview
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="aspect-video bg-sidebar rounded-md flex items-center justify-center border-2 border-accent">
+                        <div className="text-center">
+                          {previewScene ? (
+                            <>
+                              <h3 className="font-bold text-lg mb-2">{previewScene.name}</h3>
+                              <p className="text-xs text-muted-foreground">{previewScene.description}</p>
+                              <Badge variant="outline" className="mt-2">{previewScene.layout}</Badge>
+                            </>
+                          ) : (
+                            <p className="text-muted-foreground text-sm">No scene in preview</p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 flex gap-2">
+                        <Button
+                          onClick={handleTakeToProgram}
+                          disabled={!liveState?.previewSceneId || updateStateMutation.isPending}
+                          className="flex-1"
+                          data-testid="button-take-to-program"
+                        >
+                          <Play className="w-4 h-4 mr-2" />
+                          Take to Program
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleToggleTicker}
+                          disabled={updateStateMutation.isPending}
+                          data-testid="button-toggle-ticker"
+                        >
+                          {liveState?.tickerOn ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Presentation Sets</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {presentationSets && presentationSets.length > 0 ? (
+                        presentationSets.map(set => (
+                          <Button
+                            key={set.id}
+                            variant={set.id === liveState?.currentSetId ? "default" : "outline"}
+                            className="w-full justify-start"
+                            onClick={() => handleLoadSet(set.id)}
+                            disabled={updateStateMutation.isPending}
+                            data-testid={`button-set-${set.id}`}
+                          >
+                            <div className="flex-1 text-left">
+                              <div className="font-bold">{set.name}</div>
+                              <div className="text-xs text-muted-foreground">{set.sceneIds.length} scenes</div>
+                            </div>
+                          </Button>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No presentation sets available
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Scenes</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 max-h-96 overflow-y-auto">
+                      {activeSet && scenes ? (
+                        scenes
+                          .filter(s => activeSet.sceneIds.includes(s.id))
+                          .map(scene => (
+                            <Button
+                              key={scene.id}
+                              variant="outline"
+                              className="w-full justify-start"
+                              onClick={() => handleSetPreview(scene.id)}
+                              disabled={updateStateMutation.isPending}
+                              data-testid={`button-scene-${scene.id}`}
+                            >
+                              <div className="flex-1 text-left">
+                                <div className="font-bold text-sm">{scene.name}</div>
+                                <div className="text-xs text-muted-foreground">{scene.layout}</div>
+                              </div>
+                              {scene.id === liveState?.previewSceneId && (
+                                <Badge variant="secondary">Preview</Badge>
+                              )}
+                              {scene.id === liveState?.programSceneId && (
+                                <Badge>Live</Badge>
+                              )}
+                            </Button>
+                          ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Load a presentation set to view scenes
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Event Log</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-sidebar rounded p-2 max-h-48 overflow-y-auto">
+                        {eventLog.length > 0 ? (
+                          <div className="font-mono text-xs space-y-1">
+                            {eventLog.map((log, i) => (
+                              <div key={i} className="text-muted-foreground">{log}</div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No events yet</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="scenes">
+            <SceneManager />
+          </TabsContent>
+
+          <TabsContent value="sets">
+            <PresentationSetManager />
+          </TabsContent>
+
+          <TabsContent value="sources">
+            <VideoSourceManager />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Live Presentation Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-bold mb-2">Transition Effect</h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Current: {liveState?.transitionEffect || 'cut'}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateStateMutation.mutate({ transitionEffect: 'cut' })}
+                      >
+                        Cut
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateStateMutation.mutate({ transitionEffect: 'fade' })}
+                      >
+                        Fade
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateStateMutation.mutate({ transitionEffect: 'dissolve' })}
+                      >
+                        Dissolve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateStateMutation.mutate({ transitionEffect: 'slide' })}
+                      >
+                        Slide
+                      </Button>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
+                  <div>
+                    <h3 className="font-bold mb-2">Transition Duration</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Current: {liveState?.transitionDuration || 500}ms
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-bold mb-2">Banner Configuration</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Position: {liveState?.bannerConfig?.position || 'bottom'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

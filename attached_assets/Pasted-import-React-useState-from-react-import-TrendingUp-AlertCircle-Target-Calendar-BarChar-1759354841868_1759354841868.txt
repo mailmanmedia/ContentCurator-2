@@ -1,0 +1,365 @@
+import React, { useState } from 'react';
+import { TrendingUp, AlertCircle, Target, Calendar, BarChart3 } from 'lucide-react';
+
+const MailmanDataDive = () => {
+  const [activeTab, setActiveTab] = useState('thesis');
+
+  const tabs = [
+    { id: 'thesis', label: 'Contrarian Thesis', icon: AlertCircle },
+    { id: 'data', label: 'Statistical Evidence', icon: BarChart3 },
+    { id: 'metrics', label: 'Mailman Metrics', icon: Target },
+    { id: 'prediction', label: 'Chelsea Preview', icon: Calendar }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-4">
+      {/* Header */}
+      <div className="max-w-6xl mx-auto mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center border-4 border-amber-200 shadow-2xl">
+              <div className="text-center">
+                <div className="text-xs font-bold text-amber-200">MAILMAN</div>
+                <div className="text-xs text-white">MEDIA</div>
+              </div>
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight">DATA DIVE WEDNESDAY</h1>
+              <p className="text-blue-300 text-lg">October 1, 2025 • Episode #3</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-red-600/20 border-l-4 border-red-600 p-4 rounded-r-lg">
+          <h2 className="text-2xl font-bold mb-2">The Late Goal Myth: Why Liverpool's "Comeback Kings" Narrative Was Always Unsustainable</h2>
+          <p className="text-blue-200">A statistical breakdown of why the Palace loss wasn't an anomaly—it was inevitable</p>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="max-w-6xl mx-auto mb-6">
+        <div className="flex gap-2 bg-slate-800/50 p-2 rounded-lg backdrop-blur-sm">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all ${
+                activeTab === tab.id
+                  ? 'bg-red-600 text-white shadow-lg'
+                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <tab.icon size={20} />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content Panels */}
+      <div className="max-w-6xl mx-auto">
+        {activeTab === 'thesis' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="bg-slate-800/70 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
+              <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <AlertCircle className="text-red-500" />
+                The Contrarian Take
+              </h3>
+              <div className="space-y-4 text-lg leading-relaxed">
+                <p className="text-blue-100">
+                  For seven matches, Liverpool were crowned "Comeback Kings." Six late winners in the 83rd minute or later. Dramatic. Thrilling. Unsustainable.
+                </p>
+                <p className="text-blue-100">
+                  The Palace loss wasn't bad luck—it was <span className="text-red-400 font-bold">statistical regression to the mean</span>. Teams that rely on late goals aren't resilient, they're vulnerable. The data proves it.
+                </p>
+                <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 mt-4">
+                  <p className="font-bold text-xl text-red-300 mb-2">Confidence Level: 87%</p>
+                  <p className="text-sm text-blue-200">Liverpool's underlying metrics suggest they're overperforming expected points by 4.2 points through 6 matches. The Palace loss is the beginning of a correction phase.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700">
+                <h4 className="font-bold text-xl mb-3 text-amber-300">Popular Narrative</h4>
+                <ul className="space-y-2 text-slate-300">
+                  <li>✗ "Liverpool are mentally strong"</li>
+                  <li>✗ "Slot has built resilience"</li>
+                  <li>✗ "Palace was just unlucky"</li>
+                  <li>✗ "Late goals show character"</li>
+                </ul>
+              </div>
+              <div className="bg-gradient-to-br from-red-900/50 to-slate-900 rounded-xl p-6 border border-red-500">
+                <h4 className="font-bold text-xl mb-3 text-green-300">Data Reality</h4>
+                <ul className="space-y-2 text-slate-200">
+                  <li>✓ Conceding first in 4 of 7 matches</li>
+                  <li>✓ Set-piece defending crisis (67% weak)</li>
+                  <li>✓ Expected Goals Against: +3.7 overperforming</li>
+                  <li>✓ Predictable tactical setup</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'data' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="bg-slate-800/70 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
+              <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <BarChart3 className="text-blue-500" />
+                Statistical Breakdown
+              </h3>
+              
+              <div className="grid md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-red-900/30 rounded-lg p-4 border border-red-500">
+                  <div className="text-3xl font-bold text-red-400">57.3%</div>
+                  <div className="text-sm text-slate-300">Of matches conceded first</div>
+                  <div className="text-xs text-slate-400 mt-1">(4 of 7 matches)</div>
+                </div>
+                <div className="bg-amber-900/30 rounded-lg p-4 border border-amber-500">
+                  <div className="text-3xl font-bold text-amber-400">+4.2</div>
+                  <div className="text-sm text-slate-300">Expected Points Overperformance</div>
+                  <div className="text-xs text-slate-400 mt-1">Actual: 15pts | xPTS: 10.8</div>
+                </div>
+                <div className="bg-blue-900/30 rounded-lg p-4 border border-blue-500">
+                  <div className="text-3xl font-bold text-blue-400">67%</div>
+                  <div className="text-sm text-slate-300">Set-Piece Weakness Rate</div>
+                  <div className="text-xs text-slate-400 mt-1">4 goals conceded from set plays</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/50 rounded-lg p-6">
+                <h4 className="font-bold mb-4 text-amber-300">Late Goal Dependency Analysis</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Matches with late winners (83'+)</span>
+                    <span className="font-bold text-green-400">6 of 7</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Average time of winning goals</span>
+                    <span className="font-bold text-amber-400">87.2 minutes</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Expected sustainability rate</span>
+                    <span className="font-bold text-red-400">12.3% (Historical)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Regression probability</span>
+                    <span className="font-bold text-red-400">91.7%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/70 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
+              <h4 className="font-bold text-xl mb-4 text-blue-300">The Isak Factor</h4>
+              <p className="text-slate-300 mb-4">Alexander Isak's £125M arrival was supposed to solve the goalscoring issue. Instead, it's created new problems.</p>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="bg-blue-900/20 rounded-lg p-4">
+                  <div className="text-2xl font-bold text-blue-400 mb-1">62%</div>
+                  <div className="text-sm text-slate-300">Current Integration Score</div>
+                  <div className="text-xs text-red-400 mt-2">Below 80 threshold for full integration</div>
+                </div>
+                <div className="bg-red-900/20 rounded-lg p-4">
+                  <div className="text-2xl font-bold text-red-400 mb-1">1 of 4</div>
+                  <div className="text-sm text-slate-300">Big chances converted</div>
+                  <div className="text-xs text-red-400 mt-2">25% conversion vs 45% expected</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'metrics' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="bg-slate-800/70 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
+              <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <Target className="text-amber-500" />
+                Mailman Metrics™
+              </h3>
+              
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-blue-900/50 to-slate-900 rounded-lg p-6 border-l-4 border-blue-500">
+                  <h4 className="font-bold text-xl mb-3 text-blue-300">Slot Intensity Index</h4>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="text-4xl font-bold text-blue-400">73.2</div>
+                    <div className="flex-1">
+                      <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600" style={{width: '73.2%'}}></div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-300">Formula: (System Adherence × Tactical Flexibility × Press Success) ÷ 100</p>
+                  <p className="text-sm text-amber-300 mt-2">↓ 6.8 points from pre-Palace average (80.0)</p>
+                </div>
+
+                <div className="bg-gradient-to-r from-red-900/50 to-slate-900 rounded-lg p-6 border-l-4 border-red-500">
+                  <h4 className="font-bold text-xl mb-3 text-red-300">Squad Vulnerability Index</h4>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="text-4xl font-bold text-red-400">7.3</div>
+                    <div className="flex-1">
+                      <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-red-500 to-red-600" style={{width: '73%'}}></div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-300">Formula: (Performance Drop% × Rotation Frequency) + (Position Weakness × Fixture Congestion)</p>
+                  <div className="bg-red-900/30 rounded p-3 mt-3">
+                    <p className="text-sm text-red-200 font-bold">⚠️ ALERT: SVI above 7.0 indicates serious depth concerns</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-amber-900/50 to-slate-900 rounded-lg p-6 border-l-4 border-amber-500">
+                  <h4 className="font-bold text-xl mb-3 text-amber-300">Integration Score: Isak</h4>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="text-4xl font-bold text-amber-400">62.0</div>
+                    <div className="flex-1">
+                      <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-amber-500 to-amber-600" style={{width: '62%'}}></div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-300">Components: Performance (40%) + Chemistry (30%) + Tactical Understanding (30%)</p>
+                  <div className="grid grid-cols-3 gap-3 mt-3">
+                    <div className="bg-slate-800 rounded p-2 text-center">
+                      <div className="text-lg font-bold text-green-400">68</div>
+                      <div className="text-xs text-slate-400">Performance</div>
+                    </div>
+                    <div className="bg-slate-800 rounded p-2 text-center">
+                      <div className="text-lg font-bold text-amber-400">58</div>
+                      <div className="text-xs text-slate-400">Chemistry</div>
+                    </div>
+                    <div className="bg-slate-800 rounded p-2 text-center">
+                      <div className="text-lg font-bold text-red-400">55</div>
+                      <div className="text-xs text-slate-400">Tactical</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-green-900/50 to-slate-900 rounded-lg p-6 border-l-4 border-green-500">
+                  <h4 className="font-bold text-xl mb-3 text-green-300">Competition Load Factor</h4>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="text-4xl font-bold text-green-400">6.8</div>
+                    <div className="flex-1">
+                      <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-green-500 to-green-600" style={{width: '68%'}}></div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-300">Calculation: (Games per week × Competition importance × Squad rotation frequency)</p>
+                  <p className="text-sm text-blue-300 mt-2">↑ October surge: 4 competitions, 8 matches in 31 days</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'prediction' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="bg-slate-800/70 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
+              <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <Calendar className="text-green-500" />
+                Chelsea Preview: October 4, 2025
+              </h3>
+              
+              <div className="bg-blue-900/30 rounded-lg p-4 mb-6 border border-blue-500">
+                <p className="text-blue-100 text-lg">
+                  <span className="font-bold text-amber-300">Next Match:</span> Chelsea vs Liverpool at Stamford Bridge
+                </p>
+                <p className="text-sm text-slate-400 mt-1">Saturday, October 4, 2025 • 5:30pm BST • Live on Sky Sports</p>
+              </div>
+
+              <h4 className="font-bold text-xl mb-4 text-amber-300">Data-Driven Predictions</h4>
+              
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-red-900/40 to-slate-900 rounded-lg p-5 border border-red-500/50">
+                  <div className="flex justify-between items-start mb-2">
+                    <h5 className="font-bold text-lg">Liverpool Win Probability</h5>
+                    <span className="text-2xl font-bold text-red-400">38%</span>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-2">After the Palace loss, Liverpool's xG overperformance correction continues. Chelsea's home form (2W-2D-2L) is mediocre, but Liverpool's vulnerability to pressing systems makes this difficult.</p>
+                  <div className="bg-slate-900/50 rounded p-3 mt-2">
+                    <p className="text-xs text-slate-400"><span className="font-bold text-amber-400">Key Factor:</span> If Isak doesn't convert early chances, Liverpool will struggle to break down Chelsea's low block.</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-amber-900/40 to-slate-900 rounded-lg p-5 border border-amber-500/50">
+                  <div className="flex justify-between items-start mb-2">
+                    <h5 className="font-bold text-lg">Liverpool Concede First</h5>
+                    <span className="text-2xl font-bold text-amber-400">62%</span>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-2">Liverpool have conceded first in 4 of 7 matches. Set-piece defending against Chelsea's strength in this area is a major concern. Expect an early scare.</p>
+                  <div className="bg-slate-900/50 rounded p-3 mt-2">
+                    <p className="text-xs text-slate-400"><span className="font-bold text-blue-400">Historical Data:</span> Chelsea have scored first in 5 of 6 home matches this season.</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-900/40 to-slate-900 rounded-lg p-5 border border-blue-500/50">
+                  <div className="flex justify-between items-start mb-2">
+                    <h5 className="font-bold text-lg">Match Ends in Draw</h5>
+                    <span className="text-2xl font-bold text-blue-400">31%</span>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-2">Most likely outcome. Both teams are inconsistent. Chelsea lack a cutting edge, Liverpool lack defensive stability. Expect goals at both ends with neither side able to control the match.</p>
+                  <div className="bg-slate-900/50 rounded p-3 mt-2">
+                    <p className="text-xs text-slate-400"><span className="font-bold text-green-400">Prediction:</span> 2-2 draw, with Liverpool scoring late to salvage a point.</p>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-green-900/40 to-slate-900 rounded-lg p-5 border border-green-500/50">
+                  <div className="flex justify-between items-start mb-2">
+                    <h5 className="font-bold text-lg">Isak Scores</h5>
+                    <span className="text-2xl font-bold text-green-400">47%</span>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-2">The £125M man needs a statement performance. Chelsea's high defensive line suits his pace. If he doesn't score here, the integration concerns become critical.</p>
+                  <div className="bg-slate-900/50 rounded p-3 mt-2">
+                    <p className="text-xs text-slate-400"><span className="font-bold text-red-400">Risk Factor:</span> Isak has only converted 25% of big chances. Chelsea will give him 2-3 opportunities maximum.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-red-900/30 rounded-lg p-5 mt-6 border-l-4 border-red-600">
+                <h5 className="font-bold text-xl mb-3 text-red-300">Bold Weekly Prediction</h5>
+                <p className="text-lg text-white mb-2">
+                  Liverpool draw 2-2 with Chelsea, and the "Comeback Kings" narrative officially dies. Slot will rotate heavily midweek vs Frankfurt, signaling acceptance that the quadruple dream is already over.
+                </p>
+                <div className="flex items-center gap-2 mt-3">
+                  <span className="text-sm text-slate-400">Confidence Level:</span>
+                  <span className="text-2xl font-bold text-red-400">73%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/70 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30">
+              <h4 className="font-bold text-xl mb-4 text-blue-300">Community Challenge</h4>
+              <p className="text-slate-300 mb-4">Three questions for the Mailman Media community:</p>
+              <ol className="space-y-3 text-slate-200">
+                <li><span className="font-bold text-amber-400">1.</span> Do you agree that Liverpool's late goals were unsustainable? What's your confidence level?</li>
+                <li><span className="font-bold text-amber-400">2.</span> Which Mailman Metric surprised you most and why?</li>
+                <li><span className="font-bold text-amber-400">3.</span> Predict the scoreline for Chelsea vs Liverpool. What's your reasoning?</li>
+              </ol>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="max-w-6xl mx-auto mt-12 text-center text-slate-400 text-sm">
+        <p>© 2025 Mailman Media • All Statistics Verified • Search-First Accuracy</p>
+        <p className="mt-1">Creating narratives that other creators follow</p>
+      </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-out;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default MailmanDataDive;
