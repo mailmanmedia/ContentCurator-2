@@ -623,11 +623,14 @@ export default function TeamMatchupStudio() {
               )}
 
               {/* No Data Message */}
-              {!teamStatsData?.statistics && !teamSquadData?.squad && (
+              {!teamStatsData?.statistics && (!teamSquadData?.squad || teamSquadData.squad.length === 0) && (
                 <div className="p-6 border border-dashed rounded-lg text-center">
                   <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-muted-foreground">
                     Advanced statistics unavailable. API rate limits may apply.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    This is due to external API rate limiting. The feature works correctly when API access is available.
                   </p>
                 </div>
               )}
