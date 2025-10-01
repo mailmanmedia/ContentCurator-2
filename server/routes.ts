@@ -2109,6 +2109,16 @@ Return ONLY a JSON object with this structure:
   });
 
   // Presentation Scenes routes (aliased under /api/presentation/scenes)
+  app.get("/api/presentation/scenes", async (req, res) => {
+    try {
+      const scenes = await storage.getScenes();
+      res.json(scenes);
+    } catch (error) {
+      console.error('Error fetching scenes:', error);
+      res.status(500).json({ error: "Failed to fetch scenes" });
+    }
+  });
+
   app.post("/api/presentation/scenes", async (req, res) => {
     try {
       const validatedData = insertSceneSchema.parse(req.body);
@@ -2281,6 +2291,16 @@ Return ONLY a JSON object with this structure:
   });
 
   // Presentation Sets routes (aliased under /api/presentation/sets)
+  app.get("/api/presentation/sets", async (req, res) => {
+    try {
+      const sets = await storage.getPresentationSets();
+      res.json(sets);
+    } catch (error) {
+      console.error('Error fetching presentation sets:', error);
+      res.status(500).json({ error: "Failed to fetch presentation sets" });
+    }
+  });
+
   app.post("/api/presentation/sets", async (req, res) => {
     try {
       const validatedData = insertPresentationSetSchema.parse(req.body);

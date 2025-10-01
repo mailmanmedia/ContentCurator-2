@@ -23,6 +23,7 @@ function Router() {
       <Route path="/team-matchup-studio" component={TeamMatchupStudio} />
       <Route path="/content-library" component={ContentLibrary} />
       <Route path="/live-presentation" component={LivePresentation} />
+      <Route path="/live" component={LivePresentation} />
       <Route component={NotFound} />
     </Switch>
   );

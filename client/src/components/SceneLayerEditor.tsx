@@ -46,7 +46,7 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
   });
 
   const { data: videoSources } = useQuery<VideoSource[]>({
-    queryKey: ['/api/video-sources'],
+    queryKey: ['/api/live/video-sources'],
   });
 
   const handleAddElement = () => {
@@ -203,11 +203,23 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
                         <SelectValue placeholder="Select source" />
                       </SelectTrigger>
                       <SelectContent>
-                        {videoSources?.map((source) => (
-                          <SelectItem key={source.id} value={source.id}>
-                            {source.name} ({source.sourceType})
-                          </SelectItem>
-                        ))}
+                        {(videoSources && Array.isArray(videoSources)) ? (
+                          videoSources.length > 0 ? (
+                            videoSources.map((source) => (
+                              <SelectItem key={source.id} value={source.id}>
+                                {source.name} ({source.sourceType})
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-2 py-1 text-sm text-muted-foreground">
+                              No video sources available
+                            </div>
+                          )
+                        ) : (
+                          <div className="px-2 py-1 text-sm text-muted-foreground">
+                            Loading...
+                          </div>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
