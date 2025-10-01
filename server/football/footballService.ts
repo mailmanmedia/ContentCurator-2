@@ -1445,6 +1445,44 @@ class FootballService {
     );
   }
 
+  async getTeamSquad(teamId: number, season: number): Promise<any[]> {
+    const cacheCategory = teamId === 40 ? 'liverpool' : 'general';
+    
+    return await smartFootballCache.get(
+      `team_squad_${teamId}_${season}`,
+      async () => {
+        try {
+          const response = await this.fetchFromAPI('/players/squads', {
+            team: teamId
+          });
+
+          if (!response.response || response.response.length === 0) {
+            return [];
+          }
+
+          const squadData = response.response[0] as any;
+          if (!squadData?.players || !Array.isArray(squadData.players)) {
+            return [];
+          }
+
+          return squadData.players.map((player: any) => ({
+            id: player.id,
+            name: player.name,
+            position: player.position,
+            number: player.number,
+            age: player.age,
+            nationality: player.nationality,
+            photo: player.photo
+          }));
+        } catch (error) {
+          console.error(`Failed to get team squad:`, error);
+          return [];
+        }
+      },
+      cacheCategory
+    );
+  }
+
   async getLineupForFixture(fixtureId: number): Promise<FootballLineup[]> {
     try {
       const response = await this.fetchFromAPI<APILineup>('/fixtures/lineups', {

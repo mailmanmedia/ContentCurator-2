@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Shield, Users, TrendingUp, Calendar, MapPin, Trophy, Target, Zap } from "lucide-react";
+import { Shield, Users, TrendingUp, Calendar, MapPin, Trophy, Target, Zap, Activity, Award, Timer, AlertCircle } from "lucide-react";
+import { ChartContainer } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { queryClient } from "@/lib/queryClient";
 import Header from "@/components/Header";
 
@@ -51,6 +53,7 @@ export default function TeamMatchupStudio() {
   const [selectedTeam1, setSelectedTeam1] = useState<number | null>(null);
   const [selectedTeam2, setSelectedTeam2] = useState<number | null>(null);
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('single');
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
 
   // Fetch competitions
   const { data: competitionsData, isLoading: competitionsLoading } = useQuery({
@@ -72,6 +75,20 @@ export default function TeamMatchupStudio() {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Fetch team statistics for single team analysis
+  const { data: teamStatsData, isLoading: statsLoading } = useQuery<{statistics: any}>({
+    queryKey: ['/api/football/teams', selectedTeam1, 'statistics', { leagueId: selectedCompetition, season: 2025 }],
+    enabled: !!(selectedTeam1 && selectedCompetition && analysisMode === 'single'),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Fetch team squad for single team analysis
+  const { data: teamSquadData, isLoading: squadLoading } = useQuery<{squad: any[]}>({
+    queryKey: ['/api/football/teams', selectedTeam1, 'squad', { season: 2025 }],
+    enabled: !!(selectedTeam1 && analysisMode === 'single'),
+    staleTime: 15 * 60 * 1000,
+  });
+
   // Initialize football data mutation
   const initializeDataMutation = useMutation({
     mutationFn: async () => {
@@ -84,6 +101,26 @@ export default function TeamMatchupStudio() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/football/competitions'] });
+    },
+  });
+
+  // AI Analysis mutation
+  const aiAnalysisMutation = useMutation({
+    mutationFn: async ({ teamId, teamName, statistics }: any) => {
+      const response = await fetch(`/api/football/teams/${teamId}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          teamName, 
+          statistics,
+          isLiverpool: teamId === 40
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to generate analysis');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setAiAnalysis(data.analysis);
     },
   });
 
@@ -453,14 +490,247 @@ export default function TeamMatchupStudio() {
             </div>
           )}
 
-          <div className="mt-4 p-4 border border-dashed rounded-lg text-center">
-            <Zap className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground">
-              Advanced statistics and squad analysis coming soon
-            </p>
-          </div>
+          {/* Advanced Statistics and Squad Analysis */}
+          {(statsLoading || squadLoading) ? (
+            <div className="mt-4 p-8 border border-dashed rounded-lg text-center">
+              <div className="animate-pulse">Loading advanced statistics and squad data...</div>
+            </div>
+          ) : (
+            <div className="mt-6 space-y-6">
+              {/* Team Statistics Section */}
+              {teamStatsData?.statistics && (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-league-spartan font-bold text-lg uppercase text-accent mb-4 flex items-center gap-2">
+                      <Activity className="w-5 h-5" />
+                      Performance Metrics
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {renderStatCard("Form", teamStatsData.statistics.form || "N/A", TrendingUp)}
+                      {renderStatCard("Goals", `${teamStatsData.statistics.goals?.for?.total?.total || 0} scored`, Target)}
+                      {renderStatCard("Clean Sheets", teamStatsData.statistics.clean_sheet?.total || "0", Shield)}
+                      {renderStatCard("Win Rate", `${Math.round((teamStatsData.statistics.fixtures?.wins?.total || 0) / Math.max(teamStatsData.statistics.fixtures?.played?.total || 1, 1) * 100)}%`, Award)}
+                    </div>
+                  </div>
+
+                  {/* Performance Charts */}
+                  {renderPerformanceCharts(teamStatsData.statistics)}
+
+                  {/* AI Analysis Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-league-spartan font-bold text-lg uppercase text-accent flex items-center gap-2">
+                        <Zap className="w-5 h-5" />
+                        AI-Powered Analysis
+                      </h4>
+                      <Button
+                        onClick={() => aiAnalysisMutation.mutate({
+                          teamId: selectedTeam1,
+                          teamName: selectedTeam1Data?.name,
+                          statistics: teamStatsData.statistics
+                        })}
+                        disabled={aiAnalysisMutation.isPending || !teamStatsData.statistics}
+                        size="sm"
+                        data-testid="button-generate-ai-analysis"
+                      >
+                        {aiAnalysisMutation.isPending ? 'Analyzing...' : 'Generate Insights'}
+                      </Button>
+                    </div>
+
+                    {aiAnalysis && (
+                      <Card className="bg-accent/5 border-accent/20">
+                        <CardContent className="p-6 space-y-4">
+                          {/* Narrative */}
+                          <div>
+                            <p className="text-base leading-relaxed">{aiAnalysis.narrative}</p>
+                          </div>
+
+                          {/* Key Insights */}
+                          {aiAnalysis.keyInsights && aiAnalysis.keyInsights.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-sm text-muted-foreground mb-2 uppercase">Key Insights</h5>
+                              <ul className="space-y-2">
+                                {aiAnalysis.keyInsights.map((insight: string, idx: number) => (
+                                  <li key={idx} className="flex items-start gap-2">
+                                    <Target className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                                    <span className="text-sm">{insight}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Tactical Recommendations */}
+                          {aiAnalysis.tacticalRecommendations && aiAnalysis.tacticalRecommendations.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-sm text-muted-foreground mb-2 uppercase">Tactical Recommendations</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {aiAnalysis.tacticalRecommendations.map((rec: string, idx: number) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {rec}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Confidence Score */}
+                          {aiAnalysis.confidence && (
+                            <div className="pt-2 border-t">
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>Analysis Confidence</span>
+                                <span className="font-semibold">{aiAnalysis.confidence}%</span>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {!aiAnalysis && !aiAnalysisMutation.isPending && (
+                      <Card className="border-dashed">
+                        <CardContent className="p-6 text-center">
+                          <Zap className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            Click "Generate Insights" to get AI-powered tactical analysis
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Squad Roster Section */}
+              {teamSquadData?.squad && teamSquadData.squad.length > 0 && (
+                <div>
+                  <h4 className="font-league-spartan font-bold text-lg uppercase text-accent mb-4 flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Squad Roster
+                  </h4>
+                  {renderSquadByPosition(teamSquadData.squad)}
+                </div>
+              )}
+
+              {/* No Data Message */}
+              {!teamStatsData?.statistics && !teamSquadData?.squad && (
+                <div className="p-6 border border-dashed rounded-lg text-center">
+                  <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">
+                    Advanced statistics unavailable. API rate limits may apply.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
+    );
+  };
+
+  // Helper to render stat cards
+  const renderStatCard = (label: string, value: string | number, Icon: any) => (
+    <Card className="hover-elevate" data-testid={`stat-${label.toLowerCase().replace(' ', '-')}`}>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Icon className="w-4 h-4 text-primary" />
+          <span className="text-xs font-medium text-muted-foreground uppercase">{label}</span>
+        </div>
+        <p className="text-2xl font-bold">{value}</p>
+      </CardContent>
+    </Card>
+  );
+
+  // Helper to render performance charts
+  const renderPerformanceCharts = (stats: any) => {
+    if (!stats.goals) return null;
+
+    // Build chart data from statistics
+    const chartData = [
+      { name: 'Goals Scored', value: stats.goals?.for?.total?.total || 0, fill: 'hsl(var(--primary))' },
+      { name: 'Goals Conceded', value: stats.goals?.against?.total?.total || 0, fill: 'hsl(var(--destructive))' },
+      { name: 'Clean Sheets', value: stats.clean_sheet?.total || 0, fill: 'hsl(var(--accent))' },
+      { name: 'Yellow Cards', value: stats.cards?.yellow?.['0-15']?.total || 0, fill: 'hsl(45 100% 50%)' },
+    ];
+
+    const chartConfig = {
+      value: {
+        label: "Value",
+        color: "hsl(var(--primary))",
+      },
+    };
+
+    return (
+      <div>
+        <h4 className="font-league-spartan font-bold text-lg uppercase text-accent mb-4 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5" />
+          Performance Overview
+        </h4>
+        <Card>
+          <CardContent className="p-6">
+            <ChartContainer config={chartConfig} className="h-[250px] w-full">
+              <BarChart data={chartData}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="name" 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  angle={-15}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  // Helper to organize and render squad by position
+  const renderSquadByPosition = (squad: any[]) => {
+    const positions = {
+      'Goalkeeper': squad.filter(p => p.position === 'Goalkeeper'),
+      'Defender': squad.filter(p => p.position === 'Defender'),
+      'Midfielder': squad.filter(p => p.position === 'Midfielder'),
+      'Attacker': squad.filter(p => p.position === 'Attacker'),
+    };
+
+    return (
+      <div className="space-y-4">
+        {Object.entries(positions).map(([position, players]) => {
+          if (players.length === 0) return null;
+          return (
+            <div key={position}>
+              <h5 className="font-semibold text-sm text-muted-foreground mb-2 uppercase">{position}s</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {players.map((player: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 p-3 bg-muted rounded-lg hover-elevate"
+                    data-testid={`player-${player.number || idx}`}
+                  >
+                    {player.photo && (
+                      <img src={player.photo} alt={player.name} className="w-10 h-10 rounded-full object-cover" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{player.name}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {player.number && <span className="font-mono">#{player.number}</span>}
+                        {player.age && <span>{player.age}y</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     );
   };
 
