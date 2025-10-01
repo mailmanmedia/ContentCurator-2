@@ -15,6 +15,7 @@ import {
   type Scene, type InsertScene,
   type PresentationSet, type InsertPresentationSet,
   type TickerPlaylist, type InsertTickerPlaylist,
+  type VideoSource, type InsertVideoSource,
   type LiveState
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -149,6 +150,7 @@ export interface IStorage {
   createScene(scene: InsertScene): Promise<Scene>;
   updateScene(id: string, updates: Partial<InsertScene>): Promise<Scene | undefined>;
   deleteScene(id: string): Promise<boolean>;
+  duplicateScene(id: string): Promise<Scene | undefined>;
 
   // Presentation Set methods
   getPresentationSets(): Promise<PresentationSet[]>;
@@ -165,6 +167,13 @@ export interface IStorage {
   createTickerPlaylist(playlist: InsertTickerPlaylist): Promise<TickerPlaylist>;
   updateTickerPlaylist(id: string, updates: Partial<InsertTickerPlaylist>): Promise<TickerPlaylist | undefined>;
   deleteTickerPlaylist(id: string): Promise<boolean>;
+
+  // Video Source methods
+  getVideoSources(): Promise<VideoSource[]>;
+  getVideoSource(id: string): Promise<VideoSource | undefined>;
+  createVideoSource(source: InsertVideoSource): Promise<VideoSource>;
+  updateVideoSource(id: string, updates: Partial<InsertVideoSource>): Promise<VideoSource | undefined>;
+  deleteVideoSource(id: string): Promise<boolean>;
 
   // Live State methods (in-memory only)
   getLiveState(): Promise<LiveState>;
@@ -201,6 +210,7 @@ export class MemStorage implements IStorage {
   private scenes: Map<string, Scene>;
   private presentationSets: Map<string, PresentationSet>;
   private tickerPlaylists: Map<string, TickerPlaylist>;
+  private videoSources: Map<string, VideoSource>;
   private liveState: LiveState;
 
   constructor() {
@@ -220,6 +230,7 @@ export class MemStorage implements IStorage {
     this.scenes = new Map();
     this.presentationSets = new Map();
     this.tickerPlaylists = new Map();
+    this.videoSources = new Map();
     this.liveState = {
       currentSetId: null,
       programSceneId: null,
@@ -228,7 +239,10 @@ export class MemStorage implements IStorage {
       tickerPlaylistId: null,
       bannerOn: false,
       bannerText: '',
+      bannerConfig: {},
       transitionDuration: 500,
+      transitionEffect: 'fade',
+      activeVideoSources: {},
       lastUpdate: new Date()
     };
     
@@ -1391,6 +1405,24 @@ export class MemStorage implements IStorage {
     return this.scenes.delete(id);
   }
 
+  async duplicateScene(id: string): Promise<Scene | undefined> {
+    const original = this.scenes.get(id);
+    if (!original) return undefined;
+
+    const newId = randomUUID();
+    const now = new Date();
+    const duplicated: Scene = {
+      ...original,
+      id: newId,
+      name: `${original.name} (Copy)`,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.scenes.set(newId, duplicated);
+    return duplicated;
+  }
+
   // Presentation Set methods
   async getPresentationSets(): Promise<PresentationSet[]> {
     return Array.from(this.presentationSets.values())
@@ -1498,6 +1530,57 @@ export class MemStorage implements IStorage {
 
   async deleteTickerPlaylist(id: string): Promise<boolean> {
     return this.tickerPlaylists.delete(id);
+  }
+
+  // Video Source methods
+  async getVideoSources(): Promise<VideoSource[]> {
+    return Array.from(this.videoSources.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getVideoSource(id: string): Promise<VideoSource | undefined> {
+    return this.videoSources.get(id);
+  }
+
+  async createVideoSource(insertSource: InsertVideoSource): Promise<VideoSource> {
+    const id = randomUUID();
+    const now = new Date();
+    const source: VideoSource = {
+      id,
+      name: insertSource.name,
+      description: insertSource.description || '',
+      sourceType: insertSource.sourceType,
+      deviceId: insertSource.deviceId || null,
+      deviceLabel: insertSource.deviceLabel || null,
+      streamUrl: insertSource.streamUrl || null,
+      mediaFileId: insertSource.mediaFileId || null,
+      configJson: insertSource.configJson || {},
+      isActive: insertSource.isActive ?? true,
+      isConnected: insertSource.isConnected ?? false,
+      lastConnectedAt: null,
+      tags: insertSource.tags || [],
+      createdAt: now,
+      updatedAt: now
+    };
+    this.videoSources.set(id, source);
+    return source;
+  }
+
+  async updateVideoSource(id: string, updates: Partial<InsertVideoSource>): Promise<VideoSource | undefined> {
+    const existing = this.videoSources.get(id);
+    if (!existing) return undefined;
+    
+    const updated: VideoSource = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.videoSources.set(id, updated);
+    return updated;
+  }
+
+  async deleteVideoSource(id: string): Promise<boolean> {
+    return this.videoSources.delete(id);
   }
 
   // Live State methods (in-memory only)

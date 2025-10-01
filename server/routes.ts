@@ -17,6 +17,7 @@ import {
   insertSceneSchema,
   insertPresentationSetSchema,
   insertTickerPlaylistSchema,
+  insertVideoSourceSchema,
   type LiveState
 } from "@shared/schema";
 import OpenAI from "openai";
@@ -2094,6 +2095,92 @@ Return ONLY a JSON object with this structure:
     }
   });
 
+  app.post("/api/scenes/:id/duplicate", async (req, res) => {
+    try {
+      const scene = await storage.duplicateScene(req.params.id);
+      if (!scene) {
+        return res.status(404).json({ error: "Scene not found" });
+      }
+      res.status(201).json({ scene });
+    } catch (error) {
+      console.error('Error duplicating scene:', error);
+      res.status(500).json({ error: "Failed to duplicate scene" });
+    }
+  });
+
+  // Presentation Scenes routes (aliased under /api/presentation/scenes)
+  app.post("/api/presentation/scenes", async (req, res) => {
+    try {
+      const validatedData = insertSceneSchema.parse(req.body);
+      const scene = await storage.createScene(validatedData);
+      res.status(201).json({ scene });
+    } catch (error) {
+      console.error('Error creating scene:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create scene" });
+      }
+    }
+  });
+
+  app.get("/api/presentation/scenes/:id", async (req, res) => {
+    try {
+      const scene = await storage.getScene(req.params.id);
+      if (!scene) {
+        return res.status(404).json({ error: "Scene not found" });
+      }
+      res.json({ scene });
+    } catch (error) {
+      console.error('Error fetching scene:', error);
+      res.status(500).json({ error: "Failed to fetch scene" });
+    }
+  });
+
+  app.put("/api/presentation/scenes/:id", async (req, res) => {
+    try {
+      const updates = insertSceneSchema.partial().parse(req.body);
+      const scene = await storage.updateScene(req.params.id, updates);
+      if (!scene) {
+        return res.status(404).json({ error: "Scene not found" });
+      }
+      res.json({ scene });
+    } catch (error) {
+      console.error('Error updating scene:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update scene" });
+      }
+    }
+  });
+
+  app.delete("/api/presentation/scenes/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteScene(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Scene not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting scene:', error);
+      res.status(500).json({ error: "Failed to delete scene" });
+    }
+  });
+
+  app.post("/api/presentation/scenes/:id/duplicate", async (req, res) => {
+    try {
+      const scene = await storage.duplicateScene(req.params.id);
+      if (!scene) {
+        return res.status(404).json({ error: "Scene not found" });
+      }
+      res.status(201).json({ scene });
+    } catch (error) {
+      console.error('Error duplicating scene:', error);
+      res.status(500).json({ error: "Failed to duplicate scene" });
+    }
+  });
+
   // Presentation Sets routes
   app.get("/api/presentation-sets", async (req, res) => {
     try {
@@ -2169,6 +2256,108 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error deleting presentation set:', error);
       res.status(500).json({ error: "Failed to delete presentation set" });
+    }
+  });
+
+  app.put("/api/presentation-sets/:id/scenes", async (req, res) => {
+    try {
+      const { sceneIds } = z.object({
+        sceneIds: z.array(z.string())
+      }).parse(req.body);
+      
+      const set = await storage.updatePresentationSet(req.params.id, { sceneIds });
+      if (!set) {
+        return res.status(404).json({ error: "Presentation set not found" });
+      }
+      res.json({ presentationSet: set });
+    } catch (error) {
+      console.error('Error reordering scenes:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to reorder scenes" });
+      }
+    }
+  });
+
+  // Presentation Sets routes (aliased under /api/presentation/sets)
+  app.post("/api/presentation/sets", async (req, res) => {
+    try {
+      const validatedData = insertPresentationSetSchema.parse(req.body);
+      const set = await storage.createPresentationSet(validatedData);
+      res.status(201).json({ presentationSet: set });
+    } catch (error) {
+      console.error('Error creating presentation set:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create presentation set" });
+      }
+    }
+  });
+
+  app.get("/api/presentation/sets/:id", async (req, res) => {
+    try {
+      const set = await storage.getPresentationSet(req.params.id);
+      if (!set) {
+        return res.status(404).json({ error: "Presentation set not found" });
+      }
+      res.json({ presentationSet: set });
+    } catch (error) {
+      console.error('Error fetching presentation set:', error);
+      res.status(500).json({ error: "Failed to fetch presentation set" });
+    }
+  });
+
+  app.put("/api/presentation/sets/:id", async (req, res) => {
+    try {
+      const updates = insertPresentationSetSchema.partial().parse(req.body);
+      const set = await storage.updatePresentationSet(req.params.id, updates);
+      if (!set) {
+        return res.status(404).json({ error: "Presentation set not found" });
+      }
+      res.json({ presentationSet: set });
+    } catch (error) {
+      console.error('Error updating presentation set:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update presentation set" });
+      }
+    }
+  });
+
+  app.delete("/api/presentation/sets/:id", async (req, res) => {
+    try {
+      const success = await storage.deletePresentationSet(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Presentation set not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting presentation set:', error);
+      res.status(500).json({ error: "Failed to delete presentation set" });
+    }
+  });
+
+  app.put("/api/presentation/sets/:id/scenes", async (req, res) => {
+    try {
+      const { sceneIds } = z.object({
+        sceneIds: z.array(z.string())
+      }).parse(req.body);
+      
+      const set = await storage.updatePresentationSet(req.params.id, { sceneIds });
+      if (!set) {
+        return res.status(404).json({ error: "Presentation set not found" });
+      }
+      res.json({ presentationSet: set });
+    } catch (error) {
+      console.error('Error reordering scenes:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to reorder scenes" });
+      }
     }
   });
 
@@ -2250,6 +2439,107 @@ Return ONLY a JSON object with this structure:
     }
   });
 
+  // Video Source routes
+  app.get("/api/video-sources", async (req, res) => {
+    try {
+      const sources = await storage.getVideoSources();
+      res.json({ videoSources: sources });
+    } catch (error) {
+      console.error('Error fetching video sources:', error);
+      res.status(500).json({ error: "Failed to fetch video sources" });
+    }
+  });
+
+  app.get("/api/video-sources/:id", async (req, res) => {
+    try {
+      const source = await storage.getVideoSource(req.params.id);
+      if (!source) {
+        return res.status(404).json({ error: "Video source not found" });
+      }
+      res.json({ videoSource: source });
+    } catch (error) {
+      console.error('Error fetching video source:', error);
+      res.status(500).json({ error: "Failed to fetch video source" });
+    }
+  });
+
+  app.post("/api/video-sources", async (req, res) => {
+    try {
+      const validatedData = insertVideoSourceSchema.parse(req.body);
+      const source = await storage.createVideoSource(validatedData);
+      res.status(201).json({ videoSource: source });
+    } catch (error) {
+      console.error('Error creating video source:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create video source" });
+      }
+    }
+  });
+
+  app.put("/api/video-sources/:id", async (req, res) => {
+    try {
+      const updates = insertVideoSourceSchema.partial().parse(req.body);
+      const source = await storage.updateVideoSource(req.params.id, updates);
+      if (!source) {
+        return res.status(404).json({ error: "Video source not found" });
+      }
+      res.json({ videoSource: source });
+    } catch (error) {
+      console.error('Error updating video source:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update video source" });
+      }
+    }
+  });
+
+  app.delete("/api/video-sources/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteVideoSource(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Video source not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting video source:', error);
+      res.status(500).json({ error: "Failed to delete video source" });
+    }
+  });
+
+  app.post("/api/video-sources/:id/connect", async (req, res) => {
+    try {
+      const source = await storage.updateVideoSource(req.params.id, {
+        isConnected: true,
+        lastConnectedAt: new Date()
+      });
+      if (!source) {
+        return res.status(404).json({ error: "Video source not found" });
+      }
+      res.json({ videoSource: source });
+    } catch (error) {
+      console.error('Error connecting video source:', error);
+      res.status(500).json({ error: "Failed to connect video source" });
+    }
+  });
+
+  app.post("/api/video-sources/:id/disconnect", async (req, res) => {
+    try {
+      const source = await storage.updateVideoSource(req.params.id, {
+        isConnected: false
+      });
+      if (!source) {
+        return res.status(404).json({ error: "Video source not found" });
+      }
+      res.json({ videoSource: source });
+    } catch (error) {
+      console.error('Error disconnecting video source:', error);
+      res.status(500).json({ error: "Failed to disconnect video source" });
+    }
+  });
+
   // Live State routes
   app.get("/api/live/state", async (req, res) => {
     try {
@@ -2271,7 +2561,15 @@ Return ONLY a JSON object with this structure:
         tickerPlaylistId: z.string().nullable().optional(),
         bannerOn: z.boolean().optional(),
         bannerText: z.string().optional(),
-        transitionDuration: z.number().optional()
+        bannerConfig: z.object({
+          position: z.enum(['top', 'bottom']).optional(),
+          fontSize: z.number().optional(),
+          backgroundColor: z.string().optional(),
+          textColor: z.string().optional()
+        }).optional(),
+        transitionDuration: z.number().optional(),
+        transitionEffect: z.string().optional(),
+        activeVideoSources: z.record(z.string(), z.string()).optional()
       }).parse(req.body);
       
       const liveState = await storage.updateLiveState(updates);

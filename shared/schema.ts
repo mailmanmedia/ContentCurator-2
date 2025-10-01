@@ -453,6 +453,24 @@ export const tickerPlaylists = pgTable("ticker_playlists", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+export const videoSources = pgTable("video_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  sourceType: text("source_type").notNull(), // 'camera', 'screen', 'media', 'rtmp', 'webrtc'
+  deviceId: text("device_id"), // For camera/screen sources
+  deviceLabel: text("device_label"),
+  streamUrl: text("stream_url"), // For RTMP/WebRTC sources
+  mediaFileId: varchar("media_file_id"), // Reference to library item for media files
+  configJson: jsonb("config_json").notNull().default('{}'), // Resolution, frame rate, etc.
+  isActive: boolean("is_active").notNull().default(true),
+  isConnected: boolean("is_connected").notNull().default(false),
+  lastConnectedAt: timestamp("last_connected_at"),
+  tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 // Live state will be managed in-memory, not persisted
 export interface LiveState {
   currentSetId: string | null;
@@ -462,7 +480,15 @@ export interface LiveState {
   tickerPlaylistId: string | null;
   bannerOn: boolean;
   bannerText: string;
+  bannerConfig: {
+    position?: 'top' | 'bottom';
+    fontSize?: number;
+    backgroundColor?: string;
+    textColor?: string;
+  };
   transitionDuration: number;
+  transitionEffect: string; // 'cut', 'fade', 'dissolve', 'slide'
+  activeVideoSources: { [key: string]: string }; // Map of zone IDs to video source IDs
   lastUpdate: Date;
 }
 
@@ -490,6 +516,13 @@ export const insertTickerPlaylistSchema = createInsertSchema(tickerPlaylists).om
   updatedAt: true,
 });
 
+export const insertVideoSourceSchema = createInsertSchema(videoSources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastConnectedAt: true,
+});
+
 export type InsertLibraryItem = z.infer<typeof insertLibraryItemSchema>;
 export type LibraryItem = typeof libraryItems.$inferSelect;
 export type InsertScene = z.infer<typeof insertSceneSchema>;
@@ -498,3 +531,5 @@ export type InsertPresentationSet = z.infer<typeof insertPresentationSetSchema>;
 export type PresentationSet = typeof presentationSets.$inferSelect;
 export type InsertTickerPlaylist = z.infer<typeof insertTickerPlaylistSchema>;
 export type TickerPlaylist = typeof tickerPlaylists.$inferSelect;
+export type InsertVideoSource = z.infer<typeof insertVideoSourceSchema>;
+export type VideoSource = typeof videoSources.$inferSelect;

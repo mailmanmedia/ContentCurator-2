@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Visual Techniques - Liverpool FC Content</title>
+    <style>
+        /* ===== ADVANCED GRADIENT SYSTEM ===== */
+        
+        :root {
+            --mm-navy: #1B365D;
+            --mm-red: #C8102E;
+            --mm-cream: #E8DCC6;
+            
+            /* Advanced Gradients */
+            --gradient-primary: linear-gradient(135deg, var(--mm-red) 0%, #dc2626 100%);
+            --gradient-secondary: linear-gradient(135deg, var(--mm-navy) 0%, #2563eb 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            
+            /* Glassmorphism Effects */
+            --glass-light: rgba(255, 255, 255, 0.25);
+            --glass-dark: rgba(255, 255, 255, 0.1);
+            --backdrop-blur: blur(10px);
+            --backdrop-blur-heavy: blur(20px);
+            
+            /* Advanced Shadows */
+            --shadow-colored: 0 20px 25px -5px rgba(27, 54, 93, 0.1), 0 10px 10px -5px rgba(27, 54, 93, 0.04);
+            --shadow-glow: 0 0 20px rgba(200, 16, 46, 0.3);
+            --shadow-inset: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--mm-cream) 0%, #ffffff 50%, #f8fafc 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        /* ===== ADVANCED CARD SYSTEM WITH GLASSMORPHISM ===== */
+        
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            backdrop-filter: var(--backdrop-blur);
+            -webkit-backdrop-filter: var(--backdrop-blur);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 
+                0 8px 32px 0 rgba(31, 38, 135, 0.37),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+        }
+        
+        /* ===== PROFESSIONAL STATISTICS VISUALIZATION ===== */
+        
+        .stat-visualization {
+            background: var(--gradient-secondary);
+            border-radius: 16px;
+            padding: 25px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .stat-visualization::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.3;
+        }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .stat-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .stat-trend {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            display: block;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* ===== ANIMATED COUNTDOWN WITH NEON EFFECTS ===== */
+        
+        .neon-countdown {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+        
+        .neon-unit {
+            background: #0f0f23;
+            border: 2px solid var(--mm-red);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            min-width: 100px;
+            position: relative;
+            box-shadow: 
+                0 0 20px rgba(200, 16, 46, 0.3),
+                inset 0 0 20px rgba(200, 16, 46, 0.1);
+        }
+        
+        .neon-unit::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: var(--gradient-primary);
+            border-radius: 12px;
+            z-index: -1;
+            animation: neon-pulse 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes neon-pulse {
+            from {
+                box-shadow: 0 0 5px var(--mm-red), 0 0 10px var(--mm-red), 0 0 15px var(--mm-red);
+            }
+            to {
+                box-shadow: 0 0 10px var(--mm-red), 0 0 20px var(--mm-red), 0 0 30px var(--mm-red);
+            }
+        }
+        
+        .neon-number {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 10px var(--mm-red);
+            display: block;
+        }
+        
+        .neon-label {
+            color: var(--mm-red);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        /* ===== ADVANCED PROGRESS BARS WITH ANIMATIONS ===== */
+        
+        .advanced-progress {
+            margin: 30px 0;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .progress-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--mm-navy);
+        }
+        
+        .progress-percentage {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--mm-red);
+        }
+        
+        .progress-track {
+            width: 100%;
+            height: 20px;
+            background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 100%);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-inset);
+        }
+        
+        .progress-bar-advanced {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 10px;
+            position: relative;
+            transition: width 2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 10px rgba(200, 16, 46, 0.3);
+        }
+        
+        .progress-bar-advanced::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.4) 30%,
+                rgba(255, 255, 255, 0.6) 50%,
+                rgba(255, 255, 255, 0.4) 70%,
+                transparent 100%
+            );
+            animation: shimmer-advanced 3s ease-in-out infinite;
+        }
+        
+        @keyframes shimmer-advanced {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .progress-bar-advanced::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.5), rgba(255,255,255,0.2));
+            border-radius: 8px;
+        }
+        
+        /* ===== INTERACTIVE STORYLINE CARDS ===== */
+        
+        .storyline-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .storyline-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: var(--shadow-colored);
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        .storyline-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: var(--shadow-glow), var(--shadow-colored);
+        }
+        
+        .storyline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .storyline-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--mm-navy);
+            line-height: 1.2;
+            flex: 1;
+        }
+        
+        .storyline-score {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3);
+        }
+        
+        .storyline-description {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .storyline-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .metric-mini {
+            text-align: center;
+            padding: 12px;
+            background: rgba(27, 54, 93, 0.05);
+            border-radius: 8px;
+        }
+        
+        .metric-mini-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--mm-navy);
+            display: block;
+        }
+        
+        .metric-mini-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+        
+        /* ===== FORMATION PITCH VISUALIZATION ===== */
+        
+        .pitch-container {
+            background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+            border-radius: 12px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            margin: 30px 0;
+        }
+        
+        .pitch-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                /* Center circle */
+                radial-gradient(circle at center, transparent 60px, transparent 62px, rgba(255,255,255,0.3) 64px, rgba(255,255,255,0.3) 66px, transparent 68px),
+                /* Center line */
+                linear-gradient(90deg, transparent calc(50% - 1px), rgba(255,255,255,0.3) calc(50% - 1px), rgba(255,255,255,0.3) calc(50% + 1px), transparent calc(50% + 1px)),
+                /* Penalty areas */
+                linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.2) 20%, transparent 20%, transparent 80%, rgba(255,255,255,0.2) 80%, rgba(255,255,255,0.2) 100%);
+        }
+        
+        .formation-setup {
+            position: relative;
+            z-index: 1;
+            height: 300px;
+            display: grid;
+            grid-template-columns: repeat(11, 1fr);
+            grid-template-rows: repeat(7, 1fr);
+            gap: 10px;
+        }
+        
+        .player-dot {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 3px solid var(--mm-navy);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--mm-navy);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            justify-self: center;
+            align-self: center;
+        }
+        
+        .player-dot:hover {
+            transform: scale(1.2);
+            background: var(--gradient-primary);
+            color: white;
+            border-color: white;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .player-dot.highlight {
+            background: var(--gradient-warning);
+            color: white;
+            border-color: #f59e0b;
+            animation: player-highlight 2s ease-in-out infinite;
+        }
+        
+        @keyframes player-highlight {
+            0%, 100% {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+                transform: scale(1.1);
+            }
+        }
+        
+        /* ===== CRISIS ALERT SYSTEM WITH ANIMATIONS ===== */
+        
+        .crisis-system {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            padding: 25px;
+            position: relative;
+            margin: 30px 0;
+            overflow: hidden;
+        }
+        
+        .crisis-system::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: var(--gradient-danger);
+            border-radius: 16px;
+            z-index: -1;
+            animation: crisis-border-pulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes crisis-border-pulse {
+            0%, 100% {
+                opacity: 0.3;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+        
+        .crisis-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .crisis-icon-advanced {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-danger);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 900;
+            animation: crisis-pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes crisis-pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+                transform: scale(1.05);
+            }
+        }
+        
+        .crisis-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--mm-danger);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* ===== RESPONSIVE DESIGN ===== */
+        
+        @media (max-width: 768px) {
+            .neon-countdown {
+                gap: 15px;
+            }
+            
+            .neon-unit {
+                min-width: 80px;
+                padding: 15px;
+            }
+            
+            .neon-number {
+                font-size: 2rem;
+            }
+            
+            .storyline-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .formation-setup {
+                height: 250px;
+            }
+            
+            .player-dot {
+                width: 30px;
+                height: 30px;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+        <h1 style="text-align: center; color: var(--mm-navy); margin-bottom: 40px;">Advanced Visual Techniques</h1>
+        
+        <!-- Glassmorphism Stats Card -->
+        <div class="glass-card">
+            <h2 style="color: var(--mm-navy); margin-bottom: 20px;">1. Glassmorphism Statistics Display</h2>
+            <div class="stat-visualization">
+                <div class="stat-header">
+                    <h3 class="stat-title">Performance Metrics</h3>
+                    <div class="stat-trend">
+                        <span>↗️ +12%</span>
+                    </div>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <span class="stat-value">76%</span>
+                        <span class="stat-label">Press Success</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">8.2</span>
+                        <span class="stat-label">Slot Index</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">31%</span>
+                        <span class="stat-label">Vulnerability</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">71%</span>
+                        <span class="stat-label">Win Rate</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Neon Countdown -->
+        <div class="glass-card">
+            <h2 style="color: var(--mm-navy); margin-bottom: 20px;">2. Neon Countdown System</h2>
+            <div class="neon-countdown">
+                <div class="neon-unit">
+                    <span class="neon-number" id="neon-days">3</span>
+                    <span class="neon-label">Days</span>
+                </div>
+                <div class="neon-unit">
+                    <span class="neon-number" id="neon-hours">14</span>
+                    <span class="neon-label">Hours</span>
+                </div>
+                <div class="neon-unit">
+                    <span class="neon-number" id="neon-minutes">32</span>
+                    <span class="neon-label">Minutes</span>
+                </div>
+                <div class="neon-unit">
+                    <span class="neon-number" id="neon-seconds">45</span>
+                    <span class="neon-label">Seconds</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Progress Bars -->
+        <div class="glass-card">
+            <h2 style="color: var(--mm-navy); margin-bottom: 20px;">3. Advanced Progress Visualization</h2>
+            <div class="advanced-progress">
+                <div class="progress-header">
+                    <span class="progress-title">Victory Confidence</span>
+                    <span class="progress-percentage">71%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar-advanced" style="width: 71%"></div>
+                </div>
+            </div>
+            <div class="advanced-progress">
+                <div class="progress-header">
+                    <span class="progress-title">Clean Sheet Probability</span>
+                    <span class="progress-percentage">45%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar-advanced" style="width: 45%"></div>
+                </div>
+            </div>
+            <div class="advanced-progress">
+                <div class="progress-header">
+                    <span class="progress-title">Debut Success Rate</span>
+                    <span class="progress-percentage">68%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar-advanced" style="width: 68%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Storyline Cards -->
+        <div class="glass-card">
+            <h2 style="color: var(--mm-navy); margin-bottom: 20px;">4. Interactive Storyline System</h2>
+            <div class="storyline-container">
+                <div class="storyline-card" onclick="highlightStoryline(this)">
+                    <div class="storyline-header">
+                        <h3 class="storyline-title">Depth Myth Exposed</h3>
+                        <div class="storyline-score">7.2</div>
+                    </div>
+                    <p class="storyline-description">Palace's hostile environment will test Liverpool's rotation policy as key players face their biggest challenge yet.</p>
+                    <div class="storyline-metrics">
+                        <div class="metric-mini">
+                            <span class="metric-mini-value">76%</span>
+                            <span class="metric-mini-label">Pressure</span>
+                        </div>
+                        <div class="metric-mini">
+                            <span class="metric-mini-value">-8%</span>
+                            <span class="metric-mini-label">Change</span>
+                        </div>
+                        <div class="metric-mini">
+                            <span class="metric-mini-value">3/10</span>
+                            <span class="metric-mini-label">Risk</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="storyline-card" onclick="highlightStoryline(this)">
+                    <div class="storyline-header">
+                        <h3 class="storyline-title">Slot's Evolution</h3>
+                        <div class="storyline-score">8.2</div>
+                    </div>
+                    <p class="storyline-description">The manager's tactical flexibility faces its ultimate test against a team designed to exploit weaknesses.</p>
+                    <div class="storyline-metrics">
+                        <div class="metric-mini">
+                            <span class="metric-mini-value">+0.3</span>
+                            <span class="metric-mini-label">Growth</span>
+                        </div>
+                        <div class="metric-mini">
+                            <span class="metric-mini-value">85%</span>
+                            <span class="metric-mini-label">Adapt</span>
+                        </div>
+                        <div class="metric-mini">
+                            <span class="metric-mini-value">2/5</span>
+                            <span class="metric-mini-label">Risk</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="storyline-card" onclick="highlightStoryline(this)">
+                    <div class="storyline-header">
+                        <h3 class="storyline-title">Debut Pressure</h3>
+                        <div class="storyline-score">6.8</div>
+                    </div>
+                    <p class="storyline-description">Isak's first start at Selhurst Park could define his Liverpool career trajectory.</p>
+                    <div class="storyline-metrics">
+                        <div class="metric-mini">
+                            <span class="metric-mini-value">68%</span>
+                            <span class="metric-mini-label">Success</span>
+                        </div>
+                        <div class="metric-mini">
+                            <span class="metric-mini-value">HIGH</span>
+                            <span class="metric-mini-label">Stakes</span>
+                        </div>
+                        <div class="metric-mini">
+                            <span class="metric-mini-value">4/5</span>
+                            <span class="metric-mini-label">Risk</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formation Visualization -->
+        <div class="glass-card">
+            <h2 style="color: var(--mm-navy); margin-bottom: 20px;">5. Advanced Formation Display</h2>
+            <div class="pitch-container">
+                <div class="pitch-lines"></div>
+                <div class="formation-setup">
+                    <!-- Goalkeeper -->
+                    <div class="player-dot" style="grid-column: 6; grid-row: 1;">GK</div>
+                    
+                    <!-- Defense -->
+                    <div class="player-dot" style="grid-column: 2; grid-row: 2;">LB</div>
+                    <div class="player-dot" style="grid-column: 4; grid-row: 2;">CB</div>
+                    <div class="player-dot" style="grid-column: 8; grid-row: 2;">CB</div>
+                    <div class="player-dot" style="grid-column: 10; grid-row: 2;">RB</div>
+                    
+                    <!-- Midfield -->
+                    <div class="player-dot" style="grid-column: 3; grid-row: 4;">CM</div>
+                    <div class="player-dot highlight" style="grid-column: 6; grid-row: 4;">DM</div>
+                    <div class="player-dot" style="grid-column: 9; grid-row: 4;">CM</div>
+                    
+                    <!-- Attack -->
+                    <div class="player-dot" style="grid-column: 2; grid-row: 6;">LW</div>
+                    <div class="player-dot highlight" style="grid-column: 6; grid-row: 6;">ST</div>
+                    <div class="player-dot" style="grid-column: 10; grid-row: 6;">RW</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crisis Alert System -->
+        <div class="crisis-system">
+            <div class="crisis-header">
+                <div class="crisis-icon-advanced">⚠</div>
+                <div class="crisis-title">CRISIS CONVERGENCE</div>
+            </div>
+            <p style="font-size: 1.1rem; line-height: 1.6; color: var(--mm-dark-gray);">
+                All three storylines reach critical mass at Selhurst Park. Palace's hostile environment becomes the perfect laboratory to test Liverpool's depth, Slot's adaptability, and Isak's debut resilience simultaneously.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Advanced countdown with real-time updates
+        function updateAdvancedCountdown() {
+            const now = new Date().getTime();
+            const matchTime = new Date('2025-09-28T15:00:00').getTime();
+            const distance = matchTime - now;
+            
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            document.getElementById('neon-days').textContent = days;
+            document.getElementById('neon-hours').textContent = hours;
+            document.getElementById('neon-minutes').textContent = minutes;
+            document.getElementById('neon-seconds').textContent = seconds;
+        }
+        
+        // Storyline interaction
+        function highlightStoryline(card) {
+            // Remove previous highlights
+            document.querySelectorAll('.storyline-card').forEach(c => {
+                c.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%)';
+                c.style.borderColor = 'rgba(255,255,255,0.3)';
+            });
+            
+            // Highlight selected
+            card.style.background = 'linear-gradient(135deg, rgba(200, 16, 46, 0.1) 0%, rgba(27, 54, 93, 0.1) 100%)';
+            card.style.borderColor = 'var(--mm-red)';
+            
+            // Add pulse effect
+            card.style.animation = 'storyline-select 0.5s ease-out';
+        }
+        
+        // Progress bar animation on scroll
+        function animateProgressBars() {
+            const progressBars = document.querySelectorAll('.progress-bar-advanced');
+            progressBars.forEach((bar, index) => {
+                const width = bar.style.width;
+                bar.style.width = '0%';
+                setTimeout(() => {
+                    bar.style.width = width;
+                }, 200 * index);
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateAdvancedCountdown();
+            animateProgressBars();
+            
+            setInterval(updateAdvancedCountdown, 1000);
+        });
+        
+        // Add storyline animation CSS
+        const storylineAnimation = `
+            @keyframes storyline-select {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.03); }
+                100% { transform: scale(1.02); }
+            }
+        `;
+        
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = storylineAnimation;
+        document.head.appendChild(styleSheet);
+    </script>
+</body>
+</html>
