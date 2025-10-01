@@ -1,144 +1,69 @@
 # Mailman Media Visual Assistant
 
 ## Overview
-
-The Mailman Media Visual Assistant is a specialized content creation platform designed for Liverpool FC YouTube channel analysis and visual content generation. The application enables soccer analytics, transfer analysis, and story visualization through AI-powered tools and branded template systems. It combines data-driven insights with professional visual design to produce YouTube-ready content including thumbnails, infographics, statistical charts, and analytical dashboards.
+The Mailman Media Visual Assistant is a content creation platform focused on Liverpool FC YouTube channel analysis and visual content generation. It provides AI-powered tools and branded templates to generate YouTube-ready content, including thumbnails, infographics, statistical charts, and analytical dashboards, by combining data-driven insights with professional visual design. The platform aims to support soccer analytics, transfer analysis, and story visualization.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
 ### Frontend Architecture
-The application uses a React-based Single Page Application (SPA) architecture with TypeScript and Vite as the build tool. The UI is built with shadcn/ui components providing a consistent design system based on Radix UI primitives. The application implements a dark-first design approach with custom CSS variables for theming, featuring a Liverpool FC-inspired color palette (Navy #002147, Red #C8102E, Cream #F5F1E9, Accent Blue #4CA9E0).
+The application uses a React-based Single Page Application (SPA) with TypeScript and Vite. The UI is built with shadcn/ui components based on Radix UI, implementing a dark-first design with a Liverpool FC-inspired color palette. Tailwind CSS is used for styling, along with Google Fonts (League Spartan, Libre Franklin, JetBrains Mono). React Query manages server state and API integration.
 
 ### Component Structure
-The frontend follows a modular component architecture with specialized components for different content types:
-- **VisualAssistant**: Main orchestration component managing the overall application state and navigation
-- **LivePresentation**: Real-time broadcast control system for managing live presentations with Server-Sent Events
-- **PromptStudio**: AI-powered content generation interface for creating visual content from text prompts
-- **TemplateCard/DataChart**: Reusable components for displaying and managing template-based content
-- **ImageManager**: Asset management system for organizing and categorizing visual resources
-- **ExportPanel**: Output configuration and file generation management
-- **Header**: Global navigation component providing consistent access to all major features across pages
-- **ContentTabs**: Shared navigation tabs component for AI Studio, Images, Tactical Analysis, Templates, Analytics, and Export features
-
-### Styling and Design System
-The application uses Tailwind CSS with custom configuration extending the base design system. Typography is managed through Google Fonts integration (League Spartan for headlines, Libre Franklin for body text, JetBrains Mono for code/data displays). The design follows the "New York" shadcn/ui style variant with custom border radius and spacing modifications.
-
-### State Management
-The application uses React Query (@tanstack/react-query) for server state management and API integration. Local component state is managed through React hooks with centralized query configuration for consistent error handling and caching strategies.
+The frontend follows a modular architecture with components such as `VisualAssistant` for overall state management, `LivePresentation` for real-time broadcast control, `PromptStudio` for AI content generation, and `TemplateCard`/`DataChart` for displaying templated content. Global navigation is handled by `Header` and `ContentTabs`.
 
 ### Backend Architecture
-Express.js server implementation with TypeScript providing RESTful API endpoints. The server includes middleware for request logging, JSON parsing, and error handling. The architecture supports both development (with Vite middleware) and production deployment configurations.
+An Express.js server in TypeScript provides RESTful API endpoints, including middleware for logging, JSON parsing, and error handling.
 
 ### Database Integration
-Drizzle ORM with PostgreSQL database configuration, using Neon Database as the serverless PostgreSQL provider. The schema includes user management tables with UUID primary keys and includes Zod validation schemas for type safety. Database migrations are managed through Drizzle Kit.
+Drizzle ORM is used with a PostgreSQL database provided by Neon Database. The schema includes user management and utilizes Zod for validation. Drizzle Kit manages database migrations.
 
-## Key Features
+### Key Features
 
-### Live Presentation System
-Real-time broadcast control interface for managing live presentations:
-- **Server-Sent Events (SSE)**: Real-time updates via /api/live/stream endpoint
-- **Program & Preview Management**: Dual-display system for controlling live output and preparing next scenes
-- **Presentation Sets**: Organized collections of scenes for different broadcast types
-- **Live Controls**: Take to program, toggle ticker, banner management with real-time state synchronization
-- **Event Logging**: Comprehensive logging of all live control actions and state changes
+#### Live Presentation System
+A professional broadcast control system for managing multi-camera live productions with real-time scene composition, graphics overlays, and a program/preview workflow. It uses Server-Sent Events (SSE) for real-time state synchronization, canvas-based rendering for video composition, and supports camera integration via MediaStream API. The system manages video sources, scene layers (video, image, text), scenes (multi-layer compositions), presentation sets (organized scene collections), and live state control.
 
-### Navigation System
-- **Global Header**: Consistent navigation bar present on all pages with icon-based buttons for major features
-- **Responsive Design**: Desktop icon navigation and mobile menu drawer for optimal experience on all devices
-- **Active State Indicators**: Visual feedback showing current page location
-- **Feature Access**: Home, Framework Directory, RSS Intelligence, Team Matchup Studio, Content Library, and Live Presentation
+#### Navigation System
+A global header provides consistent navigation across all pages, with responsive design for desktop and mobile.
 
-### Real-Time Statistics
-- Homepage displays live database counts instead of placeholder data
-- Statistics include: Total Content, Frameworks, Images, and News Articles
-- Data fetched from /api/statistics endpoint using React Query
+#### Real-Time Statistics
+The homepage displays live database counts for total content, frameworks, images, and news articles, fetched from a `/api/statistics` endpoint.
 
-### Football Data Integration
-- **Current Season**: 2025-26 season data (updated September 30, 2025)
-- **Team Rosters**: Comprehensive fallback data for all major competitions reflecting current season participants
-- **Champions League**: All 36 teams in 2025-26 league phase including Galatasaray, Napoli, Villarreal, Ajax, and all 6 English clubs
-- **Data Accuracy**: Fallback team data updated to match current season rosters ensuring content creation uses accurate, real team information
-- **API Integration**: RapidAPI Football API with smart caching and fallback system for rate limit resilience
+#### Football Data Integration
+The system integrates 2025-26 season football data, including team rosters for major competitions and Champions League participants, ensuring accurate information for content creation.
 
-### Team Matchup Studio - Advanced Stats & Squad Analysis
-Comprehensive team analysis system combining real-time statistics, squad information, and AI-powered insights for creating compelling YouTube content:
-
-**Performance Statistics Dashboard**
-- **Key Metrics Display**: Form guide (e.g., "WWDWL"), goals scored/conceded, clean sheets, win rate percentage
-- **Real-Time Data**: Statistics fetched from Football API with 15-minute cache TTL
-- **Competition Context**: Stats filtered by selected competition and 2025-26 season
-- **Visual Presentation**: Performance metrics displayed in organized card layout with icons
-
-**Interactive Performance Charts**
-- **Recharts Integration**: Bar charts visualizing team performance across multiple dimensions
-- **Data Points**: Goals scored, goals conceded, clean sheets, yellow cards, red cards
-- **Visual Design**: Charts styled with Liverpool FC color palette using shadcn ChartContainer
-- **Responsive Layout**: Charts adapt to different screen sizes and data ranges
-
-**Squad Roster Analysis**
-- **Position-Based Organization**: Players grouped by Goalkeeper, Defender, Midfielder, Attacker
-- **Player Details**: Name, squad number, age, player photo
-- **Real-Time Data**: Squad information fetched from Football API with smart caching
-- **Visual Cards**: Clean player card design with profile images and key stats
-
-**AI-Powered Tactical Analysis**
-- **OpenAI Integration**: GPT-4o-mini model generates Liverpool-focused narrative analysis
-- **Context-Aware Prompts**: Analysis tailored based on whether analyzing Liverpool (celebratory) or opponents (tactical exploitation)
-- **Generated Content**:
-  - **Narrative**: 2-3 sentence compelling story about team performance
-  - **Key Insights**: Bullet points highlighting statistical trends and patterns
-  - **Tactical Recommendations**: Strategic suggestions for Liverpool's approach
-  - **Confidence Score**: AI-generated confidence rating (0-100%)
-- **Fallback System**: Graceful degradation when OpenAI unavailable or rate limits hit
-- **User-Triggered**: Analysis generated on-demand via "Generate Insights" button
-
-**Technical Implementation**
-- **Backend Endpoints**:
-  - `GET /api/football/teams/:teamId/statistics?leagueId=X&season=2025` - Team performance stats
-  - `GET /api/football/teams/:teamId/squad?season=2025` - Squad roster with player details
-  - `POST /api/football/teams/:teamId/analyze` - AI analysis generation from statistics
-- **Smart Caching**: Multi-layer caching system (in-memory + database) to minimize API calls and handle rate limits
-- **Liverpool FC Context**: Team ID 40 flagged for Liverpool-specific analysis tone and recommendations
-- **Error Handling**: Comprehensive error handling with fallback data for API failures
-- **Data Validation**: Zod schemas validate API responses and request bodies
-
-**Content Creation Workflow**
-1. Select competition (Premier League, Champions League, FA Cup, etc.)
-2. Select team for analysis
-3. View comprehensive statistics and performance trends
-4. Review squad roster organized by position
-5. Generate AI-powered insights with tactical recommendations
-6. Use analysis for YouTube video scripts, thumbnails, and tactical breakdowns
-
-This feature transforms raw football statistics into engaging, Liverpool-focused narrative content suitable for YouTube video creation, combining quantitative data analysis with AI-generated storytelling.
+#### Team Matchup Studio - Advanced Stats & Squad Analysis
+This feature provides a comprehensive team analysis system for creating YouTube content. It includes:
+- **Performance Statistics Dashboard**: Displays key metrics like form, goals, and win rates, fetched from a Football API with a 15-minute cache TTL.
+- **Interactive Performance Charts**: Visualizes team performance data using Recharts, styled with the Liverpool FC palette.
+- **Squad Roster Analysis**: Organizes and displays player details by position.
+- **AI-Powered Tactical Analysis**: Uses OpenAI's GPT-4o-mini to generate Liverpool-focused narrative analysis, key insights, tactical recommendations, and a confidence score, with a fallback system for API issues.
 
 ## External Dependencies
 
 ### AI Integration
-- **OpenAI GPT-4**: Primary AI engine for content suggestions and creative generation, integrated through the official OpenAI SDK for generating Liverpool FC-focused content recommendations and variations
+- **OpenAI GPT-4**: Used for content suggestions and creative generation, specifically for Liverpool FC-focused content.
 
 ### Database and Storage
-- **Neon Database**: Serverless PostgreSQL provider for data persistence
-- **Drizzle ORM**: Type-safe database queries with automatic migration management
-- **Drizzle Kit**: Database schema management and migration tooling
+- **Neon Database**: Serverless PostgreSQL provider.
+- **Drizzle ORM**: Type-safe database queries.
+- **Drizzle Kit**: Database schema management.
 
 ### UI Framework and Components
-- **Radix UI**: Comprehensive component primitives for accessibility and interaction patterns
-- **shadcn/ui**: Pre-built component library built on Radix UI with consistent styling
-- **Tailwind CSS**: Utility-first CSS framework with custom configuration for brand colors and spacing
-- **Lucide Icons**: Consistent icon library for UI elements
+- **Radix UI**: Component primitives.
+- **shadcn/ui**: Pre-built component library.
+- **Tailwind CSS**: Utility-first CSS framework.
+- **Lucide Icons**: Icon library.
 
 ### Development and Build Tools
-- **Vite**: Fast development server and build tool with React plugin support
-- **TypeScript**: Type safety across frontend and backend with shared type definitions
-- **ESBuild**: Fast bundling for production server builds
-- **React Query**: Server state management with caching and synchronization
+- **Vite**: Fast development server and build tool.
+- **TypeScript**: Type safety across the project.
+- **ESBuild**: Fast bundling for the backend.
+- **React Query**: Server state management.
 
 ### Content Creation Tools
-- **React Hook Form**: Form state management with validation for content creation workflows
-- **date-fns**: Date manipulation and formatting for content scheduling and analytics
-- **class-variance-authority**: Dynamic styling system for component variants
+- **React Hook Form**: Form state management.
+- **date-fns**: Date manipulation.
+- **class-variance-authority**: Dynamic styling system.
