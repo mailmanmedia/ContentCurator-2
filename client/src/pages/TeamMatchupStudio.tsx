@@ -77,14 +77,24 @@ export default function TeamMatchupStudio() {
 
   // Fetch team statistics for single team analysis
   const { data: teamStatsData, isLoading: statsLoading } = useQuery<{statistics: any}>({
-    queryKey: ['/api/football/teams', selectedTeam1, 'statistics', { leagueId: selectedCompetition, season: 2025 }],
+    queryKey: ['/api/football/teams', selectedTeam1, 'statistics', selectedCompetition, 2025],
+    queryFn: async () => {
+      const response = await fetch(`/api/football/teams/${selectedTeam1}/statistics?leagueId=${selectedCompetition}&season=2025`);
+      if (!response.ok) throw new Error('Failed to fetch statistics');
+      return response.json();
+    },
     enabled: !!(selectedTeam1 && selectedCompetition && analysisMode === 'single'),
     staleTime: 10 * 60 * 1000,
   });
 
   // Fetch team squad for single team analysis
   const { data: teamSquadData, isLoading: squadLoading } = useQuery<{squad: any[]}>({
-    queryKey: ['/api/football/teams', selectedTeam1, 'squad', { season: 2025 }],
+    queryKey: ['/api/football/teams', selectedTeam1, 'squad', 2025],
+    queryFn: async () => {
+      const response = await fetch(`/api/football/teams/${selectedTeam1}/squad?season=2025`);
+      if (!response.ok) throw new Error('Failed to fetch squad');
+      return response.json();
+    },
     enabled: !!(selectedTeam1 && analysisMode === 'single'),
     staleTime: 15 * 60 * 1000,
   });
