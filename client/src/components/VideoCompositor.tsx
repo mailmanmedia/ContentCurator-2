@@ -48,9 +48,11 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
     enabled: !!sceneId,
   });
 
-  const { data: videoSources } = useQuery<VideoSource[]>({
-    queryKey: ['/api/live/video-sources'],
+  const { data: videoSourcesData } = useQuery<{ videoSources: VideoSource[] }>({
+    queryKey: ['/api/video-sources'],
   });
+
+  const videoSources = videoSourcesData?.videoSources;
 
   const [mediaStreams, setMediaStreams] = useState<Map<string, MediaStream>>(new Map());
   const cleanupRef = useRef<Map<string, MediaStream>>(new Map());

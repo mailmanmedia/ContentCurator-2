@@ -3,6 +3,42 @@
 ## Overview
 The Mailman Media Visual Assistant is a content creation platform focused on Liverpool FC YouTube channel analysis and visual content generation. It provides AI-powered tools and branded templates to generate YouTube-ready content, including thumbnails, infographics, statistical charts, and analytical dashboards, by combining data-driven insights with professional visual design. The platform aims to support soccer analytics, transfer analysis, and story visualization.
 
+## Recent Updates (October 2, 2025)
+
+### Production Studio Enhancement - Complete
+Implemented comprehensive live broadcast production studio capabilities:
+
+**New Components Added:**
+1. **QuickSourceControls** - One-click camera connect/disconnect controls in Control tab
+2. **QuickLibraryControls** - Quick access to starred/recent library items for live switching
+3. **LibraryItemPicker** - Reusable dialog for selecting visual content when building scenes
+4. **ContentLibraryBrowser** - Full searchable grid of all library items with type/category filters
+5. **VideoSourceManager** - Enhanced video source management (already existed, now properly integrated)
+
+**Critical Bug Fixes:**
+- Fixed SelectItem empty string error in SceneLayerEditor (changed `sourceId: ''` to `sourceId: undefined`)
+- Fixed wrong API endpoint: Changed `/api/live/video-sources` to `/api/video-sources` in SceneLayerEditor and VideoCompositor
+- Fixed data extraction bugs in 7 components to properly unwrap API responses (`{ videoSources: [...] }`)
+
+**Integration Points:**
+- Control tab: QuickSourceControls + QuickLibraryControls + Program/Preview monitors
+- Library tab: Full ContentLibraryBrowser with search and filtering
+- Scene Editor: LibraryItemPicker integration via "Browse Library" button for image/graphic layers
+- Sources tab: Complete VideoSourceManager with CRUD operations
+- SSE real-time updates and toast notifications throughout
+
+**API Pattern:**
+All video-source and library endpoints return wrapped responses:
+- GET /api/video-sources → `{ videoSources: VideoSource[] }`
+- GET /api/library-items → `{ libraryItems: LibraryItem[] }`
+- GET /api/scenes → `{ scenes: Scene[] }`
+
+**Testing:**
+- E2E tested: Video source creation, scene management, layer editor, library browsing
+- All tabs navigable and functional
+- No SelectItem errors
+- No runtime errors or Vite overlays
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
@@ -24,6 +60,14 @@ Drizzle ORM is used with a PostgreSQL database provided by Neon Database. The sc
 
 #### Live Presentation System
 A professional broadcast control system for managing multi-camera live productions with real-time scene composition, graphics overlays, and a program/preview workflow. It uses Server-Sent Events (SSE) for real-time state synchronization, canvas-based rendering for video composition, and supports camera integration via MediaStream API. The system manages video sources, scene layers (video, image, text), scenes (multi-layer compositions), presentation sets (organized scene collections), and live state control.
+
+**Production Studio Components:**
+- **VideoSourceManager**: Full CRUD for cameras and video sources with connect/disconnect controls
+- **QuickSourceControls**: One-click camera controls in Control tab
+- **QuickLibraryControls**: Quick library item switching for live broadcasts  
+- **LibraryItemPicker**: Dialog for selecting images/graphics when building scenes
+- **ContentLibraryBrowser**: Full searchable library with type and category filters
+- **SceneLayerEditor**: Layer management with video source dropdown and library picker integration
 
 #### Navigation System
 A global header provides consistent navigation across all pages, with responsive design for desktop and mobile.

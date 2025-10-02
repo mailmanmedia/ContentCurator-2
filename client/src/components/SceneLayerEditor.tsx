@@ -44,12 +44,14 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
     width: 100,
     height: 100,
     content: '',
-    sourceId: '',
+    sourceId: undefined as string | undefined,
   });
 
-  const { data: videoSources } = useQuery<VideoSource[]>({
-    queryKey: ['/api/live/video-sources'],
+  const { data } = useQuery<{ videoSources: VideoSource[] }>({
+    queryKey: ['/api/video-sources'],
   });
+
+  const videoSources = data?.videoSources;
 
   const handleAddElement = () => {
     const element: SceneElement = {
@@ -110,7 +112,7 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
       width: element.position.width,
       height: element.position.height,
       content: element.content || '',
-      sourceId: element.sourceId || '',
+      sourceId: element.sourceId || undefined,
     });
     setIsAddDialogOpen(true);
   };
@@ -124,7 +126,7 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
       width: 100,
       height: 100,
       content: '',
-      sourceId: '',
+      sourceId: undefined,
     });
   };
 
@@ -206,7 +208,7 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
                   <div>
                     <Label>Video Source</Label>
                     <Select
-                      value={newElement.sourceId}
+                      value={newElement.sourceId || undefined}
                       onValueChange={(value) => setNewElement({ ...newElement, sourceId: value })}
                     >
                       <SelectTrigger data-testid="select-video-source">
