@@ -51,13 +51,26 @@ export default function VideoSourceManager() {
 
   useEffect(() => {
     if (formData.sourceType === 'camera') {
-      navigator.mediaDevices.enumerateDevices()
+      // Request camera permission first to trigger browser prompt
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          // Stop the stream immediately - we just needed permission
+          stream.getTracks().forEach(track => track.stop());
+          
+          // Now enumerate devices with full labels
+          return navigator.mediaDevices.enumerateDevices();
+        })
         .then(deviceList => {
           const cameras = deviceList.filter(d => d.kind === 'videoinput');
           setDevices(cameras);
         })
-        .catch(() => {
-          toast({ title: 'Could not access camera devices', variant: 'destructive' });
+        .catch((err) => {
+          console.error('Camera permission error:', err);
+          toast({ 
+            title: 'Camera permission required', 
+            description: 'Please allow camera access to select a device',
+            variant: 'destructive' 
+          });
         });
     }
   }, [formData.sourceType, toast]);
