@@ -94,12 +94,12 @@ export const sceneTemplates: SceneTemplate[] = [
           position: { x: 0, y: 92, width: 100, height: 8 },
           content: JSON.stringify({
             backgroundColor: '#C8102E',
-            textColor: '#FFFFFF',
+            textColor: '#1B365D',
             fontSize: 16,
             speed: 50,
             items: [
-              { text: 'Latest Liverpool FC news and updates', icon: '⚽' },
-              { text: 'Follow @MailmanMedia for more content', icon: '📺' }
+              { text: 'Latest Liverpool FC news and updates' },
+              { text: 'Follow @MailmanMedia for more content' }
             ]
           })
         }
@@ -156,7 +156,7 @@ export const sceneTemplates: SceneTemplate[] = [
           zone: 'overlay',
           position: { x: 42, y: 18, width: 16, height: 6 },
           content: JSON.stringify({
-            text: "67' ⚽",
+            text: "67'",
             fontSize: 20,
             fontWeight: 'bold',
             color: '#E8DCC6',
@@ -183,8 +183,8 @@ export const sceneTemplates: SceneTemplate[] = [
             fontSize: 14,
             speed: 60,
             items: [
-              { text: 'LIVE: Liverpool vs Opponent - Follow along with Mailman Media', icon: '🔴' },
-              { text: 'Subscribe for more Liverpool FC content', icon: '⚽' }
+              { text: 'LIVE: Liverpool vs Opponent - Follow along with Mailman Media' },
+              { text: 'Subscribe for more Liverpool FC content' }
             ]
           })
         }
@@ -271,7 +271,7 @@ export const sceneTemplates: SceneTemplate[] = [
           zone: 'overlay',
           position: { x: 55, y: 68, width: 36, height: 10 },
           content: JSON.stringify({
-            text: '⭐ MOTM: Mohamed Salah',
+            text: 'MOTM: Mohamed Salah',
             fontSize: 18,
             fontWeight: 'bold',
             color: '#FFFFFF',
@@ -291,8 +291,8 @@ export const sceneTemplates: SceneTemplate[] = [
             fontSize: 16,
             speed: 45,
             items: [
-              { text: 'Post-Match Analysis brought to you by Mailman Media', icon: '⚽' },
-              { text: 'Player Ratings and Key Moments coming up', icon: '📊' }
+              { text: 'Post-Match Analysis brought to you by Mailman Media' },
+              { text: 'Player Ratings and Key Moments coming up' }
             ]
           })
         }

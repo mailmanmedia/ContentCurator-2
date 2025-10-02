@@ -153,8 +153,8 @@ function renderGraphicElement(element: SceneElement): string {
 
 function renderTickerElement(element: SceneElement, rssArticles?: RssArticle[], rssSources?: RssSource[]): string {
   const content = parseElementContent(element);
-  const backgroundColor = content.backgroundColor || '#1B365D';
-  const textColor = content.textColor || '#FFFFFF';
+  const backgroundColor = content.backgroundColor || '#C8102E';
+  const textColor = content.textColor || '#1B365D';
   const fontSize = content.fontSize || 16;
   const speed = content.speed || 50;
   const items = content.items || [];

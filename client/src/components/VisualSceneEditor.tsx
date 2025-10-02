@@ -54,7 +54,8 @@ export default function VisualSceneEditor({ sceneId, onClose }: VisualSceneEdito
   const [gridSnap, setGridSnap] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [workingElements, setWorkingElements] = useState<SceneElement[]>([]);
-  const { toast } = useToast();
+  const initializedRef = useRef(false);
+  const { toast} = useToast();
 
   const { data: scene, isLoading } = useQuery<{ scene: Scene }>({
     queryKey: ['/api/presentation/scenes', sceneId],
@@ -62,10 +63,20 @@ export default function VisualSceneEditor({ sceneId, onClose }: VisualSceneEdito
   });
 
   useEffect(() => {
+    // Reset initialization when scene changes
+    initializedRef.current = false;
+    setHasUnsavedChanges(false);
+  }, [sceneId]);
+
+  useEffect(() => {
     if (scene?.scene?.elements) {
-      setWorkingElements(scene.scene.elements);
+      // Only update on initial load or when explicitly discarding changes
+      if (!initializedRef.current || !hasUnsavedChanges) {
+        setWorkingElements(scene.scene.elements);
+        initializedRef.current = true;
+      }
     }
-  }, [scene]);
+  }, [scene?.scene?.elements, hasUnsavedChanges]);
 
   const updateSceneMutation = useMutation({
     mutationFn: async (elements: SceneElement[]) => {
