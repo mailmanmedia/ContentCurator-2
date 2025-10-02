@@ -7,10 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play, Pause, Radio, Tv, AlertCircle, Settings, Video, Film } from "lucide-react";
 import Header from "@/components/Header";
 import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import SceneManager from "@/components/SceneManager";
 import PresentationSetManager from "@/components/PresentationSetManager";
 import VideoSourceManager from "@/components/VideoSourceManager";
 import VideoCompositor from "@/components/VideoCompositor";
+import QuickSourceControls from "@/components/QuickSourceControls";
+import QuickLibraryControls from "@/components/QuickLibraryControls";
 
 interface LiveState {
   currentSetId: string | null;
@@ -50,6 +53,7 @@ interface Scene {
 export default function LivePresentation() {
   const [sseConnected, setSSEConnected] = useState(false);
   const [eventLog, setEventLog] = useState<string[]>([]);
+  const { toast } = useToast();
 
   const { data: liveState, isLoading: stateLoading } = useQuery<LiveState>({
     queryKey: ['/api/live/state'],
@@ -126,6 +130,14 @@ export default function LivePresentation() {
 
   const handleToggleTicker = () => {
     updateStateMutation.mutate({ tickerOn: !liveState?.tickerOn });
+  };
+
+  const handleLibraryItemSelect = (item: any) => {
+    addLog(`Library item selected: ${item.name} (${item.type})`);
+    toast({ 
+      title: 'Library Item Selected',
+      description: `${item.name} - Ready to use in scene layers`,
+    });
   };
 
   const activeSet = presentationSets?.find(s => s.id === liveState?.currentSetId);
@@ -270,6 +282,10 @@ export default function LivePresentation() {
                 </div>
 
                 <div className="space-y-6">
+                  <QuickSourceControls />
+                  
+                  <QuickLibraryControls onItemSelect={handleLibraryItemSelect} />
+                  
                   <Card>
                     <CardHeader>
                       <CardTitle>Presentation Sets</CardTitle>

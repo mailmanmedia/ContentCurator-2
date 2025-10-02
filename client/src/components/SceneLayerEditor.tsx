@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Trash2, Video, Image, Type, Move } from "lucide-react";
+import { Plus, Trash2, Video, Image, Type, Move, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import LibraryItemPicker from "./LibraryItemPicker";
 
 interface SceneElement {
   id: string;
@@ -34,6 +35,7 @@ interface SceneLayerEditorProps {
 export default function SceneLayerEditor({ elements, onChange }: SceneLayerEditorProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingElement, setEditingElement] = useState<SceneElement | null>(null);
+  const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
   const [newElement, setNewElement] = useState({
     type: 'video' as 'video' | 'image' | 'text' | 'graphic',
     zone: 'main',
@@ -135,6 +137,14 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
     }
   };
 
+  const handleLibraryItemSelect = (item: any) => {
+    setNewElement({ 
+      ...newElement, 
+      content: item.contentUrl || item.thumbnailUrl || '' 
+    });
+    setIsLibraryPickerOpen(false);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -234,6 +244,46 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
                       placeholder="Enter text content"
                       data-testid="input-text-content"
                     />
+                  </div>
+                )}
+
+                {(newElement.type === 'image' || newElement.type === 'graphic') && (
+                  <div className="space-y-2">
+                    <Label>Content Source</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setIsLibraryPickerOpen(true)}
+                      data-testid="button-browse-library"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Browse Library
+                    </Button>
+                    {newElement.content && (
+                      <div className="border rounded-md p-2 space-y-2">
+                        <div className="aspect-video bg-sidebar rounded border flex items-center justify-center overflow-hidden">
+                          <img
+                            src={newElement.content}
+                            alt="Selected content"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {newElement.content}
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setNewElement({ ...newElement, content: '' })}
+                          data-testid="button-clear-content"
+                        >
+                          Clear Selection
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -372,6 +422,14 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
           </CardContent>
         </Card>
       )}
+
+      <LibraryItemPicker
+        open={isLibraryPickerOpen}
+        onOpenChange={setIsLibraryPickerOpen}
+        onSelect={handleLibraryItemSelect}
+        typeFilter={newElement.type === 'image' ? 'image' : newElement.type === 'graphic' ? 'all' : 'all'}
+        title="Select Content from Library"
+      />
     </div>
   );
 }
