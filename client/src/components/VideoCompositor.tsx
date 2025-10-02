@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 interface VideoSource {
   id: string;
   name: string;
-  type: string;
+  sourceType: string;
   deviceId?: string;
-  url?: string;
-  status: string;
+  streamUrl?: string;
+  isActive: boolean;
+  isConnected: boolean;
 }
 
 interface SceneElement {
@@ -90,7 +91,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
       const newStreams = new Map<string, MediaStream>();
 
       for (const source of videoSources) {
-        if (source.type === 'camera' && source.deviceId && source.status === 'active') {
+        if (source.sourceType === 'camera' && source.deviceId && source.isActive && source.isConnected) {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({
               video: { deviceId: { exact: source.deviceId } },
