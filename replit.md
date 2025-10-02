@@ -68,6 +68,51 @@ All video-source and library endpoints return wrapped responses:
 - No SelectItem errors
 - No runtime errors or Vite overlays
 
+### OBS-Style Production Studio Features - Complete
+Implemented professional broadcast overlay system with Liverpool FC branding:
+
+**RSS News Ticker Layer:**
+- New 'ticker' layer type with horizontal scrolling animation
+- Liverpool FC branded: Red background (#C8102E), navy text (#1B365D)
+- Fetches live RSS articles from RSS Intelligence service
+- Auto-refresh every 60 seconds
+- Smooth CSS animation with configurable speed
+
+**Visual Drag-and-Drop Scene Editor:**
+- Canvas-based 16:9 (1920x1080) editor in VisualSceneEditor component
+- Drag layers to reposition with percentage-based coordinates
+- 8 resize handles (corners + edges) for layer sizing
+- Liverpool FC red selection border (#C8102E)
+- Grid snap toggle (5% increments)
+- Real-time position/size display
+- Save/Discard with unsaved changes detection
+- Bug fix: useRef pattern prevents React Query refetch from resetting unsaved changes
+
+**OBS Browser Source Endpoints:**
+- GET /obs/scene/:id - Transparent overlay renderer
+- rgba(0,0,0,0) background for OBS chroma key
+- Absolutely positioned layers matching scene percentages
+- Auto-refresh support (?refresh=false, ?interval=5000)
+- window.obsstudio detection
+- CORS headers for OBS Studio compatibility
+
+**Scene Template System:**
+- GET /api/scene-templates - List all templates
+- POST /api/scenes/from-template - Create scene from template
+- 4 Liverpool FC branded templates (100% emoji-free):
+  * Pre-Match Analysis: Tactical breakdown with stats ticker
+  * Live Commentary: Real-time match with score overlay
+  * Post-Match Analysis: Player ratings and statistics
+  * Transfer News: Breaking transfer coverage
+- All templates use exact Liverpool FC colors and no emoji per project requirements
+
+**Branding Compliance:**
+- Ticker defaults: #C8102E background, #1B365D text
+- No emoji in any templates or rendering code
+- Video placeholders use "VIDEO" text instead of emoji
+- RSS articles render without icons
+- All colors match Liverpool FC brand guidelines
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
