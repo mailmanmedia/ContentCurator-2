@@ -1,0 +1,95 @@
+# Replit Production Studio Research: OBS-Style Web Application Guide
+
+## Main Findings
+
+Building an OBS-style production studio in Replit is **technically feasible** with specific architectural considerations. The key is leveraging Replit's Node.js capabilities while working within its resource constraints and providing explicit instructions to AI agents.
+
+## Core Technical Stack
+
+**Frontend Architecture**: HTML5 Canvas with drag-and-drop overlay editor, CSS3 animations, and WebSocket real-time communication[1][2][3]
+
+**Backend Infrastructure**: Node.js/Express server with WebSocket support, RSS parsing via rss-parser library, and static asset management[4][5][6]
+
+**OBS Integration**: Standard web technologies work directly in OBS Browser Sources, supporting custom CSS injection and JavaScript events through `window.obsstudio`[7][8][9]
+
+## Critical Implementation Requirements
+
+### 1. **Dynamic Overlay System**
+- HTML5 Canvas-based editor with native drag-and-drop API[2][1]
+- Liverpool FC branded templates with official colors (#C8102E, #00B2A9, #F6EB61)
+- Real-time preview system with WebSocket updates[10][5]
+- Template-based approach for match scenarios (pre-match, live, post-match)
+
+### 2. **RSS Feed Integration**
+- Multi-source aggregation from Liverpool FC official feeds, BBC Sport, Sky Sports[11][12]
+- Real-time news banner system with scrolling ticker implementation[13][14]
+- Automatic content filtering and Liverpool FC relevance scoring
+- Fallback systems for RSS feed failures with backup sources[15]
+
+### 3. **Replit-Specific Considerations**
+- **Resource limitations**: Maximum 20 concurrent Repls, CPU/RAM constraints on free tiers[16][17]
+- **Explicit file structure**: Agent needs clear directory organization and environment variable setup
+- **Error handling**: Robust timeout systems for external RSS feeds and WebSocket connections
+- **Performance optimization**: Canvas rendering with requestAnimationFrame, image caching, RSS polling limits
+
+## Download Complete Implementation Guide
+
+
+
+## What's in the Guide
+
+**Section 1-2**: Replit capabilities, limitations, and proven OBS-style architecture patterns
+**Section 3-4**: Step-by-step overlay editor implementation and RSS integration code examples
+**Section 5-6**: Production studio UI design and complete Replit setup instructions
+**Section 7-9**: Advanced features, security measures, and 4-phase implementation checklist
+
+## Key Agent Instructions
+
+1. **File Structure**: Create organized directories for overlays, assets, server components, and configuration files
+2. **Environment Setup**: Define RSS feed URLs, WebSocket ports, and Liverpool FC branding assets
+3. **Error Handling**: Implement timeout systems for RSS feeds (10-second limit) and WebSocket reconnection logic
+4. **Performance**: Use efficient canvas rendering, image caching, and minimize RSS polling frequency
+5. **OBS Compatibility**: Ensure all overlays work as Browser Sources with proper HTTPS and CORS configuration
+
+The production studio will enable easy overlay editing through drag-and-drop interfaces, real-time RSS news integration, and Liverpool FC branded templates—all optimized for Replit's environment and OBS Browser Source compatibility.
+
+[1](https://web.dev/articles/drag-and-drop)
+[2](https://www.w3schools.com/html/html5_draganddrop.asp)
+[3](https://konvajs.org/docs/drag_and_drop/Drag_and_Drop.html)
+[4](https://www.npmjs.com/package/rss-parser)
+[5](https://replit.com/@masfrost/WebSocket-Server)
+[6](https://blog.logrocket.com/using-replit-node-js-build-deploy-apps/)
+[7](https://horus.dev/blog/using-html-css-and-javascript-to-create-obs-plugins-for-your-live-streaming-sessions)
+[8](https://github.com/jojobyte/obs-witchcraft)
+[9](https://obsproject.com/forum/threads/html-interface.42673/)
+[10](https://blog.stackademic.com/building-a-real-time-video-streaming-server-with-express-js-and-websockets-26a984fbaef8)
+[11](https://dev.to/geekgalgroks/building-an-rss-reader-in-javascript-1ep0)
+[12](https://css-tricks.com/how-to-fetch-and-parse-rss-feeds-in-javascript/)
+[13](https://allwebco-templates.com/support/S_script_newsfeed.htm)
+[14](https://www.nowsignage.com/2024/07/RSS-feed-integration)
+[15](https://dev.to/rameshchauhan/how-to-build-real-time-news-apps-with-a-live-news-api-and-javascript-52hd)
+[16](https://content.trickle.so/blog/replit-review)
+[17](https://www.baytechconsulting.com/blog/replit-an-analysis-of-the-ai-powered-cloud-development-platform)
+[18](https://www.arsturn.com/blog/navigating-replitys-limitations-what-you-should-know)
+[19](https://www.reddit.com/r/replit/comments/1ktobb1/replit_review_may_2025_genius_and_retarded_simple/)
+[20](https://replit.com)
+[21](https://shipper.now/replit-review/)
+[22](https://slashdev.io/-the-ultimate-guide-to-building-apps-with-replit-in-2025)
+[23](https://uibakery.io/blog/replit-vs-lovable)
+[24](https://www.youtube.com/watch?v=hSAky1s1EWo)
+[25](https://www.reddit.com/r/rss/comments/10zvwbp/is_there_a_way_to_create_a_real_time_rss_feed_for/)
+[26](https://www.youtube.com/watch?v=WfisUZb1_FQ)
+[27](https://obsproject.com/forum/threads/custom-css-for-browser-docks-like-browser-sources.155735/)
+[28](https://rss.app/en/)
+[29](https://www.nocodementor.io/blog/replit-overview)
+[30](https://stackoverflow.com/questions/10943544/how-to-parse-an-rss-feed-using-javascript)
+[31](https://www.youtube.com/watch?v=UhM-mEY7Pyk)
+[32](https://robertnyman.com/2011/03/10/using-html5-canvas-drag-and-drop-and-file-api-to-offer-the-cure/)
+[33](https://www.geeksforgeeks.org/javascript/create-a-rss-news-feed-reader-using-html-css-and-javascript/)
+[34](https://dev.to/sandramartin/basic-express-server-using-replitcom-2ba9)
+[35](https://github.com/cemreefe/client-side-rss-reader)
+[36](https://stackoverflow.com/questions/4974262/wysiwyg-drag-and-drop-widgets-from-toolbar-into-canvas)
+[37](https://www.contentful.com/blog/generate-blog-rss-feed-with-javascript-and-netlify/)
+[38](https://replit.com/languages/nodejs)
+[39](https://github.com/georapbox/rss-feed-reader)
+[40](https://www.youtube.com/watch?v=7PYvx8u_9Sk)
