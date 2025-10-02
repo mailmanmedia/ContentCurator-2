@@ -52,7 +52,7 @@ function wrapWithSecurityHeaders(html: string, title: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; img-src data: https:; font-src https://fonts.gstatic.com; script-src https://cdn.tailwindcss.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; img-src data: https:; font-src https://fonts.gstatic.com; script-src 'unsafe-inline' https://cdn.tailwindcss.com;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="X-XSS-Protection" content="1; mode=block">
@@ -721,9 +721,8 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
       </div>
 
       <!-- Neon Countdown to Next Match -->
-      ${opponent !== 'Opponent' ? `
       <div class="glass-card">
-        <h2 class="text-2xl font-black mb-6 text-white text-center">MATCH COUNTDOWN</h2>
+        <h2 class="text-2xl font-black mb-6 text-white text-center">${opponent !== 'Opponent' ? `MATCH COUNTDOWN: ${escapeHtml(opponent)}` : 'ANALYSIS COUNTDOWN'}</h2>
         <div class="neon-countdown">
           <div class="neon-unit">
             <span class="neon-number" id="days">2</span>
@@ -743,7 +742,6 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
           </div>
         </div>
       </div>
-      ` : ''}
 
       <!-- Main Analysis Section with Glassmorphism -->
       <div class="glass-card">
@@ -973,6 +971,23 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
     </script>
   `;
 
+  // Wrap HTML with proper document structure and CSP (without X-Frame-Options for iframe compatibility)
+  const wrappedHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; img-src data: https:; font-src https://fonts.gstatic.com; script-src 'unsafe-inline' https://cdn.tailwindcss.com;">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+  <title>${escapeHtml(report.title)} - Mailman Media</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+${html}
+</body>
+</html>`;
+
   const blocks = {
     header: {
       type: 'header',
@@ -1013,7 +1028,7 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
   };
 
   return {
-    html,
+    html: wrappedHtml,
     blocks: sanitizeBlocks(blocks),
     meta: {
       styleKey: style.key,
