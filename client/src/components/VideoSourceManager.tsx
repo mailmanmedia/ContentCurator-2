@@ -38,7 +38,7 @@ export default function VideoSourceManager() {
     name: '',
     description: '',
     sourceType: 'camera' as 'camera' | 'screen' | 'media' | 'rtmp' | 'webrtc',
-    deviceId: '',
+    deviceId: undefined as string | undefined,
     streamUrl: '',
   });
   const { toast } = useToast();
@@ -138,7 +138,7 @@ export default function VideoSourceManager() {
       name: '',
       description: '',
       sourceType: 'camera',
-      deviceId: '',
+      deviceId: undefined,
       streamUrl: '',
     });
   };
@@ -198,7 +198,7 @@ export default function VideoSourceManager() {
       name: source.name,
       description: source.description || '',
       sourceType: source.sourceType,
-      deviceId: source.deviceId || '',
+      deviceId: source.deviceId || undefined,
       streamUrl: source.streamUrl || '',
     });
     setIsDialogOpen(true);
@@ -294,7 +294,7 @@ export default function VideoSourceManager() {
                 <div>
                   <Label htmlFor="deviceId">Camera Device</Label>
                   <Select
-                    value={formData.deviceId}
+                    value={formData.deviceId || undefined}
                     onValueChange={(value) => setFormData({ ...formData, deviceId: value })}
                   >
                     <SelectTrigger id="deviceId" data-testid="select-device">
