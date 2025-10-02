@@ -294,18 +294,20 @@ export default function VideoSourceManager() {
                 <div>
                   <Label htmlFor="deviceId">Camera Device</Label>
                   <Select
-                    value={formData.deviceId || undefined}
+                    value={formData.deviceId}
                     onValueChange={(value) => setFormData({ ...formData, deviceId: value })}
                   >
                     <SelectTrigger id="deviceId" data-testid="select-device">
                       <SelectValue placeholder="Select a camera" />
                     </SelectTrigger>
                     <SelectContent>
-                      {devices.map((device) => (
-                        <SelectItem key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Camera ${device.deviceId.substring(0, 8)}`}
-                        </SelectItem>
-                      ))}
+                      {devices
+                        .filter(device => device.deviceId && device.deviceId.trim() !== '')
+                        .map((device) => (
+                          <SelectItem key={device.deviceId} value={device.deviceId}>
+                            {device.label || `Camera ${device.deviceId.substring(0, 8)}`}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   {formData.deviceId && (
