@@ -57,9 +57,59 @@ export function wrapWithSecurityHeaders(html: string, title: string): string {
   <meta http-equiv="X-XSS-Protection" content="1; mode=block">
   <title>${escapeHtml(title)} - Mailman Media Report</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Glassmorphism effect for metric cards */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .glass-card:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    /* Tab button styles */
+    .tab-button {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .tab-button.active {
+      background-color: #C8102E;
+      color: white;
+    }
+    /* Hide non-active tab content */
+    .tab-content.hidden {
+      display: none;
+    }
+    /* Progress bar widths - static values for performance metrics */
+    .progress-88 { width: 88%; }
+    .progress-91 { width: 91%; }
+    .progress-84 { width: 84%; }
+  </style>
 </head>
 <body>
   ${html}
+  <script>
+    // Secure tab switching with event delegation
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('[data-tab-btn]').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          const tabName = this.getAttribute('data-tab-btn');
+          // Hide all tab content
+          document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+          // Deactivate all buttons
+          document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+          // Show selected tab
+          const targetTab = document.getElementById(tabName);
+          if (targetTab) {
+            targetTab.classList.remove('hidden');
+          }
+          // Activate clicked button
+          this.classList.add('active');
+        });
+      });
+    });
+  </script>
 </body>
 </html>`;
 }
@@ -211,37 +261,37 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
       <div class="max-w-6xl mx-auto mb-8">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <!-- Metric Card 1 -->
-          <div class="rounded-xl p-6 transition-all duration-300" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2);">
-            <div class="text-4xl font-black mb-2" style="color: #F39C12;">87%</div>
-            <div class="text-sm font-semibold mb-2" style="color: rgba(255, 255, 255, 0.9);">Victory Confidence</div>
-            <div class="text-xs font-bold px-2 py-1 rounded-full inline-block" style="background: rgba(46, 204, 113, 0.2); color: #2ECC71;">
+          <div class="glass-card rounded-xl p-6 transition-all duration-300">
+            <div class="text-4xl font-black mb-2 text-amber-400">87%</div>
+            <div class="text-sm font-semibold mb-2 text-white/90">Victory Confidence</div>
+            <div class="text-xs font-bold px-2 py-1 rounded-full inline-block bg-green-500/20 text-green-400">
               +12%
             </div>
           </div>
 
           <!-- Metric Card 2 -->
-          <div class="rounded-xl p-6 transition-all duration-300" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2);">
-            <div class="text-4xl font-black mb-2" style="color: #3498DB;">73.2</div>
-            <div class="text-sm font-semibold mb-2" style="color: rgba(255, 255, 255, 0.9);">Slot Intensity</div>
-            <div class="text-xs font-bold px-2 py-1 rounded-full inline-block" style="background: rgba(52, 152, 219, 0.2); color: #3498DB;">
+          <div class="glass-card rounded-xl p-6 transition-all duration-300">
+            <div class="text-4xl font-black mb-2 text-blue-400">73.2</div>
+            <div class="text-sm font-semibold mb-2 text-white/90">Slot Intensity</div>
+            <div class="text-xs font-bold px-2 py-1 rounded-full inline-block bg-blue-500/20 text-blue-400">
               -6.8
             </div>
           </div>
 
           <!-- Metric Card 3 -->
-          <div class="rounded-xl p-6 transition-all duration-300" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2);">
-            <div class="text-4xl font-black mb-2" style="color: #E74C3C;">7.3</div>
-            <div class="text-sm font-semibold mb-2" style="color: rgba(255, 255, 255, 0.9);">Vulnerability Index</div>
-            <div class="text-xs font-bold px-2 py-1 rounded-full inline-block" style="background: rgba(231, 76, 60, 0.2); color: #E74C3C;">
+          <div class="glass-card rounded-xl p-6 transition-all duration-300">
+            <div class="text-4xl font-black mb-2 text-red-400">7.3</div>
+            <div class="text-sm font-semibold mb-2 text-white/90">Vulnerability Index</div>
+            <div class="text-xs font-bold px-2 py-1 rounded-full inline-block bg-red-500/20 text-red-400">
               ALERT
             </div>
           </div>
 
           <!-- Metric Card 4 -->
-          <div class="rounded-xl p-6 transition-all duration-300" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2);">
-            <div class="text-4xl font-black mb-2" style="color: #2ECC71;">91%</div>
-            <div class="text-sm font-semibold mb-2" style="color: rgba(255, 255, 255, 0.9);">Defensive Stability</div>
-            <div class="text-xs font-bold px-2 py-1 rounded-full inline-block" style="background: rgba(46, 204, 113, 0.2); color: #2ECC71;">
+          <div class="glass-card rounded-xl p-6 transition-all duration-300">
+            <div class="text-4xl font-black mb-2 text-green-400">91%</div>
+            <div class="text-sm font-semibold mb-2 text-white/90">Defensive Stability</div>
+            <div class="text-xs font-bold px-2 py-1 rounded-full inline-block bg-green-500/20 text-green-400">
               +7%
             </div>
           </div>
@@ -251,19 +301,19 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
       <!-- Tab Navigation -->
       <div class="max-w-6xl mx-auto mb-6">
         <div class="flex gap-2 bg-slate-800/50 p-2 rounded-lg backdrop-blur-sm flex-wrap">
-          <button id="btn-summary" onclick="showTab('summary')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all" style="background-color: #C8102E; color: white;">
+          <button data-tab-btn="summary" class="tab-button active flex-1 px-4 py-3 rounded-lg font-semibold transition-all">
             Match Summary
           </button>
-          <button id="btn-statistics" onclick="showTab('statistics')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all" style="background-color: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.7);">
+          <button data-tab-btn="statistics" class="tab-button flex-1 px-4 py-3 rounded-lg font-semibold transition-all">
             Statistics
           </button>
-          <button id="btn-tactical" onclick="showTab('tactical')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all" style="background-color: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.7);">
+          <button data-tab-btn="tactical" class="tab-button flex-1 px-4 py-3 rounded-lg font-semibold transition-all">
             Tactical
           </button>
-          <button id="btn-players" onclick="showTab('players')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all" style="background-color: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.7);">
+          <button data-tab-btn="players" class="tab-button flex-1 px-4 py-3 rounded-lg font-semibold transition-all">
             Players
           </button>
-          <button id="btn-predictions" onclick="showTab('predictions')" class="flex-1 px-4 py-3 rounded-lg font-semibold transition-all" style="background-color: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.7);">
+          <button data-tab-btn="predictions" class="tab-button flex-1 px-4 py-3 rounded-lg font-semibold transition-all">
             Predictions
           </button>
         </div>
@@ -283,7 +333,7 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
 
           <div class="grid md:grid-cols-2 gap-6">
             <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700">
-              <h3 class="text-xl font-bold mb-4" style="color: #F39C12;">Key Strengths</h3>
+              <h3 class="text-xl font-bold mb-4 text-amber-400">Key Strengths</h3>
               <ul class="space-y-2 text-slate-300">
                 <li class="flex items-start">
                   <span class="text-green-500 mr-2">✓</span>
@@ -300,7 +350,7 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
               </ul>
             </div>
             <div class="bg-gradient-to-br from-red-900/50 to-slate-900 rounded-xl p-6 border border-red-500/50">
-              <h3 class="text-xl font-bold mb-4" style="color: #E74C3C;">Areas of Concern</h3>
+              <h3 class="text-xl font-bold mb-4 text-red-400">Areas of Concern</h3>
               <ul class="space-y-2 text-slate-200">
                 <li class="flex items-start">
                   <span class="text-red-500 mr-2">!</span>
@@ -326,17 +376,17 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
             
             <div class="grid md:grid-cols-3 gap-4 mb-6">
               <div class="bg-red-900/30 rounded-lg p-4 border border-red-500">
-                <div class="text-3xl font-bold" style="color: #E74C3C;">57.3%</div>
+                <div class="text-3xl font-bold text-red-400">57.3%</div>
                 <div class="text-sm text-slate-300">Conceded First</div>
                 <div class="text-xs text-slate-400 mt-1">(4 of 7 matches)</div>
               </div>
               <div class="bg-amber-900/30 rounded-lg p-4 border border-amber-500">
-                <div class="text-3xl font-bold" style="color: #F39C12;">+4.2</div>
+                <div class="text-3xl font-bold text-amber-400">+4.2</div>
                 <div class="text-sm text-slate-300">xPTS Overperformance</div>
                 <div class="text-xs text-slate-400 mt-1">Actual: 15pts | xPTS: 10.8</div>
               </div>
               <div class="bg-blue-900/30 rounded-lg p-4 border border-blue-500">
-                <div class="text-3xl font-bold" style="color: #3498DB;">67%</div>
+                <div class="text-3xl font-bold text-blue-400">67%</div>
                 <div class="text-sm text-slate-300">Set-Piece Weakness</div>
                 <div class="text-xs text-slate-400 mt-1">4 goals conceded</div>
               </div>
@@ -350,7 +400,7 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
                   <span class="text-white/80">88%</span>
                 </div>
                 <div class="h-3 bg-slate-700 rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-1000" style="width: 88%;"></div>
+                  <div class="progress-88 h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-1000"></div>
                 </div>
               </div>
               <div>
@@ -359,7 +409,7 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
                   <span class="text-white/80">91%</span>
                 </div>
                 <div class="h-3 bg-slate-700 rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-1000" style="width: 91%;"></div>
+                  <div class="progress-91 h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-1000"></div>
                 </div>
               </div>
               <div>
@@ -368,7 +418,7 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
                   <span class="text-white/80">84%</span>
                 </div>
                 <div class="h-3 bg-slate-700 rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-1000" style="width: 84%;"></div>
+                  <div class="progress-84 h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-1000"></div>
                 </div>
               </div>
             </div>
