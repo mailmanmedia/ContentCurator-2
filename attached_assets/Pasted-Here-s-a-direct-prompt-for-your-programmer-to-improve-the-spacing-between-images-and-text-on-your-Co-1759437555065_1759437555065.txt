@@ -1,0 +1,26 @@
+Here’s a direct prompt for your programmer to improve the spacing between images and text on your ContentCurator page, based on a detailed review of the interface and user experience:
+
+***
+
+**Prompt for UI/UX Improvements:**
+
+*Review and adjust the vertical and horizontal spacing between all images, text blocks, feature cards, and buttons across the homepage and content production panels. The current spacing feels excessive, causing elements to appear disconnected and distant.*
+
+**Edit Guidelines:**
+- Reduce top/bottom padding and margins on image containers, text areas, and feature cards by 25–40%, ensuring elements visually belong together while still readable.
+- For content grids, decrease row and column gaps to achieve a tighter, more compact look that’s not cramped.
+- Adjust line-height in body text for a slightly denser read, but avoid crowding—target 1.3–1.4.
+- On cards and panels, shrink the space between the header, main content, and call-to-action button (e.g., narrow vertical gaps to 18–24px rather than 32+).
+- On mobile breakpoints, scale spacing so elements feel comfortably packed—aim for touch-friendly but not airy gaps.
+- Use CSS rem, em, or Tailwind spacing classes with tighter values such as `gap-2` or `mb-2` instead of bigger defaults (`gap-6`/`mb-6`).
+- Make sure major images (e.g., Mailman Media logo) retain prominence, but are visually linked to adjacent branding or stats through reduced margin.
+- Maintain visual hierarchy: slightly more space above section headers, less between related content items.
+
+**Objective:**  
+*Achieve a visually tighter, more efficient layout where images, text blocks, and feature cards feel grouped and professionally organized, without sacrificing readability or comfort. The end result should evoke the polished density of top platforms like Perplexity or Claude, not the loosely spaced layouts typical of default templates.*
+
+***
+
+This prompt provides clear direction for tightening up your layout while keeping the design comfortable and readable. Let me know if you want it tailored for a specific framework or codebase!
+
+[1](https://replit.com/@jsmithinthesith/ContentCurator)
