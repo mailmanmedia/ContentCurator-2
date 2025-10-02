@@ -191,10 +191,35 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
     </svg>
   `;
 
-  // Generate rich HTML with Liverpool FC branding
+  // Generate rich HTML with Liverpool FC branding and advanced visual techniques
   const html = `
     <style>
       @import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;700;900&family=Libre+Franklin:wght@400;600;700&display=swap');
+      
+      /* ===== CSS CUSTOM PROPERTIES SYSTEM ===== */
+      :root {
+        --mm-navy: #1B365D;
+        --mm-red: #C8102E;
+        --mm-cream: #E8DCC6;
+        
+        /* Advanced Gradients */
+        --gradient-primary: linear-gradient(135deg, var(--mm-red) 0%, #dc2626 100%);
+        --gradient-secondary: linear-gradient(135deg, var(--mm-navy) 0%, #2563eb 100%);
+        --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        
+        /* Glassmorphism Effects */
+        --glass-light: rgba(255, 255, 255, 0.25);
+        --glass-dark: rgba(255, 255, 255, 0.1);
+        --backdrop-blur: blur(10px);
+        --backdrop-blur-heavy: blur(20px);
+        
+        /* Advanced Shadows */
+        --shadow-colored: 0 20px 25px -5px rgba(27, 54, 93, 0.1), 0 10px 10px -5px rgba(27, 54, 93, 0.04);
+        --shadow-glow: 0 0 20px rgba(200, 16, 46, 0.3);
+        --shadow-inset: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+      }
       
       * {
         margin: 0;
@@ -223,20 +248,408 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
         background-clip: text;
       }
       
-      .card {
-        background: rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(10px);
+      /* ===== GLASSMORPHISM CARD SYSTEM ===== */
+      .glass-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        backdrop-filter: var(--backdrop-blur);
+        -webkit-backdrop-filter: var(--backdrop-blur);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 
+          0 8px 32px 0 rgba(31, 38, 135, 0.37),
+          inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+        position: relative;
+        overflow: hidden;
+        margin: 20px 0;
+      }
+      
+      .glass-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+      }
+      
+      /* ===== NEON COUNTDOWN SYSTEM ===== */
+      .neon-countdown {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin: 40px 0;
+        flex-wrap: wrap;
+      }
+      
+      .neon-unit {
+        background: #0f0f23;
+        border: 2px solid var(--mm-red);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        min-width: 100px;
+        position: relative;
+        box-shadow: 
+          0 0 20px rgba(200, 16, 46, 0.3),
+          inset 0 0 20px rgba(200, 16, 46, 0.1);
+      }
+      
+      .neon-unit::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: var(--gradient-primary);
+        border-radius: 12px;
+        z-index: -1;
+        animation: neon-pulse 2s ease-in-out infinite alternate;
+      }
+      
+      @keyframes neon-pulse {
+        from {
+          box-shadow: 0 0 5px var(--mm-red), 0 0 10px var(--mm-red), 0 0 15px var(--mm-red);
+        }
+        to {
+          box-shadow: 0 0 10px var(--mm-red), 0 0 20px var(--mm-red), 0 0 30px var(--mm-red);
+        }
+      }
+      
+      .neon-number {
+        font-size: 3rem;
+        font-weight: 900;
+        color: #fff;
+        text-shadow: 0 0 10px var(--mm-red);
+        display: block;
+      }
+      
+      .neon-label {
+        color: var(--mm-red);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+        margin-top: 5px;
+      }
+      
+      /* ===== ADVANCED PROGRESS BARS ===== */
+      .advanced-progress {
+        margin: 30px 0;
+      }
+      
+      .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      
+      .progress-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #fff;
+      }
+      
+      .progress-percentage {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--mm-red);
+      }
+      
+      .progress-track {
+        width: 100%;
+        height: 20px;
+        background: linear-gradient(90deg, rgba(15, 23, 42, 0.6) 0%, rgba(30, 41, 59, 0.6) 100%);
+        border-radius: 10px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--shadow-inset);
+      }
+      
+      .progress-bar-advanced {
+        height: 100%;
+        background: var(--gradient-primary);
+        border-radius: 10px;
+        position: relative;
+        transition: width 2s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 10px rgba(200, 16, 46, 0.3);
+      }
+      
+      .progress-bar-advanced::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.4) 30%,
+          rgba(255, 255, 255, 0.6) 50%,
+          rgba(255, 255, 255, 0.4) 70%,
+          transparent 100%
+        );
+        animation: shimmer-advanced 3s ease-in-out infinite;
+      }
+      
+      @keyframes shimmer-advanced {
+        0% { transform: translateX(-100%); }
+        50% { transform: translateX(0%); }
+        100% { transform: translateX(100%); }
+      }
+      
+      .progress-bar-advanced::before {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        right: 2px;
+        height: 6px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.5), rgba(255,255,255,0.2));
+        border-radius: 8px;
+      }
+      
+      /* ===== INTERACTIVE STORYLINE CARDS ===== */
+      .storyline-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin: 30px 0;
+      }
+      
+      .storyline-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%);
+        backdrop-filter: var(--backdrop-blur);
         border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 25px;
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: var(--shadow-colored);
+        position: relative;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+      }
+      
+      .storyline-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: var(--shadow-glow), var(--shadow-colored);
+        background: linear-gradient(135deg, rgba(200, 16, 46, 0.2) 0%, rgba(27, 54, 93, 0.2) 100%);
+      }
+      
+      .storyline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+      }
+      
+      .storyline-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.2;
+        flex: 1;
+      }
+      
+      .storyline-score {
+        background: var(--gradient-primary);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3);
+      }
+      
+      .storyline-description {
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.6;
+        margin-bottom: 20px;
+      }
+      
+      .storyline-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+      }
+      
+      .metric-mini {
+        text-align: center;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+      }
+      
+      .metric-mini-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #fff;
+        display: block;
+      }
+      
+      .metric-mini-label {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+      }
+      
+      /* ===== FORMATION PITCH VISUALIZATION ===== */
+      .pitch-container {
+        background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+        border-radius: 12px;
+        padding: 30px;
+        position: relative;
+        overflow: hidden;
+        margin: 30px 0;
+      }
+      
+      .pitch-lines {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+          radial-gradient(circle at center, transparent 60px, transparent 62px, rgba(255,255,255,0.3) 64px, rgba(255,255,255,0.3) 66px, transparent 68px),
+          linear-gradient(90deg, transparent calc(50% - 1px), rgba(255,255,255,0.3) calc(50% - 1px), rgba(255,255,255,0.3) calc(50% + 1px), transparent calc(50% + 1px)),
+          linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.2) 20%, transparent 20%, transparent 80%, rgba(255,255,255,0.2) 80%, rgba(255,255,255,0.2) 100%);
+      }
+      
+      .formation-setup {
+        position: relative;
+        z-index: 1;
+        height: 300px;
+        display: grid;
+        grid-template-columns: repeat(11, 1fr);
+        grid-template-rows: repeat(7, 1fr);
+        gap: 10px;
+      }
+      
+      .player-dot {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border: 3px solid var(--mm-navy);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--mm-navy);
+        cursor: pointer;
         transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        justify-self: center;
+        align-self: center;
       }
       
-      .card:hover {
-        background: rgba(255, 255, 255, 0.12);
-        transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(200, 16, 46, 0.2);
+      .player-dot:hover {
+        transform: scale(1.2);
+        background: var(--gradient-primary);
+        color: white;
+        border-color: white;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
       }
       
+      .player-dot.highlight {
+        background: var(--gradient-warning);
+        color: white;
+        border-color: #f59e0b;
+        animation: player-highlight 2s ease-in-out infinite;
+      }
+      
+      @keyframes player-highlight {
+        0%, 100% {
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        50% {
+          box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+          transform: scale(1.1);
+        }
+      }
+      
+      /* ===== STAT VISUALIZATION ===== */
+      .stat-visualization {
+        background: var(--gradient-secondary);
+        border-radius: 16px;
+        padding: 25px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        margin: 20px 0;
+      }
+      
+      .stat-visualization::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.3;
+      }
+      
+      .stat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        position: relative;
+        z-index: 1;
+      }
+      
+      .stat-title-main {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+      }
+      
+      .stat-trend {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+      
+      .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 20px;
+        position: relative;
+        z-index: 1;
+      }
+      
+      .stat-item {
+        text-align: center;
+      }
+      
+      .stat-value {
+        font-size: 2.5rem;
+        font-weight: 900;
+        display: block;
+        margin-bottom: 5px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      
+      .stat-label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      
+      /* ===== LEGACY STYLES ===== */
       .badge {
         display: inline-block;
         padding: 8px 16px;
@@ -259,56 +672,38 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
         border: 2px solid rgba(34, 197, 94, 0.4);
       }
       
-      .progress-bar {
-        width: 100%;
-        height: 12px;
-        background: rgba(15, 23, 42, 0.6);
-        border-radius: 999px;
-        overflow: hidden;
-        position: relative;
-      }
-      
-      .progress-fill {
-        height: 100%;
-        border-radius: 999px;
-        transition: width 1.5s ease-in-out;
-        position: relative;
-        overflow: hidden;
-      }
-      
-      .progress-fill::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        animation: shimmer 2s infinite;
-      }
-      
-      @keyframes shimmer {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
-      }
-      
-      .timeline-item {
-        padding: 20px;
-        border-left: 4px solid;
-        margin-left: 20px;
-        position: relative;
-      }
-      
-      .timeline-item::before {
-        content: '';
-        position: absolute;
-        left: -10px;
-        top: 24px;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: currentColor;
-        border: 4px solid #0f172a;
+      /* ===== RESPONSIVE DESIGN ===== */
+      @media (max-width: 768px) {
+        .neon-countdown {
+          gap: 15px;
+        }
+        
+        .neon-unit {
+          min-width: 80px;
+          padding: 15px;
+        }
+        
+        .neon-number {
+          font-size: 2rem;
+        }
+        
+        .storyline-container {
+          grid-template-columns: 1fr;
+        }
+        
+        .formation-setup {
+          height: 250px;
+        }
+        
+        .player-dot {
+          width: 30px;
+          height: 30px;
+          font-size: 0.65rem;
+        }
+        
+        .stat-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
       }
     </style>
     
@@ -325,8 +720,33 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
         <p class="text-xl text-white/70 mt-4">Professional Tactical Analysis • ${new Date().toLocaleDateString()}</p>
       </div>
 
-      <!-- Main Analysis Section -->
-      <div class="card p-8 md:p-12 mb-8">
+      <!-- Neon Countdown to Next Match -->
+      ${opponent !== 'Opponent' ? `
+      <div class="glass-card">
+        <h2 class="text-2xl font-black mb-6 text-white text-center">MATCH COUNTDOWN</h2>
+        <div class="neon-countdown">
+          <div class="neon-unit">
+            <span class="neon-number" id="days">2</span>
+            <span class="neon-label">Days</span>
+          </div>
+          <div class="neon-unit">
+            <span class="neon-number" id="hours">14</span>
+            <span class="neon-label">Hours</span>
+          </div>
+          <div class="neon-unit">
+            <span class="neon-number" id="minutes">32</span>
+            <span class="neon-label">Minutes</span>
+          </div>
+          <div class="neon-unit">
+            <span class="neon-number" id="seconds">45</span>
+            <span class="neon-label">Seconds</span>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      <!-- Main Analysis Section with Glassmorphism -->
+      <div class="glass-card">
         <div class="mb-8">
           <h2 class="text-3xl font-black mb-2 text-white">COMPREHENSIVE BREAKDOWN</h2>
           <div class="h-1 w-32 rounded-full" style="background: linear-gradient(90deg, #C8102E 0%, #F24055 100%);"></div>
@@ -336,74 +756,164 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
         </div>
       </div>
 
-      <!-- Key Metrics Grid -->
-      ${config.showMetrics !== false ? `
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-        <div class="card p-6 text-center">
-          <div class="text-4xl font-black mb-2" style="color: #F24055;">85%</div>
-          <div class="text-sm font-semibold text-white/70 mb-2">Pressing Intensity</div>
-          <div class="badge badge-green">+8%</div>
+      <!-- Advanced Statistics Visualization -->
+      <div class="glass-card">
+        <div class="stat-visualization">
+          <div class="stat-header">
+            <h3 class="stat-title-main">Performance Metrics</h3>
+            <div class="stat-trend">↗ +12%</div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <span class="stat-value">85%</span>
+              <span class="stat-label">Press Success</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">8.2</span>
+              <span class="stat-label">Slot Index</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">73%</span>
+              <span class="stat-label">Pass Accuracy</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">92%</span>
+              <span class="stat-label">Duels Won</span>
+            </div>
+          </div>
         </div>
-        <div class="card p-6 text-center">
-          <div class="text-4xl font-black mb-2" style="color: #F24055;">73</div>
-          <div class="text-sm font-semibold text-white/70 mb-2">Pass Completion</div>
-          <div class="badge badge-green">+5%</div>
+      </div>
+
+      <!-- Interactive Storyline Cards -->
+      <div class="glass-card">
+        <h2 class="text-2xl font-black mb-6 text-white">KEY STORYLINES</h2>
+        <div class="storyline-container">
+          <div class="storyline-card">
+            <div class="storyline-header">
+              <h3 class="storyline-title">Tactical Evolution</h3>
+              <div class="storyline-score">8.2</div>
+            </div>
+            <p class="storyline-description">Liverpool's tactical flexibility under Slot continues to evolve, adapting to opponents with strategic precision.</p>
+            <div class="storyline-metrics">
+              <div class="metric-mini">
+                <span class="metric-mini-value">+12%</span>
+                <span class="metric-mini-label">Adapt</span>
+              </div>
+              <div class="metric-mini">
+                <span class="metric-mini-value">85%</span>
+                <span class="metric-mini-label">Success</span>
+              </div>
+              <div class="metric-mini">
+                <span class="metric-mini-value">2/5</span>
+                <span class="metric-mini-label">Risk</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="storyline-card">
+            <div class="storyline-header">
+              <h3 class="storyline-title">Attacking Intent</h3>
+              <div class="storyline-score">7.8</div>
+            </div>
+            <p class="storyline-description">High-press tactics combined with rapid transitions create constant attacking threats down both flanks.</p>
+            <div class="storyline-metrics">
+              <div class="metric-mini">
+                <span class="metric-mini-value">88%</span>
+                <span class="metric-mini-value">Threat</span>
+              </div>
+              <div class="metric-mini">
+                <span class="metric-mini-value">+8%</span>
+                <span class="metric-mini-label">Change</span>
+              </div>
+              <div class="metric-mini">
+                <span class="metric-mini-value">3/5</span>
+                <span class="metric-mini-label">Risk</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="storyline-card">
+            <div class="storyline-header">
+              <h3 class="storyline-title">Defensive Solidity</h3>
+              <div class="storyline-score">9.1</div>
+            </div>
+            <p class="storyline-description">Organized defensive structure maintains shape while enabling aggressive pressing in opponent half.</p>
+            <div class="storyline-metrics">
+              <div class="metric-mini">
+                <span class="metric-mini-value">91%</span>
+                <span class="metric-mini-label">Stability</span>
+              </div>
+              <div class="metric-mini">
+                <span class="metric-mini-value">HIGH</span>
+                <span class="metric-mini-label">Confidence</span>
+              </div>
+              <div class="metric-mini">
+                <span class="metric-mini-value">1/5</span>
+                <span class="metric-mini-label">Risk</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card p-6 text-center">
-          <div class="text-4xl font-black mb-2" style="color: #F24055;">2.8</div>
-          <div class="text-sm font-semibold text-white/70 mb-2">xG Created</div>
-          <div class="badge" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 2px solid rgba(59, 130, 246, 0.4);">+0.3</div>
-        </div>
-        <div class="card p-6 text-center">
-          <div class="text-4xl font-black mb-2" style="color: #F24055;">92%</div>
-          <div class="text-sm font-semibold text-white/70 mb-2">Duels Won</div>
-          <div class="badge badge-green">+7%</div>
+      </div>
+
+      <!-- Formation Pitch Visualization -->
+      ${config.showFormations !== false ? `
+      <div class="glass-card">
+        <h2 class="text-2xl font-black mb-6 text-white">TACTICAL SETUP</h2>
+        <div class="pitch-container">
+          <div class="pitch-lines"></div>
+          <div class="formation-setup">
+            <!-- Goalkeeper -->
+            <div class="player-dot" style="grid-column: 6; grid-row: 1;">GK</div>
+            
+            <!-- Defense (4-3-3) -->
+            <div class="player-dot" style="grid-column: 2; grid-row: 2;">LB</div>
+            <div class="player-dot" style="grid-column: 4; grid-row: 2;">CB</div>
+            <div class="player-dot" style="grid-column: 8; grid-row: 2;">CB</div>
+            <div class="player-dot" style="grid-column: 10; grid-row: 2;">RB</div>
+            
+            <!-- Midfield -->
+            <div class="player-dot" style="grid-column: 3; grid-row: 4;">CM</div>
+            <div class="player-dot highlight" style="grid-column: 6; grid-row: 4;">DM</div>
+            <div class="player-dot" style="grid-column: 9; grid-row: 4;">CM</div>
+            
+            <!-- Attack -->
+            <div class="player-dot" style="grid-column: 2; grid-row: 6;">LW</div>
+            <div class="player-dot highlight" style="grid-column: 6; grid-row: 6;">ST</div>
+            <div class="player-dot" style="grid-column: 10; grid-row: 6;">RW</div>
+          </div>
         </div>
       </div>
       ` : ''}
 
-      <!-- Performance Indicators -->
-      <div class="card p-8 mb-8">
-        <h3 class="text-2xl font-black mb-6 text-white">PERFORMANCE ANALYSIS</h3>
-        <div class="space-y-6">
-          <div>
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-white font-bold">Attacking Threat</span>
-              <span class="text-white/60 font-semibold">88/100</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: 88%; background: linear-gradient(90deg, #C8102E 0%, #F24055 100%);"></div>
-            </div>
+      <!-- Advanced Progress Bars -->
+      <div class="glass-card">
+        <h2 class="text-2xl font-black mb-6 text-white">PERFORMANCE INDICATORS</h2>
+        <div class="advanced-progress">
+          <div class="progress-header">
+            <span class="progress-title">Victory Confidence</span>
+            <span class="progress-percentage">88%</span>
           </div>
-          
-          <div>
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-white font-bold">Defensive Stability</span>
-              <span class="text-white/60 font-semibold">91/100</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: 91%; background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);"></div>
-            </div>
+          <div class="progress-track">
+            <div class="progress-bar-advanced" style="width: 88%"></div>
           </div>
-          
-          <div>
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-white font-bold">Midfield Control</span>
-              <span class="text-white/60 font-semibold">84/100</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: 84%; background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);"></div>
-            </div>
+        </div>
+        <div class="advanced-progress">
+          <div class="progress-header">
+            <span class="progress-title">Clean Sheet Probability</span>
+            <span class="progress-percentage">76%</span>
           </div>
-          
-          <div>
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-white font-bold">Set Piece Efficiency</span>
-              <span class="text-white/60 font-semibold">76/100</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: 76%; background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);"></div>
-            </div>
+          <div class="progress-track">
+            <div class="progress-bar-advanced" style="width: 76%"></div>
+          </div>
+        </div>
+        <div class="advanced-progress">
+          <div class="progress-header">
+            <span class="progress-title">Tactical Execution</span>
+            <span class="progress-percentage">91%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar-advanced" style="width: 91%"></div>
           </div>
         </div>
       </div>
@@ -418,6 +928,49 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
         </div>
       </div>
     </div>
+    
+    <script>
+      // Countdown timer with real updates
+      function updateCountdown() {
+        const now = new Date().getTime();
+        const matchTime = new Date(Date.now() + (2.5 * 24 * 60 * 60 * 1000)).getTime(); // ~2.5 days from now
+        const distance = matchTime - now;
+        
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+        
+        const daysEl = document.getElementById('days');
+        const hoursEl = document.getElementById('hours');
+        const minutesEl = document.getElementById('minutes');
+        const secondsEl = document.getElementById('seconds');
+        
+        if (daysEl) daysEl.textContent = days;
+        if (hoursEl) hoursEl.textContent = hours;
+        if (minutesEl) minutesEl.textContent = minutes;
+        if (secondsEl) secondsEl.textContent = seconds;
+      }
+      
+      // Progress bar animation
+      function animateProgressBars() {
+        const progressBars = document.querySelectorAll('.progress-bar-advanced');
+        progressBars.forEach((bar, index) => {
+          const width = bar.style.width;
+          bar.style.width = '0%';
+          setTimeout(() => {
+            bar.style.width = width;
+          }, 300 * index);
+        });
+      }
+      
+      // Initialize
+      document.addEventListener('DOMContentLoaded', function() {
+        updateCountdown();
+        animateProgressBars();
+        setInterval(updateCountdown, 1000);
+      });
+    </script>
   `;
 
   const blocks = {
