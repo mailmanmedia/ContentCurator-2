@@ -45,8 +45,8 @@ function sanitizeBlocks(blocks: any): any {
   return blocks;
 }
 
-// Helper function to wrap HTML with security headers
-function wrapWithSecurityHeaders(html: string, title: string): string {
+// Helper function to wrap HTML with security headers (exported for use in routes)
+export function wrapWithSecurityHeaders(html: string, title: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -211,36 +211,36 @@ registerRenderer('claudeArtifact', async (report: Report, style: PresentationSty
       <div class="max-w-6xl mx-auto mb-8">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <!-- Metric Card 1 -->
-          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-all duration-300 border border-white/20">
+          <div class="rounded-xl p-6 transition-all duration-300" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2);">
             <div class="text-4xl font-black mb-2" style="color: #F39C12;">87%</div>
-            <div class="text-sm font-semibold text-white/90 mb-2">Victory Confidence</div>
+            <div class="text-sm font-semibold mb-2" style="color: rgba(255, 255, 255, 0.9);">Victory Confidence</div>
             <div class="text-xs font-bold px-2 py-1 rounded-full inline-block" style="background: rgba(46, 204, 113, 0.2); color: #2ECC71;">
               +12%
             </div>
           </div>
 
           <!-- Metric Card 2 -->
-          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-all duration-300 border border-white/20">
+          <div class="rounded-xl p-6 transition-all duration-300" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2);">
             <div class="text-4xl font-black mb-2" style="color: #3498DB;">73.2</div>
-            <div class="text-sm font-semibold text-white/90 mb-2">Slot Intensity</div>
+            <div class="text-sm font-semibold mb-2" style="color: rgba(255, 255, 255, 0.9);">Slot Intensity</div>
             <div class="text-xs font-bold px-2 py-1 rounded-full inline-block" style="background: rgba(52, 152, 219, 0.2); color: #3498DB;">
               -6.8
             </div>
           </div>
 
           <!-- Metric Card 3 -->
-          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-all duration-300 border border-white/20">
+          <div class="rounded-xl p-6 transition-all duration-300" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2);">
             <div class="text-4xl font-black mb-2" style="color: #E74C3C;">7.3</div>
-            <div class="text-sm font-semibold text-white/90 mb-2">Vulnerability Index</div>
+            <div class="text-sm font-semibold mb-2" style="color: rgba(255, 255, 255, 0.9);">Vulnerability Index</div>
             <div class="text-xs font-bold px-2 py-1 rounded-full inline-block" style="background: rgba(231, 76, 60, 0.2); color: #E74C3C;">
               ALERT
             </div>
           </div>
 
           <!-- Metric Card 4 -->
-          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-all duration-300 border border-white/20">
+          <div class="rounded-xl p-6 transition-all duration-300" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2);">
             <div class="text-4xl font-black mb-2" style="color: #2ECC71;">91%</div>
-            <div class="text-sm font-semibold text-white/90 mb-2">Defensive Stability</div>
+            <div class="text-sm font-semibold mb-2" style="color: rgba(255, 255, 255, 0.9);">Defensive Stability</div>
             <div class="text-xs font-bold px-2 py-1 rounded-full inline-block" style="background: rgba(46, 204, 113, 0.2); color: #2ECC71;">
               +7%
             </div>

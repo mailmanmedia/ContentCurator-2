@@ -27,7 +27,7 @@ import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 import express from "express";
-import { renderPresentation, generateSecureExportHtml } from "./presentation/renderer";
+import { renderPresentation, wrapWithSecurityHeaders } from "./presentation/renderer";
 import { rssService } from "./rss/rssService";
 import { footballService } from "./football/footballService";
 
@@ -919,7 +919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate secure HTML with CSP headers
-      const secureHtml = generateSecureExportHtml(rendering.contentHtml, report.title);
+      const secureHtml = wrapWithSecurityHeaders(rendering.contentHtml, report.title);
       
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="${report.title.replace(/[^a-zA-Z0-9]/g, '-')}-${styleKey}.html"`);
