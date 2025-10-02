@@ -54,7 +54,6 @@ function wrapWithSecurityHeaders(html: string, title: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; img-src data: https:; font-src https://fonts.gstatic.com; script-src 'unsafe-inline' https://cdn.tailwindcss.com;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="X-XSS-Protection" content="1; mode=block">
   <title>${escapeHtml(title)} - Mailman Media Report</title>
   <script src="https://cdn.tailwindcss.com"></script>
