@@ -345,7 +345,7 @@ export const sceneTemplates: SceneTemplate[] = [
           zone: 'overlay',
           position: { x: 5, y: 8, width: 90, height: 10 },
           content: JSON.stringify({
-            text: '🚨 BREAKING: Transfer News Update',
+            text: 'BREAKING: Transfer News Update',
             fontSize: 26,
             fontWeight: 'bold',
             color: '#FFFFFF',
@@ -386,12 +386,12 @@ export const sceneTemplates: SceneTemplate[] = [
           position: { x: 0, y: 92, width: 100, height: 8 },
           content: JSON.stringify({
             backgroundColor: '#C8102E',
-            textColor: '#FFFFFF',
+            textColor: '#1B365D',
             fontSize: 16,
             speed: 55,
             items: [
-              { text: 'Stay tuned for the latest Liverpool FC transfer news', icon: '🔴' },
-              { text: 'Subscribe to Mailman Media for exclusive updates', icon: '📰' }
+              { text: 'Stay tuned for the latest Liverpool FC transfer news' },
+              { text: 'Subscribe to Mailman Media for exclusive updates' }
             ]
           })
         }

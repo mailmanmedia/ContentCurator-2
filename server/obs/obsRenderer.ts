@@ -166,8 +166,7 @@ function renderTickerElement(element: SceneElement, rssArticles?: RssArticle[], 
       const source = rssSources?.find(s => s.id === article.sourceId);
       const sourceName = source ? source.name : 'News';
       return {
-        text: `${sourceName}: ${article.title}`,
-        icon: '⚽'
+        text: `${sourceName}: ${article.title}`
       };
     });
     tickerItems = [...tickerItems, ...rssItems];
@@ -222,7 +221,7 @@ function renderVideoElement(element: SceneElement): string {
       z-index: ${getZIndex(element.zone)};
     ">
       <div style="text-align: center;">
-        <div style="font-size: 32px; margin-bottom: 8px;">📹</div>
+        <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px; color: #C8102E;">VIDEO</div>
         <div>${escapeHtml(element.content || 'Video Source')}</div>
         <div style="font-size: 12px; margin-top: 4px; color: #888;">
           Connect via OBS Browser Source
