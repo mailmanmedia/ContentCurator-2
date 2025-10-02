@@ -1,24 +1,20 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Sparkles, Target, Calendar, Wand2, Image } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Link } from "wouter";
+import { 
+  Video, 
+  BarChart3, 
+  FileText, 
+  Zap,
+  TrendingUp,
+  Trophy,
+  PlayCircle
+} from "lucide-react";
 import Header from "./Header";
-import SearchBar from "./SearchBar";
-import TemplateCard from "./TemplateCard";
-import DataChart from "./DataChart";
-import ExportPanel from "./ExportPanel";
-import PromptStudio from "./PromptStudio";
-import ImageManager from "./ImageManager";
-import TacticalAnalysis from "./TacticalAnalysis";
+import mailmanLogo from "@assets/mailman-logo.png";
 
 export default function VisualAssistant() {
-  const [activeTab, setActiveTab] = useState("studio");
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
-
-  // Fetch real statistics from the API
   const { data: stats } = useQuery<{
     totalContent: number;
     frameworks: number;
@@ -33,401 +29,229 @@ export default function VisualAssistant() {
     queryKey: ['/api/statistics'],
   });
 
-  // todo: remove mock functionality
-  const mockTemplates = [
-    {
-      title: "Contrarian Take",
-      category: "Mailman Monday" as const,
-      description: "Challenge conventional narratives with data-driven insights and bold predictions",
-      thumbnail: "/placeholder.jpg",
-      dimensions: "1920x1080",
-      lastUsed: "2 days ago"
-    },
-    {
-      title: "Squad Depth Analysis",
-      category: "Data Dive Wednesday" as const,
-      description: "Deep dive into tactical formations, rotation impact, and player statistics",
-      thumbnail: "/placeholder.jpg",
-      dimensions: "1280x720"
-    },
-    {
-      title: "Transfer Window Prediction",
-      category: "Future Focus Friday" as const,
-      description: "Predictive analysis with confidence meters, risk factors, and transfer domino effects",
-      thumbnail: "/placeholder.jpg",
-      dimensions: "1920x1080",
-      lastUsed: "1 week ago"
-    },
-    {
-      title: "Fixture Congestion Impact",
-      category: "Data Dive Wednesday" as const,
-      description: "Analyze squad vulnerability during busy periods and rotation strategies",
-      thumbnail: "/placeholder.jpg",
-      dimensions: "1920x1080"
-    },
-    {
-      title: "Player Integration Score",
-      category: "Mailman Monday" as const,
-      description: "Track new signings' adaptation and squad chemistry development",
-      thumbnail: "/placeholder.jpg",
-      dimensions: "1280x720",
-      lastUsed: "3 days ago"
-    },
-    {
-      title: "Tactical Shift Prediction",
-      category: "Future Focus Friday" as const,
-      description: "Forecast formation changes based on opponent analysis and injury reports",
-      thumbnail: "/placeholder.jpg",
-      dimensions: "1920x1080"
-    }
-  ];
-
-  const mockChartData = {
-    playerStats: [
-      { label: 'Salah', value: 28, trend: 'up' as const },
-      { label: 'Núñez', value: 18, trend: 'up' as const },
-      { label: 'Gakpo', value: 14, trend: 'neutral' as const },
-      { label: 'Jota', value: 12, trend: 'down' as const }
-    ],
-    squadMetrics: [
-      { label: 'Squad Depth', value: 87 },
-      { label: 'Injury Impact', value: 23 },
-      { label: 'Form Rating', value: 92 }
-    ],
-    keyStats: [
-      { label: 'Goals', value: 89, trend: 'up' as const },
-      { label: 'Clean Sheets', value: 16, trend: 'up' as const },
-      { label: 'Assists', value: 52, trend: 'neutral' as const },
-      { label: 'Possession %', value: 68, trend: 'down' as const }
-    ]
-  };
-
-  const searchFilters = [
-    'Players', 'Matches', 'Statistics', 'Transfers', 'Injuries', 'Tactics',
-    'Premier League', 'Champions League', 'Current Season', 'Historical Data'
-  ];
-
-  const handleSearch = (query: string) => {
-    console.log('Search query:', query);
-  };
-
-  const handleFilterChange = (filters: string[]) => {
-    setSelectedFilters(filters);
-    console.log('Active filters:', filters);
-  };
-
-  const handleCreateNew = () => {
-    console.log('Create new visual');
-    // Switch to AI Studio tab to show creation interface
-    setActiveTab('studio');
-  };
-
-  const getTabIcon = (tab: string) => {
-    switch (tab) {
-      case 'templates': return <Calendar className="w-4 h-4" />;
-      case 'analytics': return <Target className="w-4 h-4" />;
-      case 'export': return <Sparkles className="w-4 h-4" />;
-      default: return null;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#E8DCC6]">
       <Header />
       
-      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        {/* Hero Section */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <div className="flex-1">
-              <h1 className="font-league-spartan font-black text-2xl sm:text-3xl lg:text-4xl uppercase tracking-wide text-foreground mb-2">
-                Visual Content Studio
-              </h1>
-              <p className="font-libre-franklin text-sm sm:text-base lg:text-lg text-muted-foreground">
-                Create compelling YouTube visuals with Liverpool FC data and AI-powered insights
-              </p>
-            </div>
-            <Button 
-              size="default"
-              onClick={handleCreateNew}
-              data-testid="button-create-new"
-              className="font-league-spartan font-bold uppercase tracking-wide w-full sm:w-auto"
-            >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              <span className="hidden sm:inline">Create New</span>
-              <span className="sm:hidden">Create</span>
-            </Button>
+      <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        {/* Hero Section with Mailman Media Logo */}
+        <div className="relative mb-12">
+          {/* Vintage Border Frame */}
+          <div className="absolute inset-0 border-8 border-[#1B365D] rounded-sm pointer-events-none">
+            <div className="absolute inset-0 border-4 border-[#C8102E] rounded-sm m-1"></div>
           </div>
           
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <Card className="bg-primary/10 border-primary/20">
-              <CardContent className="p-3 sm:p-4 text-center">
-                <div className="font-mono font-bold text-xl sm:text-2xl text-primary mb-1" data-testid="stat-total-content">
-                  {stats?.totalContent ?? 0}
-                </div>
-                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Total Content</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-accent/10 border-accent/20">
-              <CardContent className="p-3 sm:p-4 text-center">
-                <div className="font-mono font-bold text-xl sm:text-2xl text-accent mb-1" data-testid="stat-frameworks">
-                  {stats?.frameworks ?? 0}
-                </div>
-                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Frameworks</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-chart-2/10 border-chart-2/20">
-              <CardContent className="p-3 sm:p-4 text-center">
-                <div className="font-mono font-bold text-xl sm:text-2xl text-chart-2 mb-1" data-testid="stat-images">
-                  {stats?.images ?? 0}
-                </div>
-                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">Images</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-chart-5/10 border-chart-5/20">
-              <CardContent className="p-3 sm:p-4 text-center">
-                <div className="font-mono font-bold text-xl sm:text-2xl text-chart-5 mb-1" data-testid="stat-articles">
-                  {stats?.rssArticles ?? 0}
-                </div>
-                <div className="font-libre-franklin text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">News Articles</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Search Bar */}
-          <SearchBar 
-            filters={searchFilters}
-            selectedFilters={selectedFilters}
-            onSearch={handleSearch}
-            onFilterChange={handleFilterChange}
-          />
-        </div>
-
-        {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          {/* Mobile: Scrollable horizontal tabs */}
-          <div className="lg:hidden">
-            <div className="overflow-x-auto scrollbar-hide">
-              <TabsList className="flex w-max min-w-full bg-card border-card-border">
-                <TabsTrigger 
-                  value="studio" 
-                  className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2 text-xs px-3"
-                  data-testid="tab-studio"
-                >
-                  <Wand2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">AI Studio</span>
-                  <span className="sm:hidden">AI</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="images" 
-                  className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2 text-xs px-3"
-                  data-testid="tab-images"
-                >
-                  <Image className="w-4 h-4" />
-                  Images
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="tactical" 
-                  className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2 text-xs px-3"
-                  data-testid="tab-tactical"
-                >
-                  <Target className="w-4 h-4" />
-                  Tactical
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="templates" 
-                  className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2 text-xs px-3"
-                  data-testid="tab-templates"
-                >
-                  {getTabIcon('templates')}
-                  <span className="hidden sm:inline">Templates</span>
-                  <span className="sm:hidden">Temps</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="analytics" 
-                  className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2 text-xs px-3"
-                  data-testid="tab-analytics"
-                >
-                  {getTabIcon('analytics')}
-                  <span className="hidden sm:inline">Analytics</span>
-                  <span className="sm:hidden">Stats</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="export" 
-                  className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2 text-xs px-3"
-                  data-testid="tab-export"
-                >
-                  {getTabIcon('export')}
-                  Export
-                </TabsTrigger>
-              </TabsList>
+          <div className="relative py-12 sm:py-16 px-6 sm:px-12">
+            {/* Mailman Media Logo */}
+            <div className="flex justify-center mb-8">
+              <img 
+                src={mailmanLogo} 
+                alt="Mailman Media" 
+                className="w-40 h-40 sm:w-48 sm:h-48 drop-shadow-2xl"
+              />
             </div>
-          </div>
-
-          {/* Desktop: Grid layout tabs */}
-          <div className="hidden lg:block">
-            <TabsList className="grid w-full grid-cols-6 bg-card border-card-border">
-              <TabsTrigger 
-                value="studio" 
-                className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
-                data-testid="tab-studio"
-              >
-                <Wand2 className="w-4 h-4" />
-                AI Studio
-              </TabsTrigger>
-              <TabsTrigger 
-                value="images" 
-                className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
-                data-testid="tab-images"
-              >
-                <Image className="w-4 h-4" />
-                Images
-              </TabsTrigger>
-              <TabsTrigger 
-                value="tactical" 
-                className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
-                data-testid="tab-tactical"
-              >
-                <Target className="w-4 h-4" />
-                Tactical
-              </TabsTrigger>
-              <TabsTrigger 
-                value="templates" 
-                className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
-                data-testid="tab-templates"
-              >
-                {getTabIcon('templates')}
-                Templates
-              </TabsTrigger>
-              <TabsTrigger 
-                value="analytics" 
-                className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
-                data-testid="tab-analytics"
-              >
-                {getTabIcon('analytics')}
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger 
-                value="export" 
-                className="font-league-spartan font-bold uppercase tracking-wide flex items-center gap-2"
-                data-testid="tab-export"
-              >
-                {getTabIcon('export')}
-                Export
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          {/* AI Studio Tab */}
-          <TabsContent value="studio" className="space-y-6">
-            <PromptStudio />
-          </TabsContent>
-
-          {/* Images Tab */}
-          <TabsContent value="images" className="space-y-6">
-            <ImageManager />
-          </TabsContent>
-
-          {/* Tactical Analysis Tab */}
-          <TabsContent value="tactical" className="space-y-6">
-            <TacticalAnalysis />
-          </TabsContent>
-
-          {/* Templates Tab */}
-          <TabsContent value="templates" className="space-y-4 sm:space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h2 className="font-league-spartan font-bold text-xl sm:text-2xl uppercase tracking-wide text-foreground">
-                Template Library
-              </h2>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline">6 Templates</Badge>
-                <Badge className="bg-primary text-primary-foreground">YouTube Optimized</Badge>
+            
+            {/* Hero Text */}
+            <div className="text-center mb-8">
+              <h1 className="font-league-spartan font-black text-4xl sm:text-5xl lg:text-6xl uppercase tracking-wide text-[#1B365D] mb-4">
+                VISUAL ASSISTANT
+              </h1>
+              <p className="font-libre-franklin text-lg sm:text-xl text-[#1B365D]/80 max-w-3xl mx-auto">
+                Professional broadcast-quality content creation for Liverpool FC analysis
+              </p>
+            </div>
+            
+            {/* Stats Bar */}
+            <div className="border-t-2 border-b-2 border-[#C8102E] py-4 px-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="text-center">
+                  <div className="font-mono font-bold text-3xl text-[#C8102E]" data-testid="stat-total-content">
+                    {stats?.reports ?? 0}
+                  </div>
+                  <div className="font-league-spartan text-sm text-[#1B365D] uppercase tracking-wide mt-1">
+                    Reports
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="font-mono font-bold text-3xl text-[#1B365D]" data-testid="stat-scenes">
+                    {stats?.scenes ?? 0}
+                  </div>
+                  <div className="font-league-spartan text-sm text-[#1B365D] uppercase tracking-wide mt-1">
+                    Scenes
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="font-mono font-bold text-3xl text-[#C8102E]" data-testid="stat-library">
+                    {stats?.libraryItems ?? 0}
+                  </div>
+                  <div className="font-league-spartan text-sm text-[#1B365D] uppercase tracking-wide mt-1">
+                    Library Items
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="font-mono font-bold text-3xl text-[#1B365D]" data-testid="stat-articles">
+                    {stats?.rssArticles ?? 0}
+                  </div>
+                  <div className="font-league-spartan text-sm text-[#1B365D] uppercase tracking-wide mt-1">
+                    RSS Articles
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-              {mockTemplates.map((template, index) => (
-                <TemplateCard key={index} {...template} />
-              ))}
-            </div>
-          </TabsContent>
+          </div>
+        </div>
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
-            <h2 className="font-league-spartan font-bold text-xl sm:text-2xl uppercase tracking-wide text-foreground mb-4 sm:mb-6">
-              Liverpool FC Analytics
-            </h2>
-            
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-              <DataChart 
-                title="Top Scorers" 
-                subtitle="Premier League 2024/25"
-                data={mockChartData.playerStats}
-                type="bar"
-                color="primary"
-              />
-              <DataChart 
-                title="Squad Health" 
-                subtitle="Current season metrics"
-                data={mockChartData.squadMetrics}
-                type="progress"
-                color="chart-2"
-              />
-            </div>
-            
-            <DataChart 
-              title="Key Statistics" 
-              subtitle="Season performance indicators"
-              data={mockChartData.keyStats}
-              type="stat"
-              color="chart-3"
-            />
-          </TabsContent>
-
-          {/* Export Tab */}
-          <TabsContent value="export" className="space-y-4 sm:space-y-6">
-            <h2 className="font-league-spartan font-bold text-xl sm:text-2xl uppercase tracking-wide text-foreground mb-4 sm:mb-6">
-              Export Studio
-            </h2>
-            
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-              <ExportPanel />
-              
-              <Card className="bg-card border-card-border">
-                <CardHeader>
-                  <CardTitle className="font-league-spartan font-bold text-base sm:text-lg uppercase tracking-wide text-card-foreground">
-                    Preview Canvas
+        {/* Main Features Section */}
+        <div className="mb-12">
+          <h2 className="font-league-spartan font-bold text-3xl uppercase tracking-wide text-[#1B365D] text-center mb-8">
+            PRODUCTION TOOLS
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Team Matchup Studio */}
+            <Card className="border-4 border-[#1B365D] bg-white/90 hover-elevate active-elevate-2 transition-all">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-3 bg-[#C8102E] rounded-lg">
+                    <BarChart3 className="w-8 h-8 text-white" />
+                  </div>
+                  <CardTitle className="font-league-spartan text-2xl uppercase tracking-wide text-[#1B365D]">
+                    Team Matchup Studio
                   </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="aspect-video bg-gradient-to-br from-sidebar to-secondary rounded-lg flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-black/20"></div>
-                    <div className="text-center z-10">
-                      <img 
-                        src="/assets/847D1ED6-4A19-4001-B286-53F0D10F961E.png_1758823068354.PNG" 
-                        alt="Mailman Media Logo" 
-                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain mx-auto mb-4"
-                      />
-                      <h3 className="font-league-spartan font-bold text-lg sm:text-xl uppercase tracking-wide text-white mb-2">
-                        Mailman Media
-                      </h3>
-                      <p className="font-libre-franklin text-sm sm:text-base text-white/80">
-                        Your visual will appear here
-                      </p>
-                    </div>
+                </div>
+                <CardDescription className="font-libre-franklin text-base text-[#1B365D]/70">
+                  Advanced tactical analysis with AI-powered insights, squad rosters, and performance metrics
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-[#1B365D]/80">
+                  <Trophy className="w-4 h-4 text-[#C8102E]" />
+                  <span className="font-libre-franklin">Premier League & Champions League data</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#1B365D]/80">
+                  <TrendingUp className="w-4 h-4 text-[#C8102E]" />
+                  <span className="font-libre-franklin">Live statistics & form analysis</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#1B365D]/80">
+                  <Zap className="w-4 h-4 text-[#C8102E]" />
+                  <span className="font-libre-franklin">AI tactical recommendations</span>
+                </div>
+                <Link href="/team-matchup-studio">
+                  <Button 
+                    className="w-full mt-4 bg-[#1B365D] hover:bg-[#1B365D]/90 text-white font-league-spartan font-bold uppercase tracking-wide"
+                    data-testid="button-team-matchup"
+                  >
+                    Open Studio
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Live Presentation */}
+            <Card className="border-4 border-[#1B365D] bg-white/90 hover-elevate active-elevate-2 transition-all">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-3 bg-[#C8102E] rounded-lg">
+                    <Video className="w-8 h-8 text-white" />
                   </div>
-                  
-                  <div className="mt-4 text-center">
-                    <p className="font-libre-franklin text-xs sm:text-sm text-muted-foreground">
-                      Select a template or create new content to preview
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+                  <CardTitle className="font-league-spartan text-2xl uppercase tracking-wide text-[#1B365D]">
+                    Live Presentation
+                  </CardTitle>
+                </div>
+                <CardDescription className="font-libre-franklin text-base text-[#1B365D]/70">
+                  Professional broadcast control with multi-camera management and real-time graphics
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-[#1B365D]/80">
+                  <PlayCircle className="w-4 h-4 text-[#C8102E]" />
+                  <span className="font-libre-franklin">Program/Preview workflow</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#1B365D]/80">
+                  <Video className="w-4 h-4 text-[#C8102E]" />
+                  <span className="font-libre-franklin">Multi-camera scene composition</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#1B365D]/80">
+                  <FileText className="w-4 h-4 text-[#C8102E]" />
+                  <span className="font-libre-franklin">Real-time graphics overlay</span>
+                </div>
+                <Link href="/live-presentation">
+                  <Button 
+                    className="w-full mt-4 bg-[#C8102E] hover:bg-[#C8102E]/90 text-white font-league-spartan font-bold uppercase tracking-wide"
+                    data-testid="button-live-presentation"
+                  >
+                    Go Live
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Quick Access Section */}
+        <div className="border-t-4 border-[#1B365D] pt-8">
+          <h3 className="font-league-spartan font-bold text-2xl uppercase tracking-wide text-[#1B365D] text-center mb-6">
+            QUICK ACCESS
+          </h3>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link href="/frameworks">
+              <Button 
+                variant="outline" 
+                className="w-full h-auto py-4 border-2 border-[#1B365D] text-[#1B365D] hover:bg-[#1B365D] hover:text-white font-league-spartan font-semibold uppercase"
+                data-testid="button-frameworks"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <FileText className="w-6 h-6" />
+                  <span>Frameworks</span>
+                  <span className="text-xs font-mono">({stats?.frameworks ?? 0})</span>
+                </div>
+              </Button>
+            </Link>
+            
+            <Link href="/content-library">
+              <Button 
+                variant="outline" 
+                className="w-full h-auto py-4 border-2 border-[#1B365D] text-[#1B365D] hover:bg-[#1B365D] hover:text-white font-league-spartan font-semibold uppercase"
+                data-testid="button-library"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <FileText className="w-6 h-6" />
+                  <span>Library</span>
+                  <span className="text-xs font-mono">({stats?.libraryItems ?? 0})</span>
+                </div>
+              </Button>
+            </Link>
+            
+            <Link href="/rss">
+              <Button 
+                variant="outline" 
+                className="w-full h-auto py-4 border-2 border-[#1B365D] text-[#1B365D] hover:bg-[#1B365D] hover:text-white font-league-spartan font-semibold uppercase"
+                data-testid="button-rss"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Zap className="w-6 h-6" />
+                  <span>RSS Intel</span>
+                  <span className="text-xs font-mono">({stats?.rssArticles ?? 0})</span>
+                </div>
+              </Button>
+            </Link>
+            
+            <Link href="/team-matchup-studio">
+              <Button 
+                variant="outline" 
+                className="w-full h-auto py-4 border-2 border-[#C8102E] text-[#C8102E] hover:bg-[#C8102E] hover:text-white font-league-spartan font-semibold uppercase"
+                data-testid="button-matchup-quick"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <BarChart3 className="w-6 h-6" />
+                  <span>Matchup</span>
+                  <span className="text-xs font-mono">Studio</span>
+                </div>
+              </Button>
+            </Link>
+          </div>
+        </div>
       </main>
     </div>
   );
