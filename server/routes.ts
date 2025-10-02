@@ -30,6 +30,8 @@ import express from "express";
 import { renderPresentation, wrapWithSecurityHeaders } from "./presentation/renderer";
 import { rssService } from "./rss/rssService";
 import { footballService } from "./football/footballService";
+import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplates";
+import { renderOBSScene } from "./obs/obsRenderer";
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -2105,6 +2107,144 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error duplicating scene:', error);
       res.status(500).json({ error: "Failed to duplicate scene" });
+    }
+  });
+
+  // Scene Template routes
+  app.get("/api/scene-templates", async (req, res) => {
+    try {
+      const templates = getAllSceneTemplates();
+      res.json({ templates });
+    } catch (error) {
+      console.error('Error fetching scene templates:', error);
+      res.status(500).json({ error: "Failed to fetch scene templates" });
+    }
+  });
+
+  app.get("/api/scene-templates/:templateId", async (req, res) => {
+    try {
+      const template = getSceneTemplate(req.params.templateId);
+      if (!template) {
+        return res.status(404).json({ error: "Scene template not found" });
+      }
+      res.json({ template });
+    } catch (error) {
+      console.error('Error fetching scene template:', error);
+      res.status(500).json({ error: "Failed to fetch scene template" });
+    }
+  });
+
+  app.post("/api/scenes/from-template", async (req, res) => {
+    try {
+      const { templateId, name } = req.body;
+      
+      if (!templateId || !name) {
+        return res.status(400).json({ error: "templateId and name are required" });
+      }
+
+      const template = getSceneTemplate(templateId);
+      if (!template) {
+        return res.status(404).json({ error: "Scene template not found" });
+      }
+
+      const sceneData: any = {
+        ...template.template,
+        name: name
+      };
+
+      const scene = await storage.createScene(sceneData);
+      res.status(201).json({ scene });
+    } catch (error) {
+      console.error('Error creating scene from template:', error);
+      res.status(500).json({ error: "Failed to create scene from template" });
+    }
+  });
+
+  // OBS Browser Source route
+  app.get("/obs/scene/:id", async (req, res) => {
+    try {
+      const scene = await storage.getScene(req.params.id);
+      if (!scene) {
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Scene Not Found</title>
+            <style>
+              body { 
+                background: rgba(0,0,0,0); 
+                color: #fff; 
+                font-family: sans-serif; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                height: 100vh; 
+                margin: 0;
+              }
+            </style>
+          </head>
+          <body>
+            <div>Scene not found</div>
+          </body>
+          </html>
+        `);
+      }
+
+      const enableAutoRefresh = req.query.refresh !== 'false';
+      const refreshInterval = parseInt(req.query.interval as string) || 5000;
+
+      let rssArticles: any[] = [];
+      let rssSources: any[] = [];
+      try {
+        rssArticles = await storage.getRecentRssArticles(20);
+        rssSources = await storage.getRssSources();
+      } catch (error) {
+        console.error('Error fetching RSS data for OBS scene:', error);
+        rssArticles = [];
+        rssSources = [];
+      }
+
+      const html = renderOBSScene(scene, {
+        enableAutoRefresh,
+        refreshInterval,
+        rssArticles,
+        rssSources
+      });
+
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      
+      res.send(html);
+    } catch (error) {
+      console.error('Error rendering OBS scene:', error);
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Error</title>
+          <style>
+            body { 
+              background: rgba(0,0,0,0); 
+              color: #f00; 
+              font-family: sans-serif; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              height: 100vh; 
+              margin: 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div>Error rendering scene</div>
+        </body>
+        </html>
+      `);
     }
   });
 

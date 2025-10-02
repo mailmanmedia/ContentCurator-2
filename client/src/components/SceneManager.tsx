@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Copy, Video, Layers } from "lucide-react";
+import { Plus, Edit2, Trash2, Copy, Video, Layers, Box } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SceneLayerEditor from "./SceneLayerEditor";
+import VisualSceneEditor from "./VisualSceneEditor";
 
 interface Scene {
   id: string;
@@ -44,6 +45,7 @@ interface SceneElement {
 export default function SceneManager() {
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [visualEditorSceneId, setVisualEditorSceneId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -179,11 +181,18 @@ export default function SceneManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-league-spartan font-bold text-xl uppercase tracking-wide">
-          Scene Manager
-        </h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {visualEditorSceneId ? (
+        <VisualSceneEditor 
+          sceneId={visualEditorSceneId} 
+          onClose={() => setVisualEditorSceneId(null)}
+        />
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="font-league-spartan font-bold text-xl uppercase tracking-wide">
+              Scene Manager
+            </h2>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleOpenNewDialog} data-testid="button-create-scene">
               <Plus className="w-4 h-4 mr-2" />
@@ -303,8 +312,18 @@ export default function SceneManager() {
                     <Button
                       size="icon"
                       variant="ghost"
+                      onClick={() => setVisualEditorSceneId(scene.id)}
+                      data-testid={`button-visual-editor-${scene.id}`}
+                      title="Visual Editor"
+                    >
+                      <Box className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
                       onClick={() => handleEditScene(scene)}
                       data-testid={`button-edit-scene-${scene.id}`}
+                      title="Edit Scene"
                     >
                       <Edit2 className="w-3 h-3" />
                     </Button>
@@ -314,6 +333,7 @@ export default function SceneManager() {
                       onClick={() => duplicateSceneMutation.mutate(scene.id)}
                       disabled={duplicateSceneMutation.isPending}
                       data-testid={`button-duplicate-scene-${scene.id}`}
+                      title="Duplicate"
                     >
                       <Copy className="w-3 h-3" />
                     </Button>
@@ -323,6 +343,7 @@ export default function SceneManager() {
                       onClick={() => deleteSceneMutation.mutate(scene.id)}
                       disabled={deleteSceneMutation.isPending}
                       data-testid={`button-delete-scene-${scene.id}`}
+                      title="Delete"
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -369,6 +390,8 @@ export default function SceneManager() {
             </Button>
           </CardContent>
         </Card>
+      )}
+        </>
       )}
     </div>
   );

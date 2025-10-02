@@ -12,7 +12,7 @@ interface VideoSource {
 
 interface SceneElement {
   id: string;
-  type: 'video' | 'image' | 'text' | 'graphic';
+  type: 'video' | 'image' | 'text' | 'graphic' | 'ticker';
   zone: string;
   position: {
     x: number;
@@ -22,6 +22,18 @@ interface SceneElement {
   };
   content?: string;
   sourceId?: string;
+}
+
+interface RssArticle {
+  id: string;
+  title: string;
+  sourceId: string;
+  publishedAt: string;
+}
+
+interface RssSource {
+  id: string;
+  name: string;
 }
 
 interface Scene {
@@ -56,6 +68,13 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
 
   const [mediaStreams, setMediaStreams] = useState<Map<string, MediaStream>>(new Map());
   const cleanupRef = useRef<Map<string, MediaStream>>(new Map());
+  const tickerScrollOffset = useRef<number>(0);
+
+  // Fetch RSS articles for ticker
+  const { data: rssData } = useQuery<{ articles: RssArticle[], sources: RssSource[] }>({
+    queryKey: ['/api/rss-articles', { limit: 20 }],
+    refetchInterval: 60000, // Refetch every minute
+  });
 
   // Initialize video elements for camera sources
   useEffect(() => {
@@ -224,6 +243,60 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
           ctx.fillRect(x, y, width, height);
           ctx.strokeStyle = '#60a5fa';
           ctx.strokeRect(x, y, width, height);
+        } else if (element.type === 'ticker') {
+          // Render scrolling RSS ticker with Liverpool FC branding
+          // Background: Liverpool red #C8102E
+          ctx.fillStyle = '#C8102E';
+          ctx.fillRect(x, y, width, height);
+
+          if (rssData && rssData.articles && rssData.articles.length > 0) {
+            // Build ticker text from articles
+            const sourcesMap = new Map(rssData.sources?.map(s => [s.id, s.name]) || []);
+            const tickerItems = rssData.articles.map(article => {
+              const sourceName = sourcesMap.get(article.sourceId) || 'LFC News';
+              return `${sourceName}: ${article.title}`;
+            });
+            const tickerText = tickerItems.join('  •  ') + '  •  ';
+
+            // Set font and measure text
+            const fontSize = Math.floor(height * 0.5);
+            ctx.font = `bold ${fontSize}px sans-serif`;
+            const textWidth = ctx.measureText(tickerText).width;
+
+            // Update scroll position (2 pixels per frame for smooth scrolling)
+            tickerScrollOffset.current += 2;
+            if (tickerScrollOffset.current > textWidth) {
+              tickerScrollOffset.current = 0;
+            }
+
+            // Save context for clipping
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x, y, width, height);
+            ctx.clip();
+
+            // Draw text with Liverpool navy color #1B365D
+            ctx.fillStyle = '#1B365D';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+
+            // Draw two copies for seamless looping
+            const xPos1 = x + width - tickerScrollOffset.current;
+            const xPos2 = xPos1 + textWidth;
+            
+            ctx.fillText(tickerText, xPos1, y + height / 2);
+            ctx.fillText(tickerText, xPos2, y + height / 2);
+
+            // Restore context
+            ctx.restore();
+          } else {
+            // Loading or no articles
+            ctx.fillStyle = '#1B365D';
+            ctx.font = `bold ${Math.floor(height * 0.5)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Loading Liverpool FC News...', x + width / 2, y + height / 2);
+          }
         }
 
         // Debug: Draw zone label
@@ -245,7 +318,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [sceneId, scene, mediaStreams]);
+  }, [sceneId, scene, mediaStreams, rssData]);
 
   if (!sceneId) {
     return (
