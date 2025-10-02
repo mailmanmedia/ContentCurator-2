@@ -56,10 +56,12 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
   const animationFrameRef = useRef<number>();
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
 
-  const { data: scene } = useQuery<Scene>({
-    queryKey: ['/api/live/scenes', sceneId],
+  const { data: sceneData } = useQuery<{ scene: Scene }>({
+    queryKey: [`/api/presentation/scenes/${sceneId}`],
     enabled: !!sceneId,
   });
+
+  const scene = sceneData?.scene;
 
   const { data: videoSourcesData } = useQuery<{ videoSources: VideoSource[] }>({
     queryKey: ['/api/video-sources'],
@@ -73,7 +75,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
 
   // Fetch RSS articles for ticker
   const { data: rssData } = useQuery<{ articles: RssArticle[], sources: RssSource[] }>({
-    queryKey: ['/api/rss-articles', { limit: 20 }],
+    queryKey: ['/api/rss-articles?limit=20'],
     refetchInterval: 60000, // Refetch every minute
   });
 
