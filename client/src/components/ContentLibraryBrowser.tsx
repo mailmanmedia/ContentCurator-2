@@ -40,9 +40,11 @@ export default function ContentLibraryBrowser({
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-  const { data: libraryItems, isLoading } = useQuery<LibraryItem[]>({
+  const { data, isLoading } = useQuery<{ libraryItems: LibraryItem[] }>({
     queryKey: ['/api/library-items'],
   });
+
+  const libraryItems = data?.libraryItems || [];
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -55,7 +57,7 @@ export default function ContentLibraryBrowser({
     }
   };
 
-  const filteredItems = libraryItems?.filter(item => {
+  const filteredItems = libraryItems.filter(item => {
     const matchesSearch = searchTerm === '' || 
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -65,9 +67,9 @@ export default function ContentLibraryBrowser({
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     
     return matchesSearch && matchesType && matchesCategory && item.isActive;
-  }) || [];
+  });
 
-  const categories = Array.from(new Set(libraryItems?.map(item => item.category) || []));
+  const categories = Array.from(new Set(libraryItems.map(item => item.category)));
 
   if (isLoading) {
     return (

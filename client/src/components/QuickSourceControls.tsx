@@ -25,9 +25,11 @@ interface VideoSource {
 export default function QuickSourceControls() {
   const { toast } = useToast();
 
-  const { data: videoSources, isLoading } = useQuery<VideoSource[]>({
+  const { data, isLoading } = useQuery<{ videoSources: VideoSource[] }>({
     queryKey: ['/api/video-sources'],
   });
+
+  const videoSources = data?.videoSources;
 
   const connectSourceMutation = useMutation({
     mutationFn: async (id: string) => {

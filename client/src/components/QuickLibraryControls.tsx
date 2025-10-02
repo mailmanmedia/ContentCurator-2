@@ -31,18 +31,20 @@ interface QuickLibraryControlsProps {
 export default function QuickLibraryControls({ onItemSelect }: QuickLibraryControlsProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
-  const { data: libraryItems, isLoading } = useQuery<LibraryItem[]>({
+  const { data, isLoading } = useQuery<{ libraryItems: LibraryItem[] }>({
     queryKey: ['/api/library-items'],
   });
 
+  const libraryItems = data?.libraryItems || [];
+
   const starredItems = libraryItems
-    ?.filter(item => item.isStarred && item.isActive)
-    .slice(0, 4) || [];
+    .filter(item => item.isStarred && item.isActive)
+    .slice(0, 4);
 
   const recentItems = libraryItems
-    ?.filter(item => item.isActive && !item.isStarred)
+    .filter(item => item.isActive && !item.isStarred)
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 2) || [];
+    .slice(0, 2);
 
   const quickAccessItems = [...starredItems, ...recentItems].slice(0, 4);
 

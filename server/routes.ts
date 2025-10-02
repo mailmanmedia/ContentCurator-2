@@ -2532,8 +2532,7 @@ Return ONLY a JSON object with this structure:
   app.post("/api/video-sources/:id/connect", async (req, res) => {
     try {
       const source = await storage.updateVideoSource(req.params.id, {
-        isConnected: true,
-        lastConnectedAt: new Date()
+        isConnected: true
       });
       if (!source) {
         return res.status(404).json({ error: "Video source not found" });

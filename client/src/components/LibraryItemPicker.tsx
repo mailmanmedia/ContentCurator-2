@@ -45,9 +45,11 @@ export default function LibraryItemPicker({
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null);
 
-  const { data: libraryItems, isLoading } = useQuery<LibraryItem[]>({
+  const { data, isLoading } = useQuery<{ libraryItems: LibraryItem[] }>({
     queryKey: ['/api/library-items'],
   });
+
+  const libraryItems = data?.libraryItems || [];
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -60,7 +62,7 @@ export default function LibraryItemPicker({
     }
   };
 
-  const filteredItems = libraryItems?.filter(item => {
+  const filteredItems = libraryItems.filter(item => {
     const matchesSearch = searchTerm === '' || 
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,9 +72,9 @@ export default function LibraryItemPicker({
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     
     return matchesSearch && matchesType && matchesCategory && item.isActive;
-  }) || [];
+  });
 
-  const categories = Array.from(new Set(libraryItems?.map(item => item.category) || []));
+  const categories = Array.from(new Set(libraryItems.map(item => item.category)));
 
   const handleSelect = () => {
     if (selectedItem) {

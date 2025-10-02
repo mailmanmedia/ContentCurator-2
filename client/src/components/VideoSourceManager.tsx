@@ -43,9 +43,11 @@ export default function VideoSourceManager() {
   });
   const { toast } = useToast();
 
-  const { data: videoSources, isLoading } = useQuery<VideoSource[]>({
+  const { data, isLoading } = useQuery<{ videoSources: VideoSource[] }>({
     queryKey: ['/api/video-sources'],
   });
+
+  const videoSources = data?.videoSources;
 
   useEffect(() => {
     if (formData.sourceType === 'camera') {
