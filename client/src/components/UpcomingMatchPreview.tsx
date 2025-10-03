@@ -106,25 +106,28 @@ export default function UpcomingMatchPreview() {
     }
   }, [timezone]);
 
-  const formatDate = (date: Date) => {
+  const dateFormatter = useMemo(() => {
     return new Intl.DateTimeFormat('en-GB', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       timeZone: timezoneInfo.name,
-    }).format(date);
-  };
+    });
+  }, [timezoneInfo.name]);
 
-  const formatTime = (date: Date) => {
+  const timeFormatter = useMemo(() => {
     return new Intl.DateTimeFormat('en-GB', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
       timeZone: timezoneInfo.name,
-    }).format(date);
-  };
+    });
+  }, [timezoneInfo.name]);
+
+  const formatDate = (date: Date) => dateFormatter.format(date);
+  const formatTime = (date: Date) => timeFormatter.format(date);
 
   const handleTeamClick = (team: { id: number; name: string; logo: string }) => {
     setSelectedTeam(team);
@@ -337,11 +340,7 @@ export default function UpcomingMatchPreview() {
               <div className="flex items-center justify-center gap-2 text-[#1B365D] hover:text-[#C8102E] transition-colors duration-300">
                 <Clock className="w-5 h-5" />
                 <span className="font-libre-franklin text-base font-medium" data-testid="text-match-time">
-                  {new Date(nextMatch.date).toLocaleTimeString('en-GB', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    timeZone: timezoneInfo.name
-                  })} {timezoneInfo.label}
+                  {formatTime(new Date(nextMatch.date))} {timezoneInfo.label}
                 </span>
               </div>
               <div className="flex items-center justify-center gap-2 text-[#1B365D] hover:text-[#C8102E] transition-colors duration-300">
