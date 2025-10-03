@@ -12,6 +12,7 @@ import {
   PlayCircle
 } from "lucide-react";
 import Header from "./Header";
+import UpcomingMatchPreview from "./UpcomingMatchPreview";
 import mailmanLogo from "@assets/mailman-logo.png";
 
 export default function VisualAssistant() {
@@ -99,6 +100,11 @@ export default function VisualAssistant() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Upcoming Match Section */}
+        <div className="mb-6">
+          <UpcomingMatchPreview />
         </div>
 
         {/* Main Features Section */}
