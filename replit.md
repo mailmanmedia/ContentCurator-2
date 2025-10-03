@@ -1,7 +1,7 @@
-# Mailman Media Visual Assistant
+# Mailman Media - The Production Post
 
 ## Overview
-The Mailman Media Visual Assistant is a content creation platform focused on Liverpool FC YouTube channel analysis and visual content generation. It provides AI-powered tools and branded templates to generate YouTube-ready content, including thumbnails, infographics, statistical charts, and analytical dashboards, by combining data-driven insights with professional visual design. The platform aims to support soccer analytics, transfer analysis, and story visualization.
+The Production Post is Mailman Media's content creation platform focused on Liverpool FC YouTube channel analysis and visual content generation. It provides AI-powered tools and branded templates to generate YouTube-ready content, including thumbnails, infographics, statistical charts, and analytical dashboards, by combining data-driven insights with professional visual design. The platform aims to support soccer analytics, transfer analysis, and story visualization.
 
 ## Recent Updates (October 2, 2025)
 

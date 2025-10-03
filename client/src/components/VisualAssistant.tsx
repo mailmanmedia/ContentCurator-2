@@ -55,7 +55,7 @@ export default function VisualAssistant() {
             {/* Hero Text */}
             <div className="text-center mb-5">
               <h1 className="font-league-spartan font-black text-4xl sm:text-5xl lg:text-6xl uppercase tracking-wide text-[#1B365D] mb-3">
-                VISUAL ASSISTANT
+                THE PRODUCTION POST
               </h1>
               <p className="font-libre-franklin text-lg sm:text-xl text-[#1B365D]/80 max-w-3xl mx-auto leading-snug">
                 Professional broadcast-quality content creation for Liverpool FC analysis

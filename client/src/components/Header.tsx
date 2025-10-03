@@ -32,7 +32,7 @@ export default function Header() {
                 Mailman Media
               </h1>
               <p className="text-[#1B365D]/70 font-libre-franklin text-xs lg:text-sm leading-tight">
-                Visual Assistant
+                The Production Post
               </p>
             </div>
           </div>
