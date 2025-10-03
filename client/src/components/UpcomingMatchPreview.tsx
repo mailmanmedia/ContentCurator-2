@@ -143,11 +143,11 @@ export default function UpcomingMatchPreview() {
     <>
       <div className="space-y-4">
         {/* Current Date/Time Clock with Pulse Animation */}
-        <Card 
-          className="border-4 border-[#C8102E] bg-gradient-to-br from-[#1B365D] to-[#152849] shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]" 
+        <div 
+          className="border-4 border-[#C8102E] rounded-lg bg-gradient-to-br from-[#1B365D] to-[#152849] shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] overflow-hidden" 
           data-testid="card-current-datetime"
         >
-          <CardContent className="pt-6 pb-6">
+          <div className="pt-6 pb-6">
             <div className="flex items-center justify-center gap-3 text-[#E8DCC6]">
               <Calendar className="w-6 h-6 animate-pulse" />
               <div className="font-mono text-xl sm:text-2xl font-bold" data-testid="text-current-date">
@@ -160,8 +160,8 @@ export default function UpcomingMatchPreview() {
                 {formatTime(currentTime)}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Next Match Preview with Enhanced Interactions */}
         <Card 
