@@ -1809,6 +1809,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Liverpool's upcoming fixtures
+  app.get("/api/football/liverpool/upcoming", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 5;
+      const fixtures = await storage.getLiverpoolUpcomingFixtures(limit);
+      res.json({ fixtures });
+    } catch (error) {
+      console.error('Error fetching Liverpool upcoming fixtures:', error);
+      res.status(500).json({ error: "Failed to fetch upcoming fixtures" });
+    }
+  });
+
   // AI Analysis endpoint for team statistics
   app.post("/api/football/teams/:teamId/analyze", async (req, res) => {
     try {

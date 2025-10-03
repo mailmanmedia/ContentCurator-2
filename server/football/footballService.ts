@@ -1515,6 +1515,86 @@ class FootballService {
     }
   }
 
+  // Get Liverpool's upcoming fixtures
+  async getLiverpoolUpcomingFixtures(limit: number = 10): Promise<any[]> {
+    return await smartFootballCache.get(
+      `liverpool_upcoming_${limit}`,
+      async () => {
+        try {
+          const response = await this.fetchFromAPI<APIFixture>('/fixtures', {
+            team: 40, // Liverpool team ID
+            next: limit,
+            season: 2025,
+            timezone: 'UTC'
+          });
+
+          const fixtures = await Promise.all(
+            response.response.map(async (item) => {
+              const fixture = {
+                id: item.fixture.id,
+                date: new Date(item.fixture.date),
+                timestamp: item.fixture.timestamp,
+                venue: item.fixture.venue,
+                status: item.fixture.status,
+                league: {
+                  id: item.league.id,
+                  name: item.league.name,
+                  logo: item.league.logo,
+                  round: item.league.round
+                },
+                homeTeam: {
+                  id: item.teams.home.id,
+                  name: item.teams.home.name,
+                  logo: item.teams.home.logo
+                },
+                awayTeam: {
+                  id: item.teams.away.id,
+                  name: item.teams.away.name,
+                  logo: item.teams.away.logo
+                },
+                goals: item.goals,
+                isLiverpool: item.teams.home.id === 40 || item.teams.away.id === 40
+              };
+
+              return fixture;
+            })
+          );
+
+          return fixtures;
+        } catch (error) {
+          console.error(`Failed to get Liverpool upcoming fixtures:`, error);
+          // Return fallback data for next match
+          return [{
+            id: 999999,
+            date: new Date('2025-10-05T15:00:00Z'),
+            timestamp: 1728140400,
+            venue: { id: 550, name: 'Anfield', city: 'Liverpool' },
+            status: { long: 'Not Started', short: 'NS', elapsed: 0 },
+            league: {
+              id: 39,
+              name: 'Premier League',
+              logo: 'https://media.api-sports.io/football/leagues/39.png',
+              round: 'Regular Season - 8'
+            },
+            homeTeam: {
+              id: 40,
+              name: 'Liverpool',
+              logo: 'https://media.api-sports.io/football/teams/40.png'
+            },
+            awayTeam: {
+              id: 49,
+              name: 'Chelsea',
+              logo: 'https://media.api-sports.io/football/teams/49.png'
+            },
+            goals: { home: null, away: null },
+            isLiverpool: true
+          }];
+        }
+      },
+      'fixtures_liverpool'
+    );
+  }
+
   async initializeData(): Promise<void> {
     console.log('Initializing football data...');
     

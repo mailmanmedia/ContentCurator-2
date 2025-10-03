@@ -129,6 +129,7 @@ export interface IStorage {
   getFootballHeadToHead(homeTeamId: number, awayTeamId: number): Promise<any[]>;
   getFootballTeamStatistics(teamId: number, leagueId: number, season: number): Promise<any>;
   getFootballTeamSquad(teamId: number, season: number): Promise<any[]>;
+  getLiverpoolUpcomingFixtures(limit: number): Promise<any[]>;
   initializeFootballData(): Promise<void>;
 
   // Library Item methods
@@ -1254,6 +1255,10 @@ export class MemStorage implements IStorage {
 
   async getFootballTeamSquad(teamId: number, season: number): Promise<any[]> {
     return footballService.getTeamSquad(teamId, season);
+  }
+
+  async getLiverpoolUpcomingFixtures(limit: number): Promise<any[]> {
+    return footballService.getLiverpoolUpcomingFixtures(limit);
   }
 
   async initializeFootballData(): Promise<void> {
