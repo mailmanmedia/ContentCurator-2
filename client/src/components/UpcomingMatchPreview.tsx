@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Shield, TrendingUp, Target, Award, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, Clock, MapPin, Shield, TrendingUp, Target, Award, Zap, Globe } from "lucide-react";
 
 interface UpcomingFixture {
   id: number;
@@ -48,10 +49,13 @@ interface TeamStats {
   cleanSheets: number;
 }
 
+type Timezone = 'CST' | 'BST';
+
 export default function UpcomingMatchPreview() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedTeam, setSelectedTeam] = useState<{ id: number; name: string; logo: string } | null>(null);
   const [hoveredTeam, setHoveredTeam] = useState<number | null>(null);
+  const [timezone, setTimezone] = useState<Timezone>('BST');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -93,21 +97,33 @@ export default function UpcomingMatchPreview() {
 
   const countdown = getCountdown();
 
+  const getTimezoneInfo = () => {
+    if (timezone === 'BST') {
+      return { name: 'Europe/London', label: 'BST' };
+    } else {
+      return { name: 'America/Chicago', label: 'CST' };
+    }
+  };
+
   const formatDate = (date: Date) => {
+    const tz = getTimezoneInfo();
     return new Intl.DateTimeFormat('en-GB', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: tz.name,
     }).format(date);
   };
 
   const formatTime = (date: Date) => {
+    const tz = getTimezoneInfo();
     return new Intl.DateTimeFormat('en-GB', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
+      timeZone: tz.name,
     }).format(date);
   };
 
@@ -147,17 +163,54 @@ export default function UpcomingMatchPreview() {
           className="border-4 border-[#C8102E] rounded-lg bg-gradient-to-br from-[#1B365D] to-[#152849] shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] overflow-hidden" 
           data-testid="card-current-datetime"
         >
-          <div className="pt-6 pb-6">
+          <div className="pt-6 pb-4">
             <div className="flex items-center justify-center gap-3 text-[#E8DCC6]">
               <Calendar className="w-6 h-6 animate-pulse" />
               <div className="font-mono text-xl sm:text-2xl font-bold" data-testid="text-current-date">
                 {formatDate(currentTime)}
               </div>
             </div>
-            <div className="flex items-center justify-center gap-3 text-[#E8DCC6] mt-2">
+            <div className="flex items-center justify-center gap-3 text-[#E8DCC6] mt-2 mb-4">
               <Clock className="w-6 h-6" />
               <div className="font-mono text-3xl sm:text-4xl font-bold tracking-wider transition-all duration-300" data-testid="text-current-time">
                 {formatTime(currentTime)}
+              </div>
+            </div>
+            
+            {/* Timezone Toggle */}
+            <div className="flex items-center justify-center gap-2">
+              <Globe className="w-4 h-4 text-[#E8DCC6]" />
+              <div className="flex gap-1 bg-[#152849]/50 rounded-md p-1">
+                <Button
+                  size="sm"
+                  variant={timezone === 'BST' ? 'default' : 'ghost'}
+                  onClick={() => setTimezone('BST')}
+                  className={`
+                    font-mono text-xs transition-all duration-300
+                    ${timezone === 'BST' 
+                      ? 'bg-[#C8102E] text-white hover:bg-[#A00D24]' 
+                      : 'text-[#E8DCC6] hover:bg-[#1B365D]'
+                    }
+                  `}
+                  data-testid="button-timezone-bst"
+                >
+                  BST
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timezone === 'CST' ? 'default' : 'ghost'}
+                  onClick={() => setTimezone('CST')}
+                  className={`
+                    font-mono text-xs transition-all duration-300
+                    ${timezone === 'CST' 
+                      ? 'bg-[#C8102E] text-white hover:bg-[#A00D24]' 
+                      : 'text-[#E8DCC6] hover:bg-[#1B365D]'
+                    }
+                  `}
+                  data-testid="button-timezone-cst"
+                >
+                  CST
+                </Button>
               </div>
             </div>
           </div>
@@ -288,8 +341,8 @@ export default function UpcomingMatchPreview() {
                   {new Date(nextMatch.date).toLocaleTimeString('en-GB', { 
                     hour: '2-digit', 
                     minute: '2-digit',
-                    timeZoneName: 'short'
-                  })}
+                    timeZone: getTimezoneInfo().name
+                  })} {getTimezoneInfo().label}
                 </span>
               </div>
               <div className="flex items-center justify-center gap-2 text-[#1B365D] hover:text-[#C8102E] transition-colors duration-300">
