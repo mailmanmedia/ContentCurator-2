@@ -1821,6 +1821,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team statistics endpoint for match preview
+  app.get("/api/team-stats/:teamId", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const season = 2024; // Current season
+      const leagueId = 39; // Premier League
+
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      const stats = await footballService.getTeamStatistics(teamId, leagueId, season);
+
+      if (!stats) {
+        return res.json({
+          form: "?????",
+          goals: { for: 0, against: 0 },
+          winRate: 0,
+          cleanSheets: 0
+        });
+      }
+
+      // Extract and format the relevant statistics
+      const formattedStats = {
+        form: stats.form || "?????",
+        goals: {
+          for: stats.goals?.for?.total?.total || 0,
+          against: stats.goals?.against?.total?.total || 0
+        },
+        winRate: Math.round(((stats.fixtures?.wins?.total || 0) / (stats.fixtures?.played?.total || 1)) * 100),
+        cleanSheets: stats.clean_sheet?.total || 0
+      };
+
+      res.json(formattedStats);
+    } catch (error) {
+      console.error('Error fetching team statistics:', error);
+      res.json({
+        form: "?????",
+        goals: { for: 0, against: 0 },
+        winRate: 0,
+        cleanSheets: 0
+      });
+    }
+  });
+
   // AI Analysis endpoint for team statistics
   app.post("/api/football/teams/:teamId/analyze", async (req, res) => {
     try {
