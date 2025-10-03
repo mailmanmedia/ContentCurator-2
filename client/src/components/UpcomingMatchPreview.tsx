@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -67,7 +67,8 @@ export default function UpcomingMatchPreview() {
 
   const { data: fixturesData, isLoading } = useQuery<{ fixtures: UpcomingFixture[] }>({
     queryKey: ['/api/football/liverpool/upcoming?limit=1'],
-    refetchInterval: 60000,
+    staleTime: 300000,
+    refetchInterval: 300000,
   });
 
   const { data: teamStatsData } = useQuery<TeamStats>({
@@ -97,33 +98,31 @@ export default function UpcomingMatchPreview() {
 
   const countdown = getCountdown();
 
-  const getTimezoneInfo = () => {
+  const timezoneInfo = useMemo(() => {
     if (timezone === 'BST') {
       return { name: 'Europe/London', label: 'BST' };
     } else {
       return { name: 'America/Chicago', label: 'CST' };
     }
-  };
+  }, [timezone]);
 
   const formatDate = (date: Date) => {
-    const tz = getTimezoneInfo();
     return new Intl.DateTimeFormat('en-GB', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      timeZone: tz.name,
+      timeZone: timezoneInfo.name,
     }).format(date);
   };
 
   const formatTime = (date: Date) => {
-    const tz = getTimezoneInfo();
     return new Intl.DateTimeFormat('en-GB', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
-      timeZone: tz.name,
+      timeZone: timezoneInfo.name,
     }).format(date);
   };
 
@@ -341,8 +340,8 @@ export default function UpcomingMatchPreview() {
                   {new Date(nextMatch.date).toLocaleTimeString('en-GB', { 
                     hour: '2-digit', 
                     minute: '2-digit',
-                    timeZone: getTimezoneInfo().name
-                  })} {getTimezoneInfo().label}
+                    timeZone: timezoneInfo.name
+                  })} {timezoneInfo.label}
                 </span>
               </div>
               <div className="flex items-center justify-center gap-2 text-[#1B365D] hover:text-[#C8102E] transition-colors duration-300">
