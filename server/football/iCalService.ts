@@ -1,4 +1,7 @@
 import ical from 'node-ical';
+import { db } from '../db';
+import { footballTeams } from '@shared/schema';
+import { eq, sql } from 'drizzle-orm';
 
 const LIVERPOOL_ICAL_URL = 'https://ics.fixtur.es/v2/liverpool.ics';
 
@@ -85,11 +88,62 @@ const TEAM_MAPPING: Record<string, { id: number; name: string }> = {
   'real sociedad': { id: 548, name: 'Real Sociedad' },
   'athletic club': { id: 531, name: 'Athletic Club' },
   'villarreal': { id: 555, name: 'Villarreal' },
+  
+  // Championship & FA Cup/Carabao Cup Common Opponents
+  'stoke city': { id: 3859, name: 'Stoke City' },
+  'stoke': { id: 3859, name: 'Stoke City' },
+  'west brom': { id: 60, name: 'West Bromwich Albion' },
+  'west bromwich albion': { id: 60, name: 'West Bromwich Albion' },
+  'west bromwich': { id: 60, name: 'West Bromwich Albion' },
+  'sheffield united': { id: 62, name: 'Sheffield United' },
+  'sheffield utd': { id: 62, name: 'Sheffield United' },
+  'norwich': { id: 71, name: 'Norwich City' },
+  'norwich city': { id: 71, name: 'Norwich City' },
+  'cardiff': { id: 76, name: 'Cardiff City' },
+  'cardiff city': { id: 76, name: 'Cardiff City' },
+  'preston': { id: 1081, name: 'Preston North End' },
+  'preston north end': { id: 1081, name: 'Preston North End' },
+  'derby': { id: 56, name: 'Derby County' },
+  'derby county': { id: 56, name: 'Derby County' },
+  'birmingham': { id: 1359, name: 'Birmingham City' },
+  'birmingham city': { id: 1359, name: 'Birmingham City' },
+  'reading': { id: 53, name: 'Reading' },
+  'blackburn': { id: 59, name: 'Blackburn Rovers' },
+  'blackburn rovers': { id: 59, name: 'Blackburn Rovers' },
+  'leeds': { id: 63, name: 'Leeds United' },
+  'leeds united': { id: 63, name: 'Leeds United' },
+  'burnley': { id: 44, name: 'Burnley' },
+  'middlesbrough': { id: 25, name: 'Middlesbrough' },
+  'sunderland': { id: 61, name: 'Sunderland' },
+  'swansea': { id: 72, name: 'Swansea City' },
+  'swansea city': { id: 72, name: 'Swansea City' },
+  'luton': { id: 1359, name: 'Luton Town' },
+  'luton town': { id: 1359, name: 'Luton Town' },
+  'millwall': { id: 1368, name: 'Millwall' },
+  'coventry': { id: 1347, name: 'Coventry City' },
+  'coventry city': { id: 1347, name: 'Coventry City' },
+  'plymouth': { id: 1346, name: 'Plymouth Argyle' },
+  'plymouth argyle': { id: 1346, name: 'Plymouth Argyle' },
+  'bristol city': { id: 1360, name: 'Bristol City' },
+  'sheffield wednesday': { id: 1349, name: 'Sheffield Wednesday' },
+  'queens park rangers': { id: 54, name: 'Queens Park Rangers' },
+  'qpr': { id: 54, name: 'Queens Park Rangers' },
+  'hull': { id: 1346, name: 'Hull City' },
+  'hull city': { id: 1346, name: 'Hull City' },
+  'watford': { id: 58, name: 'Watford' },
+  'portsmouth': { id: 1343, name: 'Portsmouth' },
+  'oxford united': { id: 1353, name: 'Oxford United' },
+  'oxford': { id: 1353, name: 'Oxford United' },
 };
 
-function getTeamInfo(teamName: string): { id: number; name: string; logo: string } {
-  // Remove score information like "(2-1)", "(0-0)", etc.
-  const cleanName = teamName.replace(/\s*\(\d+-\d+\)\s*$/g, '').trim();
+async function getTeamInfo(teamName: string): Promise<{ id: number; name: string; logo: string }> {
+  // Remove score information like "(2-1)", "(0-0)", competition tags like "[CL]", "[PL]", etc.
+  let cleanName = teamName
+    .replace(/\s*\(\d+-\d+\)\s*$/g, '') // Remove scores (2-1)
+    .replace(/\s*\[.*?\]\s*$/g, '')      // Remove tags [CL], [PL], etc.
+    .replace(/\s+(FC|CF|AFC|GFC|SFC|RFC)$/i, '') // Remove common club suffixes
+    .trim();
+  
   const normalizedName = cleanName.toLowerCase().trim();
   const teamInfo = TEAM_MAPPING[normalizedName];
   
@@ -101,7 +155,25 @@ function getTeamInfo(teamName: string): { id: number; name: string; logo: string
     };
   }
   
-  // Fallback for unknown teams
+  // Try database lookup as fallback for unknown teams
+  try {
+    const dbTeam = await db.select()
+      .from(footballTeams)
+      .where(sql`LOWER(${footballTeams.name}) = ${normalizedName}`)
+      .limit(1);
+    
+    if (dbTeam.length > 0) {
+      return {
+        id: dbTeam[0].id,
+        name: dbTeam[0].name,
+        logo: dbTeam[0].logo || ''
+      };
+    }
+  } catch (error) {
+    console.error(`Database lookup failed for team: ${cleanName}`, error);
+  }
+  
+  // Final fallback for truly unknown teams
   return {
     id: 0,
     name: cleanName,
@@ -206,13 +278,8 @@ export class ICalService {
         }
         
         // Get team info with IDs and logos
-        const homeTeam = getTeamInfo(homeTeamName);
-        const awayTeam = getTeamInfo(awayTeamName);
-        
-        // Debug logging for first fixture
-        if (fixtures.length === 0) {
-          console.log(`First fixture parsed: ${homeTeamName} (ID: ${homeTeam.id}) vs ${awayTeamName} (ID: ${awayTeam.id})`);
-        }
+        const homeTeam = await getTeamInfo(homeTeamName);
+        const awayTeam = await getTeamInfo(awayTeamName);
 
         let competition = 'Premier League';
         let competitionId = 39;
