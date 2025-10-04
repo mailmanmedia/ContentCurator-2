@@ -204,16 +204,44 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
         const width = (element.position.width / 100) * canvas.width;
         const height = (element.position.height / 100) * canvas.height;
 
-        if (element.type === 'video' && element.sourceId) {
-          const video = videoRefs.current.get(element.sourceId);
-          if (video && video.readyState >= 2) {
-            ctx.drawImage(video, x, y, width, height);
-          } else {
-            // Placeholder for video not ready
+        if (element.type === 'video') {
+          if (!element.sourceId) {
+            // No source configured
             ctx.fillStyle = '#1f2937';
             ctx.fillRect(x, y, width, height);
-            ctx.strokeStyle = '#374151';
-            ctx.strokeRect(x, y, width, height);
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = `${Math.floor(height * 0.15)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No source configured', x + width / 2, y + height / 2);
+            ctx.fillText('Edit scene to assign source', x + width / 2, y + height / 2 + Math.floor(height * 0.15) + 4);
+          } else {
+            const video = videoRefs.current.get(element.sourceId);
+            const source = videoSources?.find(s => s.id === element.sourceId);
+            if (video && video.readyState >= 2) {
+              ctx.drawImage(video, x, y, width, height);
+            } else {
+              // Placeholder for video not ready
+              ctx.fillStyle = '#1f2937';
+              ctx.fillRect(x, y, width, height);
+              ctx.strokeStyle = '#374151';
+              ctx.strokeRect(x, y, width, height);
+              // Show status message
+              ctx.fillStyle = '#9ca3af';
+              ctx.font = `${Math.floor(height * 0.12)}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              if (!source) {
+                ctx.fillText('Source not found', x + width / 2, y + height / 2);
+              } else if (!source.isConnected) {
+                ctx.fillText(`${source.name} (Not connected)`, x + width / 2, y + height / 2);
+                ctx.fillText('Connect source to see video', x + width / 2, y + height / 2 + Math.floor(height * 0.12) + 4);
+              } else if (!source.isActive) {
+                ctx.fillText(`${source.name} (Not active)`, x + width / 2, y + height / 2);
+              } else {
+                ctx.fillText(`${source.name} (Loading...)`, x + width / 2, y + height / 2);
+              }
+            }
           }
         } else if (element.type === 'text' && element.content) {
           // Render text overlay

@@ -132,6 +132,16 @@ export default function LivePresentation() {
     updateStateMutation.mutate({ tickerOn: !liveState?.tickerOn });
   };
 
+  const handleStopFeed = () => {
+    updateStateMutation.mutate({ programSceneId: null });
+    addLog('Program feed stopped');
+    toast({
+      title: 'Feed Stopped',
+      description: 'Program output has been cleared',
+      variant: 'default'
+    });
+  };
+
   const handleLibraryItemSelect = (item: any) => {
     addLog(`Library item selected: ${item.name} (${item.type})`);
     toast({ 
@@ -217,9 +227,33 @@ export default function LivePresentation() {
                 <div className="space-y-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Tv className="w-5 h-5" />
-                        Program Output
+                      <CardTitle className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Tv className="w-5 h-5" />
+                          Program Output
+                        </div>
+                        {liveState?.programSceneId && (
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant="default" 
+                              className="gap-2 animate-broadcast bg-primary text-primary-foreground"
+                              data-testid="badge-program-on-air"
+                            >
+                              <div className="w-2 h-2 rounded-full bg-white animate-pulse-glow" />
+                              ON AIR
+                            </Badge>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleStopFeed}
+                              disabled={updateStateMutation.isPending}
+                              data-testid="button-stop-feed"
+                            >
+                              <Pause className="w-3 h-3 mr-1" />
+                              Stop Feed
+                            </Button>
+                          </div>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -289,6 +323,69 @@ export default function LivePresentation() {
                         >
                           {liveState?.tickerOn ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                         </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="w-5 h-5" />
+                        Transition Effects
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="font-bold mb-2 text-sm">Effect Type</h3>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Current: {liveState?.transitionEffect || 'cut'}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              variant={liveState?.transitionEffect === 'cut' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => updateStateMutation.mutate({ transitionEffect: 'cut' })}
+                              disabled={updateStateMutation.isPending}
+                              data-testid="button-effect-cut"
+                            >
+                              Cut
+                            </Button>
+                            <Button
+                              variant={liveState?.transitionEffect === 'fade' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => updateStateMutation.mutate({ transitionEffect: 'fade' })}
+                              disabled={updateStateMutation.isPending}
+                              data-testid="button-effect-fade"
+                            >
+                              Fade
+                            </Button>
+                            <Button
+                              variant={liveState?.transitionEffect === 'dissolve' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => updateStateMutation.mutate({ transitionEffect: 'dissolve' })}
+                              disabled={updateStateMutation.isPending}
+                              data-testid="button-effect-dissolve"
+                            >
+                              Dissolve
+                            </Button>
+                            <Button
+                              variant={liveState?.transitionEffect === 'slide' ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => updateStateMutation.mutate({ transitionEffect: 'slide' })}
+                              disabled={updateStateMutation.isPending}
+                              data-testid="button-effect-slide"
+                            >
+                              Slide
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="font-bold mb-1 text-sm">Duration</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {liveState?.transitionDuration || 500}ms
+                          </p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -406,45 +503,9 @@ export default function LivePresentation() {
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <h3 className="font-bold mb-2">Transition Effect</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Current: {liveState?.transitionEffect || 'cut'}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateStateMutation.mutate({ transitionEffect: 'cut' })}
-                      >
-                        Cut
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateStateMutation.mutate({ transitionEffect: 'fade' })}
-                      >
-                        Fade
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateStateMutation.mutate({ transitionEffect: 'dissolve' })}
-                      >
-                        Dissolve
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateStateMutation.mutate({ transitionEffect: 'slide' })}
-                      >
-                        Slide
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-bold mb-2">Transition Duration</h3>
+                    <h3 className="font-bold mb-2">Transition Effects</h3>
                     <p className="text-sm text-muted-foreground">
-                      Current: {liveState?.transitionDuration || 500}ms
+                      Transition effects are now available on the Control tab for easy access while managing your live output.
                     </p>
                   </div>
                   <div>
