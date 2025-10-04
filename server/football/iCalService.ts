@@ -88,7 +88,9 @@ const TEAM_MAPPING: Record<string, { id: number; name: string }> = {
 };
 
 function getTeamInfo(teamName: string): { id: number; name: string; logo: string } {
-  const normalizedName = teamName.toLowerCase().trim();
+  // Remove score information like "(2-1)", "(0-0)", etc.
+  const cleanName = teamName.replace(/\s*\(\d+-\d+\)\s*$/g, '').trim();
+  const normalizedName = cleanName.toLowerCase().trim();
   const teamInfo = TEAM_MAPPING[normalizedName];
   
   if (teamInfo) {
@@ -102,7 +104,7 @@ function getTeamInfo(teamName: string): { id: number; name: string; logo: string
   // Fallback for unknown teams
   return {
     id: 0,
-    name: teamName,
+    name: cleanName,
     logo: ''
   };
 }
@@ -206,6 +208,11 @@ export class ICalService {
         // Get team info with IDs and logos
         const homeTeam = getTeamInfo(homeTeamName);
         const awayTeam = getTeamInfo(awayTeamName);
+        
+        // Debug logging for first fixture
+        if (fixtures.length === 0) {
+          console.log(`First fixture parsed: ${homeTeamName} (ID: ${homeTeam.id}) vs ${awayTeamName} (ID: ${awayTeam.id})`);
+        }
 
         let competition = 'Premier League';
         let competitionId = 39;
