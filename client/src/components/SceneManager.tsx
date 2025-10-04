@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Copy, Video, Layers, Box } from "lucide-react";
+import { Plus, Edit2, Trash2, Copy, Video, Layers, Box, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SceneLayerEditor from "./SceneLayerEditor";
@@ -30,6 +30,7 @@ interface Scene {
   };
   aspectRatio: string;
   tags: string[];
+  isTemplate?: boolean;
 }
 
 interface SceneElement {
@@ -57,6 +58,24 @@ export default function SceneManager() {
 
   const { data: scenes, isLoading } = useQuery<Scene[]>({
     queryKey: ['/api/presentation/scenes'],
+  });
+
+  const { data: templates, isLoading: templatesLoading } = useQuery<Scene[]>({
+    queryKey: ['/api/presentation/scenes/templates'],
+  });
+
+  const createFromTemplateMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const response = await apiRequest('POST', `/api/presentation/scenes/${templateId}/duplicate`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/presentation/scenes'] });
+      toast({ title: 'Scene created from template' });
+    },
+    onError: () => {
+      toast({ title: 'Failed to create scene from template', variant: 'destructive' });
+    },
   });
 
   const createSceneMutation = useMutation({
@@ -291,6 +310,74 @@ export default function SceneManager() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {templates && templates.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h3 className="font-league-spartan font-bold text-lg uppercase tracking-wide">
+              Broadcast Templates
+            </h3>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {templates.map((template) => (
+              <Card key={template.id} className="hover-elevate border-primary/20">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <CardTitle className="text-base">{template.name}</CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="aspect-video bg-gradient-to-br from-primary/10 to-accent/10 rounded border border-primary/30 flex items-center justify-center">
+                      <div className="text-center p-4">
+                        <Badge variant="outline" className="mb-2 border-primary/50">
+                          {template.layout}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground">
+                          {template.aspectRatio}
+                        </p>
+                      </div>
+                    </div>
+                    {template.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {template.description}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Layers className="w-3 h-3" />
+                        <span>{template.elements?.length || 0} layers</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => createFromTemplateMutation.mutate(template.id)}
+                        disabled={createFromTemplateMutation.isPending}
+                        data-testid={`button-use-template-${template.id}`}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Use Template
+                      </Button>
+                    </div>
+                    {template.tags && template.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {template.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <Card>

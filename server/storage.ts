@@ -528,6 +528,95 @@ export class MemStorage implements IStorage {
     for (const imageData of sampleImages) {
       await this.createImage(imageData);
     }
+
+    // Seed broadcast templates for Live Presentation Studio
+    const sceneTemplates: InsertScene[] = [
+      {
+        name: 'Pre-Match Analysis',
+        description: 'Full screen lineup display with stats comparison overlay. Perfect for pre-match team sheet reveals and tactical preview.',
+        layout: 'split',
+        elements: [
+          {id: '1', type: 'video', zone: 'main', position: {x: 0, y: 0, width: 70, height: 100}, sourceId: 'camera1'},
+          {id: '2', type: 'graphic', zone: 'overlay-right', position: {x: 70, y: 0, width: 30, height: 100}},
+          {id: '3', type: 'text', zone: 'header', position: {x: 72, y: 5, width: 26, height: 10}, content: 'TEAM NEWS'},
+          {id: '4', type: 'graphic', zone: 'ticker', position: {x: 0, y: 92, width: 100, height: 8}}
+        ],
+        backgroundConfig: {type: 'color', value: '#000000'},
+        transitionConfig: {effect: 'fade', duration: 800},
+        aspectRatio: '16:9',
+        isTemplate: true,
+        tags: ['pre-match', 'lineup', 'team-sheet', 'analysis']
+      },
+      {
+        name: 'Live Commentary',
+        description: 'Multi-camera live production with score overlay and scrolling news ticker. Industry-standard broadcast layout.',
+        layout: 'single',
+        elements: [
+          {id: '1', type: 'video', zone: 'main', position: {x: 0, y: 0, width: 100, height: 100}, sourceId: 'camera1'},
+          {id: '2', type: 'graphic', zone: 'scorebug', position: {x: 2, y: 5, width: 25, height: 12}},
+          {id: '3', type: 'graphic', zone: 'ticker', position: {x: 0, y: 92, width: 100, height: 8}},
+          {id: '4', type: 'text', zone: 'live-badge', position: {x: 90, y: 3, width: 8, height: 6}, content: 'LIVE'}
+        ],
+        backgroundConfig: {type: 'color', value: '#000000'},
+        transitionConfig: {effect: 'slide', duration: 600},
+        aspectRatio: '16:9',
+        isTemplate: true,
+        tags: ['live', 'match', 'commentary', 'scorebug']
+      },
+      {
+        name: 'Post-Match Wrap',
+        description: 'Stats review dashboard with match highlights recap. Perfect for post-match analysis and player ratings display.',
+        layout: 'grid',
+        elements: [
+          {id: '1', type: 'video', zone: 'main', position: {x: 0, y: 0, width: 50, height: 100}, sourceId: 'camera1'},
+          {id: '2', type: 'graphic', zone: 'stats-panel', position: {x: 50, y: 0, width: 50, height: 50}},
+          {id: '3', type: 'graphic', zone: 'ratings-panel', position: {x: 50, y: 50, width: 50, height: 50}},
+          {id: '4', type: 'text', zone: 'title', position: {x: 52, y: 3, width: 46, height: 10}, content: 'FULL TIME ANALYSIS'}
+        ],
+        backgroundConfig: {type: 'color', value: '#0F1419'},
+        transitionConfig: {effect: 'zoom', duration: 1000},
+        aspectRatio: '16:9',
+        isTemplate: true,
+        tags: ['post-match', 'analysis', 'stats', 'ratings']
+      },
+      {
+        name: 'Tactical Breakdown',
+        description: 'Formation diagram with heat map visualization. Ideal for in-depth tactical analysis and player positioning breakdown.',
+        layout: 'stack',
+        elements: [
+          {id: '1', type: 'video', zone: 'main', position: {x: 0, y: 0, width: 100, height: 60}, sourceId: 'camera1'},
+          {id: '2', type: 'graphic', zone: 'formation', position: {x: 10, y: 15, width: 80, height: 50}},
+          {id: '3', type: 'text', zone: 'title', position: {x: 10, y: 5, width: 80, height: 10}, content: 'TACTICAL ANALYSIS'},
+          {id: '4', type: 'graphic', zone: 'ticker', position: {x: 0, y: 92, width: 100, height: 8}}
+        ],
+        backgroundConfig: {type: 'color', value: '#000000'},
+        transitionConfig: {effect: 'wipe', duration: 700},
+        aspectRatio: '16:9',
+        isTemplate: true,
+        tags: ['tactical', 'formation', 'analysis', 'heatmap']
+      },
+      {
+        name: 'Transfer News',
+        description: 'Player spotlight with dynamic stats and scrolling news. Perfect for transfer rumors, player profiles, and breaking news.',
+        layout: 'split',
+        elements: [
+          {id: '1', type: 'video', zone: 'background', position: {x: 0, y: 0, width: 100, height: 100}, sourceId: 'camera1'},
+          {id: '2', type: 'graphic', zone: 'player-card', position: {x: 10, y: 15, width: 35, height: 70}},
+          {id: '3', type: 'graphic', zone: 'stats-panel', position: {x: 50, y: 15, width: 45, height: 70}},
+          {id: '4', type: 'text', zone: 'breaking', position: {x: 10, y: 5, width: 30, height: 8}, content: 'BREAKING NEWS'},
+          {id: '5', type: 'graphic', zone: 'ticker', position: {x: 0, y: 92, width: 100, height: 8}}
+        ],
+        backgroundConfig: {type: 'color', value: '#000000'},
+        transitionConfig: {effect: 'slide', duration: 800},
+        aspectRatio: '16:9',
+        isTemplate: true,
+        tags: ['transfer', 'news', 'player', 'breaking']
+      }
+    ];
+
+    for (const templateData of sceneTemplates) {
+      await this.createScene(templateData);
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -1420,6 +1509,7 @@ export class MemStorage implements IStorage {
       ...original,
       id: newId,
       name: `${original.name} (Copy)`,
+      isTemplate: false,
       createdAt: now,
       updatedAt: now
     };

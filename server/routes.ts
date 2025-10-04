@@ -2422,9 +2422,20 @@ Return ONLY a JSON object with this structure:
   });
 
   // Presentation Scenes routes (aliased under /api/presentation/scenes)
+  app.get("/api/presentation/scenes/templates", async (req, res) => {
+    try {
+      const templates = await storage.getSceneTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      res.status(500).json({ error: "Failed to fetch templates" });
+    }
+  });
+
   app.get("/api/presentation/scenes", async (req, res) => {
     try {
-      const scenes = await storage.getScenes();
+      const allScenes = await storage.getScenes();
+      const scenes = allScenes.filter(scene => !scene.isTemplate);
       res.json(scenes);
     } catch (error) {
       console.error('Error fetching scenes:', error);
