@@ -1307,20 +1307,24 @@ class FootballService {
   }
 
   async getHeadToHeadStats(homeTeamId: number, awayTeamId: number, last: number = 10): Promise<FootballFixture[]> {
-    // PHASE 1: Query database first for persistent H2H fixtures
+    // PHASE 1: Query database first for persistent H2H fixtures (CURRENT SEASON ONLY)
+    const currentSeason = 2024; // 2024-25 Premier League season
     try {
       const dbFixtures = await db
         .select()
         .from(footballFixtures)
         .where(
-          or(
-            and(
-              eq(footballFixtures.homeTeamId, homeTeamId),
-              eq(footballFixtures.awayTeamId, awayTeamId)
-            ),
-            and(
-              eq(footballFixtures.homeTeamId, awayTeamId),
-              eq(footballFixtures.awayTeamId, homeTeamId)
+          and(
+            eq(footballFixtures.season, currentSeason),
+            or(
+              and(
+                eq(footballFixtures.homeTeamId, homeTeamId),
+                eq(footballFixtures.awayTeamId, awayTeamId)
+              ),
+              and(
+                eq(footballFixtures.homeTeamId, awayTeamId),
+                eq(footballFixtures.awayTeamId, homeTeamId)
+              )
             )
           )
         )
@@ -1328,7 +1332,7 @@ class FootballService {
         .limit(last);
 
       if (dbFixtures.length > 0) {
-        console.log(`Found ${dbFixtures.length} H2H fixtures in database`);
+        console.log(`Found ${dbFixtures.length} H2H fixtures in database (season ${currentSeason})`);
         return dbFixtures;
       }
     } catch (dbError) {
