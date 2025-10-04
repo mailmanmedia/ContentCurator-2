@@ -160,10 +160,23 @@ export default function LivePresentation() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant={sseConnected ? "default" : "destructive"} className="gap-2">
-                <Radio className={`w-3 h-3 ${sseConnected ? 'animate-pulse' : ''}`} />
+              <Badge 
+                variant={sseConnected ? "default" : "destructive"} 
+                className="gap-2"
+              >
+                <Radio className={`w-3 h-3 ${sseConnected ? 'animate-pulse-glow' : ''}`} />
                 {sseConnected ? 'Live' : 'Disconnected'}
               </Badge>
+              {liveState?.programSceneId && (
+                <Badge 
+                  variant="default" 
+                  className="gap-2 animate-broadcast bg-primary text-primary-foreground"
+                  data-testid="badge-on-air"
+                >
+                  <div className="w-2 h-2 rounded-full bg-white animate-pulse-glow" />
+                  ON AIR
+                </Badge>
+              )}
             </div>
           </div>
         </div>

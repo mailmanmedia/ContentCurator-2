@@ -30,6 +30,13 @@ export default function VisualAssistant() {
     queryKey: ['/api/statistics'],
   });
 
+  // Use static values for reliability (count-up removed for accessibility)
+  const reportsCount = stats?.reports ?? 0;
+  const scenesCount = stats?.scenes ?? 0;
+  const libraryCount = stats?.libraryItems ?? 0;
+  const articlesCount = stats?.rssArticles ?? 0;
+  const frameworksCount = stats?.frameworks ?? 0;
+
   return (
     <div className="min-h-screen bg-[#E8DCC6]">
       <Header />
@@ -67,7 +74,7 @@ export default function VisualAssistant() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
                   <div className="font-mono font-bold text-3xl text-[#C8102E]" data-testid="stat-total-content">
-                    {stats?.reports ?? 0}
+                    {reportsCount}
                   </div>
                   <div className="font-league-spartan text-sm text-[#1B365D] uppercase tracking-wide mt-1">
                     Reports
@@ -75,7 +82,7 @@ export default function VisualAssistant() {
                 </div>
                 <div className="text-center">
                   <div className="font-mono font-bold text-3xl text-[#1B365D]" data-testid="stat-scenes">
-                    {stats?.scenes ?? 0}
+                    {scenesCount}
                   </div>
                   <div className="font-league-spartan text-sm text-[#1B365D] uppercase tracking-wide mt-1">
                     Scenes
@@ -83,7 +90,7 @@ export default function VisualAssistant() {
                 </div>
                 <div className="text-center">
                   <div className="font-mono font-bold text-3xl text-[#C8102E]" data-testid="stat-library">
-                    {stats?.libraryItems ?? 0}
+                    {libraryCount}
                   </div>
                   <div className="font-league-spartan text-sm text-[#1B365D] uppercase tracking-wide mt-1">
                     Library Items
@@ -91,7 +98,7 @@ export default function VisualAssistant() {
                 </div>
                 <div className="text-center">
                   <div className="font-mono font-bold text-3xl text-[#1B365D]" data-testid="stat-articles">
-                    {stats?.rssArticles ?? 0}
+                    {articlesCount}
                   </div>
                   <div className="font-league-spartan text-sm text-[#1B365D] uppercase tracking-wide mt-1">
                     RSS Articles
@@ -115,7 +122,7 @@ export default function VisualAssistant() {
           
           <div className="grid md:grid-cols-2 gap-4">
             {/* Team Matchup Studio */}
-            <Card className="border-4 border-[#1B365D] bg-white/90 hover-elevate active-elevate-2 transition-all">
+            <Card className="border-4 border-[#1B365D] bg-white/90 hover-elevate active-elevate-2 transition-all card-3d">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="p-2.5 bg-[#C8102E] rounded-lg">
@@ -154,7 +161,7 @@ export default function VisualAssistant() {
             </Card>
 
             {/* Live Presentation */}
-            <Card className="border-4 border-[#1B365D] bg-white/90 hover-elevate active-elevate-2 transition-all">
+            <Card className="border-4 border-[#1B365D] bg-white/90 hover-elevate active-elevate-2 transition-all card-3d">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="p-2.5 bg-[#C8102E] rounded-lg">
@@ -210,7 +217,7 @@ export default function VisualAssistant() {
                 <div className="flex flex-col items-center gap-1.5">
                   <FileText className="w-6 h-6" />
                   <span>Frameworks</span>
-                  <span className="text-xs font-mono">({stats?.frameworks ?? 0})</span>
+                  <span className="text-xs font-mono">({frameworksCount})</span>
                 </div>
               </Button>
             </Link>
@@ -224,7 +231,7 @@ export default function VisualAssistant() {
                 <div className="flex flex-col items-center gap-1.5">
                   <FileText className="w-6 h-6" />
                   <span>Library</span>
-                  <span className="text-xs font-mono">({stats?.libraryItems ?? 0})</span>
+                  <span className="text-xs font-mono">({libraryCount})</span>
                 </div>
               </Button>
             </Link>
@@ -238,7 +245,7 @@ export default function VisualAssistant() {
                 <div className="flex flex-col items-center gap-1.5">
                   <Zap className="w-6 h-6" />
                   <span>RSS Intel</span>
-                  <span className="text-xs font-mono">({stats?.rssArticles ?? 0})</span>
+                  <span className="text-xs font-mono">({articlesCount})</span>
                 </div>
               </Button>
             </Link>

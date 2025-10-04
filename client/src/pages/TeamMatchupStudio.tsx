@@ -816,7 +816,13 @@ export default function TeamMatchupStudio() {
                 />
                 <YAxis tickLine={false} axisLine={false} />
                 <Tooltip />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+                <Bar 
+                  dataKey="value" 
+                  radius={[8, 8, 0, 0]} 
+                  animationDuration={1200}
+                  animationBegin={0}
+                  animationEasing="ease-out"
+                />
               </BarChart>
             </ChartContainer>
           </CardContent>
