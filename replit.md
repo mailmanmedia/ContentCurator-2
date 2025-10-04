@@ -22,6 +22,8 @@ Drizzle ORM is used with a PostgreSQL database (Neon Database). The schema inclu
 #### Live Presentation System
 A professional broadcast control system for multi-camera live productions, featuring real-time scene composition, graphics overlays, and a program/preview workflow. It uses Server-Sent Events (SSE) for state synchronization, canvas-based rendering for video composition, and supports camera integration via MediaStream API. Key components include `VideoSourceManager`, `QuickSourceControls`, `QuickLibraryControls`, `LibraryItemPicker`, `ContentLibraryBrowser`, and `SceneLayerEditor`. It includes an OBS-style production studio with a visual drag-and-drop scene editor, RSS news ticker layer, and OBS Browser Source endpoints. Scene templates (e.g., Pre-Match Analysis, Live Commentary) are Liverpool FC branded and emoji-free.
 
+**Content Upload System (Oct 2025)**: Comprehensive library upload dialog supporting 4 content types - images (with automatic thumbnail generation), HTML artifacts (Claude artifacts/templates), code snippets, and external links. Features smart category management with preset dropdowns (General, Graphics, Overlays, Templates, Artifacts, Lower Thirds, Tickers, Backgrounds) plus "Other (Custom)" option for user-defined categories. Includes tag deduplication (case-insensitive), optional descriptions/thumbnails, and automatic cache invalidation. Content stored in flexible JSON structure (metaJson) for HTML/code, with proper URL handling for images/links.
+
 #### Navigation System
 A global header provides consistent, responsive navigation across all pages.
 

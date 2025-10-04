@@ -52,6 +52,8 @@ export default function UploadLibraryItemDialog({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [categoryType, setCategoryType] = useState<"preset" | "custom">("preset");
+  const [customCategory, setCustomCategory] = useState("");
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -388,7 +390,18 @@ export default function UploadLibraryItemDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        if (value === "__custom__") {
+                          setCategoryType("custom");
+                          field.onChange("");
+                        } else {
+                          setCategoryType("preset");
+                          field.onChange(value);
+                        }
+                      }} 
+                      defaultValue={categoryType === "preset" ? field.value : "__custom__"}
+                    >
                       <FormControl>
                         <SelectTrigger data-testid="select-category">
                           <SelectValue placeholder="Select category" />
@@ -400,9 +413,26 @@ export default function UploadLibraryItemDialog({
                         <SelectItem value="Overlays">Overlays</SelectItem>
                         <SelectItem value="Templates">Templates</SelectItem>
                         <SelectItem value="Artifacts">Artifacts</SelectItem>
-                        <SelectItem value="Custom">Custom</SelectItem>
+                        <SelectItem value="Lower Thirds">Lower Thirds</SelectItem>
+                        <SelectItem value="Tickers">Tickers</SelectItem>
+                        <SelectItem value="Backgrounds">Backgrounds</SelectItem>
+                        <SelectItem value="__custom__">Other (Custom)</SelectItem>
                       </SelectContent>
                     </Select>
+                    {categoryType === "custom" && (
+                      <FormControl>
+                        <Input
+                          placeholder="Enter custom category name..."
+                          value={customCategory}
+                          onChange={(e) => {
+                            setCustomCategory(e.target.value);
+                            field.onChange(e.target.value);
+                          }}
+                          data-testid="input-custom-category"
+                          className="mt-2"
+                        />
+                      </FormControl>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
