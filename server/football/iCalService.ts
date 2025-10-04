@@ -2,6 +2,111 @@ import ical from 'node-ical';
 
 const LIVERPOOL_ICAL_URL = 'https://ics.fixtur.es/v2/liverpool.ics';
 
+// Team name to ID mapping for accurate badge display
+const TEAM_MAPPING: Record<string, { id: number; name: string }> = {
+  // Premier League
+  'liverpool': { id: 40, name: 'Liverpool' },
+  'manchester united': { id: 33, name: 'Manchester United' },
+  'man united': { id: 33, name: 'Manchester United' },
+  'man utd': { id: 33, name: 'Manchester United' },
+  'manchester city': { id: 50, name: 'Manchester City' },
+  'man city': { id: 50, name: 'Manchester City' },
+  'arsenal': { id: 42, name: 'Arsenal' },
+  'chelsea': { id: 49, name: 'Chelsea' },
+  'tottenham': { id: 47, name: 'Tottenham Hotspur' },
+  'tottenham hotspur': { id: 47, name: 'Tottenham Hotspur' },
+  'spurs': { id: 47, name: 'Tottenham Hotspur' },
+  'newcastle': { id: 34, name: 'Newcastle United' },
+  'newcastle united': { id: 34, name: 'Newcastle United' },
+  'aston villa': { id: 66, name: 'Aston Villa' },
+  'west ham': { id: 48, name: 'West Ham United' },
+  'west ham united': { id: 48, name: 'West Ham United' },
+  'brighton': { id: 51, name: 'Brighton & Hove Albion' },
+  'brighton & hove albion': { id: 51, name: 'Brighton & Hove Albion' },
+  'crystal palace': { id: 52, name: 'Crystal Palace' },
+  'fulham': { id: 36, name: 'Fulham' },
+  'brentford': { id: 55, name: 'Brentford' },
+  'everton': { id: 45, name: 'Everton' },
+  'nottingham forest': { id: 65, name: 'Nottingham Forest' },
+  'wolves': { id: 39, name: 'Wolverhampton Wanderers' },
+  'wolverhampton': { id: 39, name: 'Wolverhampton Wanderers' },
+  'wolverhampton wanderers': { id: 39, name: 'Wolverhampton Wanderers' },
+  'bournemouth': { id: 35, name: 'AFC Bournemouth' },
+  'afc bournemouth': { id: 35, name: 'AFC Bournemouth' },
+  'southampton': { id: 41, name: 'Southampton' },
+  'leicester': { id: 46, name: 'Leicester City' },
+  'leicester city': { id: 46, name: 'Leicester City' },
+  'ipswich': { id: 57, name: 'Ipswich Town' },
+  'ipswich town': { id: 57, name: 'Ipswich Town' },
+  
+  // Champions League Teams
+  'real madrid': { id: 541, name: 'Real Madrid' },
+  'barcelona': { id: 529, name: 'Barcelona' },
+  'bayern munich': { id: 157, name: 'Bayern München' },
+  'bayern münchen': { id: 157, name: 'Bayern München' },
+  'bayern': { id: 157, name: 'Bayern München' },
+  'psg': { id: 85, name: 'Paris Saint-Germain' },
+  'paris saint-germain': { id: 85, name: 'Paris Saint-Germain' },
+  'paris saint germain': { id: 85, name: 'Paris Saint-Germain' },
+  'inter': { id: 505, name: 'Inter Milan' },
+  'inter milan': { id: 505, name: 'Inter Milan' },
+  'ac milan': { id: 487, name: 'AC Milan' },
+  'milan': { id: 487, name: 'AC Milan' },
+  'juventus': { id: 496, name: 'Juventus' },
+  'atletico madrid': { id: 530, name: 'Atlético Madrid' },
+  'atlético madrid': { id: 530, name: 'Atlético Madrid' },
+  'atletico': { id: 530, name: 'Atlético Madrid' },
+  'borussia dortmund': { id: 165, name: 'Borussia Dortmund' },
+  'dortmund': { id: 165, name: 'Borussia Dortmund' },
+  'rb leipzig': { id: 173, name: 'RB Leipzig' },
+  'leipzig': { id: 173, name: 'RB Leipzig' },
+  'bayer leverkusen': { id: 168, name: 'Bayer Leverkusen' },
+  'leverkusen': { id: 168, name: 'Bayer Leverkusen' },
+  'benfica': { id: 211, name: 'Benfica' },
+  'sporting': { id: 228, name: 'Sporting CP' },
+  'sporting cp': { id: 228, name: 'Sporting CP' },
+  'ajax': { id: 610, name: 'Ajax' },
+  'psv': { id: 179, name: 'PSV Eindhoven' },
+  'psv eindhoven': { id: 179, name: 'PSV Eindhoven' },
+  'napoli': { id: 492, name: 'Napoli' },
+  'roma': { id: 488, name: 'AS Roma' },
+  'as roma': { id: 488, name: 'AS Roma' },
+  'atalanta': { id: 499, name: 'Atalanta' },
+  'monaco': { id: 497, name: 'AS Monaco' },
+  'as monaco': { id: 497, name: 'AS Monaco' },
+  'marseille': { id: 81, name: 'Marseille' },
+  'rangers': { id: 727, name: 'Rangers' },
+  'club brugge': { id: 569, name: 'Club Brugge' },
+  'copenhagen': { id: 400, name: 'Copenhagen' },
+  'galatasaray': { id: 645, name: 'Galatasaray' },
+  'olympiacos': { id: 553, name: 'Olympiacos' },
+  'slavia praha': { id: 614, name: 'Slavia Praha' },
+  'qarabağ': { id: 551, name: 'Qarabağ' },
+  'real sociedad': { id: 548, name: 'Real Sociedad' },
+  'athletic club': { id: 531, name: 'Athletic Club' },
+  'villarreal': { id: 555, name: 'Villarreal' },
+};
+
+function getTeamInfo(teamName: string): { id: number; name: string; logo: string } {
+  const normalizedName = teamName.toLowerCase().trim();
+  const teamInfo = TEAM_MAPPING[normalizedName];
+  
+  if (teamInfo) {
+    return {
+      id: teamInfo.id,
+      name: teamInfo.name,
+      logo: `https://media.api-sports.io/football/teams/${teamInfo.id}.png`
+    };
+  }
+  
+  // Fallback for unknown teams
+  return {
+    id: 0,
+    name: teamName,
+    logo: ''
+  };
+}
+
 interface ICalFixture {
   id: number;
   date: Date;
@@ -74,30 +179,33 @@ export class ICalService {
 
         if (!startDate) continue;
 
-        const isHomeMatch = location.toLowerCase().includes('anfield');
+        let homeTeamName = 'Liverpool';
+        let awayTeamName = 'TBD';
         
-        let homeTeam = 'Liverpool';
-        let awayTeam = 'TBD';
-        
+        // Parse team names from summary
         if (summary.includes(' - ')) {
           const teams = summary.split(' - ');
           if (teams.length === 2) {
-            homeTeam = teams[0].trim();
-            awayTeam = teams[1].trim();
+            homeTeamName = teams[0].trim();
+            awayTeamName = teams[1].trim();
           }
         } else if (summary.includes(' v ')) {
           const teams = summary.split(' v ');
           if (teams.length === 2) {
-            homeTeam = teams[0].trim();
-            awayTeam = teams[1].trim();
+            homeTeamName = teams[0].trim();
+            awayTeamName = teams[1].trim();
           }
         } else if (summary.includes(' vs ')) {
           const teams = summary.split(' vs ');
           if (teams.length === 2) {
-            homeTeam = teams[0].trim();
-            awayTeam = teams[1].trim();
+            homeTeamName = teams[0].trim();
+            awayTeamName = teams[1].trim();
           }
         }
+        
+        // Get team info with IDs and logos
+        const homeTeam = getTeamInfo(homeTeamName);
+        const awayTeam = getTeamInfo(awayTeamName);
 
         let competition = 'Premier League';
         let competitionId = 39;
@@ -146,14 +254,14 @@ export class ICalService {
             round: 'Regular Season'
           },
           homeTeam: {
-            id: isHomeMatch ? 40 : 0,
-            name: homeTeam,
-            logo: isHomeMatch ? 'https://media.api-sports.io/football/teams/40.png' : ''
+            id: homeTeam.id,
+            name: homeTeam.name,
+            logo: homeTeam.logo
           },
           awayTeam: {
-            id: !isHomeMatch ? 40 : 0,
-            name: awayTeam,
-            logo: !isHomeMatch ? 'https://media.api-sports.io/football/teams/40.png' : ''
+            id: awayTeam.id,
+            name: awayTeam.name,
+            logo: awayTeam.logo
           },
           goals: {
             home: null,
