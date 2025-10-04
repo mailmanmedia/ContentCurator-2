@@ -11,9 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Edit2, Trash2, Film, GripVertical } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Plus, Edit2, Trash2, Film, GripVertical, ChevronsUpDown, Check } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface PresentationSet {
   id: string;
@@ -32,6 +35,21 @@ interface Scene {
   description: string;
   layout: string;
 }
+
+const PRESET_SET_NAMES = [
+  "Match Day Show",
+  "Weekly Roundup",
+  "Transfer News",
+  "Youth Academy Report",
+  "Champions League Special",
+  "Tactical Analysis Series",
+  "Player Profile Series",
+  "Season Review",
+  "Pre-Season Coverage",
+  "Derby Day Special",
+  "Fan Zone",
+  "Training Ground Report",
+];
 
 function SortableSceneItem({ scene, onRemove }: { scene: Scene; onRemove: () => void }) {
   const {
@@ -75,6 +93,7 @@ function SortableSceneItem({ scene, onRemove }: { scene: Scene; onRemove: () => 
 export default function PresentationSetManager() {
   const [selectedSet, setSelectedSet] = useState<PresentationSet | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [nameComboboxOpen, setNameComboboxOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -245,13 +264,54 @@ export default function PresentationSetManager() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name">Set Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Match Day Show"
-                  data-testid="input-set-name"
-                />
+                <Popover open={nameComboboxOpen} onOpenChange={setNameComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={nameComboboxOpen}
+                      className="w-full justify-between"
+                      data-testid="button-set-name-combobox"
+                    >
+                      {formData.name || "Select or type set name..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Search or type name..." 
+                        value={formData.name}
+                        onValueChange={(value) => setFormData({ ...formData, name: value })}
+                        data-testid="input-set-name"
+                      />
+                      <CommandList>
+                        <CommandEmpty>Press Enter to use "{formData.name}"</CommandEmpty>
+                        <CommandGroup heading="Preset Set Names">
+                          {PRESET_SET_NAMES.map((name) => (
+                            <CommandItem
+                              key={name}
+                              value={name}
+                              onSelect={() => {
+                                setFormData({ ...formData, name });
+                                setNameComboboxOpen(false);
+                              }}
+                              data-testid={`option-set-name-${name.toLowerCase().replace(/\s+/g, '-')}`}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.name === name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>

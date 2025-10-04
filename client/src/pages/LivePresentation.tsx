@@ -333,33 +333,31 @@ export default function LivePresentation() {
                       <CardTitle>Scenes</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 max-h-96 overflow-y-auto">
-                      {activeSet && scenes ? (
-                        scenes
-                          .filter(s => activeSet.sceneIds.includes(s.id))
-                          .map(scene => (
-                            <Button
-                              key={scene.id}
-                              variant="outline"
-                              className="w-full justify-start"
-                              onClick={() => handleSetPreview(scene.id)}
-                              disabled={updateStateMutation.isPending}
-                              data-testid={`button-scene-${scene.id}`}
-                            >
-                              <div className="flex-1 text-left">
-                                <div className="font-bold text-sm">{scene.name}</div>
-                                <div className="text-xs text-muted-foreground">{scene.layout}</div>
-                              </div>
-                              {scene.id === liveState?.previewSceneId && (
-                                <Badge variant="secondary">Preview</Badge>
-                              )}
-                              {scene.id === liveState?.programSceneId && (
-                                <Badge>Live</Badge>
-                              )}
-                            </Button>
-                          ))
+                      {scenes && scenes.length > 0 ? (
+                        scenes.map(scene => (
+                          <Button
+                            key={scene.id}
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => handleSetPreview(scene.id)}
+                            disabled={updateStateMutation.isPending}
+                            data-testid={`button-scene-${scene.id}`}
+                          >
+                            <div className="flex-1 text-left">
+                              <div className="font-bold text-sm">{scene.name}</div>
+                              <div className="text-xs text-muted-foreground">{scene.layout}</div>
+                            </div>
+                            {scene.id === liveState?.previewSceneId && (
+                              <Badge variant="secondary">Preview</Badge>
+                            )}
+                            {scene.id === liveState?.programSceneId && (
+                              <Badge>Live</Badge>
+                            )}
+                          </Button>
+                        ))
                       ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">
-                          Load a presentation set to view scenes
+                          No scenes created yet
                         </p>
                       )}
                     </CardContent>

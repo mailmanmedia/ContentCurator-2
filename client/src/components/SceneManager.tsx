@@ -8,11 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Copy, Video, Layers, Box, Sparkles } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Plus, Edit2, Trash2, Copy, Video, Layers, Box, Sparkles, ChevronsUpDown, Check } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SceneLayerEditor from "./SceneLayerEditor";
 import VisualSceneEditor from "./VisualSceneEditor";
+import { cn } from "@/lib/utils";
 
 interface Scene {
   id: string;
@@ -43,10 +46,29 @@ interface SceneElement {
   style?: Record<string, any>;
 }
 
+const PRESET_SCENE_NAMES = [
+  "Pre-Match Analysis",
+  "Live Commentary",
+  "Post-Match Analysis",
+  "Highlights Reel",
+  "Tactical Breakdown",
+  "Player Interview",
+  "Manager Interview",
+  "Stats Dashboard",
+  "Line-Up Display",
+  "Goal Replay",
+  "Match Preview",
+  "Transfer News",
+  "Training Ground",
+  "Fan Reactions",
+  "Press Conference",
+];
+
 export default function SceneManager() {
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [visualEditorSceneId, setVisualEditorSceneId] = useState<string | null>(null);
+  const [nameComboboxOpen, setNameComboboxOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -227,13 +249,54 @@ export default function SceneManager() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name">Scene Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Main Camera"
-                  data-testid="input-scene-name"
-                />
+                <Popover open={nameComboboxOpen} onOpenChange={setNameComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={nameComboboxOpen}
+                      className="w-full justify-between"
+                      data-testid="button-scene-name-combobox"
+                    >
+                      {formData.name || "Select or type scene name..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Search or type name..." 
+                        value={formData.name}
+                        onValueChange={(value) => setFormData({ ...formData, name: value })}
+                        data-testid="input-scene-name"
+                      />
+                      <CommandList>
+                        <CommandEmpty>Press Enter to use "{formData.name}"</CommandEmpty>
+                        <CommandGroup heading="Preset Scene Names">
+                          {PRESET_SCENE_NAMES.map((name) => (
+                            <CommandItem
+                              key={name}
+                              value={name}
+                              onSelect={() => {
+                                setFormData({ ...formData, name });
+                                setNameComboboxOpen(false);
+                              }}
+                              data-testid={`option-scene-name-${name.toLowerCase().replace(/\s+/g, '-')}`}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.name === name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
