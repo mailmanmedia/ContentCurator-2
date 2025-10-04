@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Image, Star, ExternalLink } from "lucide-react";
+import { Image, Star, ExternalLink, Upload } from "lucide-react";
 import LibraryItemPicker from "./LibraryItemPicker";
+import UploadLibraryItemDialog from "./UploadLibraryItemDialog";
 
 interface LibraryItem {
   id: string;
@@ -30,6 +31,7 @@ interface QuickLibraryControlsProps {
 
 export default function QuickLibraryControls({ onItemSelect }: QuickLibraryControlsProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   const { data, isLoading } = useQuery<{ libraryItems: LibraryItem[] }>({
     queryKey: ['/api/library-items'],
@@ -78,15 +80,26 @@ export default function QuickLibraryControls({ onItemSelect }: QuickLibraryContr
               <Image className="w-5 h-5" />
               Quick Library Access
             </CardTitle>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsPickerOpen(true)}
-              data-testid="button-browse-library"
-            >
-              <ExternalLink className="w-3 h-3 mr-1" />
-              Browse
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => setIsUploadOpen(true)}
+                data-testid="button-upload-content"
+              >
+                <Upload className="w-3 h-3 mr-1" />
+                Upload
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsPickerOpen(true)}
+                data-testid="button-browse-library"
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                Browse
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -97,11 +110,12 @@ export default function QuickLibraryControls({ onItemSelect }: QuickLibraryContr
               </p>
               <Button
                 size="sm"
-                variant="outline"
-                onClick={() => setIsPickerOpen(true)}
+                variant="default"
+                onClick={() => setIsUploadOpen(true)}
                 data-testid="button-add-first-library-item"
               >
-                Browse Library
+                <Upload className="w-3 h-3 mr-1" />
+                Upload Content
               </Button>
             </div>
           ) : (
@@ -150,6 +164,11 @@ export default function QuickLibraryControls({ onItemSelect }: QuickLibraryContr
         onOpenChange={setIsPickerOpen}
         onSelect={handleItemSelect}
         title="Browse Library Items"
+      />
+      
+      <UploadLibraryItemDialog
+        open={isUploadOpen}
+        onOpenChange={setIsUploadOpen}
       />
     </>
   );
