@@ -43,6 +43,31 @@ This feature offers a comprehensive team analysis system for YouTube content cre
 #### Advanced Visual Presentation System (Claude Artifact Pattern)
 This system generates broadcast-quality visual content following Claude's artifact creation pattern. It features a 5-tab navigation system, metric cards with glassmorphism effects, progress bars, and a CSS Grid-based football pitch visualization. Styling strictly adheres to Liverpool FC brand colors and uses pure Tailwind CSS. Security architecture includes event delegation, class-based styling, content sanitization, and CSP headers for XSS protection and iframe compatibility.
 
+#### Creative Visual Enhancement System (Oct 2025)
+A comprehensive animation and visual effects system integrated across the platform for modern, engaging user experiences while maintaining professional broadcast standards. All animations use GPU-accelerated CSS transforms for optimal performance.
+
+**Animation Utilities (index.css)**:
+- **Shimmer Effect**: Gradient sweep animation for loading states with Liverpool red branding (`animate-shimmer`)
+- **Pulse Glow**: Breathing scale + opacity effect for live indicators (`animate-pulse-glow`)
+- **Broadcast Pulse**: Box-shadow glow animation for ON AIR badges (`animate-broadcast`)
+- **3D Card Transform**: Perspective tilt effect on hover for feature cards (`card-3d`)
+- **Spring Animations**: Bounce entrance effects with cubic-bezier easing (`animate-spring`)
+- **Slide Animations**: Fade + slide entrance effects (`animate-slide-up`)
+- **Stagger Delays**: Coordinated animation timing (`.stagger-1` through `.stagger-6`)
+- **Glassmorphism**: Enhanced backdrop blur effects (`.glass-strong`)
+
+**Component Enhancements**:
+- **Homepage (VisualAssistant)**: 3D tilt cards, static stat displays (accessibility-first, no value flash)
+- **Live Presentation**: Pulsing live badge with Radio icon, animated ON AIR broadcast badge with dot indicator
+- **Team Matchup Studio**: Smooth bar chart animations (1.2s duration, ease-out easing) via Recharts
+- **Loading States**: Shimmer skeleton with Liverpool red gradient wave effect
+
+**Performance & Accessibility**:
+- All animations use GPU-accelerated transforms (translate, scale, opacity)
+- No layout thrashing or reflow-inducing properties
+- Reduced-motion support available in utility hooks
+- Professional subtlety maintained across all effects
+
 ## External Dependencies
 
 ### AI Integration
