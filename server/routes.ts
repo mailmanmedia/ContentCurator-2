@@ -1724,6 +1724,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Football API Routes for Team Matchup Studio
   
+  // Get static data statistics
+  app.get("/api/football/static-data/stats", async (req, res) => {
+    try {
+      const StaticDataLoader = (await import('./football/staticDataLoader')).default;
+      const stats = StaticDataLoader.getStats();
+      res.json({ stats });
+    } catch (error) {
+      console.error('Error fetching static data stats:', error);
+      res.status(500).json({ error: "Failed to fetch static data stats" });
+    }
+  });
+  
   // Get all competitions
   app.get("/api/football/competitions", async (req, res) => {
     try {
