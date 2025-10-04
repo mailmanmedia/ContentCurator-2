@@ -31,6 +31,8 @@ The homepage displays live database counts for various content types, fetched fr
 #### Football Data Integration
 The system integrates 2025-26 season football data, including team rosters and Champions League participants, for accurate content creation. Database-first fetching is implemented for upcoming and head-to-head fixtures to enhance resilience against API rate limits.
 
+**Liverpool FC Official Calendar Integration (Oct 2025)**: The platform now fetches live fixture data from Liverpool FC's official iCalendar feed (https://ics.fixtur.es/v2/liverpool.ics) using the node-ical library. The iCalService parses 600+ fixtures across all competitions, implements 10-minute caching to reduce external requests, and provides robust error handling (returns 503 when data unavailable instead of empty arrays). Currently displays 37 upcoming fixtures including Liverpool vs Manchester United (Oct 19, 2025). The integration automatically updates with official schedule changes and prevents "TBD" values in the UI.
+
 #### Team Matchup Studio
 This feature offers a comprehensive team analysis system for YouTube content creation, including performance statistics dashboards, interactive performance charts (using Recharts with Liverpool FC palette), squad roster analysis, and AI-powered tactical analysis (using OpenAI's GPT-4o-mini).
 
