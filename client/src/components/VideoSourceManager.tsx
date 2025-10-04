@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -259,6 +259,9 @@ export default function VideoSourceManager() {
               <DialogTitle>
                 {selectedSource ? 'Edit Video Source' : 'Add New Video Source'}
               </DialogTitle>
+              <DialogDescription>
+                {selectedSource ? 'Update the video source configuration and settings.' : 'Configure a new camera, screen share, or media source for your production.'}
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>

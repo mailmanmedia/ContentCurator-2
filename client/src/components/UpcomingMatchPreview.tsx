@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, Shield, TrendingUp, Target, Award, Zap, Globe } from "lucide-react";
 
@@ -410,6 +410,9 @@ export default function UpcomingMatchPreview() {
                 </>
               )}
             </DialogTitle>
+            <DialogDescription className="text-[#1B365D]/80">
+              View current season performance metrics and form.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 pt-4">

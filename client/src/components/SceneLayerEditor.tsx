@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -173,6 +173,9 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingElement ? 'Edit Layer' : 'Add New Layer'}</DialogTitle>
+              <DialogDescription>
+                {editingElement ? 'Modify the layer properties and positioning.' : 'Add a video, image, text, or graphic layer to your scene.'}
+              </DialogDescription>
             </DialogHeader>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-4">
