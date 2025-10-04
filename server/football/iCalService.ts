@@ -1,6 +1,6 @@
 import ical from 'node-ical';
 
-const LIVERPOOL_ICAL_URL = 'http://www.liverpoolfc.com/ical/first-team/fixturelist.ics';
+const LIVERPOOL_ICAL_URL = 'https://ics.fixtur.es/v2/liverpool.ics';
 
 interface ICalFixture {
   id: number;
@@ -43,7 +43,7 @@ export class ICalService {
   private static instance: ICalService;
   private cachedFixtures: ICalFixture[] = [];
   private lastFetchTime: number = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
   private constructor() {}
 
@@ -79,7 +79,13 @@ export class ICalService {
         let homeTeam = 'Liverpool';
         let awayTeam = 'TBD';
         
-        if (summary.includes(' v ')) {
+        if (summary.includes(' - ')) {
+          const teams = summary.split(' - ');
+          if (teams.length === 2) {
+            homeTeam = teams[0].trim();
+            awayTeam = teams[1].trim();
+          }
+        } else if (summary.includes(' v ')) {
           const teams = summary.split(' v ');
           if (teams.length === 2) {
             homeTeam = teams[0].trim();
@@ -160,14 +166,20 @@ export class ICalService {
       }
 
       fixtures.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
+      
       this.cachedFixtures = fixtures;
       this.lastFetchTime = now;
 
       return fixtures;
     } catch (error) {
       console.error('Error fetching Liverpool iCal fixtures:', error);
-      return this.cachedFixtures;
+      
+      if (this.cachedFixtures.length > 0) {
+        console.log('Returning cached fixtures due to fetch error');
+        return this.cachedFixtures;
+      }
+      
+      throw new Error('Failed to fetch Liverpool fixtures and no cached data available');
     }
   }
 

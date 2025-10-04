@@ -1818,7 +1818,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ fixtures });
     } catch (error) {
       console.error('Error fetching Liverpool upcoming fixtures from iCal:', error);
-      res.status(500).json({ error: "Failed to fetch upcoming fixtures" });
+      res.status(503).json({ 
+        error: "Liverpool fixtures temporarily unavailable",
+        message: "Unable to fetch fixture data. Please try again later."
+      });
     }
   });
 
