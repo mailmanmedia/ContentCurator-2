@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueries } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Shield, Users, TrendingUp, Calendar, MapPin, Trophy, Target, Zap, Activity, Award, Timer, AlertCircle } from "lucide-react";
 import { ChartContainer } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -55,49 +56,56 @@ export default function TeamMatchupStudio() {
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('single');
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
 
-  // Fetch competitions
+  // Fetch competitions (rarely changes, long cache)
   const { data: competitionsData, isLoading: competitionsLoading } = useQuery({
     queryKey: ['/api/football/competitions'],
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 60 * 1000, // 30 minutes - competitions don't change often
   });
 
-  // Fetch teams for selected competition
+  // Fetch teams for selected competition (rarely changes, long cache)
   const { data: teamsData, isLoading: teamsLoading } = useQuery({
     queryKey: ['/api/football/competitions', selectedCompetition, 'teams'],
     enabled: !!selectedCompetition,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 minutes - teams don't change often
   });
 
-  // Fetch head-to-head data when two teams are selected
+  // Fetch head-to-head data when two teams are selected (historical data, long cache)
   const { data: headToHeadData, isLoading: headToHeadLoading } = useQuery({
     queryKey: ['/api/football/head-to-head', selectedTeam1, selectedTeam2],
     enabled: !!(selectedTeam1 && selectedTeam2 && analysisMode === 'head_to_head'),
-    staleTime: 10 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hour - historical data changes infrequently
   });
 
-  // Fetch team statistics for single team analysis
-  const { data: teamStatsData, isLoading: statsLoading } = useQuery<{statistics: any}>({
-    queryKey: ['/api/football/teams', selectedTeam1, 'statistics', selectedCompetition, 2025],
-    queryFn: async () => {
-      const response = await fetch(`/api/football/teams/${selectedTeam1}/statistics?leagueId=${selectedCompetition}&season=2025`);
-      if (!response.ok) throw new Error('Failed to fetch statistics');
-      return response.json();
-    },
-    enabled: !!(selectedTeam1 && selectedCompetition && analysisMode === 'single'),
-    staleTime: 10 * 60 * 1000,
+  // Parallel fetch for single team analysis (stats + squad)
+  const singleTeamQueries = useQueries({
+    queries: [
+      {
+        queryKey: ['/api/football/teams', selectedTeam1, 'statistics', selectedCompetition, 2025],
+        queryFn: async () => {
+          const response = await fetch(`/api/football/teams/${selectedTeam1}/statistics?leagueId=${selectedCompetition}&season=2025`);
+          if (!response.ok) throw new Error('Failed to fetch statistics');
+          return response.json();
+        },
+        enabled: !!(selectedTeam1 && selectedCompetition && analysisMode === 'single'),
+        staleTime: 10 * 60 * 1000, // 10 minutes
+      },
+      {
+        queryKey: ['/api/football/teams', selectedTeam1, 'squad', 2025],
+        queryFn: async () => {
+          const response = await fetch(`/api/football/teams/${selectedTeam1}/squad?season=2025`);
+          if (!response.ok) throw new Error('Failed to fetch squad');
+          return response.json();
+        },
+        enabled: !!(selectedTeam1 && analysisMode === 'single'),
+        staleTime: 60 * 60 * 1000, // 1 hour - squad changes infrequently
+      },
+    ],
   });
 
-  // Fetch team squad for single team analysis
-  const { data: teamSquadData, isLoading: squadLoading } = useQuery<{squad: any[]}>({
-    queryKey: ['/api/football/teams', selectedTeam1, 'squad', 2025],
-    queryFn: async () => {
-      const response = await fetch(`/api/football/teams/${selectedTeam1}/squad?season=2025`);
-      if (!response.ok) throw new Error('Failed to fetch squad');
-      return response.json();
-    },
-    enabled: !!(selectedTeam1 && analysisMode === 'single'),
-    staleTime: 15 * 60 * 1000,
-  });
+  const teamStatsData = singleTeamQueries[0]?.data as {statistics: any} | undefined;
+  const teamSquadData = singleTeamQueries[1]?.data as {squad: any[]} | undefined;
+  const statsLoading = singleTeamQueries[0]?.isLoading || false;
+  const squadLoading = singleTeamQueries[1]?.isLoading || false;
 
   // Initialize football data mutation
   const initializeDataMutation = useMutation({
@@ -349,50 +357,112 @@ export default function TeamMatchupStudio() {
 
     const draws = headToHeadFixtures.filter(f => f.goals.home === f.goals.away).length;
 
+    const team1Goals = headToHeadFixtures.reduce((sum, f) => {
+      return sum + (f.homeTeamId === selectedTeam1 ? f.goals.home : f.goals.away);
+    }, 0);
+
+    const team2Goals = headToHeadFixtures.reduce((sum, f) => {
+      return sum + (f.homeTeamId === selectedTeam2 ? f.goals.home : f.goals.away);
+    }, 0);
+
     return (
       <div className="space-y-6">
         {/* Head-to-Head Overview */}
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary" />
-              Head-to-Head Record
+              Head-to-Head Comparison
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Team Headers */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="flex items-center justify-center gap-2 mb-3">
                   {selectedTeam1Data.logo && (
-                    <img src={selectedTeam1Data.logo} alt={selectedTeam1Data.name} className="w-6 h-6" />
+                    <img src={selectedTeam1Data.logo} alt={selectedTeam1Data.name} className="w-10 h-10" />
                   )}
-                  <span className="font-medium">{selectedTeam1Data.name}</span>
+                  <span className="font-league-spartan font-bold text-lg">{selectedTeam1Data.name}</span>
                 </div>
-                <div className="text-2xl font-bold text-primary">{team1Wins}</div>
-                <div className="text-sm text-muted-foreground">Wins</div>
+              </div>
+
+              <div className="text-center flex items-center justify-center">
+                <span className="text-2xl font-bold text-muted-foreground">VS</span>
               </div>
 
               <div className="text-center">
-                <div className="mb-2">
-                  <span className="font-medium">Draws</span>
-                </div>
-                <div className="text-2xl font-bold text-muted-foreground">{draws}</div>
-                <div className="text-sm text-muted-foreground">-</div>
-              </div>
-
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="flex items-center justify-center gap-2 mb-3">
                   {selectedTeam2Data.logo && (
-                    <img src={selectedTeam2Data.logo} alt={selectedTeam2Data.name} className="w-6 h-6" />
+                    <img src={selectedTeam2Data.logo} alt={selectedTeam2Data.name} className="w-10 h-10" />
                   )}
-                  <span className="font-medium">{selectedTeam2Data.name}</span>
+                  <span className="font-league-spartan font-bold text-lg">{selectedTeam2Data.name}</span>
                 </div>
-                <div className="text-2xl font-bold text-primary">{team2Wins}</div>
-                <div className="text-sm text-muted-foreground">Wins</div>
               </div>
             </div>
 
-            <div className="text-center text-sm text-muted-foreground">
+            {/* Statistics Grid */}
+            <div className="space-y-4">
+              {/* Wins */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <div className="text-right">
+                  <span className="text-3xl font-bold text-primary">{team1Wins}</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-sm font-medium text-muted-foreground uppercase">Wins</span>
+                </div>
+                <div className="text-left">
+                  <span className="text-3xl font-bold text-primary">{team2Wins}</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Draws */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-muted-foreground">{draws}</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-sm font-medium text-muted-foreground uppercase">Draws</span>
+                </div>
+                <div className="text-left">
+                  <span className="text-2xl font-bold text-muted-foreground">{draws}</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Goals */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <div className="text-right">
+                  <span className="text-2xl font-bold">{team1Goals}</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-sm font-medium text-muted-foreground uppercase">Goals Scored</span>
+                </div>
+                <div className="text-left">
+                  <span className="text-2xl font-bold">{team2Goals}</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Win Rate */}
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <div className="text-right">
+                  <span className="text-xl font-semibold">{headToHeadFixtures.length > 0 ? Math.round((team1Wins / headToHeadFixtures.length) * 100) : 0}%</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-sm font-medium text-muted-foreground uppercase">Win Rate</span>
+                </div>
+                <div className="text-left">
+                  <span className="text-xl font-semibold">{headToHeadFixtures.length > 0 ? Math.round((team2Wins / headToHeadFixtures.length) * 100) : 0}%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center text-sm text-muted-foreground mt-6 pt-4 border-t">
               Based on last {headToHeadFixtures.length} matches
             </div>
           </CardContent>
@@ -400,11 +470,11 @@ export default function TeamMatchupStudio() {
 
         {/* Recent Matches */}
         {headToHeadFixtures.length > 0 && (
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
-                Recent Matches
+                Match History
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -412,33 +482,48 @@ export default function TeamMatchupStudio() {
                 {headToHeadFixtures.slice(0, 5).map((fixture) => {
                   const homeTeam = teams.find(t => t.id === fixture.homeTeamId);
                   const awayTeam = teams.find(t => t.id === fixture.awayTeamId);
+                  const homeWon = fixture.goals.home > fixture.goals.away;
+                  const awayWon = fixture.goals.away > fixture.goals.home;
+                  const isDraw = fixture.goals.home === fixture.goals.away;
                   
                   return (
-                    <div key={fixture.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
+                    <div 
+                      key={fixture.id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover-elevate transition-all"
+                      data-testid={`fixture-${fixture.id}`}
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`flex items-center gap-2 flex-1 ${homeWon ? 'font-bold' : ''}`}>
                           {homeTeam?.logo && (
-                            <img src={homeTeam.logo} alt={homeTeam.name} className="w-5 h-5" />
+                            <img src={homeTeam.logo} alt={homeTeam.name} className="w-6 h-6" />
                           )}
                           <span className="font-medium">{homeTeam?.name}</span>
+                          {homeWon && <Badge variant="default" className="ml-auto text-xs">W</Badge>}
                         </div>
                         
-                        <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded">
-                          <span className="font-bold">{fixture.goals.home}</span>
-                          <span>-</span>
-                          <span className="font-bold">{fixture.goals.away}</span>
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                          isDraw ? 'bg-muted' : homeWon ? 'bg-primary/10' : 'bg-accent/10'
+                        }`}>
+                          <span className="font-bold text-lg">{fixture.goals.home}</span>
+                          <span className="text-muted-foreground">-</span>
+                          <span className="font-bold text-lg">{fixture.goals.away}</span>
                         </div>
                         
-                        <div className="flex items-center gap-2">
-                          {awayTeam?.logo && (
-                            <img src={awayTeam.logo} alt={awayTeam.name} className="w-5 h-5" />
-                          )}
+                        <div className={`flex items-center gap-2 flex-1 ${awayWon ? 'font-bold' : ''}`}>
+                          {awayWon && <Badge variant="default" className="mr-auto text-xs">W</Badge>}
                           <span className="font-medium">{awayTeam?.name}</span>
+                          {awayTeam?.logo && (
+                            <img src={awayTeam.logo} alt={awayTeam.name} className="w-6 h-6" />
+                          )}
                         </div>
                       </div>
                       
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(fixture.date).toLocaleDateString()}
+                      <div className="text-sm text-muted-foreground ml-4">
+                        {new Date(fixture.date).toLocaleDateString('en-GB', { 
+                          day: 'numeric', 
+                          month: 'short', 
+                          year: 'numeric' 
+                        })}
                       </div>
                     </div>
                   );
@@ -502,8 +587,31 @@ export default function TeamMatchupStudio() {
 
           {/* Advanced Statistics and Squad Analysis */}
           {(statsLoading || squadLoading) ? (
-            <div className="mt-4 p-8 border border-dashed rounded-lg text-center">
-              <div className="animate-pulse">Loading advanced statistics and squad data...</div>
+            <div className="mt-6 space-y-6">
+              <div>
+                <Skeleton className="h-6 w-48 mb-4" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i}>{renderStatCardSkeleton()}</div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Skeleton className="h-6 w-48 mb-4" />
+                <Card className="glass-card">
+                  <CardContent className="p-6">
+                    <Skeleton className="h-[250px] w-full" />
+                  </CardContent>
+                </Card>
+              </div>
+              <div>
+                <Skeleton className="h-6 w-32 mb-4" />
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="mt-6 space-y-6">
@@ -641,9 +749,22 @@ export default function TeamMatchupStudio() {
     );
   };
 
+  // Helper to render skeleton for stat cards
+  const renderStatCardSkeleton = () => (
+    <Card className="glass-card">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Skeleton className="w-4 h-4 rounded" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+        <Skeleton className="h-8 w-16" />
+      </CardContent>
+    </Card>
+  );
+
   // Helper to render stat cards
   const renderStatCard = (label: string, value: string | number, Icon: any) => (
-    <Card className="hover-elevate" data-testid={`stat-${label.toLowerCase().replace(' ', '-')}`}>
+    <Card className="hover-elevate glass-card" data-testid={`stat-${label.toLowerCase().replace(' ', '-')}`}>
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-2">
           <Icon className="w-4 h-4 text-primary" />
@@ -774,11 +895,37 @@ export default function TeamMatchupStudio() {
           <div className="space-y-6">
             {analysisMode === 'head_to_head' && selectedTeam2 ? (
               headToHeadLoading ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <div className="animate-pulse">Loading head-to-head analysis...</div>
-                  </CardContent>
-                </Card>
+                <div className="space-y-6">
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <Skeleton className="h-6 w-48" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="text-center space-y-2">
+                            <Skeleton className="h-6 w-24 mx-auto" />
+                            <Skeleton className="h-8 w-12 mx-auto" />
+                            <Skeleton className="h-4 w-16 mx-auto" />
+                          </div>
+                        ))}
+                      </div>
+                      <Skeleton className="h-4 w-48 mx-auto" />
+                    </CardContent>
+                  </Card>
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <Skeleton className="h-6 w-32" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {[...Array(5)].map((_, i) => (
+                          <Skeleton key={i} className="h-16 w-full" />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               ) : (
                 renderHeadToHeadAnalysis()
               )
