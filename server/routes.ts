@@ -30,6 +30,7 @@ import express from "express";
 import { renderPresentation, wrapWithSecurityHeaders } from "./presentation/renderer";
 import { rssService } from "./rss/rssService";
 import { footballService } from "./football/footballService";
+import { iCalService } from "./football/iCalService";
 import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplates";
 import { renderOBSScene } from "./obs/obsRenderer";
 
@@ -1809,14 +1810,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get Liverpool's upcoming fixtures
+  // Get Liverpool's upcoming fixtures from official iCal feed
   app.get("/api/football/liverpool/upcoming", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 5;
-      const fixtures = await storage.getLiverpoolUpcomingFixtures(limit);
+      const fixtures = await iCalService.getUpcomingFixtures(limit);
       res.json({ fixtures });
     } catch (error) {
-      console.error('Error fetching Liverpool upcoming fixtures:', error);
+      console.error('Error fetching Liverpool upcoming fixtures from iCal:', error);
       res.status(500).json({ error: "Failed to fetch upcoming fixtures" });
     }
   });
