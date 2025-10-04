@@ -1564,17 +1564,22 @@ class FootballService {
         } catch (error) {
           console.error(`Failed to get Liverpool upcoming fixtures:`, error);
           // Return fallback data for next match
+          // Note: This is stale data when Football API is unavailable
+          // TODO: Implement persistent fixture storage with manual updates
+          const fallbackDate = new Date();
+          fallbackDate.setDate(fallbackDate.getDate() + 3); // 3 days from now
+          
           return [{
             id: 999999,
-            date: new Date('2025-10-05T15:00:00Z'),
-            timestamp: 1728140400,
+            date: fallbackDate,
+            timestamp: Math.floor(fallbackDate.getTime() / 1000),
             venue: { id: 550, name: 'Anfield', city: 'Liverpool' },
             status: { long: 'Not Started', short: 'NS', elapsed: 0 },
             league: {
               id: 39,
               name: 'Premier League',
               logo: 'https://media.api-sports.io/football/leagues/39.png',
-              round: 'Regular Season - 8'
+              round: 'Regular Season - TBD'
             },
             homeTeam: {
               id: 40,
