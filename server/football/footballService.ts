@@ -1307,7 +1307,35 @@ class FootballService {
   }
 
   async getHeadToHeadStats(homeTeamId: number, awayTeamId: number, last: number = 10): Promise<FootballFixture[]> {
-    // Use smart cache's optimized head-to-head method
+    // PHASE 1: Query database first for persistent H2H fixtures
+    try {
+      const dbFixtures = await db
+        .select()
+        .from(footballFixtures)
+        .where(
+          or(
+            and(
+              eq(footballFixtures.homeTeamId, homeTeamId),
+              eq(footballFixtures.awayTeamId, awayTeamId)
+            ),
+            and(
+              eq(footballFixtures.homeTeamId, awayTeamId),
+              eq(footballFixtures.awayTeamId, homeTeamId)
+            )
+          )
+        )
+        .orderBy(desc(footballFixtures.date))
+        .limit(last);
+
+      if (dbFixtures.length > 0) {
+        console.log(`Found ${dbFixtures.length} H2H fixtures in database`);
+        return dbFixtures;
+      }
+    } catch (dbError) {
+      console.error('Database H2H query failed, falling back to cache/API:', dbError);
+    }
+
+    // PHASE 2: If no database fixtures, try cache/API
     return await smartFootballCache.getHeadToHead(homeTeamId, awayTeamId, () => 
       this.fetchHeadToHeadRaw(homeTeamId, awayTeamId, last)
     );
