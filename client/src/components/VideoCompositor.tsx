@@ -20,6 +20,9 @@ interface OverlayConfig {
   position: 'top' | 'bottom';
   height: number;
   visible: boolean;
+  fontFamily: string;
+  scrollSpeed: number;
+  scrollDirection: 'left' | 'right' | 'up' | 'down';
 }
 
 interface VideoCompositorProps {
@@ -224,23 +227,60 @@ export default function VideoCompositor({
         ctx.fillRect(0, yPosition, canvas.width, overlay.height);
 
         ctx.fillStyle = overlay.textColor;
-        ctx.font = `bold ${overlay.fontSize}px Arial, sans-serif`;
+        ctx.font = `bold ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
         ctx.textBaseline = 'middle';
 
         if (overlay.animationType === 'scroll') {
-          let scrollX = scrollPositions.current.get(overlay.id) || canvas.width;
+          const scrollSpeed = overlay.scrollSpeed / 10;
+          const isVertical = overlay.scrollDirection === 'up' || overlay.scrollDirection === 'down';
           
-          ctx.textAlign = 'left';
-          ctx.fillText(overlay.text, scrollX, yPosition + overlay.height / 2);
-          
-          const textWidth = ctx.measureText(overlay.text).width;
-          scrollX -= 2;
-          
-          if (scrollX < -textWidth - 50) {
-            scrollX = canvas.width;
+          if (isVertical) {
+            let scrollY = scrollPositions.current.get(overlay.id);
+            if (scrollY === undefined) {
+              scrollY = overlay.scrollDirection === 'down' ? -overlay.height : canvas.height;
+            }
+            
+            ctx.textAlign = 'center';
+            ctx.fillText(overlay.text, canvas.width / 2, scrollY + overlay.height / 2);
+            
+            const textHeight = overlay.fontSize * 1.2;
+            if (overlay.scrollDirection === 'up') {
+              scrollY -= scrollSpeed;
+              if (scrollY < -textHeight - 50) {
+                scrollY = canvas.height;
+              }
+            } else {
+              scrollY += scrollSpeed;
+              if (scrollY > canvas.height + 50) {
+                scrollY = -overlay.height;
+              }
+            }
+            
+            scrollPositions.current.set(overlay.id, scrollY);
+          } else {
+            let scrollX = scrollPositions.current.get(overlay.id);
+            if (scrollX === undefined) {
+              scrollX = overlay.scrollDirection === 'right' ? -canvas.width : canvas.width;
+            }
+            
+            ctx.textAlign = 'left';
+            ctx.fillText(overlay.text, scrollX, yPosition + overlay.height / 2);
+            
+            const textWidth = ctx.measureText(overlay.text).width;
+            if (overlay.scrollDirection === 'left') {
+              scrollX -= scrollSpeed;
+              if (scrollX < -textWidth - 50) {
+                scrollX = canvas.width;
+              }
+            } else {
+              scrollX += scrollSpeed;
+              if (scrollX > canvas.width + 50) {
+                scrollX = -textWidth;
+              }
+            }
+            
+            scrollPositions.current.set(overlay.id, scrollX);
           }
-          
-          scrollPositions.current.set(overlay.id, scrollX);
         } else if (overlay.animationType === 'fade') {
           let fadeTime = fadeStates.current.get(overlay.id) || 0;
           fadeTime += 0.02;

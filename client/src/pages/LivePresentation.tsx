@@ -51,6 +51,7 @@ import {
   RectangleHorizontal
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Slider } from "@/components/ui/slider";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import VideoCompositor from "@/components/VideoCompositor";
@@ -93,6 +94,9 @@ interface OverlayConfig {
   position: 'top' | 'bottom';
   height: number;
   visible: boolean;
+  fontFamily: string;
+  scrollSpeed: number;
+  scrollDirection: 'left' | 'right' | 'up' | 'down';
 }
 
 const sourceTypeIcons = {
@@ -109,6 +113,9 @@ const TEMPLATE_PRESETS = {
     height: 70,
     animationType: 'scroll' as const,
     position: 'bottom' as const,
+    fontFamily: 'League Spartan',
+    scrollSpeed: 50,
+    scrollDirection: 'left' as const,
   },
   'live-updates': {
     name: 'Live Updates',
@@ -118,6 +125,9 @@ const TEMPLATE_PRESETS = {
     height: 70,
     animationType: 'scroll' as const,
     position: 'bottom' as const,
+    fontFamily: 'League Spartan',
+    scrollSpeed: 50,
+    scrollDirection: 'left' as const,
   },
   'match-info': {
     name: 'Match Info',
@@ -127,6 +137,9 @@ const TEMPLATE_PRESETS = {
     height: 80,
     animationType: 'fade' as const,
     position: 'top' as const,
+    fontFamily: 'League Spartan',
+    scrollSpeed: 50,
+    scrollDirection: 'left' as const,
   },
 };
 
@@ -230,6 +243,9 @@ export default function LivePresentation() {
   const [overlayText, setOverlayText] = useState('');
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof TEMPLATE_PRESETS>('breaking-news');
   const [overlayPosition, setOverlayPosition] = useState<'top' | 'bottom'>('bottom');
+  const [overlayFontFamily, setOverlayFontFamily] = useState('League Spartan');
+  const [overlayScrollSpeed, setOverlayScrollSpeed] = useState(50);
+  const [overlayScrollDirection, setOverlayScrollDirection] = useState<'left' | 'right' | 'up' | 'down'>('left');
   const [selectedValue, setSelectedValue] = useState<string>('');
   const [editingOverlayId, setEditingOverlayId] = useState<string | null>(null);
   const [outputResolution, setOutputResolution] = useState({ width: 1920, height: 1080 });
@@ -242,12 +258,20 @@ export default function LivePresentation() {
   useEffect(() => {
     const detectCameras = async () => {
       try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
+        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        
+        tempStream.getTracks().forEach(track => track.stop());
+        
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
         setCameras(videoDevices);
       } catch (err) {
         console.error('Camera detection error:', err);
+        toast({
+          title: "Camera Access Required",
+          description: "Please allow camera access to see available cameras.",
+          variant: "destructive"
+        });
       }
     };
 
@@ -257,7 +281,7 @@ export default function LivePresentation() {
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', detectCameras);
     };
-  }, []);
+  }, [toast]);
 
   const handleSourceSelection = async (value: string) => {
     setSelectedValue('');
@@ -269,6 +293,9 @@ export default function LivePresentation() {
       setOverlayText('');
       setSelectedPreset('breaking-news');
       setOverlayPosition('bottom');
+      setOverlayFontFamily('League Spartan');
+      setOverlayScrollSpeed(50);
+      setOverlayScrollDirection('left');
       setIsOverlayDialogOpen(true);
     } else if (value.startsWith('camera-')) {
       const deviceId = value.replace('camera-', '');
@@ -352,6 +379,9 @@ export default function LivePresentation() {
               height: preset.height,
               animationType: preset.animationType,
               position: overlayPosition,
+              fontFamily: overlayFontFamily,
+              scrollSpeed: overlayScrollSpeed,
+              scrollDirection: overlayScrollDirection,
             }
           : overlay
       ));
@@ -368,6 +398,9 @@ export default function LivePresentation() {
         position: overlayPosition,
         height: preset.height,
         visible: true,
+        fontFamily: overlayFontFamily,
+        scrollSpeed: overlayScrollSpeed,
+        scrollDirection: overlayScrollDirection,
       };
 
       setOverlays(prev => [...prev, newOverlay]);
@@ -401,6 +434,9 @@ export default function LivePresentation() {
     setEditingOverlayId(overlay.id);
     setOverlayText(overlay.text);
     setOverlayPosition(overlay.position);
+    setOverlayFontFamily(overlay.fontFamily);
+    setOverlayScrollSpeed(overlay.scrollSpeed);
+    setOverlayScrollDirection(overlay.scrollDirection);
     
     const presetKey = Object.entries(TEMPLATE_PRESETS).find(([_, preset]) => 
       preset.backgroundColor === overlay.backgroundColor &&
@@ -911,6 +947,64 @@ export default function LivePresentation() {
                   <Label htmlFor="position-bottom" className="font-normal cursor-pointer">
                     Bottom of screen (Ticker style)
                   </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label htmlFor="font-family">Font Family</Label>
+              <Select value={overlayFontFamily} onValueChange={setOverlayFontFamily}>
+                <SelectTrigger id="font-family" data-testid="select-overlay-font">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="League Spartan">League Spartan (Bold)</SelectItem>
+                  <SelectItem value="Libre Franklin">Libre Franklin</SelectItem>
+                  <SelectItem value="JetBrains Mono">JetBrains Mono</SelectItem>
+                  <SelectItem value="Arial">Arial</SelectItem>
+                  <SelectItem value="Georgia">Georgia</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="scroll-speed">Scroll Speed: {overlayScrollSpeed}</Label>
+              <Slider
+                id="scroll-speed"
+                min={1}
+                max={100}
+                step={1}
+                value={[overlayScrollSpeed]}
+                onValueChange={(vals) => setOverlayScrollSpeed(vals[0])}
+                data-testid="slider-scroll-speed"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                1 = Very Slow, 50 = Medium, 100 = Very Fast
+              </p>
+            </div>
+
+            <div>
+              <Label>Scroll Direction</Label>
+              <RadioGroup 
+                value={overlayScrollDirection} 
+                onValueChange={(v) => setOverlayScrollDirection(v as 'left' | 'right' | 'up' | 'down')}
+                className="grid grid-cols-2 gap-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="left" id="dir-left" data-testid="radio-direction-left" />
+                  <Label htmlFor="dir-left" className="font-normal cursor-pointer">← Left</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="right" id="dir-right" data-testid="radio-direction-right" />
+                  <Label htmlFor="dir-right" className="font-normal cursor-pointer">Right →</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="up" id="dir-up" data-testid="radio-direction-up" />
+                  <Label htmlFor="dir-up" className="font-normal cursor-pointer">↑ Up</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="down" id="dir-down" data-testid="radio-direction-down" />
+                  <Label htmlFor="dir-down" className="font-normal cursor-pointer">Down ↓</Label>
                 </div>
               </RadioGroup>
             </div>
