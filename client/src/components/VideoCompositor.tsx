@@ -56,7 +56,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const animationFrameRef = useRef<number>();
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
-  const { acquireStream, releaseStream, hasStream } = useCameraStreams();
+  const { acquireStream, acquireScreenShare, releaseStream } = useCameraStreams();
 
   const { data: sceneData } = useQuery<{ scene: Scene }>({
     queryKey: [`/api/presentation/scenes/${sceneId}`],
@@ -81,7 +81,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
     refetchInterval: 60000, // Refetch every minute
   });
 
-  // Initialize video elements for camera sources using global camera manager
+  // Initialize video elements for camera and screen sources using global stream manager
   useEffect(() => {
     if (!videoSources) return;
 
@@ -90,13 +90,13 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
       
       // Identify which sources we need
       for (const source of videoSources) {
-        if (source.sourceType === 'camera' && source.deviceId && source.isActive && source.isConnected) {
+        if ((source.sourceType === 'camera' || source.sourceType === 'screen') && source.isActive && source.isConnected) {
           neededSourceIds.add(source.id);
         }
       }
 
       // Release streams we no longer need
-      for (const [sourceId, stream] of Array.from(streamsRefMap.current.entries())) {
+      for (const [sourceId] of Array.from(streamsRefMap.current.entries())) {
         if (!neededSourceIds.has(sourceId)) {
           releaseStream(sourceId);
           streamsRefMap.current.delete(sourceId);
@@ -105,14 +105,17 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
 
       // Acquire new streams we don't have yet
       for (const source of videoSources) {
-        if (source.sourceType === 'camera' && source.deviceId && source.isActive && source.isConnected) {
-          if (!streamsRefMap.current.has(source.id)) {
-            try {
+        if (source.isActive && source.isConnected && !streamsRefMap.current.has(source.id)) {
+          try {
+            if (source.sourceType === 'camera' && source.deviceId) {
               const stream = await acquireStream(source.id, source.deviceId);
               streamsRefMap.current.set(source.id, stream);
-            } catch (err) {
-              console.error(`Failed to get camera stream for ${source.name}:`, err);
+            } else if (source.sourceType === 'screen') {
+              const stream = await acquireScreenShare(source.id);
+              streamsRefMap.current.set(source.id, stream);
             }
+          } catch (err) {
+            console.error(`Failed to get stream for ${source.name}:`, err);
           }
         }
       }
@@ -122,7 +125,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
     };
 
     initializeStreams();
-  }, [videoSources, acquireStream, releaseStream]);
+  }, [videoSources, acquireStream, acquireScreenShare, releaseStream]);
 
   // Cleanup on unmount
   useEffect(() => {

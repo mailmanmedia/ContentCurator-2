@@ -1,7 +1,8 @@
-import { createContext, useContext, useRef, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useRef, useCallback, useMemo, ReactNode } from 'react';
 
 interface CameraStreamContextType {
   acquireStream: (sourceId: string, deviceId: string) => Promise<MediaStream>;
+  acquireScreenShare: (sourceId: string) => Promise<MediaStream>;
   releaseStream: (sourceId: string) => void;
   releaseAllStreams: () => void;
   hasStream: (sourceId: string) => boolean;
@@ -61,6 +62,45 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
     }
   }, []);
 
+  const acquireScreenShare = useCallback(async (sourceId: string): Promise<MediaStream> => {
+    const existing = streamsRef.current.get(sourceId);
+    if (existing) {
+      if (existing.stream.active) {
+        existing.refCount++;
+        return existing.stream;
+      } else {
+        streamsRef.current.delete(sourceId);
+        requestsRef.current.delete(sourceId);
+      }
+    }
+
+    if (requestsRef.current.has(sourceId)) {
+      const stream = await requestsRef.current.get(sourceId)!;
+      const info = streamsRef.current.get(sourceId);
+      if (info) {
+        info.refCount++;
+      }
+      return stream;
+    }
+
+    const streamRequest = navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: false,
+    });
+
+    requestsRef.current.set(sourceId, streamRequest);
+
+    try {
+      const stream = await streamRequest;
+      streamsRef.current.set(sourceId, { stream, refCount: 1 });
+      requestsRef.current.delete(sourceId);
+      return stream;
+    } catch (error) {
+      requestsRef.current.delete(sourceId);
+      throw error;
+    }
+  }, []);
+
   const releaseStream = useCallback((sourceId: string) => {
     const info = streamsRef.current.get(sourceId);
     if (info) {
@@ -85,12 +125,13 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
     return streamsRef.current.has(sourceId);
   }, []);
 
-  const value: CameraStreamContextType = {
+  const value: CameraStreamContextType = useMemo(() => ({
     acquireStream,
+    acquireScreenShare,
     releaseStream,
     releaseAllStreams,
     hasStream,
-  };
+  }), [acquireStream, acquireScreenShare, releaseStream, releaseAllStreams, hasStream]);
 
   return (
     <CameraStreamContext.Provider value={value}>
