@@ -2903,7 +2903,7 @@ Return ONLY a JSON object with this structure:
   app.get("/api/live/state", async (req, res) => {
     try {
       const liveState = await storage.getLiveState();
-      res.json({ liveState });
+      res.json(liveState);
     } catch (error) {
       console.error('Error fetching live state:', error);
       res.status(500).json({ error: "Failed to fetch live state" });
@@ -2936,7 +2936,7 @@ Return ONLY a JSON object with this structure:
       // Broadcast the update to all connected SSE clients
       liveSSEManager.broadcast('state-update', liveState);
       
-      res.json({ liveState });
+      res.json(liveState);
     } catch (error) {
       console.error('Error updating live state:', error);
       if (error instanceof z.ZodError) {
