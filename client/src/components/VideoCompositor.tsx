@@ -39,6 +39,16 @@ interface VideoCompositorProps {
   className?: string;
 }
 
+const loadImage = (src: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+};
+
 export default function VideoCompositor({ 
   activeSources = [], 
   outputResolution = { width: 1920, height: 1080 },
@@ -49,6 +59,7 @@ export default function VideoCompositor({
 }: VideoCompositorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const loadedImages = useRef<Map<string, HTMLImageElement>>(new Map());
   const animationFrameRef = useRef<number>();
   const scrollPositions = useRef<Map<string, number>>(new Map());
   const fadeStates = useRef<Map<string, number>>(new Map());
@@ -142,6 +153,18 @@ export default function VideoCompositor({
       }
     });
 
+    const currentImageSources = new Set(
+      overlays
+        .filter(o => o.overlayType === 'image')
+        .map(o => o.imageData || o.imageUrl)
+        .filter(Boolean)
+    );
+    Array.from(loadedImages.current.keys()).forEach(src => {
+      if (!currentImageSources.has(src)) {
+        loadedImages.current.delete(src);
+      }
+    });
+
     const render = () => {
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -216,93 +239,144 @@ export default function VideoCompositor({
         });
       }
 
+      const hexToRgba = (hex: string, alpha: number = 1) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
+
       overlays.forEach(overlay => {
         if (!overlay.visible) return;
 
         const yPosition = overlay.position === 'top' ? 0 : canvas.height - overlay.height;
 
-        const hexToRgba = (hex: string, alpha: number = 1) => {
-          const r = parseInt(hex.slice(1, 3), 16);
-          const g = parseInt(hex.slice(3, 5), 16);
-          const b = parseInt(hex.slice(5, 7), 16);
-          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        };
+        if (overlay.overlayType === 'image') {
+          const imageSrc = overlay.imageData || overlay.imageUrl;
+          if (!imageSrc) return;
 
-        ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
-        ctx.fillRect(0, yPosition, canvas.width, overlay.height);
-
-        ctx.fillStyle = overlay.textColor;
-        const fontWeight = overlay.isBold ? 'bold' : 'normal';
-        const fontStyle = overlay.isItalic ? 'italic' : 'normal';
-        ctx.font = `${fontStyle} ${fontWeight} ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
-        ctx.textBaseline = 'middle';
-
-        if (overlay.animationType === 'scroll') {
-          const scrollSpeed = overlay.scrollSpeed / 10;
-          const isVertical = overlay.scrollDirection === 'up' || overlay.scrollDirection === 'down';
+          let img = loadedImages.current.get(imageSrc);
           
-          if (isVertical) {
-            let scrollY = scrollPositions.current.get(overlay.id);
-            if (scrollY === undefined) {
-              scrollY = overlay.scrollDirection === 'down' ? -overlay.height : canvas.height;
+          if (!img) {
+            loadImage(imageSrc)
+              .then(loadedImg => {
+                loadedImages.current.set(imageSrc, loadedImg);
+              })
+              .catch(error => {
+                console.error('Failed to load overlay image:', error);
+              });
+            return;
+          }
+
+          const overlayWidth = canvas.width;
+          const overlayHeight = overlay.height;
+          
+          const imgAspect = img.width / img.height;
+          const overlayAspect = overlayWidth / overlayHeight;
+          
+          let drawWidth, drawHeight, drawX, drawY;
+          
+          if (imgAspect > overlayAspect) {
+            drawWidth = overlayWidth;
+            drawHeight = overlayWidth / imgAspect;
+            drawX = 0;
+            drawY = (overlayHeight - drawHeight) / 2;
+          } else {
+            drawHeight = overlayHeight;
+            drawWidth = overlayHeight * imgAspect;
+            drawX = (overlayWidth - drawWidth) / 2;
+            drawY = 0;
+          }
+
+          if (overlay.backgroundColor) {
+            ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
+            ctx.fillRect(0, yPosition, overlayWidth, overlayHeight);
+          }
+
+          ctx.drawImage(
+            img,
+            drawX,
+            yPosition + drawY,
+            drawWidth,
+            drawHeight
+          );
+        } else {
+          ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
+          ctx.fillRect(0, yPosition, canvas.width, overlay.height);
+
+          ctx.fillStyle = overlay.textColor;
+          const fontWeight = overlay.isBold ? 'bold' : 'normal';
+          const fontStyle = overlay.isItalic ? 'italic' : 'normal';
+          ctx.font = `${fontStyle} ${fontWeight} ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
+          ctx.textBaseline = 'middle';
+
+          if (overlay.animationType === 'scroll') {
+            const scrollSpeed = overlay.scrollSpeed / 10;
+            const isVertical = overlay.scrollDirection === 'up' || overlay.scrollDirection === 'down';
+            
+            if (isVertical) {
+              let scrollY = scrollPositions.current.get(overlay.id);
+              if (scrollY === undefined) {
+                scrollY = overlay.scrollDirection === 'down' ? -overlay.height : canvas.height;
+              }
+              
+              ctx.textAlign = 'center';
+              ctx.fillText(overlay.text, canvas.width / 2, scrollY + overlay.height / 2);
+              
+              const textHeight = overlay.fontSize * 1.2;
+              if (overlay.scrollDirection === 'up') {
+                scrollY -= scrollSpeed;
+                if (scrollY < -textHeight - 50) {
+                  scrollY = canvas.height;
+                }
+              } else {
+                scrollY += scrollSpeed;
+                if (scrollY > canvas.height + 50) {
+                  scrollY = -overlay.height;
+                }
+              }
+              
+              scrollPositions.current.set(overlay.id, scrollY);
+            } else {
+              let scrollX = scrollPositions.current.get(overlay.id);
+              if (scrollX === undefined) {
+                scrollX = overlay.scrollDirection === 'right' ? -canvas.width : canvas.width;
+              }
+              
+              ctx.textAlign = 'left';
+              ctx.fillText(overlay.text, scrollX, yPosition + overlay.height / 2);
+              
+              const textWidth = ctx.measureText(overlay.text).width;
+              if (overlay.scrollDirection === 'left') {
+                scrollX -= scrollSpeed;
+                if (scrollX < -textWidth - 50) {
+                  scrollX = canvas.width;
+                }
+              } else {
+                scrollX += scrollSpeed;
+                if (scrollX > canvas.width + 50) {
+                  scrollX = -textWidth;
+                }
+              }
+              
+              scrollPositions.current.set(overlay.id, scrollX);
             }
+          } else if (overlay.animationType === 'fade') {
+            let fadeTime = fadeStates.current.get(overlay.id) || 0;
+            fadeTime += 0.02;
+            
+            const opacity = (Math.sin(fadeTime) + 1) / 2;
+            ctx.globalAlpha = opacity * 0.5 + 0.5;
             
             ctx.textAlign = 'center';
-            ctx.fillText(overlay.text, canvas.width / 2, scrollY + overlay.height / 2);
+            ctx.fillText(overlay.text, canvas.width / 2, yPosition + overlay.height / 2);
+            ctx.globalAlpha = 1;
             
-            const textHeight = overlay.fontSize * 1.2;
-            if (overlay.scrollDirection === 'up') {
-              scrollY -= scrollSpeed;
-              if (scrollY < -textHeight - 50) {
-                scrollY = canvas.height;
-              }
-            } else {
-              scrollY += scrollSpeed;
-              if (scrollY > canvas.height + 50) {
-                scrollY = -overlay.height;
-              }
-            }
-            
-            scrollPositions.current.set(overlay.id, scrollY);
+            fadeStates.current.set(overlay.id, fadeTime);
           } else {
-            let scrollX = scrollPositions.current.get(overlay.id);
-            if (scrollX === undefined) {
-              scrollX = overlay.scrollDirection === 'right' ? -canvas.width : canvas.width;
-            }
-            
-            ctx.textAlign = 'left';
-            ctx.fillText(overlay.text, scrollX, yPosition + overlay.height / 2);
-            
-            const textWidth = ctx.measureText(overlay.text).width;
-            if (overlay.scrollDirection === 'left') {
-              scrollX -= scrollSpeed;
-              if (scrollX < -textWidth - 50) {
-                scrollX = canvas.width;
-              }
-            } else {
-              scrollX += scrollSpeed;
-              if (scrollX > canvas.width + 50) {
-                scrollX = -textWidth;
-              }
-            }
-            
-            scrollPositions.current.set(overlay.id, scrollX);
+            ctx.textAlign = 'center';
+            ctx.fillText(overlay.text, canvas.width / 2, yPosition + overlay.height / 2);
           }
-        } else if (overlay.animationType === 'fade') {
-          let fadeTime = fadeStates.current.get(overlay.id) || 0;
-          fadeTime += 0.02;
-          
-          const opacity = (Math.sin(fadeTime) + 1) / 2;
-          ctx.globalAlpha = opacity * 0.5 + 0.5;
-          
-          ctx.textAlign = 'center';
-          ctx.fillText(overlay.text, canvas.width / 2, yPosition + overlay.height / 2);
-          ctx.globalAlpha = 1;
-          
-          fadeStates.current.set(overlay.id, fadeTime);
-        } else {
-          ctx.textAlign = 'center';
-          ctx.fillText(overlay.text, canvas.width / 2, yPosition + overlay.height / 2);
         }
       });
 
