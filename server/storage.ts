@@ -1009,6 +1009,12 @@ export class MemStorage implements IStorage {
       isActive: insertVersion.isActive ?? true,
       downloadCount: insertVersion.downloadCount || '0',
       fileSize: insertVersion.fileSize || null,
+      sourceType: insertVersion.sourceType || 'manual',
+      sourceFileName: insertVersion.sourceFileName || null,
+      sourceFileUrl: insertVersion.sourceFileUrl || null,
+      processingStatus: insertVersion.processingStatus || 'completed',
+      extractedText: insertVersion.extractedText || null,
+      extractionError: insertVersion.extractionError || null,
       createdAt: new Date()
     };
     this.frameworkVersions.set(id, version);
@@ -1700,8 +1706,12 @@ export class MemStorage implements IStorage {
   async createSourceTemplate(template: InsertSourceTemplate): Promise<SourceTemplate> {
     const newTemplate: SourceTemplate = {
       id: randomUUID(),
-      ...template,
-      usageCount: template.usageCount ?? 0,
+      name: template.name,
+      description: template.description ?? null,
+      sourceType: template.sourceType,
+      configJson: template.configJson ?? {},
+      isDefault: template.isDefault ?? false,
+      tags: template.tags ?? [],
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -1743,8 +1753,12 @@ export class MemStorage implements IStorage {
   async createSetTemplate(template: InsertSetTemplate): Promise<SetTemplate> {
     const newTemplate: SetTemplate = {
       id: randomUUID(),
-      ...template,
-      usageCount: template.usageCount ?? 0,
+      name: template.name,
+      description: template.description ?? null,
+      sceneTemplateIds: template.sceneTemplateIds ?? [],
+      configJson: template.configJson ?? {},
+      isDefault: template.isDefault ?? false,
+      tags: template.tags ?? [],
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -1786,7 +1800,8 @@ export class MemStorage implements IStorage {
   async createSourceNamePreset(preset: InsertSourceNamePreset): Promise<SourceNamePreset> {
     const newPreset: SourceNamePreset = {
       id: randomUUID(),
-      ...preset,
+      name: preset.name,
+      category: preset.category || 'Custom',
       usageCount: preset.usageCount ?? 0,
       createdAt: new Date()
     };
