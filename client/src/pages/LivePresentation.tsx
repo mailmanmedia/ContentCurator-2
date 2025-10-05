@@ -48,7 +48,9 @@ import {
   Pencil,
   Trash2,
   Settings,
-  RectangleHorizontal
+  RectangleHorizontal,
+  Upload,
+  Images
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
@@ -57,6 +59,7 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import VideoCompositor from "@/components/VideoCompositor";
 import { useCameraStreams } from "@/contexts/CameraStreamContext";
+import { useQuery } from "@tanstack/react-query";
 import {
   DndContext,
   closestCenter,
@@ -84,6 +87,14 @@ interface ActiveSource {
   stream?: MediaStream;
 }
 
+interface LibraryImage {
+  id: number;
+  filename: string;
+  filepath: string;
+  url: string;
+  thumbnail: string;
+}
+
 interface OverlayConfig {
   id: string;
   text: string;
@@ -100,6 +111,9 @@ interface OverlayConfig {
   scrollDirection: 'left' | 'right' | 'up' | 'down';
   isBold: boolean;
   isItalic: boolean;
+  overlayType: 'text' | 'image';
+  imageUrl?: string;
+  imageData?: string;
 }
 
 const sourceTypeIcons = {
@@ -121,6 +135,7 @@ const TEMPLATE_PRESETS = {
     scrollDirection: 'left' as const,
     isBold: true,
     isItalic: false,
+    overlayType: 'text' as const,
   },
   'live-updates': {
     name: 'Live Updates',
@@ -135,6 +150,7 @@ const TEMPLATE_PRESETS = {
     scrollDirection: 'left' as const,
     isBold: true,
     isItalic: false,
+    overlayType: 'text' as const,
   },
   'match-info': {
     name: 'Match Info',
@@ -149,6 +165,7 @@ const TEMPLATE_PRESETS = {
     scrollDirection: 'left' as const,
     isBold: true,
     isItalic: false,
+    overlayType: 'text' as const,
   },
 };
 
@@ -263,9 +280,18 @@ export default function LivePresentation() {
   const [outputResolution, setOutputResolution] = useState({ width: 1920, height: 1080 });
   const [globalFitMode, setGlobalFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
   const [sourceFitModes, setSourceFitModes] = useState<Record<string, 'contain' | 'cover' | 'fill'>>({});
+  const [overlayImageUrl, setOverlayImageUrl] = useState('');
+  const [overlayImageData, setOverlayImageData] = useState('');
+  const [overlayType, setOverlayType] = useState<'text' | 'image'>('text');
+  const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
+
+  const { data: libraryImages, isLoading: isLoadingImages } = useQuery<LibraryImage[]>({
+    queryKey: ['/api/images'],
+    enabled: isLibraryPickerOpen,
+  });
 
   useEffect(() => {
     const detectCameras = async () => {
@@ -311,6 +337,9 @@ export default function LivePresentation() {
       setOverlayIsItalic(false);
       setOverlayScrollSpeed(50);
       setOverlayScrollDirection('left');
+      setOverlayImageUrl('');
+      setOverlayImageData('');
+      setOverlayType('text');
       setIsOverlayDialogOpen(true);
     } else if (value.startsWith('camera-')) {
       const deviceId = value.replace('camera-', '');
@@ -371,8 +400,57 @@ export default function LivePresentation() {
     }
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please upload a PNG, JPG, JPEG, GIF, or WEBP image',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setOverlayImageData(base64);
+      setOverlayType('image');
+      setOverlayImageUrl('');
+      toast({
+        title: 'Image uploaded',
+        description: file.name
+      });
+    };
+    reader.readAsDataURL(file);
+    
+    event.target.value = '';
+  };
+
+  const handleLibraryImageSelect = (imageUrl: string) => {
+    setOverlayImageUrl(imageUrl);
+    setOverlayType('image');
+    setOverlayImageData('');
+    setIsLibraryPickerOpen(false);
+    toast({
+      title: 'Library image selected'
+    });
+  };
+
+  const handleRemoveImage = () => {
+    setOverlayImageUrl('');
+    setOverlayImageData('');
+    setOverlayType('text');
+    toast({
+      title: 'Image removed'
+    });
+  };
+
   const handleAddOverlay = () => {
-    if (!overlayText.trim()) {
+    if (!overlayText.trim() && overlayType === 'text') {
       toast({ 
         title: 'Enter overlay text', 
         variant: 'destructive' 
@@ -399,6 +477,9 @@ export default function LivePresentation() {
               scrollDirection: overlayScrollDirection,
               isBold: overlayIsBold,
               isItalic: overlayIsItalic,
+              overlayType: overlayType,
+              imageUrl: overlayImageUrl || undefined,
+              imageData: overlayImageData || undefined,
             }
           : overlay
       ));
@@ -420,6 +501,9 @@ export default function LivePresentation() {
         scrollDirection: overlayScrollDirection,
         isBold: overlayIsBold,
         isItalic: overlayIsItalic,
+        overlayType: overlayType,
+        imageUrl: overlayImageUrl || undefined,
+        imageData: overlayImageData || undefined,
       };
 
       setOverlays(prev => [...prev, newOverlay]);
@@ -428,6 +512,9 @@ export default function LivePresentation() {
     
     setIsOverlayDialogOpen(false);
     setOverlayText('');
+    setOverlayImageUrl('');
+    setOverlayImageData('');
+    setOverlayType('text');
     setEditingOverlayId(null);
   };
 
@@ -1030,6 +1117,65 @@ export default function LivePresentation() {
               </div>
             </div>
 
+            <div className="pt-4 border-t space-y-3">
+              <Label>Image Overlay (Optional)</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => document.getElementById('overlay-image-input')?.click()}
+                  data-testid="button-upload-overlay-image"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Image
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setIsLibraryPickerOpen(true)}
+                  data-testid="button-library-overlay-image"
+                >
+                  <Images className="w-4 h-4 mr-2" />
+                  Choose from Library
+                </Button>
+              </div>
+              <input
+                id="overlay-image-input"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              
+              {(overlayImageUrl || overlayImageData) && (
+                <div className="p-3 bg-muted rounded-md space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {overlayImageData ? 'Uploaded image' : 'Library image'}
+                    </span>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={handleRemoveImage}
+                      data-testid="button-remove-overlay-image"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <img
+                    src={overlayImageData || overlayImageUrl}
+                    alt="Overlay preview"
+                    className="w-full h-auto max-h-[100px] object-contain rounded border"
+                    data-testid="img-overlay-preview"
+                  />
+                </div>
+              )}
+            </div>
+
             <div>
               <Label htmlFor="scroll-speed">Scroll Speed: {overlayScrollSpeed}</Label>
               <Slider
@@ -1104,6 +1250,65 @@ export default function LivePresentation() {
               data-testid="button-add-overlay"
             >
               {editingOverlayId ? 'Update Overlay' : 'Add Overlay'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isLibraryPickerOpen} onOpenChange={setIsLibraryPickerOpen}>
+        <DialogContent className="max-w-3xl" data-testid="dialog-library-picker">
+          <DialogHeader>
+            <DialogTitle>Choose Image from Library</DialogTitle>
+            <DialogDescription>
+              Select an image from your library to use as an overlay
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-[60vh] overflow-y-auto">
+            {isLoadingImages ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading images...</p>
+              </div>
+            ) : libraryImages && libraryImages.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {libraryImages.map((image) => (
+                  <button
+                    key={image.id}
+                    onClick={() => handleLibraryImageSelect(image.url)}
+                    className="group relative aspect-square rounded-md overflow-hidden border hover-elevate active-elevate-2"
+                    data-testid={`button-library-image-${image.id}`}
+                  >
+                    <img
+                      src={image.thumbnail || image.url}
+                      alt={image.filename}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white text-xs font-medium px-2 text-center break-all">
+                        {image.filename}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Images className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground">No images in library</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Upload images to use them as overlays
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsLibraryPickerOpen(false)}
+              data-testid="button-close-library-picker"
+            >
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>

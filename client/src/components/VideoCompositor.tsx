@@ -25,6 +25,9 @@ interface OverlayConfig {
   scrollDirection: 'left' | 'right' | 'up' | 'down';
   isBold: boolean;
   isItalic: boolean;
+  overlayType: 'text' | 'image';
+  imageUrl?: string;
+  imageData?: string;
 }
 
 interface VideoCompositorProps {
