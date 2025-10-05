@@ -2338,7 +2338,8 @@ Return ONLY a JSON object with this structure:
 
       const sceneData: any = {
         ...template.template,
-        name: name
+        name: name,
+        isTemplate: false
       };
 
       const scene = await storage.createScene(sceneData);
@@ -3124,6 +3125,7 @@ Return ONLY a JSON object with this structure:
         description: "Default scene created by Quick Setup",
         layout: "fullscreen",
         aspectRatio: "16:9",
+        isTemplate: false,
         tags: ["default", "quick-setup"],
         elements: [
           {
