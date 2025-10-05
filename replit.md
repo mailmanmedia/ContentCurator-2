@@ -25,8 +25,13 @@ A professional broadcast control system for multi-camera live productions, featu
 - **Branded Banner/Lower Third Template System**: Professional news-show style graphics with template management UI, CRUD operations, categories (lower-third, banner, full-screen, ticker), brand variants (e.g., Mailman Monday), and customizable styling based on Liverpool FC colors.
 - **RSS Ticker Control Panel**: Comprehensive RSS feed management with ticker settings (speed, colors, font size, mode), live preview, source management, and persistence via API.
 - **Dropdown-Based Source Selection**: Streamlined camera and screen share source selection with Mailman Media branding, dynamic source creation, drag-and-drop reordering, and individual source controls.
-- **Professional Overlay System**: Broadcast-quality overlay layer system with text input, position selection, animation types (scroll/fade/pulse), Liverpool FC branded template presets (Breaking News, Live Updates, Match Info), and support for multiple simultaneous overlays.
-- **iOS Camera Detection & Text Customization**: Enhanced overlay system with comprehensive text controls (font family, scroll speed, directional scrolling) and support for iOS devices via `getUserMedia()`.
+- **Professional Overlay System (Oct 2025)**: Advanced broadcast-quality overlay layer system supporting three overlay types: text, image, and RSS feed tickers. Features include:
+  - **Text Overlays**: Dynamic font size control (12-72px), bold/italic styling, font family selection (League Spartan, Libre Franklin, JetBrains Mono, Arial, Georgia), scroll speed (1-100), directional scrolling (left/right/up/down), Liverpool FC template presets (Breaking News, Live Updates, Match Info).
+  - **Image Overlays**: File upload with base64 conversion, library image picker with grid display, auto-sizing with aspect ratio preservation, image caching for performance, support for both uploaded and library images.
+  - **RSS Feed Tickers**: Multi-source RSS headline display, configurable article limit (1-20), optional source name display, formatted ticker with bullet separators ("SOURCE: Headline • SOURCE: Headline"), integration with RSS Intelligence filtering.
+  - **Position Conflict Detection**: Prevents multiple overlays in same position with warning alerts, position badges (Top/Bottom) in Active Overlays panel, disabled button state when conflicts exist, allows editing existing overlays.
+  - **VideoCompositor Rendering**: Type-safe rendering for all overlay types, image auto-sizing with contain mode, RSS ticker with cached queries and formatRssTicker optimization, seamless scrolling animations.
+- **iOS Camera Detection & Text Customization (Oct 2025)**: Enhanced overlay system with comprehensive controls and iOS device support via `getUserMedia()` permission flow before device enumeration, enabling iPad Pro, iPhone, and Continuity Camera detection.
 - **Output Dimension Controls**: Manages resolution (Full HD, 2K, 4K), global fit modes (Contain, Cover, Fill), and per-source fit mode overrides, with canvas dimensions updating based on selected resolution.
 - **Responsive Output System**: Dynamic grid layout calculation in `VideoCompositor` that auto-adapts based on active source count (e.g., 1 source = full canvas, 2 sources = 2x1, 3-4 sources = 2x2), with proper aspect ratio rendering.
 
@@ -44,6 +49,20 @@ The system integrates 2025-26 season football data, including team rosters and C
 
 #### Team Matchup Studio
 Offers comprehensive team analysis for YouTube content, including performance statistics dashboards, interactive charts (Recharts with Liverpool FC palette), squad roster analysis, and AI-powered tactical analysis.
+
+#### RSS Intelligence System (Oct 2025)
+A comprehensive RSS feed management and analysis platform for monitoring Liverpool FC news and media coverage. The system provides:
+- **Database Schema**: PostgreSQL tables for `rssSources`, `rssArticles`, `rssAnalysis`, and `rssComparisons` with full Drizzle ORM integration.
+- **Feed Management**: CRUD operations for RSS sources with category support (official, fan_site, media, podcast), update frequency configuration, and active/inactive status controls.
+- **Automated Fetching**: RssService class handles feed parsing using `rss-parser`, duplicate detection via content hashing and GUIDs, sentiment analysis, and error tracking with retry logic.
+- **Advanced Filtering (Oct 2025)**: Enhanced RSS Intelligence page with comprehensive filtering controls:
+  - **Keyword Filter**: Search articles by title, description, or keywords with case-insensitive matching
+  - **Source Filter**: Multi-select dropdown to filter by specific RSS sources
+  - **Date Range Filter**: Start and end date pickers using shadcn Calendar component for temporal filtering
+  - **Filter Status**: Visual badges showing active filters with individual remove buttons and clear all functionality
+  - **Enhanced Display**: Articles show source names, formatted published dates (using date-fns), keyword badges, and external links
+- **Dashboard Analytics**: Real-time statistics showing total sources, active sources, total articles, articles this week, and source health metrics.
+- **Live Presentation Integration**: RSS ticker overlays display scrolling headlines with configurable source selection, article limits, and optional source name display.
 
 #### Advanced Visual Presentation System (Claude Artifact Pattern)
 Generates broadcast-quality visual content following Claude's artifact creation pattern, featuring a 5-tab navigation, metric cards with glassmorphism effects, progress bars, and a CSS Grid-based football pitch visualization. Styling adheres strictly to Liverpool FC brand colors using pure Tailwind CSS, with a robust security architecture.
