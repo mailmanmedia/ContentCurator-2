@@ -480,12 +480,12 @@ export const videoSources = pgTable("video_sources", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description").default(''),
-  sourceType: text("source_type").notNull(), // 'camera', 'screen', 'media', 'rtmp', 'webrtc'
+  sourceType: text("source_type").notNull(), // 'camera', 'screen', 'media', 'rtmp', 'webrtc', 'youtube'
   deviceId: text("device_id"), // For camera/screen sources
   deviceLabel: text("device_label"),
   streamUrl: text("stream_url"), // For RTMP/WebRTC sources
   mediaFileId: varchar("media_file_id"), // Reference to library item for media files
-  configJson: jsonb("config_json").notNull().default('{}'), // Resolution, frame rate, etc.
+  configJson: jsonb("config_json").notNull().default('{}'), // Resolution, frame rate, youtubeUrl, videoId, embedConfig, etc.
   isActive: boolean("is_active").notNull().default(true),
   isConnected: boolean("is_connected").notNull().default(false),
   lastConnectedAt: timestamp("last_connected_at"),
@@ -524,6 +524,19 @@ export const sourceNamePresets = pgTable("source_name_presets", {
   category: text("category").notNull().default('Custom'),
   usageCount: integer("usage_count").notNull().default(0),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const templates = pgTable("templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  category: text("category").notNull(),
+  templateType: text("template_type").notNull(),
+  styling: jsonb("styling").notNull().default('{}'),
+  defaultContent: jsonb("default_content").notNull().default('{}'),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
 // Live state will be managed in-memory, not persisted
@@ -595,6 +608,12 @@ export const insertSourceNamePresetSchema = createInsertSchema(sourceNamePresets
   createdAt: true,
 });
 
+export const insertTemplateSchema = createInsertSchema(templates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertLibraryItem = z.infer<typeof insertLibraryItemSchema>;
 export type LibraryItem = typeof libraryItems.$inferSelect;
 export type InsertScene = z.infer<typeof insertSceneSchema>;
@@ -611,3 +630,5 @@ export type InsertSetTemplate = z.infer<typeof insertSetTemplateSchema>;
 export type SetTemplate = typeof setTemplates.$inferSelect;
 export type InsertSourceNamePreset = z.infer<typeof insertSourceNamePresetSchema>;
 export type SourceNamePreset = typeof sourceNamePresets.$inferSelect;
+export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
+export type Template = typeof templates.$inferSelect;

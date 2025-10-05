@@ -19,6 +19,7 @@ import {
   type SourceTemplate, type InsertSourceTemplate,
   type SetTemplate, type InsertSetTemplate,
   type SourceNamePreset, type InsertSourceNamePreset,
+  type Template, type InsertTemplate,
   type LiveState,
   videoSources as videoSourcesTable,
   scenes as scenesTable,
@@ -210,6 +211,44 @@ export interface IStorage {
   incrementSourceNameUsage(id: string): Promise<void>;
   deleteSourceNamePreset(id: string): Promise<boolean>;
 
+  // Template methods
+  getTemplates(): Promise<Template[]>;
+  getTemplate(id: string): Promise<Template | undefined>;
+  getTemplatesByCategory(category: string): Promise<Template[]>;
+  getTemplatesByType(templateType: string): Promise<Template[]>;
+  getActiveTemplates(): Promise<Template[]>;
+  createTemplate(template: InsertTemplate): Promise<Template>;
+  updateTemplate(id: string, updates: Partial<InsertTemplate>): Promise<Template | undefined>;
+  deleteTemplate(id: string): Promise<boolean>;
+
+  // Ticker Config methods
+  getTickerConfig(): Promise<{
+    speed: number;
+    activeFeeds: string[];
+    style: {
+      backgroundColor: string;
+      textColor: string;
+      fontSize: number;
+      height: number;
+    };
+    mode: string;
+    autoRefresh: boolean;
+    refreshInterval: number;
+  }>;
+  updateTickerConfig(config: Partial<{
+    speed: number;
+    activeFeeds: string[];
+    style: {
+      backgroundColor: string;
+      textColor: string;
+      fontSize: number;
+      height: number;
+    };
+    mode: string;
+    autoRefresh: boolean;
+    refreshInterval: number;
+  }>): Promise<void>;
+
   // Live State methods (in-memory only)
   getLiveState(): Promise<LiveState>;
   updateLiveState(updates: Partial<LiveState>): Promise<LiveState>;
@@ -249,6 +288,20 @@ export class MemStorage implements IStorage {
   private sourceTemplates: Map<string, SourceTemplate>;
   private setTemplates: Map<string, SetTemplate>;
   private sourceNamePresets: Map<string, SourceNamePreset>;
+  private templates: Map<string, Template>;
+  private tickerConfig: {
+    speed: number;
+    activeFeeds: string[];
+    style: {
+      backgroundColor: string;
+      textColor: string;
+      fontSize: number;
+      height: number;
+    };
+    mode: string;
+    autoRefresh: boolean;
+    refreshInterval: number;
+  };
   private liveState: LiveState;
 
   constructor() {
@@ -272,6 +325,20 @@ export class MemStorage implements IStorage {
     this.sourceTemplates = new Map();
     this.setTemplates = new Map();
     this.sourceNamePresets = new Map();
+    this.templates = new Map();
+    this.tickerConfig = {
+      speed: 50,
+      activeFeeds: [],
+      style: {
+        backgroundColor: '#1a1a1a',
+        textColor: '#ffffff',
+        fontSize: 16,
+        height: 40
+      },
+      mode: 'loop',
+      autoRefresh: true,
+      refreshInterval: 300
+    };
     this.liveState = {
       currentSetId: null,
       programSceneId: null,
@@ -1688,16 +1755,58 @@ export class MemStorage implements IStorage {
   }
 
   async createVideoSource(insertSource: InsertVideoSource): Promise<VideoSource> {
+    if (insertSource.sourceType === 'youtube') {
+      const config = insertSource.configJson as any;
+      if (config?.youtubeUrl) {
+        const videoId = this.extractYouTubeVideoId(config.youtubeUrl);
+        if (videoId) {
+          insertSource.configJson = {
+            ...config,
+            videoId,
+            youtubeUrl: config.youtubeUrl
+          };
+        }
+      }
+    }
     const results = await db.insert(videoSourcesTable).values(insertSource).returning();
     return results[0];
   }
 
   async updateVideoSource(id: string, updates: Partial<InsertVideoSource>): Promise<VideoSource | undefined> {
+    if (updates.sourceType === 'youtube' || (await this.getVideoSource(id))?.sourceType === 'youtube') {
+      const config = updates.configJson as any;
+      if (config?.youtubeUrl) {
+        const videoId = this.extractYouTubeVideoId(config.youtubeUrl);
+        if (videoId) {
+          updates.configJson = {
+            ...config,
+            videoId,
+            youtubeUrl: config.youtubeUrl
+          };
+        }
+      }
+    }
     const results = await db.update(videoSourcesTable)
       .set(updates)
       .where(eq(videoSourcesTable.id, id))
       .returning();
     return results[0];
+  }
+
+  private extractYouTubeVideoId(url: string): string | null {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
+      /youtube\.com\/embed\/([^&\n?#]+)/,
+      /youtube\.com\/v\/([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    return null;
   }
 
   async deleteVideoSource(id: string): Promise<boolean> {
@@ -1840,6 +1949,124 @@ export class MemStorage implements IStorage {
 
   async deleteSourceNamePreset(id: string): Promise<boolean> {
     return this.sourceNamePresets.delete(id);
+  }
+
+  // Template methods
+  async getTemplates(): Promise<Template[]> {
+    return Array.from(this.templates.values())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getTemplate(id: string): Promise<Template | undefined> {
+    return this.templates.get(id);
+  }
+
+  async getTemplatesByCategory(category: string): Promise<Template[]> {
+    return Array.from(this.templates.values())
+      .filter(template => template.category === category)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getTemplatesByType(templateType: string): Promise<Template[]> {
+    return Array.from(this.templates.values())
+      .filter(template => template.templateType === templateType)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getActiveTemplates(): Promise<Template[]> {
+    return Array.from(this.templates.values())
+      .filter(template => template.isActive)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async createTemplate(insertTemplate: InsertTemplate): Promise<Template> {
+    const id = randomUUID();
+    const now = new Date();
+    const template: Template = {
+      id,
+      name: insertTemplate.name,
+      description: insertTemplate.description || '',
+      category: insertTemplate.category,
+      templateType: insertTemplate.templateType,
+      styling: insertTemplate.styling || {},
+      defaultContent: insertTemplate.defaultContent || {},
+      isActive: insertTemplate.isActive ?? true,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.templates.set(id, template);
+    return template;
+  }
+
+  async updateTemplate(id: string, updates: Partial<InsertTemplate>): Promise<Template | undefined> {
+    const existing = this.templates.get(id);
+    if (!existing) return undefined;
+    
+    const updated: Template = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.templates.set(id, updated);
+    return updated;
+  }
+
+  async deleteTemplate(id: string): Promise<boolean> {
+    return this.templates.delete(id);
+  }
+
+  // Ticker Config methods
+  async getTickerConfig(): Promise<{
+    speed: number;
+    activeFeeds: string[];
+    style: {
+      backgroundColor: string;
+      textColor: string;
+      fontSize: number;
+      height: number;
+    };
+    mode: string;
+    autoRefresh: boolean;
+    refreshInterval: number;
+  }> {
+    return { ...this.tickerConfig };
+  }
+
+  async updateTickerConfig(config: Partial<{
+    speed: number;
+    activeFeeds: string[];
+    style: {
+      backgroundColor: string;
+      textColor: string;
+      fontSize: number;
+      height: number;
+    };
+    mode: string;
+    autoRefresh: boolean;
+    refreshInterval: number;
+  }>): Promise<void> {
+    if (config.style) {
+      this.tickerConfig.style = {
+        ...this.tickerConfig.style,
+        ...config.style
+      };
+    }
+    
+    if (config.speed !== undefined) {
+      this.tickerConfig.speed = config.speed;
+    }
+    if (config.activeFeeds !== undefined) {
+      this.tickerConfig.activeFeeds = config.activeFeeds;
+    }
+    if (config.mode !== undefined) {
+      this.tickerConfig.mode = config.mode;
+    }
+    if (config.autoRefresh !== undefined) {
+      this.tickerConfig.autoRefresh = config.autoRefresh;
+    }
+    if (config.refreshInterval !== undefined) {
+      this.tickerConfig.refreshInterval = config.refreshInterval;
+    }
   }
 
   // Live State methods (in-memory only)
