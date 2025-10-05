@@ -72,7 +72,7 @@ export default function UpcomingMatchPreview() {
   });
 
   const { data: teamStatsData } = useQuery<TeamStats>({
-    queryKey: ['/api/team-stats', selectedTeam?.id],
+    queryKey: [`/api/team-stats/${selectedTeam?.id}`],
     enabled: !!selectedTeam,
     staleTime: 300000,
   });

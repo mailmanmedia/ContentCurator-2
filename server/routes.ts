@@ -1841,7 +1841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/team-stats/:teamId", async (req, res) => {
     try {
       const teamId = parseInt(req.params.teamId);
-      const season = 2024; // Current season
+      const season = new Date().getFullYear(); // Current season
       const leagueId = 39; // Premier League
 
       if (isNaN(teamId)) {
