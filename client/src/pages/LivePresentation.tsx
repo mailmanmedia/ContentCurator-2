@@ -51,7 +51,8 @@ import {
   RectangleHorizontal,
   Upload,
   Images,
-  AlertTriangle
+  AlertTriangle,
+  Rss
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
@@ -97,6 +98,13 @@ interface LibraryImage {
   thumbnail: string;
 }
 
+interface RssSource {
+  id: number;
+  name: string;
+  url: string;
+  isActive: boolean;
+}
+
 interface OverlayConfig {
   id: string;
   text: string;
@@ -113,9 +121,12 @@ interface OverlayConfig {
   scrollDirection: 'left' | 'right' | 'up' | 'down';
   isBold: boolean;
   isItalic: boolean;
-  overlayType: 'text' | 'image';
+  overlayType: 'text' | 'image' | 'rss';
   imageUrl?: string;
   imageData?: string;
+  rssSourceIds?: string[];
+  rssMaxArticles?: number;
+  rssShowSource?: boolean;
 }
 
 const sourceTypeIcons = {
@@ -168,6 +179,23 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
+  },
+  'rss-ticker': {
+    name: 'RSS News Ticker',
+    backgroundColor: '#C8102E',
+    textColor: '#FFFFFF',
+    fontSize: 24,
+    height: 60,
+    animationType: 'scroll' as const,
+    position: 'bottom' as const,
+    fontFamily: 'League Spartan',
+    scrollSpeed: 40,
+    scrollDirection: 'left' as const,
+    isBold: true,
+    isItalic: false,
+    overlayType: 'rss' as const,
+    rssMaxArticles: 10,
+    rssShowSource: true,
   },
 };
 
@@ -284,9 +312,12 @@ export default function LivePresentation() {
   const [sourceFitModes, setSourceFitModes] = useState<Record<string, 'contain' | 'cover' | 'fill'>>({});
   const [overlayImageUrl, setOverlayImageUrl] = useState('');
   const [overlayImageData, setOverlayImageData] = useState('');
-  const [overlayType, setOverlayType] = useState<'text' | 'image'>('text');
+  const [overlayType, setOverlayType] = useState<'text' | 'image' | 'rss'>('text');
   const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
   const [positionConflict, setPositionConflict] = useState(false);
+  const [selectedRssSourceIds, setSelectedRssSourceIds] = useState<string[]>([]);
+  const [rssMaxArticles, setRssMaxArticles] = useState(10);
+  const [rssShowSource, setRssShowSource] = useState(true);
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
@@ -294,6 +325,11 @@ export default function LivePresentation() {
   const { data: libraryImages, isLoading: isLoadingImages } = useQuery<LibraryImage[]>({
     queryKey: ['/api/images'],
     enabled: isLibraryPickerOpen,
+  });
+
+  const { data: rssSources, isLoading: isLoadingRssSources } = useQuery<RssSource[]>({
+    queryKey: ['/api/rss-sources'],
+    enabled: overlayType === 'rss' && isOverlayDialogOpen,
   });
 
   const checkPositionConflict = (position: 'top' | 'bottom', excludeId?: string): boolean => {
@@ -341,6 +377,18 @@ export default function LivePresentation() {
     }
   }, [overlayPosition, overlays, isOverlayDialogOpen, editingOverlayId]);
 
+  useEffect(() => {
+    if (overlayType === 'rss' && rssSources && rssSources.length > 0 && !editingOverlayId) {
+      const activeSourceIds = rssSources
+        .filter(source => source.isActive)
+        .map(source => String(source.id));
+      
+      if (activeSourceIds.length > 0 && selectedRssSourceIds.length === 0) {
+        setSelectedRssSourceIds(activeSourceIds);
+      }
+    }
+  }, [overlayType, rssSources, editingOverlayId, selectedRssSourceIds.length]);
+
   const handleSourceSelection = async (value: string) => {
     setSelectedValue('');
     
@@ -360,6 +408,27 @@ export default function LivePresentation() {
       setOverlayImageUrl('');
       setOverlayImageData('');
       setOverlayType('text');
+      setSelectedRssSourceIds([]);
+      setRssMaxArticles(10);
+      setRssShowSource(true);
+      setIsOverlayDialogOpen(true);
+    } else if (value === 'rss-ticker') {
+      setEditingOverlayId(null);
+      setOverlayText('');
+      setSelectedPreset('rss-ticker');
+      setOverlayPosition('bottom');
+      setOverlayFontFamily('League Spartan');
+      setOverlayFontSize(24);
+      setOverlayIsBold(true);
+      setOverlayIsItalic(false);
+      setOverlayScrollSpeed(40);
+      setOverlayScrollDirection('left');
+      setOverlayImageUrl('');
+      setOverlayImageData('');
+      setOverlayType('rss');
+      setSelectedRssSourceIds([]);
+      setRssMaxArticles(10);
+      setRssShowSource(true);
       setIsOverlayDialogOpen(true);
     } else if (value.startsWith('camera-')) {
       const deviceId = value.replace('camera-', '');
@@ -478,6 +547,14 @@ export default function LivePresentation() {
       return;
     }
 
+    if (overlayType === 'rss' && selectedRssSourceIds.length === 0) {
+      toast({ 
+        title: 'Select at least one RSS source', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
     if (!editingOverlayId && checkPositionConflict(overlayPosition)) {
       toast({ 
         title: `An overlay already exists at ${overlayPosition} position.`,
@@ -518,6 +595,9 @@ export default function LivePresentation() {
               overlayType: overlayType,
               imageUrl: overlayImageUrl || undefined,
               imageData: overlayImageData || undefined,
+              rssSourceIds: overlayType === 'rss' ? selectedRssSourceIds : undefined,
+              rssMaxArticles: overlayType === 'rss' ? rssMaxArticles : undefined,
+              rssShowSource: overlayType === 'rss' ? rssShowSource : undefined,
             }
           : overlay
       ));
@@ -544,6 +624,12 @@ export default function LivePresentation() {
         imageData: overlayImageData || undefined,
       };
 
+      if (overlayType === 'rss') {
+        newOverlay.rssSourceIds = selectedRssSourceIds;
+        newOverlay.rssMaxArticles = rssMaxArticles;
+        newOverlay.rssShowSource = rssShowSource;
+      }
+
       setOverlays(prev => [...prev, newOverlay]);
       toast({ title: 'Overlay added', description: preset.name });
     }
@@ -553,6 +639,9 @@ export default function LivePresentation() {
     setOverlayImageUrl('');
     setOverlayImageData('');
     setOverlayType('text');
+    setSelectedRssSourceIds([]);
+    setRssMaxArticles(10);
+    setRssShowSource(true);
     setEditingOverlayId(null);
   };
 
@@ -584,6 +673,15 @@ export default function LivePresentation() {
     setOverlayIsItalic(overlay.isItalic);
     setOverlayScrollSpeed(overlay.scrollSpeed);
     setOverlayScrollDirection(overlay.scrollDirection);
+    setOverlayType(overlay.overlayType);
+    setOverlayImageUrl(overlay.imageUrl || '');
+    setOverlayImageData(overlay.imageData || '');
+    
+    if (overlay.overlayType === 'rss') {
+      setSelectedRssSourceIds(overlay.rssSourceIds || []);
+      setRssMaxArticles(overlay.rssMaxArticles || 10);
+      setRssShowSource(overlay.rssShowSource !== undefined ? overlay.rssShowSource : true);
+    }
     
     const presetKey = Object.entries(TEMPLATE_PRESETS).find(([_, preset]) => 
       preset.backgroundColor === overlay.backgroundColor &&
@@ -879,6 +977,12 @@ export default function LivePresentation() {
                         Mailman Media Overlay
                       </div>
                     </SelectItem>
+                    <SelectItem value="rss-ticker" data-testid="select-rss-ticker">
+                      <div className="flex items-center gap-2">
+                        <Rss className="w-4 h-4" />
+                        RSS Feed Ticker
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </CardContent>
@@ -913,8 +1017,15 @@ export default function LivePresentation() {
                           {overlay.position === 'top' ? 'TOP' : 'BOT'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">{overlay.text}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {overlay.overlayType === 'rss' ? (
+                              <>
+                                <Rss className="w-4 h-4 text-primary" />
+                                <p className="text-sm font-medium">RSS Feed Ticker</p>
+                              </>
+                            ) : (
+                              <p className="text-sm font-medium truncate">{overlay.text}</p>
+                            )}
                             <Badge 
                               variant={overlay.position === 'top' ? 'default' : 'secondary'}
                               className={overlay.position === 'top' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}
@@ -922,9 +1033,20 @@ export default function LivePresentation() {
                             >
                               {overlay.position === 'top' ? 'Top' : 'Bottom'}
                             </Badge>
+                            {overlay.overlayType === 'rss' && overlay.rssSourceIds && (
+                              <Badge variant="outline" className="bg-primary/10">
+                                {overlay.rssSourceIds.length} {overlay.rssSourceIds.length === 1 ? 'source' : 'sources'}
+                              </Badge>
+                            )}
+                            {overlay.overlayType === 'rss' && overlay.rssMaxArticles && (
+                              <Badge variant="outline" className="bg-primary/10">
+                                Max: {overlay.rssMaxArticles} articles
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground">
                             {overlay.animationType}
+                            {overlay.overlayType === 'rss' && overlay.rssShowSource && ' • Shows source names'}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -1035,27 +1157,116 @@ export default function LivePresentation() {
       </main>
 
       <Dialog open={isOverlayDialogOpen} onOpenChange={setIsOverlayDialogOpen}>
-        <DialogContent data-testid="dialog-overlay-config">
+        <DialogContent data-testid="dialog-overlay-config" className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingOverlayId ? 'Edit Overlay' : 'Create Branded Overlay'}
+              {editingOverlayId 
+                ? 'Edit Overlay' 
+                : overlayType === 'rss' 
+                  ? 'Add RSS Feed Ticker'
+                  : overlayType === 'image'
+                    ? 'Add Image Overlay'
+                    : 'Add Text Overlay'}
             </DialogTitle>
             <DialogDescription>
-              Customize your Mailman Media overlay with Liverpool FC branding
+              {overlayType === 'rss' 
+                ? 'Configure your RSS news ticker with live headlines'
+                : 'Customize your Mailman Media overlay with Liverpool FC branding'}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="overlay-text">Overlay Text</Label>
-              <Input
-                id="overlay-text"
-                placeholder="Enter your text..."
-                value={overlayText}
-                onChange={(e) => setOverlayText(e.target.value)}
-                data-testid="input-overlay-text"
-              />
-            </div>
+            {overlayType === 'text' && (
+              <div>
+                <Label htmlFor="overlay-text">Overlay Text</Label>
+                <Input
+                  id="overlay-text"
+                  placeholder="Enter your text..."
+                  value={overlayText}
+                  onChange={(e) => setOverlayText(e.target.value)}
+                  data-testid="input-overlay-text"
+                />
+              </div>
+            )}
+
+            {overlayType === 'rss' && (
+              <>
+                <div>
+                  <Label>Select RSS Sources</Label>
+                  {isLoadingRssSources ? (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-muted-foreground">Loading RSS sources...</p>
+                    </div>
+                  ) : rssSources && rssSources.length > 0 ? (
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto p-3 border rounded-md" data-testid="checklist-rss-sources">
+                      {rssSources.map((source) => (
+                        <div key={source.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`rss-source-${source.id}`}
+                            checked={selectedRssSourceIds.includes(String(source.id))}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedRssSourceIds(prev => [...prev, String(source.id)]);
+                              } else {
+                                setSelectedRssSourceIds(prev => prev.filter(id => id !== String(source.id)));
+                              }
+                            }}
+                            data-testid={`checkbox-rss-source-${source.id}`}
+                          />
+                          <Label
+                            htmlFor={`rss-source-${source.id}`}
+                            className="flex items-center gap-2 font-normal cursor-pointer flex-1"
+                          >
+                            <span className="flex-1">{source.name}</span>
+                            <Badge 
+                              variant={source.isActive ? "default" : "secondary"}
+                              className={source.isActive ? "bg-green-500 text-white" : ""}
+                            >
+                              {source.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Alert data-testid="alert-no-rss-sources">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        No RSS sources available. Please add RSS sources first.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="rss-max-articles">Max Headlines: {rssMaxArticles}</Label>
+                  <Slider
+                    id="rss-max-articles"
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[rssMaxArticles]}
+                    onValueChange={(vals) => setRssMaxArticles(vals[0])}
+                    data-testid="slider-rss-max-articles"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Number of headlines to display in the ticker
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="rss-show-source"
+                    checked={rssShowSource}
+                    onCheckedChange={(checked) => setRssShowSource(checked === true)}
+                    data-testid="checkbox-rss-show-source"
+                  />
+                  <Label htmlFor="rss-show-source" className="font-normal cursor-pointer">
+                    Show Source Names
+                  </Label>
+                </div>
+              </>
+            )}
 
             <div>
               <Label htmlFor="template-preset">Template Preset</Label>
@@ -1064,24 +1275,36 @@ export default function LivePresentation() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="breaking-news">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#C8102E' }} />
-                      Breaking News (Red)
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="live-updates">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#002147' }} />
-                      Live Updates (Navy)
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="match-info">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F6EB61' }} />
-                      Match Info (Gold)
-                    </div>
-                  </SelectItem>
+                  {overlayType === 'text' && (
+                    <>
+                      <SelectItem value="breaking-news">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#C8102E' }} />
+                          Breaking News (Red)
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="live-updates">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#002147' }} />
+                          Live Updates (Navy)
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="match-info">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F6EB61' }} />
+                          Match Info (Gold)
+                        </div>
+                      </SelectItem>
+                    </>
+                  )}
+                  {overlayType === 'rss' && (
+                    <SelectItem value="rss-ticker">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#C8102E' }} />
+                        RSS News Ticker (Red)
+                      </div>
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
@@ -1116,121 +1339,127 @@ export default function LivePresentation() {
               )}
             </div>
 
-            <div>
-              <Label htmlFor="font-family">Font Family</Label>
-              <Select value={overlayFontFamily} onValueChange={setOverlayFontFamily}>
-                <SelectTrigger id="font-family" data-testid="select-overlay-font">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="League Spartan">League Spartan (Bold)</SelectItem>
-                  <SelectItem value="Libre Franklin">Libre Franklin</SelectItem>
-                  <SelectItem value="JetBrains Mono">JetBrains Mono</SelectItem>
-                  <SelectItem value="Arial">Arial</SelectItem>
-                  <SelectItem value="Georgia">Georgia</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="font-size">Font Size: {overlayFontSize}px</Label>
-              <Slider
-                id="font-size"
-                min={12}
-                max={72}
-                step={1}
-                value={[overlayFontSize]}
-                onValueChange={(vals) => setOverlayFontSize(vals[0])}
-                data-testid="slider-overlay-font-size"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Adjust the text size from 12px to 72px
-              </p>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="overlay-bold"
-                  checked={overlayIsBold}
-                  onCheckedChange={(checked) => setOverlayIsBold(checked === true)}
-                  data-testid="checkbox-overlay-bold"
-                />
-                <Label htmlFor="overlay-bold" className="font-normal cursor-pointer">
-                  Bold
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="overlay-italic"
-                  checked={overlayIsItalic}
-                  onCheckedChange={(checked) => setOverlayIsItalic(checked === true)}
-                  data-testid="checkbox-overlay-italic"
-                />
-                <Label htmlFor="overlay-italic" className="font-normal cursor-pointer">
-                  Italics
-                </Label>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t space-y-3">
-              <Label>Image Overlay (Optional)</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => document.getElementById('overlay-image-input')?.click()}
-                  data-testid="button-upload-overlay-image"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Image
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setIsLibraryPickerOpen(true)}
-                  data-testid="button-library-overlay-image"
-                >
-                  <Images className="w-4 h-4 mr-2" />
-                  Choose from Library
-                </Button>
-              </div>
-              <input
-                id="overlay-image-input"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              
-              {(overlayImageUrl || overlayImageData) && (
-                <div className="p-3 bg-muted rounded-md space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {overlayImageData ? 'Uploaded image' : 'Library image'}
-                    </span>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      onClick={handleRemoveImage}
-                      data-testid="button-remove-overlay-image"
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  <img
-                    src={overlayImageData || overlayImageUrl}
-                    alt="Overlay preview"
-                    className="w-full h-auto max-h-[100px] object-contain rounded border"
-                    data-testid="img-overlay-preview"
-                  />
+            {(overlayType === 'text' || overlayType === 'rss') && (
+              <>
+                <div>
+                  <Label htmlFor="font-family">Font Family</Label>
+                  <Select value={overlayFontFamily} onValueChange={setOverlayFontFamily}>
+                    <SelectTrigger id="font-family" data-testid="select-overlay-font">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="League Spartan">League Spartan (Bold)</SelectItem>
+                      <SelectItem value="Libre Franklin">Libre Franklin</SelectItem>
+                      <SelectItem value="JetBrains Mono">JetBrains Mono</SelectItem>
+                      <SelectItem value="Arial">Arial</SelectItem>
+                      <SelectItem value="Georgia">Georgia</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </div>
+
+                <div>
+                  <Label htmlFor="font-size">Font Size: {overlayFontSize}px</Label>
+                  <Slider
+                    id="font-size"
+                    min={12}
+                    max={72}
+                    step={1}
+                    value={[overlayFontSize]}
+                    onValueChange={(vals) => setOverlayFontSize(vals[0])}
+                    data-testid="slider-overlay-font-size"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Adjust the text size from 12px to 72px
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="overlay-bold"
+                      checked={overlayIsBold}
+                      onCheckedChange={(checked) => setOverlayIsBold(checked === true)}
+                      data-testid="checkbox-overlay-bold"
+                    />
+                    <Label htmlFor="overlay-bold" className="font-normal cursor-pointer">
+                      Bold
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="overlay-italic"
+                      checked={overlayIsItalic}
+                      onCheckedChange={(checked) => setOverlayIsItalic(checked === true)}
+                      data-testid="checkbox-overlay-italic"
+                    />
+                    <Label htmlFor="overlay-italic" className="font-normal cursor-pointer">
+                      Italics
+                    </Label>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {overlayType === 'image' && (
+              <div className="pt-4 border-t space-y-3">
+                <Label>Image Overlay (Optional)</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => document.getElementById('overlay-image-input')?.click()}
+                    data-testid="button-upload-overlay-image"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Image
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setIsLibraryPickerOpen(true)}
+                    data-testid="button-library-overlay-image"
+                  >
+                    <Images className="w-4 h-4 mr-2" />
+                    Choose from Library
+                  </Button>
+                </div>
+                <input
+                  id="overlay-image-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                
+                {(overlayImageUrl || overlayImageData) && (
+                  <div className="p-3 bg-muted rounded-md space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        {overlayImageData ? 'Uploaded image' : 'Library image'}
+                      </span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={handleRemoveImage}
+                        data-testid="button-remove-overlay-image"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    <img
+                      src={overlayImageData || overlayImageUrl}
+                      alt="Overlay preview"
+                      className="w-full h-auto max-h-[100px] object-contain rounded border"
+                      data-testid="img-overlay-preview"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <Label htmlFor="scroll-speed">Scroll Speed: {overlayScrollSpeed}</Label>
@@ -1303,7 +1532,11 @@ export default function LivePresentation() {
             </Button>
             <Button 
               onClick={handleAddOverlay}
-              disabled={positionConflict || (!overlayText && overlayType === 'text')}
+              disabled={
+                positionConflict || 
+                (!overlayText && overlayType === 'text') ||
+                (overlayType === 'rss' && selectedRssSourceIds.length === 0)
+              }
               data-testid="button-add-overlay"
             >
               {editingOverlayId ? 'Update Overlay' : 'Add Overlay'}

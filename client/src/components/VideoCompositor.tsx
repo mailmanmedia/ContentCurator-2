@@ -25,9 +25,12 @@ interface OverlayConfig {
   scrollDirection: 'left' | 'right' | 'up' | 'down';
   isBold: boolean;
   isItalic: boolean;
-  overlayType: 'text' | 'image';
+  overlayType: 'text' | 'image' | 'rss';
   imageUrl?: string;
   imageData?: string;
+  rssSourceIds?: string[];
+  rssMaxArticles?: number;
+  rssShowSource?: boolean;
 }
 
 interface VideoCompositorProps {
