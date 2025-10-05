@@ -1,4 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { RssArticle, RssSource } from "@shared/schema";
 
 interface ActiveSource {
   id: string;
@@ -66,6 +68,69 @@ export default function VideoCompositor({
   const animationFrameRef = useRef<number>();
   const scrollPositions = useRef<Map<string, number>>(new Map());
   const fadeStates = useRef<Map<string, number>>(new Map());
+
+  // Fetch RSS articles when RSS overlay exists
+  const hasRssOverlay = overlays.some(o => o.overlayType === 'rss');
+  
+  const { data: rssArticlesData } = useQuery({
+    queryKey: ['/api/rss-articles', { limit: 50 }],
+    enabled: hasRssOverlay,
+  });
+
+  const { data: rssSourcesData } = useQuery({
+    queryKey: ['/api/rss-sources'],
+    enabled: hasRssOverlay,
+  });
+
+  const rssArticles = rssArticlesData?.articles as RssArticle[] | undefined;
+  const rssSources = rssSourcesData?.sources as RssSource[] | undefined;
+
+  // Build source name lookup map
+  const sourceNameMap = useMemo(() => {
+    if (!rssSources) return new Map<string, string>();
+    const map = new Map<string, string>();
+    rssSources.forEach(source => {
+      map.set(source.id, source.name);
+    });
+    return map;
+  }, [rssSources]);
+
+  // Format RSS ticker text from articles
+  const formatRssTicker = useCallback((
+    overlay: OverlayConfig, 
+    articles: RssArticle[] | undefined
+  ): string => {
+    if (!overlay.rssSourceIds || overlay.rssSourceIds.length === 0) {
+      return 'No RSS sources selected';
+    }
+
+    if (!articles || articles.length === 0) {
+      return 'No recent headlines available';
+    }
+
+    // Filter articles by selected sources
+    const filteredArticles = articles
+      .filter(a => overlay.rssSourceIds?.includes(a.sourceId))
+      .slice(0, overlay.rssMaxArticles || 10);
+
+    if (filteredArticles.length === 0) {
+      return 'No recent headlines available';
+    }
+
+    // Format: "SOURCE: Headline • SOURCE: Headline • ..."
+    const tickerItems = filteredArticles.map(article => {
+      const sourceName = sourceNameMap.get(article.sourceId) || article.sourceId;
+      const headline = article.title;
+      
+      if (overlay.rssShowSource) {
+        return `${sourceName.toUpperCase()}: ${headline}`;
+      } else {
+        return headline;
+      }
+    });
+
+    return tickerItems.join(' • ');
+  }, [sourceNameMap]);
 
   const drawVideoWithAspectRatio = (
     ctx: CanvasRenderingContext2D,
@@ -303,7 +368,129 @@ export default function VideoCompositor({
             drawWidth,
             drawHeight
           );
-        } else {
+        } else if (overlay.overlayType === 'rss') {
+          // RSS Ticker Overlay
+          if (!rssArticles || rssArticles.length === 0) {
+            // Show loading or no data message
+            ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
+            ctx.fillRect(0, yPosition, canvas.width, overlay.height);
+            
+            ctx.fillStyle = overlay.textColor;
+            ctx.font = `bold ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const loadingMsg = rssSources ? 'No recent headlines available' : 'Loading RSS feed...';
+            ctx.fillText(loadingMsg, canvas.width / 2, yPosition + overlay.height / 2);
+            return;
+          }
+
+          // Build ticker text from RSS articles
+          const tickerText = formatRssTicker(overlay, rssArticles);
+          
+          if (!tickerText || tickerText === 'No RSS sources selected' || tickerText === 'No recent headlines available') {
+            // Show message
+            ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
+            ctx.fillRect(0, yPosition, canvas.width, overlay.height);
+            
+            ctx.fillStyle = overlay.textColor;
+            ctx.font = `bold ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(tickerText, canvas.width / 2, yPosition + overlay.height / 2);
+            return;
+          }
+
+          // Render background
+          ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
+          ctx.fillRect(0, yPosition, canvas.width, overlay.height);
+
+          // Render scrolling ticker text
+          const fontWeight = overlay.isBold ? 'bold' : 'normal';
+          const fontStyle = overlay.isItalic ? 'italic' : 'normal';
+          ctx.font = `${fontStyle} ${fontWeight} ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
+          ctx.fillStyle = overlay.textColor;
+          ctx.textBaseline = 'middle';
+
+          // Use existing scroll animation logic
+          if (overlay.animationType === 'scroll') {
+            const scrollSpeed = overlay.scrollSpeed / 10;
+            const isVertical = overlay.scrollDirection === 'up' || overlay.scrollDirection === 'down';
+            
+            if (isVertical) {
+              let scrollY = scrollPositions.current.get(overlay.id);
+              if (scrollY === undefined) {
+                scrollY = overlay.scrollDirection === 'down' ? -overlay.height : canvas.height;
+              }
+              
+              ctx.textAlign = 'center';
+              ctx.fillText(tickerText, canvas.width / 2, scrollY + overlay.height / 2);
+              
+              const textHeight = overlay.fontSize * 1.2;
+              if (overlay.scrollDirection === 'up') {
+                scrollY -= scrollSpeed;
+                if (scrollY < -textHeight - 50) {
+                  scrollY = canvas.height;
+                }
+              } else {
+                scrollY += scrollSpeed;
+                if (scrollY > canvas.height + 50) {
+                  scrollY = -overlay.height;
+                }
+              }
+              
+              scrollPositions.current.set(overlay.id, scrollY);
+            } else {
+              // Horizontal scrolling - seamless loop
+              let scrollX = scrollPositions.current.get(overlay.id);
+              if (scrollX === undefined) {
+                scrollX = canvas.width;
+              }
+              
+              ctx.textAlign = 'left';
+              const textWidth = ctx.measureText(tickerText).width;
+              
+              if (overlay.scrollDirection === 'left') {
+                scrollX -= scrollSpeed;
+                if (scrollX < -textWidth - 100) {
+                  scrollX = canvas.width;
+                }
+              } else {
+                scrollX += scrollSpeed;
+                if (scrollX > canvas.width + 100) {
+                  scrollX = -textWidth;
+                }
+              }
+              
+              // Draw main text
+              ctx.fillText(tickerText, scrollX, yPosition + overlay.height / 2);
+              
+              // Draw duplicate for seamless loop
+              const x2 = overlay.scrollDirection === 'left'
+                ? scrollX + textWidth + 100
+                : scrollX - textWidth - 100;
+              ctx.fillText(tickerText, x2, yPosition + overlay.height / 2);
+              
+              scrollPositions.current.set(overlay.id, scrollX);
+            }
+          } else if (overlay.animationType === 'fade') {
+            let fadeTime = fadeStates.current.get(overlay.id) || 0;
+            fadeTime += 0.02;
+            
+            const opacity = (Math.sin(fadeTime) + 1) / 2;
+            ctx.globalAlpha = opacity * 0.5 + 0.5;
+            
+            ctx.textAlign = 'center';
+            ctx.fillText(tickerText, canvas.width / 2, yPosition + overlay.height / 2);
+            ctx.globalAlpha = 1;
+            
+            fadeStates.current.set(overlay.id, fadeTime);
+          } else {
+            // Static display
+            ctx.textAlign = 'center';
+            ctx.fillText(tickerText, canvas.width / 2, yPosition + overlay.height / 2);
+          }
+        } else if (overlay.overlayType === 'text') {
+          // Text Overlay
           ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
           ctx.fillRect(0, yPosition, canvas.width, overlay.height);
 
@@ -393,7 +580,7 @@ export default function VideoCompositor({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes]);
+  }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes, rssArticles, sourceNameMap, formatRssTicker]);
 
   return (
     <div className={`bg-black ${className}`}>
