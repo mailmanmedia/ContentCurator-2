@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { 
   Radio, 
   Video, 
@@ -32,8 +42,15 @@ import {
   Plus,
   X,
   Sparkles,
-  Layers
+  Layers,
+  Eye,
+  EyeOff,
+  Pencil,
+  Trash2,
+  Settings,
+  RectangleHorizontal
 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import VideoCompositor from "@/components/VideoCompositor";
@@ -59,29 +76,72 @@ import { CSS } from '@dnd-kit/utilities';
 interface ActiveSource {
   id: string;
   name: string;
-  type: 'camera' | 'screen' | 'overlay';
+  type: 'camera' | 'screen';
   deviceId?: string;
   deviceLabel?: string;
   stream?: MediaStream;
-  overlayConfig?: {
-    text: string;
-    animation: 'scroll' | 'fade' | 'pulse';
-    template: 'ticker' | 'banner' | 'corner';
-  };
+}
+
+interface OverlayConfig {
+  id: string;
+  text: string;
+  animationType: 'scroll' | 'fade' | 'static';
+  templateStyle: 'ticker' | 'banner' | 'corner';
+  backgroundColor: string;
+  textColor: string;
+  fontSize: number;
+  position: 'top' | 'bottom';
+  height: number;
+  visible: boolean;
 }
 
 const sourceTypeIcons = {
   camera: Video,
   screen: Monitor,
-  overlay: Sparkles,
+};
+
+const TEMPLATE_PRESETS = {
+  'breaking-news': {
+    name: 'Breaking News',
+    backgroundColor: '#C8102E',
+    textColor: '#FFFFFF',
+    fontSize: 28,
+    height: 70,
+    animationType: 'scroll' as const,
+    position: 'bottom' as const,
+  },
+  'live-updates': {
+    name: 'Live Updates',
+    backgroundColor: '#002147',
+    textColor: '#F6EB61',
+    fontSize: 28,
+    height: 70,
+    animationType: 'scroll' as const,
+    position: 'bottom' as const,
+  },
+  'match-info': {
+    name: 'Match Info',
+    backgroundColor: '#F6EB61',
+    textColor: '#002147',
+    fontSize: 32,
+    height: 80,
+    animationType: 'fade' as const,
+    position: 'top' as const,
+  },
 };
 
 function SortableActiveSource({ 
   source, 
-  onRemove 
+  onRemove,
+  sourceFitModes,
+  globalFitMode,
+  onFitModeChange
 }: { 
   source: ActiveSource;
   onRemove: (id: string) => void;
+  sourceFitModes: Record<string, 'contain' | 'cover' | 'fill'>;
+  globalFitMode: 'contain' | 'cover' | 'fill';
+  onFitModeChange: (sourceId: string, fitMode: 'contain' | 'cover' | 'fill' | 'auto') => void;
 }) {
   const {
     attributes,
@@ -97,6 +157,8 @@ function SortableActiveSource({
   };
 
   const Icon = sourceTypeIcons[source.type];
+  const hasCustomFitMode = sourceFitModes[source.id] !== undefined;
+  const currentFitMode = sourceFitModes[source.id] || globalFitMode;
 
   return (
     <div
@@ -110,6 +172,42 @@ function SortableActiveSource({
       </div>
       <Icon className="w-4 h-4 text-primary" />
       <span className="text-sm flex-1 truncate">{source.name}</span>
+      
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+            data-testid={`button-fitmode-${source.id}`}
+          >
+            <RectangleHorizontal className={`w-3 h-3 ${hasCustomFitMode ? 'text-primary' : ''}`} />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56" align="end">
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">Fit Mode</h4>
+            <Select
+              value={hasCustomFitMode ? currentFitMode : 'auto'}
+              onValueChange={(value) => onFitModeChange(source.id, value as 'contain' | 'cover' | 'fill' | 'auto')}
+            >
+              <SelectTrigger data-testid={`select-source-fitmode-${source.id}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto (use global: {globalFitMode})</SelectItem>
+                <SelectItem value="contain">Contain</SelectItem>
+                <SelectItem value="cover">Cover</SelectItem>
+                <SelectItem value="fill">Fill</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {hasCustomFitMode ? `Using ${currentFitMode} mode` : `Using global ${globalFitMode} mode`}
+            </p>
+          </div>
+        </PopoverContent>
+      </Popover>
+
       <Button
         size="icon"
         variant="ghost"
@@ -125,20 +223,22 @@ function SortableActiveSource({
 
 export default function LivePresentation() {
   const [activeSources, setActiveSources] = useState<ActiveSource[]>([]);
+  const [overlays, setOverlays] = useState<OverlayConfig[]>([]);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
   const [overlayText, setOverlayText] = useState('');
-  const [overlayAnimation, setOverlayAnimation] = useState<'scroll' | 'fade' | 'pulse'>('scroll');
-  const [overlayTemplate, setOverlayTemplate] = useState<'ticker' | 'banner' | 'corner'>('ticker');
+  const [selectedPreset, setSelectedPreset] = useState<keyof typeof TEMPLATE_PRESETS>('breaking-news');
+  const [overlayPosition, setOverlayPosition] = useState<'top' | 'bottom'>('bottom');
   const [selectedValue, setSelectedValue] = useState<string>('');
+  const [editingOverlayId, setEditingOverlayId] = useState<string | null>(null);
+  const [outputResolution, setOutputResolution] = useState({ width: 1920, height: 1080 });
+  const [globalFitMode, setGlobalFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
+  const [sourceFitModes, setSourceFitModes] = useState<Record<string, 'contain' | 'cover' | 'fill'>>({});
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
-  const overlayCanvasRefs = useRef<Map<string, HTMLCanvasElement>>(new Map());
-  const overlayAnimationCleanup = useRef<Map<string, () => void>>(new Map());
 
-  // Detect cameras
   useEffect(() => {
     const detectCameras = async () => {
       try {
@@ -165,6 +265,10 @@ export default function LivePresentation() {
     if (value === 'screen-share') {
       await handleAddScreenShare();
     } else if (value === 'branded-overlay') {
+      setEditingOverlayId(null);
+      setOverlayText('');
+      setSelectedPreset('breaking-news');
+      setOverlayPosition('bottom');
       setIsOverlayDialogOpen(true);
     } else if (value.startsWith('camera-')) {
       const deviceId = value.replace('camera-', '');
@@ -225,138 +329,6 @@ export default function LivePresentation() {
     }
   };
 
-  const createOverlayCanvas = (sourceId: string, config: ActiveSource['overlayConfig']): HTMLCanvasElement => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1920;
-    canvas.height = 1080;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx || !config) return canvas;
-
-    const colors = {
-      primary: '#C8102E',
-      navy: '#002147', 
-      cream: '#F5F1E9',
-      blue: '#4CA9E0'
-    };
-
-    let animationFrame: number;
-    let scrollPosition = 0;
-    let opacity = 1;
-    let scale = 1;
-
-    const cleanup = () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-      }
-    };
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (config.template === 'ticker') {
-        const tickerHeight = 100;
-        const y = canvas.height - tickerHeight;
-        
-        ctx.fillStyle = colors.primary;
-        ctx.fillRect(0, y, canvas.width, tickerHeight);
-        
-        ctx.fillStyle = colors.cream;
-        ctx.font = 'bold 48px Arial';
-        ctx.textBaseline = 'middle';
-
-        if (config.animation === 'scroll') {
-          scrollPosition -= 3;
-          const textWidth = ctx.measureText(config.text).width;
-          if (scrollPosition < -textWidth - 100) {
-            scrollPosition = canvas.width;
-          }
-          ctx.fillText(config.text, scrollPosition, y + tickerHeight / 2);
-        } else if (config.animation === 'fade') {
-          opacity = (Math.sin(Date.now() / 1000) + 1) / 2;
-          ctx.globalAlpha = opacity;
-          ctx.fillText(config.text, 50, y + tickerHeight / 2);
-          ctx.globalAlpha = 1;
-        } else if (config.animation === 'pulse') {
-          scale = 1 + Math.sin(Date.now() / 500) * 0.1;
-          ctx.save();
-          ctx.translate(canvas.width / 2, y + tickerHeight / 2);
-          ctx.scale(scale, scale);
-          ctx.textAlign = 'center';
-          ctx.fillText(config.text, 0, 0);
-          ctx.restore();
-        }
-      } else if (config.template === 'banner') {
-        const bannerHeight = 150;
-        
-        ctx.fillStyle = colors.navy;
-        ctx.globalAlpha = 0.9;
-        ctx.fillRect(0, 0, canvas.width, bannerHeight);
-        ctx.globalAlpha = 1;
-        
-        ctx.fillStyle = colors.cream;
-        ctx.font = 'bold 64px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        if (config.animation === 'fade') {
-          opacity = (Math.sin(Date.now() / 1000) + 1) / 2;
-          ctx.globalAlpha = opacity;
-        } else if (config.animation === 'pulse') {
-          scale = 1 + Math.sin(Date.now() / 500) * 0.1;
-          ctx.save();
-          ctx.translate(canvas.width / 2, bannerHeight / 2);
-          ctx.scale(scale, scale);
-          ctx.fillText(config.text, 0, 0);
-          ctx.restore();
-          ctx.globalAlpha = 1;
-          animationFrame = requestAnimationFrame(animate);
-          return;
-        }
-        
-        ctx.fillText(config.text, canvas.width / 2, bannerHeight / 2);
-        ctx.globalAlpha = 1;
-      } else if (config.template === 'corner') {
-        const cornerSize = 400;
-        
-        ctx.fillStyle = colors.primary;
-        ctx.globalAlpha = 0.95;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(cornerSize, 0);
-        ctx.lineTo(0, cornerSize);
-        ctx.closePath();
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        
-        ctx.fillStyle = colors.cream;
-        ctx.font = 'bold 32px Arial';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        
-        ctx.save();
-        ctx.translate(20, 20);
-        ctx.rotate(-0.785398);
-        
-        if (config.animation === 'pulse') {
-          scale = 1 + Math.sin(Date.now() / 500) * 0.15;
-          ctx.scale(scale, scale);
-        }
-        
-        ctx.fillText(config.text, 0, 0);
-        ctx.restore();
-      }
-
-      animationFrame = requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    overlayAnimationCleanup.current.set(sourceId, cleanup);
-
-    return canvas;
-  };
-
   const handleAddOverlay = () => {
     if (!overlayText.trim()) {
       toast({ 
@@ -366,45 +338,77 @@ export default function LivePresentation() {
       return;
     }
 
-    const sourceId = `overlay-${Date.now()}`;
-    const config = {
-      text: overlayText,
-      animation: overlayAnimation,
-      template: overlayTemplate,
-    };
+    const preset = TEMPLATE_PRESETS[selectedPreset];
+    
+    if (editingOverlayId) {
+      setOverlays(prev => prev.map(overlay => 
+        overlay.id === editingOverlayId
+          ? {
+              ...overlay,
+              text: overlayText,
+              backgroundColor: preset.backgroundColor,
+              textColor: preset.textColor,
+              fontSize: preset.fontSize,
+              height: preset.height,
+              animationType: preset.animationType,
+              position: overlayPosition,
+            }
+          : overlay
+      ));
+      toast({ title: 'Overlay updated' });
+    } else {
+      const newOverlay: OverlayConfig = {
+        id: `overlay-${Date.now()}`,
+        text: overlayText,
+        animationType: preset.animationType,
+        templateStyle: 'ticker',
+        backgroundColor: preset.backgroundColor,
+        textColor: preset.textColor,
+        fontSize: preset.fontSize,
+        position: overlayPosition,
+        height: preset.height,
+        visible: true,
+      };
 
-    const canvas = createOverlayCanvas(sourceId, config);
-    overlayCanvasRefs.current.set(sourceId, canvas);
-
-    const stream = canvas.captureStream(30);
-
-    const newSource: ActiveSource = {
-      id: sourceId,
-      name: `${overlayTemplate.charAt(0).toUpperCase() + overlayTemplate.slice(1)} Overlay`,
-      type: 'overlay',
-      stream,
-      overlayConfig: config,
-    };
-
-    setActiveSources(prev => [...prev, newSource]);
+      setOverlays(prev => [...prev, newOverlay]);
+      toast({ title: 'Overlay added', description: preset.name });
+    }
+    
     setIsOverlayDialogOpen(false);
     setOverlayText('');
-    toast({ title: 'Overlay added' });
+    setEditingOverlayId(null);
   };
 
   const handleRemoveSource = (sourceId: string) => {
-    const source = activeSources.find(s => s.id === sourceId);
-    if (source?.type === 'overlay') {
-      const cleanup = overlayAnimationCleanup.current.get(sourceId);
-      if (cleanup) {
-        cleanup();
-        overlayAnimationCleanup.current.delete(sourceId);
-      }
-      overlayCanvasRefs.current.delete(sourceId);
-    }
-    
     setActiveSources(prev => prev.filter(s => s.id !== sourceId));
     toast({ title: 'Source removed' });
+  };
+
+  const handleRemoveOverlay = (overlayId: string) => {
+    setOverlays(prev => prev.filter(o => o.id !== overlayId));
+    toast({ title: 'Overlay removed' });
+  };
+
+  const handleToggleOverlayVisibility = (overlayId: string) => {
+    setOverlays(prev => prev.map(overlay =>
+      overlay.id === overlayId
+        ? { ...overlay, visible: !overlay.visible }
+        : overlay
+    ));
+  };
+
+  const handleEditOverlay = (overlay: OverlayConfig) => {
+    setEditingOverlayId(overlay.id);
+    setOverlayText(overlay.text);
+    setOverlayPosition(overlay.position);
+    
+    const presetKey = Object.entries(TEMPLATE_PRESETS).find(([_, preset]) => 
+      preset.backgroundColor === overlay.backgroundColor &&
+      preset.textColor === overlay.textColor
+    )?.[0] as keyof typeof TEMPLATE_PRESETS || 'breaking-news';
+    
+    setSelectedPreset(presetKey);
+    setIsOverlayDialogOpen(true);
   };
 
   const handleStartBroadcast = () => {
@@ -438,6 +442,29 @@ export default function LivePresentation() {
         const oldIndex = items.findIndex(item => item.id === active.id);
         const newIndex = items.findIndex(item => item.id === over.id);
         return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleSourceFitModeChange = (sourceId: string, fitMode: 'contain' | 'cover' | 'fill' | 'auto') => {
+    if (fitMode === 'auto') {
+      setSourceFitModes(prev => {
+        const updated = { ...prev };
+        delete updated[sourceId];
+        return updated;
+      });
+      toast({ 
+        title: 'Fit mode reset', 
+        description: `Using global ${globalFitMode} mode` 
+      });
+    } else {
+      setSourceFitModes(prev => ({
+        ...prev,
+        [sourceId]: fitMode
+      }));
+      toast({ 
+        title: 'Fit mode updated', 
+        description: `Source using ${fitMode} mode` 
       });
     }
   };
@@ -481,8 +508,13 @@ export default function LivePresentation() {
                     <Radio className="w-5 h-5 text-primary" />
                     <CardTitle>Program Output</CardTitle>
                     <Badge variant="outline" data-testid="badge-active-count">
-                      {activeSources.length} Active {activeSources.length === 1 ? 'Source' : 'Sources'}
+                      {activeSources.length} {activeSources.length === 1 ? 'Source' : 'Sources'}
                     </Badge>
+                    {overlays.length > 0 && (
+                      <Badge variant="outline" className="bg-primary/10">
+                        {overlays.length} {overlays.length === 1 ? 'Overlay' : 'Overlays'}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {!isBroadcasting ? (
@@ -512,6 +544,10 @@ export default function LivePresentation() {
                 <div className="relative bg-black rounded-md overflow-hidden aspect-video">
                   <VideoCompositor
                     activeSources={activeSources}
+                    outputResolution={outputResolution}
+                    globalFitMode={globalFitMode}
+                    sourceFitModes={sourceFitModes}
+                    overlays={overlays}
                     className="w-full h-full"
                   />
                 </div>
@@ -521,6 +557,97 @@ export default function LivePresentation() {
                   </p>
                 )}
               </CardContent>
+            </Card>
+
+            <Card data-testid="card-output-settings">
+              <Collapsible defaultOpen>
+                <CardHeader className="pb-3">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full group hover-elevate rounded-md -mx-2 px-2 py-1">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-primary" />
+                      <CardTitle>Output Settings</CardTitle>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {outputResolution.width} × {outputResolution.height}
+                    </Badge>
+                  </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="output-resolution">Output Resolution</Label>
+                      <Select 
+                        value={`${outputResolution.width}x${outputResolution.height}`}
+                        onValueChange={(value) => {
+                          const [width, height] = value.split('x').map(Number);
+                          setOutputResolution({ width, height });
+                          toast({ 
+                            title: 'Resolution updated', 
+                            description: `${width} × ${height}` 
+                          });
+                        }}
+                      >
+                        <SelectTrigger id="output-resolution" data-testid="select-output-resolution">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1920x1080">1920×1080 (Full HD 16:9)</SelectItem>
+                          <SelectItem value="1280x720">1280×720 (HD 16:9)</SelectItem>
+                          <SelectItem value="1080x1080">1080×1080 (Square 1:1)</SelectItem>
+                          <SelectItem value="2560x1440">2560×1440 (2K 16:9)</SelectItem>
+                          <SelectItem value="3840x2160">3840×2160 (4K 16:9)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Current: {outputResolution.width} × {outputResolution.height}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="fit-mode">Fit Mode</Label>
+                      <Select 
+                        value={globalFitMode}
+                        onValueChange={(value: 'contain' | 'cover' | 'fill') => {
+                          setGlobalFitMode(value);
+                          toast({ 
+                            title: 'Fit mode updated', 
+                            description: value.charAt(0).toUpperCase() + value.slice(1)
+                          });
+                        }}
+                      >
+                        <SelectTrigger id="fit-mode" data-testid="select-fit-mode">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="contain">
+                            <div className="space-y-1">
+                              <div className="font-medium">Contain</div>
+                              <div className="text-xs text-muted-foreground">Fit entire video, may have letterboxing</div>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="cover">
+                            <div className="space-y-1">
+                              <div className="font-medium">Cover</div>
+                              <div className="text-xs text-muted-foreground">Fill entire space, may crop edges</div>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="fill">
+                            <div className="space-y-1">
+                              <div className="font-medium">Fill</div>
+                              <div className="text-xs text-muted-foreground">Stretch to fill (may distort)</div>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {globalFitMode === 'contain' && 'Fit entire video with letterboxing if needed'}
+                        {globalFitMode === 'cover' && 'Fill space completely, may crop edges'}
+                        {globalFitMode === 'fill' && 'Stretch video to fill (may distort aspect ratio)'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
             </Card>
 
             <Card data-testid="card-source-selector">
@@ -573,6 +700,80 @@ export default function LivePresentation() {
                 </Select>
               </CardContent>
             </Card>
+
+            {overlays.length > 0 && (
+              <Card data-testid="card-active-overlays">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    Active Overlays
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Manage your broadcast overlays
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {overlays.map((overlay) => (
+                      <div
+                        key={overlay.id}
+                        className="flex items-center gap-3 p-3 bg-card rounded-md border hover-elevate group"
+                        data-testid={`overlay-item-${overlay.id}`}
+                      >
+                        <div 
+                          className="w-12 h-8 rounded flex items-center justify-center text-xs font-bold"
+                          style={{
+                            backgroundColor: overlay.backgroundColor,
+                            color: overlay.textColor,
+                          }}
+                        >
+                          {overlay.position === 'top' ? 'TOP' : 'BOT'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{overlay.text}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {overlay.animationType} • {overlay.position}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => handleToggleOverlayVisibility(overlay.id)}
+                            data-testid={`button-toggle-overlay-${overlay.id}`}
+                          >
+                            {overlay.visible ? (
+                              <Eye className="w-4 h-4" />
+                            ) : (
+                              <EyeOff className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => handleEditOverlay(overlay)}
+                            data-testid={`button-edit-overlay-${overlay.id}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => handleRemoveOverlay(overlay.id)}
+                            data-testid={`button-remove-overlay-${overlay.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="xl:col-span-1">
@@ -613,6 +814,9 @@ export default function LivePresentation() {
                             key={source.id} 
                             source={source}
                             onRemove={handleRemoveSource}
+                            sourceFitModes={sourceFitModes}
+                            globalFitMode={globalFitMode}
+                            onFitModeChange={handleSourceFitModeChange}
                           />
                         ))}
                       </div>
@@ -641,7 +845,9 @@ export default function LivePresentation() {
       <Dialog open={isOverlayDialogOpen} onOpenChange={setIsOverlayDialogOpen}>
         <DialogContent data-testid="dialog-overlay-config">
           <DialogHeader>
-            <DialogTitle>Create Branded Overlay</DialogTitle>
+            <DialogTitle>
+              {editingOverlayId ? 'Edit Overlay' : 'Create Branded Overlay'}
+            </DialogTitle>
             <DialogDescription>
               Customize your Mailman Media overlay with Liverpool FC branding
             </DialogDescription>
@@ -660,38 +866,78 @@ export default function LivePresentation() {
             </div>
 
             <div>
-              <Label htmlFor="animation-type">Animation Type</Label>
-              <Select value={overlayAnimation} onValueChange={(v) => setOverlayAnimation(v as any)}>
-                <SelectTrigger id="animation-type" data-testid="select-animation-type">
+              <Label htmlFor="template-preset">Template Preset</Label>
+              <Select value={selectedPreset} onValueChange={(v) => setSelectedPreset(v as keyof typeof TEMPLATE_PRESETS)}>
+                <SelectTrigger id="template-preset" data-testid="select-template-preset">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="scroll">Scrolling Text</SelectItem>
-                  <SelectItem value="fade">Fade In/Out</SelectItem>
-                  <SelectItem value="pulse">Pulse</SelectItem>
+                  <SelectItem value="breaking-news">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#C8102E' }} />
+                      Breaking News (Red)
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="live-updates">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#002147' }} />
+                      Live Updates (Navy)
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="match-info">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F6EB61' }} />
+                      Match Info (Gold)
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {TEMPLATE_PRESETS[selectedPreset].name} - {TEMPLATE_PRESETS[selectedPreset].animationType}
+              </p>
             </div>
 
             <div>
-              <Label htmlFor="template-style">Template Style</Label>
-              <Select value={overlayTemplate} onValueChange={(v) => setOverlayTemplate(v as any)}>
-                <SelectTrigger id="template-style" data-testid="select-template-style">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ticker">Bottom Ticker</SelectItem>
-                  <SelectItem value="banner">Top Banner</SelectItem>
-                  <SelectItem value="corner">Corner Logo</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Position</Label>
+              <RadioGroup value={overlayPosition} onValueChange={(v) => setOverlayPosition(v as 'top' | 'bottom')}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="top" id="position-top" data-testid="radio-position-top" />
+                  <Label htmlFor="position-top" className="font-normal cursor-pointer">
+                    Top of screen
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="bottom" id="position-bottom" data-testid="radio-position-bottom" />
+                  <Label htmlFor="position-bottom" className="font-normal cursor-pointer">
+                    Bottom of screen (Ticker style)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="p-4 bg-muted rounded-md">
+              <p className="text-sm font-medium mb-2">Preview</p>
+              <div 
+                className="w-full rounded flex items-center justify-center py-2 px-4 text-sm font-bold"
+                style={{
+                  backgroundColor: TEMPLATE_PRESETS[selectedPreset].backgroundColor,
+                  color: TEMPLATE_PRESETS[selectedPreset].textColor,
+                  height: `${Math.min(TEMPLATE_PRESETS[selectedPreset].height / 2, 40)}px`,
+                }}
+              >
+                {overlayText || 'Your text will appear here'}
+              </div>
             </div>
           </div>
 
           <DialogFooter>
             <Button 
               variant="outline" 
-              onClick={() => setIsOverlayDialogOpen(false)}
+              onClick={() => {
+                setIsOverlayDialogOpen(false);
+                setEditingOverlayId(null);
+                setOverlayText('');
+              }}
               data-testid="button-cancel-overlay"
             >
               Cancel
@@ -700,7 +946,7 @@ export default function LivePresentation() {
               onClick={handleAddOverlay}
               data-testid="button-add-overlay"
             >
-              Add Overlay
+              {editingOverlayId ? 'Update Overlay' : 'Add Overlay'}
             </Button>
           </DialogFooter>
         </DialogContent>
