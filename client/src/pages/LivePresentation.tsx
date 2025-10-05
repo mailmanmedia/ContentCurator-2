@@ -50,11 +50,13 @@ import {
   Settings,
   RectangleHorizontal,
   Upload,
-  Images
+  Images,
+  AlertTriangle
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import VideoCompositor from "@/components/VideoCompositor";
@@ -284,6 +286,7 @@ export default function LivePresentation() {
   const [overlayImageData, setOverlayImageData] = useState('');
   const [overlayType, setOverlayType] = useState<'text' | 'image'>('text');
   const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
+  const [positionConflict, setPositionConflict] = useState(false);
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
@@ -292,6 +295,13 @@ export default function LivePresentation() {
     queryKey: ['/api/images'],
     enabled: isLibraryPickerOpen,
   });
+
+  const checkPositionConflict = (position: 'top' | 'bottom', excludeId?: string): boolean => {
+    return overlays.some(overlay => 
+      overlay.position === position && 
+      overlay.id !== excludeId
+    );
+  };
 
   useEffect(() => {
     const detectCameras = async () => {
@@ -320,6 +330,16 @@ export default function LivePresentation() {
       navigator.mediaDevices.removeEventListener('devicechange', detectCameras);
     };
   }, [toast]);
+
+  useEffect(() => {
+    if (isOverlayDialogOpen) {
+      const conflict = checkPositionConflict(
+        overlayPosition, 
+        editingOverlayId || undefined
+      );
+      setPositionConflict(conflict);
+    }
+  }, [overlayPosition, overlays, isOverlayDialogOpen, editingOverlayId]);
 
   const handleSourceSelection = async (value: string) => {
     setSelectedValue('');
@@ -453,6 +473,24 @@ export default function LivePresentation() {
     if (!overlayText.trim() && overlayType === 'text') {
       toast({ 
         title: 'Enter overlay text', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    if (!editingOverlayId && checkPositionConflict(overlayPosition)) {
+      toast({ 
+        title: `An overlay already exists at ${overlayPosition} position.`,
+        description: 'Please remove it first or choose a different position.',
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    if (editingOverlayId && checkPositionConflict(overlayPosition, editingOverlayId)) {
+      toast({ 
+        title: `An overlay already exists at ${overlayPosition} position.`,
+        description: 'Please remove it first or choose a different position.',
         variant: 'destructive' 
       });
       return;
@@ -875,9 +913,18 @@ export default function LivePresentation() {
                           {overlay.position === 'top' ? 'TOP' : 'BOT'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{overlay.text}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{overlay.text}</p>
+                            <Badge 
+                              variant={overlay.position === 'top' ? 'default' : 'secondary'}
+                              className={overlay.position === 'top' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}
+                              data-testid={`badge-position-${overlay.id}`}
+                            >
+                              {overlay.position === 'top' ? 'Top' : 'Bottom'}
+                            </Badge>
+                          </div>
                           <p className="text-xs text-muted-foreground">
-                            {overlay.animationType} • {overlay.position}
+                            {overlay.animationType}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -1058,6 +1105,15 @@ export default function LivePresentation() {
                   </Label>
                 </div>
               </RadioGroup>
+              
+              {positionConflict && (
+                <Alert variant="destructive" className="mt-3" data-testid="alert-position-conflict">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    ⚠️ Position conflict: An overlay already exists at this position
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             <div>
@@ -1247,6 +1303,7 @@ export default function LivePresentation() {
             </Button>
             <Button 
               onClick={handleAddOverlay}
+              disabled={positionConflict || (!overlayText && overlayType === 'text')}
               data-testid="button-add-overlay"
             >
               {editingOverlayId ? 'Update Overlay' : 'Add Overlay'}
