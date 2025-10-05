@@ -72,7 +72,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
   const videoSources = videoSourcesData?.videoSources;
 
   const [mediaStreams, setMediaStreams] = useState<Map<string, MediaStream>>(new Map());
-  const acquiredStreamsRef = useRef<Set<string>>(new Set());
+  const streamsRefMap = useRef<Map<string, MediaStream>>(new Map());
   const tickerScrollOffset = useRef<number>(0);
 
   // Fetch RSS articles for ticker
@@ -86,30 +86,39 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
     if (!videoSources) return;
 
     const initializeStreams = async () => {
-      const newStreams = new Map<string, MediaStream>();
-      const newAcquiredSet = new Set<string>();
-
+      const neededSourceIds = new Set<string>();
+      
+      // Identify which sources we need
       for (const source of videoSources) {
         if (source.sourceType === 'camera' && source.deviceId && source.isActive && source.isConnected) {
-          try {
-            const stream = await acquireStream(source.id, source.deviceId);
-            newStreams.set(source.id, stream);
-            newAcquiredSet.add(source.id);
-          } catch (err) {
-            console.error(`Failed to get camera stream for ${source.name}:`, err);
+          neededSourceIds.add(source.id);
+        }
+      }
+
+      // Release streams we no longer need
+      for (const [sourceId, stream] of streamsRefMap.current) {
+        if (!neededSourceIds.has(sourceId)) {
+          releaseStream(sourceId);
+          streamsRefMap.current.delete(sourceId);
+        }
+      }
+
+      // Acquire new streams we don't have yet
+      for (const source of videoSources) {
+        if (source.sourceType === 'camera' && source.deviceId && source.isActive && source.isConnected) {
+          if (!streamsRefMap.current.has(source.id)) {
+            try {
+              const stream = await acquireStream(source.id, source.deviceId);
+              streamsRefMap.current.set(source.id, stream);
+            } catch (err) {
+              console.error(`Failed to get camera stream for ${source.name}:`, err);
+            }
           }
         }
       }
 
-      // Release streams that are no longer needed
-      acquiredStreamsRef.current.forEach(sourceId => {
-        if (!newAcquiredSet.has(sourceId)) {
-          releaseStream(sourceId);
-        }
-      });
-
-      acquiredStreamsRef.current = newAcquiredSet;
-      setMediaStreams(newStreams);
+      // Update state with current streams
+      setMediaStreams(new Map(streamsRefMap.current));
     };
 
     initializeStreams();
@@ -118,10 +127,10 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      acquiredStreamsRef.current.forEach(sourceId => {
+      streamsRefMap.current.forEach((stream, sourceId) => {
         releaseStream(sourceId);
       });
-      acquiredStreamsRef.current.clear();
+      streamsRefMap.current.clear();
     };
   }, [releaseStream]);
 
