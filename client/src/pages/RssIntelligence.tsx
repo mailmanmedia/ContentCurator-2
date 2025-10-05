@@ -1,20 +1,28 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Rss, TrendingUp, Eye, RefreshCw, Play, BarChart3, Clock, Globe } from "lucide-react";
+import { Search, Rss, TrendingUp, Eye, RefreshCw, Play, BarChart3, Clock, Globe, X, RotateCcw, CalendarIcon, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { RssSource, RssArticle } from "@shared/schema";
 import Header from "@/components/Header";
+import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 
 export default function RssIntelligence() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [articleKeyword, setArticleKeyword] = useState("");
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -32,7 +40,13 @@ export default function RssIntelligence() {
 
   // Fetch recent articles
   const { data: articlesData, isLoading: articlesLoading } = useQuery({
-    queryKey: ['/api/rss-articles', { limit: 20 }],
+    queryKey: ['/api/rss-articles', { 
+      limit: 100,
+      keyword: articleKeyword || undefined,
+      sourceIds: selectedSourceIds.length > 0 ? selectedSourceIds : undefined,
+      startDate: startDate?.toISOString(),
+      endDate: endDate?.toISOString()
+    }],
     select: (response: any) => response.articles as RssArticle[]
   });
 
@@ -128,6 +142,58 @@ export default function RssIntelligence() {
       podcast: "Podcast"
     };
     return labels[category as keyof typeof labels] || category;
+  };
+
+  // Filter articles based on all criteria
+  const filteredArticles = articlesData?.filter(article => {
+    // Keyword filter
+    const matchesKeyword = !articleKeyword || 
+      article.title.toLowerCase().includes(articleKeyword.toLowerCase()) ||
+      article.description?.toLowerCase().includes(articleKeyword.toLowerCase()) ||
+      article.keywords?.some(k => k.toLowerCase().includes(articleKeyword.toLowerCase()));
+    
+    // Source filter
+    const matchesSource = selectedSourceIds.length === 0 || 
+      selectedSourceIds.includes(article.sourceId);
+    
+    // Date range filter
+    const articleDate = article.publishedAt ? new Date(article.publishedAt) : null;
+    const matchesDateRange = 
+      (!startDate || !articleDate || isAfter(articleDate, startOfDay(startDate)) || articleDate.getTime() === startOfDay(startDate).getTime()) &&
+      (!endDate || !articleDate || isBefore(articleDate, endOfDay(endDate)) || articleDate.getTime() === endOfDay(endDate).getTime());
+    
+    return matchesKeyword && matchesSource && matchesDateRange;
+  }) || [];
+
+  // Check if any filters are active
+  const hasActiveFilters = articleKeyword !== "" || selectedSourceIds.length > 0 || startDate !== undefined || endDate !== undefined;
+  
+  // Count active filters
+  const activeFilterCount = 
+    (articleKeyword !== "" ? 1 : 0) + 
+    (selectedSourceIds.length > 0 ? 1 : 0) + 
+    (startDate || endDate ? 1 : 0);
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setArticleKeyword("");
+    setSelectedSourceIds([]);
+    setStartDate(undefined);
+    setEndDate(undefined);
+  };
+
+  // Get source name by ID
+  const getSourceName = (sourceId: string) => {
+    return sourcesData?.find(s => s.id === sourceId)?.name || "Unknown Source";
+  };
+
+  // Toggle source selection
+  const toggleSourceSelection = (sourceId: string) => {
+    setSelectedSourceIds(prev => 
+      prev.includes(sourceId) 
+        ? prev.filter(id => id !== sourceId)
+        : [...prev, sourceId]
+    );
   };
 
   if (dashboardLoading || sourcesLoading) {
@@ -403,10 +469,191 @@ export default function RssIntelligence() {
 
         {/* Articles Tab */}
         <TabsContent value="articles" className="space-y-6">
+          {/* Filter Bar */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                Article Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                {/* Filter Controls */}
+                <div className="flex flex-col lg:flex-row gap-4 flex-wrap">
+                  {/* Article Keyword Input */}
+                  <div className="flex-1 min-w-[200px]">
+                    <Input
+                      placeholder="Search articles by keyword..."
+                      value={articleKeyword}
+                      onChange={(e) => setArticleKeyword(e.target.value)}
+                      data-testid="input-article-keyword"
+                    />
+                  </div>
+
+                  {/* Source Multi-Select */}
+                  <div className="w-full lg:w-64">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-between"
+                          data-testid="select-article-sources"
+                        >
+                          {selectedSourceIds.length === 0 
+                            ? "All Sources" 
+                            : `${selectedSourceIds.length} source${selectedSourceIds.length > 1 ? 's' : ''} selected`}
+                          <Filter className="ml-2 h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 max-h-80 overflow-auto">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm mb-3">Filter by Source</h4>
+                          {sourcesData?.filter(s => s.isActive).map((source) => (
+                            <div key={source.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`source-${source.id}`}
+                                checked={selectedSourceIds.includes(source.id)}
+                                onCheckedChange={() => toggleSourceSelection(source.id)}
+                              />
+                              <label
+                                htmlFor={`source-${source.id}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                              >
+                                {source.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Start Date Picker */}
+                  <div className="w-full lg:w-48">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-start"
+                          data-testid="datepicker-start"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {startDate ? format(startDate, "MMM d, yyyy") : "From: Pick date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={startDate}
+                          onSelect={setStartDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* End Date Picker */}
+                  <div className="w-full lg:w-48">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-start"
+                          data-testid="datepicker-end"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDate ? format(endDate, "MMM d, yyyy") : "To: Pick date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={endDate}
+                          onSelect={setEndDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Clear Filters Button */}
+                  {hasActiveFilters && (
+                    <Button 
+                      variant="outline" 
+                      onClick={clearAllFilters}
+                      data-testid="button-clear-filters"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+
+                {/* Filter Status Indicators */}
+                {hasActiveFilters && (
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
+                    <span className="text-sm text-muted-foreground">
+                      {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active:
+                    </span>
+                    
+                    {articleKeyword && (
+                      <Badge 
+                        variant="secondary" 
+                        className="gap-1"
+                        data-testid="badge-filter-keyword"
+                      >
+                        Keyword: {articleKeyword}
+                        <X 
+                          className="w-3 h-3 cursor-pointer hover-elevate" 
+                          onClick={() => setArticleKeyword("")}
+                        />
+                      </Badge>
+                    )}
+                    
+                    {selectedSourceIds.length > 0 && (
+                      <Badge 
+                        variant="secondary" 
+                        className="gap-1"
+                        data-testid="badge-filter-sources"
+                      >
+                        {selectedSourceIds.length} source{selectedSourceIds.length > 1 ? 's' : ''}
+                        <X 
+                          className="w-3 h-3 cursor-pointer hover-elevate" 
+                          onClick={() => setSelectedSourceIds([])}
+                        />
+                      </Badge>
+                    )}
+                    
+                    {(startDate || endDate) && (
+                      <Badge 
+                        variant="secondary" 
+                        className="gap-1"
+                        data-testid="badge-filter-dates"
+                      >
+                        {startDate && format(startDate, "MMM d")} - {endDate ? format(endDate, "MMM d") : "Now"}
+                        <X 
+                          className="w-3 h-3 cursor-pointer hover-elevate" 
+                          onClick={() => {
+                            setStartDate(undefined);
+                            setEndDate(undefined);
+                          }}
+                        />
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Articles List */}
           <Card>
             <CardHeader>
               <CardTitle>Article Feed</CardTitle>
-              <CardDescription>All articles from Liverpool FC RSS sources</CardDescription>
+              <CardDescription>
+                {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''} found
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {articlesLoading ? (
@@ -419,13 +666,31 @@ export default function RssIntelligence() {
                     </div>
                   ))}
                 </div>
+              ) : filteredArticles.length === 0 ? (
+                <div className="text-center py-12">
+                  <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No articles found matching your filters</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Try adjusting your filter criteria to see more results
+                  </p>
+                  {hasActiveFilters && (
+                    <Button onClick={clearAllFilters} variant="outline">
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
               ) : (
                 <div className="space-y-6">
-                  {articlesData?.map((article) => (
-                    <article key={article.id} className="border-b border-border pb-6 last:border-0">
+                  {filteredArticles.map((article) => (
+                    <article 
+                      key={article.id} 
+                      className="border-b border-border pb-6 last:border-0"
+                      data-testid={`card-article-${article.id}`}
+                    >
                       <div className="space-y-3">
-                        <div className="flex items-start justify-between">
-                          <h3 className="text-lg font-semibold line-clamp-2 flex-1 mr-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <h3 className="text-lg font-semibold line-clamp-2 flex-1">
                             <a 
                               href={article.link} 
                               target="_blank" 
@@ -451,10 +716,17 @@ export default function RssIntelligence() {
                           </p>
                         )}
                         
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Globe className="w-3 h-3" />
+                            <span className="font-medium">{getSourceName(article.sourceId)}</span>
+                          </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {formatTimeAgo(article.publishedAt ? article.publishedAt.toString() : null)}
+                            {article.publishedAt 
+                              ? format(new Date(article.publishedAt), "MMM d, yyyy 'at' h:mm a")
+                              : "No date"
+                            }
                           </div>
                           {article.author && (
                             <span>By {article.author}</span>
@@ -464,7 +736,19 @@ export default function RssIntelligence() {
                           )}
                         </div>
                         
-                        {article.topics && article.topics.length > 0 && (
+                        {/* Keywords from article */}
+                        {article.keywords && article.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {article.keywords.slice(0, 5).map((keyword, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {keyword}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Topics from article */}
+                        {article.topics && article.topics.length > 0 && !article.keywords && (
                           <div className="flex flex-wrap gap-1">
                             {article.topics.slice(0, 4).map((topic) => (
                               <Badge key={topic} variant="outline" className="text-xs">
