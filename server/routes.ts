@@ -3111,6 +3111,87 @@ Return ONLY a JSON object with this structure:
     }
   });
 
+  // Quick Setup endpoint - creates a complete setup in one click
+  app.post("/api/live/quick-setup", async (req, res) => {
+    try {
+      // Create a default scene with basic layers
+      const sceneData = {
+        name: "Quick Setup Scene",
+        description: "Default scene created by Quick Setup",
+        layout: "fullscreen",
+        aspectRatio: "16:9",
+        tags: ["default", "quick-setup"],
+        elements: [
+          {
+            id: `video-${Date.now()}`,
+            type: "video" as const,
+            zone: "main",
+            position: {
+              x: 0,
+              y: 0,
+              width: 100,
+              height: 90
+            },
+            content: "",
+            sourceId: undefined,
+            style: {}
+          },
+          {
+            id: `ticker-${Date.now()}`,
+            type: "ticker" as const,
+            zone: "overlay",
+            position: {
+              x: 0,
+              y: 90,
+              width: 100,
+              height: 10
+            },
+            content: "",
+            style: {}
+          }
+        ]
+      };
+
+      const scene = await storage.createScene(sceneData);
+
+      // Create a presentation set with the scene
+      const setData = {
+        name: "Quick Setup Show",
+        description: "Default presentation set created by Quick Setup",
+        sceneIds: [scene.id],
+        isActive: true
+      };
+
+      const presentationSet = await storage.createPresentationSet(setData);
+
+      // Load the scene into preview and the set as current
+      const liveStateUpdates = {
+        currentSetId: presentationSet.id,
+        previewSceneId: scene.id
+      };
+
+      const liveState = await storage.updateLiveState(liveStateUpdates);
+
+      // Broadcast the update to all connected SSE clients
+      liveSSEManager.broadcast('quick-setup-complete', {
+        scene,
+        presentationSet,
+        liveState
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Quick setup completed successfully",
+        scene,
+        presentationSet,
+        liveState
+      });
+    } catch (error) {
+      console.error('Error in quick setup:', error);
+      res.status(500).json({ error: "Failed to complete quick setup" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
