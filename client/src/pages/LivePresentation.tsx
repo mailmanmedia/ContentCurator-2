@@ -114,6 +114,34 @@ export default function LivePresentation() {
     },
   });
 
+  const quickSetupMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/live/quick-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error('Failed to run quick setup');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/live/state'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/presentation/scenes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/presentation/sets'] });
+      addLog('Quick setup completed successfully');
+      toast({
+        title: 'Quick Setup Complete',
+        description: 'Your scene and presentation set are ready. Click "Take to Program" to go live!',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Quick Setup Failed',
+        description: 'Failed to complete quick setup. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleLoadSet = (setId: string) => {
     updateStateMutation.mutate({ currentSetId: setId });
   };
@@ -392,6 +420,29 @@ export default function LivePresentation() {
                 </div>
 
                 <div className="space-y-6">
+                  {!liveState?.previewSceneId && !liveState?.programSceneId && (
+                    <Card className="border-primary">
+                      <CardHeader>
+                        <CardTitle className="text-center">Get Started Quickly</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p className="text-sm text-muted-foreground text-center">
+                          No scene loaded yet. Quick Setup will create a default scene with video and ticker layers, ready to go live.
+                        </p>
+                        <Button
+                          onClick={() => quickSetupMutation.mutate()}
+                          disabled={quickSetupMutation.isPending}
+                          className="w-full"
+                          size="lg"
+                          data-testid="button-quick-setup"
+                        >
+                          <Play className="w-4 h-4 mr-2" />
+                          {quickSetupMutation.isPending ? 'Setting up...' : 'Quick Setup (1 Click)'}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
                   <QuickSourceControls />
                   
                   <QuickLibraryControls onItemSelect={handleLibraryItemSelect} />
