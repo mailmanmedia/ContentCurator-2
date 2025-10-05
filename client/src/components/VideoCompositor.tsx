@@ -145,9 +145,15 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
         video = document.createElement('video');
         video.autoplay = true;
         video.muted = true;
+        video.playsInline = true;
         videoRefs.current.set(sourceId, video);
       }
       video.srcObject = stream;
+      
+      // Explicitly play the video - autoplay alone isn't reliable
+      video.play().catch(err => {
+        console.error(`Failed to play video for source ${sourceId}:`, err);
+      });
     });
   }, [mediaStreams]);
 
