@@ -295,6 +295,8 @@ export default function LivePresentation() {
   const [overlays, setOverlays] = useState<OverlayConfig[]>([]);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [cameraPermissionStatus, setCameraPermissionStatus] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
+  const [needsPermission, setNeedsPermission] = useState(false);
   const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
   const [overlayText, setOverlayText] = useState('');
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof TEMPLATE_PRESETS>('breaking-news');
@@ -342,30 +344,73 @@ export default function LivePresentation() {
   useEffect(() => {
     const detectCameras = async () => {
       try {
-        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        
-        tempStream.getTracks().forEach(track => track.stop());
-        
+        // First, try to enumerate without requesting permissions
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
-        setCameras(videoDevices);
+        
+        // iOS returns empty array before permissions - treat as needing permission
+        if (videoDevices.length === 0) {
+          setNeedsPermission(true);
+          setCameraPermissionStatus('prompt');
+          setCameras([]);
+          return;
+        }
+        
+        // Check if we have devices but no labels (means we need permissions)
+        if (videoDevices.length > 0 && !videoDevices[0].label) {
+          setNeedsPermission(true);
+          setCameraPermissionStatus('prompt');
+          setCameras(videoDevices);
+          return;
+        }
+        
+        // If we have labels, permissions are already granted
+        if (videoDevices.length > 0 && videoDevices[0].label) {
+          setCameraPermissionStatus('granted');
+          setNeedsPermission(false);
+          setCameras(videoDevices);
+          return;
+        }
       } catch (err) {
         console.error('Camera detection error:', err);
-        toast({
-          title: "Camera Access Required",
-          description: "Please allow camera access to see available cameras.",
-          variant: "destructive"
-        });
+        setNeedsPermission(true);
+        setCameraPermissionStatus('prompt');
       }
     };
 
     detectCameras();
-
     navigator.mediaDevices.addEventListener('devicechange', detectCameras);
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', detectCameras);
     };
-  }, [toast]);
+  }, []);
+
+  const requestCameraPermissions = async () => {
+    try {
+      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      tempStream.getTracks().forEach(track => track.stop());
+      
+      // Re-enumerate to get device labels
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      setCameras(videoDevices);
+      setCameraPermissionStatus('granted');
+      setNeedsPermission(false);
+      
+      toast({
+        title: "Camera Access Granted",
+        description: `Found ${videoDevices.length} camera(s)`,
+      });
+    } catch (err: any) {
+      console.error('Permission request error:', err);
+      setCameraPermissionStatus('denied');
+      toast({
+        title: "Camera Access Denied",
+        description: err.message || "Please enable camera access in your browser settings.",
+        variant: "destructive"
+      });
+    }
+  };
 
   useEffect(() => {
     if (isOverlayDialogOpen) {
@@ -944,7 +989,26 @@ export default function LivePresentation() {
                     <SelectValue placeholder="Select a source to add..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {cameras.length > 0 && (
+                    {needsPermission && (
+                      <div className="p-2">
+                        <Button 
+                          onClick={requestCameraPermissions} 
+                          className="w-full"
+                          size="sm"
+                          data-testid="button-request-camera-permission"
+                        >
+                          <Video className="w-4 h-4 mr-2" />
+                          Enable Camera Access
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-2 text-center">
+                          {cameras.length === 0 
+                            ? "Camera devices will appear after granting access" 
+                            : "Click to allow camera access (required for iOS devices)"}
+                        </p>
+                      </div>
+                    )}
+                    {needsPermission && <SelectSeparator />}
+                    {cameras.length > 0 && !needsPermission && (
                       <>
                         <SelectGroup>
                           <SelectLabel>Cameras</SelectLabel>
