@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, jsonb, integer, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -359,6 +359,24 @@ export const teamMatchupAnalysis = pgTable("team_matchup_analysis", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
+export const teamSeasonStatistics = pgTable("team_season_statistics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: integer("team_id").notNull(),
+  leagueId: integer("league_id").notNull(),
+  season: integer("season").notNull(),
+  form: text("form"),
+  matchesPlayed: integer("matches_played").notNull().default(0),
+  wins: integer("wins").notNull().default(0),
+  draws: integer("draws").notNull().default(0),
+  losses: integer("losses").notNull().default(0),
+  goalsFor: integer("goals_for").notNull().default(0),
+  goalsAgainst: integer("goals_against").notNull().default(0),
+  cleanSheets: integer("clean_sheets").notNull().default(0),
+  lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
+}, (table) => ({
+  uniqueTeamSeasonLeague: unique("team_season_league_unique").on(table.teamId, table.leagueId, table.season),
+}));
+
 export const insertFootballCompetitionSchema = createInsertSchema(footballCompetitions);
 export const insertFootballTeamSchema = createInsertSchema(footballTeams);
 export const insertFootballPlayerSchema = createInsertSchema(footballPlayers);
@@ -370,6 +388,9 @@ export const insertFootballStatisticsSchema = createInsertSchema(footballStatist
   id: true,
 });
 export const insertTeamMatchupAnalysisSchema = createInsertSchema(teamMatchupAnalysis).omit({
+  id: true,
+});
+export const insertTeamSeasonStatisticsSchema = createInsertSchema(teamSeasonStatistics).omit({
   id: true,
 });
 
@@ -387,6 +408,8 @@ export type InsertFootballStatistics = z.infer<typeof insertFootballStatisticsSc
 export type FootballStatistics = typeof footballStatistics.$inferSelect;
 export type InsertTeamMatchupAnalysis = z.infer<typeof insertTeamMatchupAnalysisSchema>;
 export type TeamMatchupAnalysis = typeof teamMatchupAnalysis.$inferSelect;
+export type InsertTeamSeasonStatistics = z.infer<typeof insertTeamSeasonStatisticsSchema>;
+export type TeamSeasonStatistics = typeof teamSeasonStatistics.$inferSelect;
 
 // Live Presentation System Schema
 export const libraryItems = pgTable("library_items", {

@@ -139,6 +139,7 @@ export interface IStorage {
   getFootballTeamSquad(teamId: number, season: number): Promise<any[]>;
   getLiverpoolUpcomingFixtures(limit: number): Promise<any[]>;
   initializeFootballData(): Promise<void>;
+  getTeamSeasonStatisticsFromDB(teamId: number, leagueId: number, season: number): Promise<any | null>;
 
   // Library Item methods
   getLibraryItems(): Promise<LibraryItem[]>;
@@ -1397,6 +1398,26 @@ export class MemStorage implements IStorage {
 
   async initializeFootballData(): Promise<void> {
     return footballService.initializeData();
+  }
+
+  async getTeamSeasonStatisticsFromDB(teamId: number, leagueId: number, season: number): Promise<any | null> {
+    const { db } = await import('./db');
+    const { teamSeasonStatistics } = await import('@shared/schema');
+    const { eq, and } = await import('drizzle-orm');
+    
+    const stats = await db
+      .select()
+      .from(teamSeasonStatistics)
+      .where(
+        and(
+          eq(teamSeasonStatistics.teamId, teamId),
+          eq(teamSeasonStatistics.leagueId, leagueId),
+          eq(teamSeasonStatistics.season, season)
+        )
+      )
+      .limit(1);
+    
+    return stats.length > 0 ? stats[0] : null;
   }
 
   // Library Item methods
