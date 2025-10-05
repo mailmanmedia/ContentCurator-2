@@ -3,6 +3,7 @@ import { db } from '../db';
 import { teamSeasonStatistics, footballFixtures } from '@shared/schema';
 import { eq, and, gte, lte, or, desc, sql } from 'drizzle-orm';
 import { footballService } from './footballService';
+import { updateLiverpoolStatsWithAI } from './aiStatsService';
 
 async function updateTeamStatistics(teamId: number, leagueId: number, season: number) {
   try {
@@ -12,6 +13,16 @@ async function updateTeamStatistics(teamId: number, leagueId: number, season: nu
     
     if (!apiStats || !apiStats.statistics) {
       console.log(`No API statistics available for team ${teamId}`);
+      
+      if (teamId === 40 && leagueId === 39) {
+        console.log('🤖 Attempting to fetch Liverpool stats using AI...');
+        const aiSuccess = await updateLiverpoolStatsWithAI();
+        if (aiSuccess) {
+          console.log('✓ AI successfully updated Liverpool statistics');
+          return;
+        }
+      }
+      
       return;
     }
 
