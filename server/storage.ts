@@ -19,10 +19,15 @@ import {
   type SourceTemplate, type InsertSourceTemplate,
   type SetTemplate, type InsertSetTemplate,
   type SourceNamePreset, type InsertSourceNamePreset,
-  type LiveState
+  type LiveState,
+  videoSources as videoSourcesTable,
+  scenes as scenesTable,
+  presentationSets as presentationSetsTable
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
+import { db } from "./db";
+import { eq, desc, ilike, or } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -1464,144 +1469,112 @@ export class MemStorage implements IStorage {
 
   // Scene methods
   async getScenes(): Promise<Scene[]> {
-    return Array.from(this.scenes.values())
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const results = await db.select().from(scenesTable).orderBy(desc(scenesTable.updatedAt));
+    return results;
   }
 
   async getScene(id: string): Promise<Scene | undefined> {
-    return this.scenes.get(id);
+    const results = await db.select().from(scenesTable).where(eq(scenesTable.id, id));
+    return results[0];
   }
 
   async getScenesByLayout(layout: string): Promise<Scene[]> {
-    return Array.from(this.scenes.values())
-      .filter(scene => scene.layout === layout)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const results = await db.select().from(scenesTable)
+      .where(eq(scenesTable.layout, layout))
+      .orderBy(desc(scenesTable.updatedAt));
+    return results;
   }
 
   async getSceneTemplates(): Promise<Scene[]> {
-    return Array.from(this.scenes.values())
-      .filter(scene => scene.isTemplate)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const results = await db.select().from(scenesTable)
+      .where(eq(scenesTable.isTemplate, true))
+      .orderBy(desc(scenesTable.updatedAt));
+    return results;
   }
 
   async searchScenes(query: string): Promise<Scene[]> {
-    const lowerQuery = query.toLowerCase();
-    return Array.from(this.scenes.values())
-      .filter(scene => 
-        scene.name.toLowerCase().includes(lowerQuery) ||
-        scene.description?.toLowerCase().includes(lowerQuery) ||
-        scene.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
+    const results = await db.select().from(scenesTable)
+      .where(
+        or(
+          ilike(scenesTable.name, `%${query}%`),
+          ilike(scenesTable.description, `%${query}%`)
+        )
       )
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .orderBy(desc(scenesTable.updatedAt));
+    return results;
   }
 
   async createScene(insertScene: InsertScene): Promise<Scene> {
-    const id = randomUUID();
-    const now = new Date();
-    const scene: Scene = {
-      id,
-      name: insertScene.name,
-      description: insertScene.description || '',
-      layout: insertScene.layout,
-      elements: insertScene.elements || [],
-      backgroundConfig: insertScene.backgroundConfig || {},
-      transitionConfig: insertScene.transitionConfig || {},
-      aspectRatio: insertScene.aspectRatio || '16:9',
-      isTemplate: insertScene.isTemplate ?? false,
-      tags: insertScene.tags || [],
-      createdAt: now,
-      updatedAt: now
-    };
-    this.scenes.set(id, scene);
-    return scene;
+    const results = await db.insert(scenesTable).values(insertScene).returning();
+    return results[0];
   }
 
   async updateScene(id: string, updates: Partial<InsertScene>): Promise<Scene | undefined> {
-    const existing = this.scenes.get(id);
-    if (!existing) return undefined;
-    
-    const updated: Scene = { 
-      ...existing, 
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.scenes.set(id, updated);
-    return updated;
+    const results = await db.update(scenesTable)
+      .set(updates)
+      .where(eq(scenesTable.id, id))
+      .returning();
+    return results[0];
   }
 
   async deleteScene(id: string): Promise<boolean> {
-    return this.scenes.delete(id);
+    const results = await db.delete(scenesTable).where(eq(scenesTable.id, id)).returning();
+    return results.length > 0;
   }
 
   async duplicateScene(id: string): Promise<Scene | undefined> {
-    const original = this.scenes.get(id);
+    const original = await this.getScene(id);
     if (!original) return undefined;
 
-    const newId = randomUUID();
-    const now = new Date();
-    const duplicated: Scene = {
-      ...original,
-      id: newId,
+    const duplicated = await db.insert(scenesTable).values({
       name: `${original.name} (Copy)`,
+      description: original.description,
+      layout: original.layout,
+      elements: original.elements,
+      backgroundConfig: original.backgroundConfig,
+      transitionConfig: original.transitionConfig,
+      aspectRatio: original.aspectRatio,
       isTemplate: false,
-      createdAt: now,
-      updatedAt: now
-    };
+      tags: original.tags
+    }).returning();
     
-    this.scenes.set(newId, duplicated);
-    return duplicated;
+    return duplicated[0];
   }
 
   // Presentation Set methods
   async getPresentationSets(): Promise<PresentationSet[]> {
-    return Array.from(this.presentationSets.values())
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const results = await db.select().from(presentationSetsTable).orderBy(desc(presentationSetsTable.updatedAt));
+    return results;
   }
 
   async getPresentationSet(id: string): Promise<PresentationSet | undefined> {
-    return this.presentationSets.get(id);
+    const results = await db.select().from(presentationSetsTable).where(eq(presentationSetsTable.id, id));
+    return results[0];
   }
 
   async getActivePresentationSets(): Promise<PresentationSet[]> {
-    return Array.from(this.presentationSets.values())
-      .filter(set => set.isActive)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const results = await db.select().from(presentationSetsTable)
+      .where(eq(presentationSetsTable.isActive, true))
+      .orderBy(desc(presentationSetsTable.updatedAt));
+    return results;
   }
 
   async createPresentationSet(insertSet: InsertPresentationSet): Promise<PresentationSet> {
-    const id = randomUUID();
-    const now = new Date();
-    const set: PresentationSet = {
-      id,
-      name: insertSet.name,
-      description: insertSet.description || '',
-      sceneIds: insertSet.sceneIds || [],
-      defaultTickerId: insertSet.defaultTickerId || null,
-      defaultTransition: insertSet.defaultTransition || 'fade',
-      isActive: insertSet.isActive ?? true,
-      tags: insertSet.tags || [],
-      createdAt: now,
-      updatedAt: now
-    };
-    this.presentationSets.set(id, set);
-    return set;
+    const results = await db.insert(presentationSetsTable).values(insertSet).returning();
+    return results[0];
   }
 
   async updatePresentationSet(id: string, updates: Partial<InsertPresentationSet>): Promise<PresentationSet | undefined> {
-    const existing = this.presentationSets.get(id);
-    if (!existing) return undefined;
-    
-    const updated: PresentationSet = { 
-      ...existing, 
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.presentationSets.set(id, updated);
-    return updated;
+    const results = await db.update(presentationSetsTable)
+      .set(updates)
+      .where(eq(presentationSetsTable.id, id))
+      .returning();
+    return results[0];
   }
 
   async deletePresentationSet(id: string): Promise<boolean> {
-    return this.presentationSets.delete(id);
+    const results = await db.delete(presentationSetsTable).where(eq(presentationSetsTable.id, id)).returning();
+    return results.length > 0;
   }
 
   // Ticker Playlist methods
@@ -1663,53 +1636,31 @@ export class MemStorage implements IStorage {
 
   // Video Source methods
   async getVideoSources(): Promise<VideoSource[]> {
-    return Array.from(this.videoSources.values())
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const results = await db.select().from(videoSourcesTable).orderBy(desc(videoSourcesTable.updatedAt));
+    return results;
   }
 
   async getVideoSource(id: string): Promise<VideoSource | undefined> {
-    return this.videoSources.get(id);
+    const results = await db.select().from(videoSourcesTable).where(eq(videoSourcesTable.id, id));
+    return results[0];
   }
 
   async createVideoSource(insertSource: InsertVideoSource): Promise<VideoSource> {
-    const id = randomUUID();
-    const now = new Date();
-    const source: VideoSource = {
-      id,
-      name: insertSource.name,
-      description: insertSource.description || '',
-      sourceType: insertSource.sourceType,
-      deviceId: insertSource.deviceId || null,
-      deviceLabel: insertSource.deviceLabel || null,
-      streamUrl: insertSource.streamUrl || null,
-      mediaFileId: insertSource.mediaFileId || null,
-      configJson: insertSource.configJson || {},
-      isActive: insertSource.isActive ?? true,
-      isConnected: insertSource.isConnected ?? false,
-      lastConnectedAt: null,
-      tags: insertSource.tags || [],
-      createdAt: now,
-      updatedAt: now
-    };
-    this.videoSources.set(id, source);
-    return source;
+    const results = await db.insert(videoSourcesTable).values(insertSource).returning();
+    return results[0];
   }
 
   async updateVideoSource(id: string, updates: Partial<InsertVideoSource>): Promise<VideoSource | undefined> {
-    const existing = this.videoSources.get(id);
-    if (!existing) return undefined;
-    
-    const updated: VideoSource = { 
-      ...existing, 
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.videoSources.set(id, updated);
-    return updated;
+    const results = await db.update(videoSourcesTable)
+      .set(updates)
+      .where(eq(videoSourcesTable.id, id))
+      .returning();
+    return results[0];
   }
 
   async deleteVideoSource(id: string): Promise<boolean> {
-    return this.videoSources.delete(id);
+    const results = await db.delete(videoSourcesTable).where(eq(videoSourcesTable.id, id)).returning();
+    return results.length > 0;
   }
 
   // Source Template methods
