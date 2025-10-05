@@ -18,6 +18,7 @@ import {
   insertPresentationSetSchema,
   insertTickerPlaylistSchema,
   insertVideoSourceSchema,
+  insertTemplateSchema,
   type LiveState
 } from "@shared/schema";
 import OpenAI from "openai";
@@ -1722,6 +1723,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RSS Ticker Configuration Routes
+  app.get("/api/rss/ticker-config", async (req, res) => {
+    try {
+      const config = await storage.getTickerConfig();
+      res.json({ config });
+    } catch (error) {
+      console.error('Error fetching ticker config:', error);
+      res.status(500).json({ error: "Failed to fetch ticker configuration" });
+    }
+  });
+
+  app.patch("/api/rss/ticker-config", async (req, res) => {
+    try {
+      const updates = z.object({
+        speed: z.number().optional(),
+        activeFeeds: z.array(z.string()).optional(),
+        style: z.object({
+          backgroundColor: z.string(),
+          textColor: z.string(),
+          fontSize: z.number(),
+          height: z.number()
+        }).optional(),
+        mode: z.string().optional(),
+        autoRefresh: z.boolean().optional(),
+        refreshInterval: z.number().optional()
+      }).parse(req.body);
+
+      await storage.updateTickerConfig(updates);
+      const config = await storage.getTickerConfig();
+      res.json({ config });
+    } catch (error) {
+      console.error('Error updating ticker config:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update ticker configuration" });
+      }
+    }
+  });
+
   // Football API Routes for Team Matchup Studio
   
   // Get static data statistics
@@ -2798,6 +2839,76 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error deleting ticker playlist:', error);
       res.status(500).json({ error: "Failed to delete ticker playlist" });
+    }
+  });
+
+  // Template Management Routes (Branded Banners)
+  app.get("/api/templates", async (req, res) => {
+    try {
+      const templates = await storage.getTemplates();
+      res.json({ templates });
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      res.status(500).json({ error: "Failed to fetch templates" });
+    }
+  });
+
+  app.get("/api/templates/:id", async (req, res) => {
+    try {
+      const template = await storage.getTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json({ template });
+    } catch (error) {
+      console.error('Error fetching template:', error);
+      res.status(500).json({ error: "Failed to fetch template" });
+    }
+  });
+
+  app.post("/api/templates", async (req, res) => {
+    try {
+      const validatedData = insertTemplateSchema.parse(req.body);
+      const template = await storage.createTemplate(validatedData);
+      res.status(201).json({ template });
+    } catch (error) {
+      console.error('Error creating template:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create template" });
+      }
+    }
+  });
+
+  app.patch("/api/templates/:id", async (req, res) => {
+    try {
+      const updates = insertTemplateSchema.partial().parse(req.body);
+      const template = await storage.updateTemplate(req.params.id, updates);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json({ template });
+    } catch (error) {
+      console.error('Error updating template:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update template" });
+      }
+    }
+  });
+
+  app.delete("/api/templates/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteTemplate(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      res.status(500).json({ error: "Failed to delete template" });
     }
   });
 

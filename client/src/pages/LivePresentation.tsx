@@ -1,211 +1,265 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Pause, Radio, Tv, AlertCircle, Settings, Video, Film } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Radio, 
+  Video, 
+  Monitor, 
+  Film, 
+  Wifi, 
+  WifiOff, 
+  Play, 
+  Square,
+  GripVertical,
+  Youtube,
+  CheckCircle2
+} from "lucide-react";
 import Header from "@/components/Header";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import SceneManager from "@/components/SceneManager";
-import PresentationSetManager from "@/components/PresentationSetManager";
-import VideoSourceManager from "@/components/VideoSourceManager";
 import VideoCompositor from "@/components/VideoCompositor";
-import QuickSourceControls from "@/components/QuickSourceControls";
-import QuickLibraryControls from "@/components/QuickLibraryControls";
+import { useCameraStreams } from "@/contexts/CameraStreamContext";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-interface LiveState {
-  currentSetId: string | null;
-  programSceneId: string | null;
-  previewSceneId: string | null;
-  tickerOn: boolean;
-  tickerPlaylistId: string | null;
-  bannerOn: boolean;
-  bannerText: string;
-  bannerConfig: {
-    position?: 'top' | 'bottom';
-    fontSize?: number;
-    backgroundColor?: string;
-    textColor?: string;
-  };
-  transitionDuration: number;
-  transitionEffect: string;
-  activeVideoSources: Record<string, string>;
-  lastUpdate: string;
-}
-
-interface PresentationSet {
+interface VideoSource {
   id: string;
   name: string;
   description: string;
-  sceneIds: string[];
+  sourceType: 'camera' | 'screen' | 'media' | 'rtmp' | 'webrtc' | 'youtube';
+  deviceId?: string;
+  deviceLabel?: string;
+  streamUrl?: string;
+  mediaFileId?: string;
+  configJson: Record<string, any>;
   isActive: boolean;
+  isConnected: boolean;
+  lastConnectedAt?: string;
+  tags: string[];
 }
 
-interface Scene {
-  id: string;
-  name: string;
-  description: string;
-  layout: string;
+const sourceTypeIcons = {
+  camera: Video,
+  screen: Monitor,
+  media: Film,
+  rtmp: Radio,
+  webrtc: Wifi,
+  youtube: Youtube,
+};
+
+const sourceTypeLabels = {
+  camera: 'Camera',
+  screen: 'Screen',
+  media: 'Media',
+  rtmp: 'RTMP',
+  webrtc: 'WebRTC',
+  youtube: 'YouTube',
+};
+
+function SortableActiveSource({ source }: { source: VideoSource }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: source.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const Icon = sourceTypeIcons[source.sourceType];
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-2 p-2 bg-card rounded-md border hover-elevate"
+      data-testid={`sortable-active-source-${source.id}`}
+    >
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+        <GripVertical className="w-4 h-4 text-muted-foreground" />
+      </div>
+      <Icon className="w-4 h-4 text-primary" />
+      <span className="text-sm flex-1 truncate">{source.name}</span>
+      <Badge variant="outline" className="text-xs">
+        {source.isConnected ? 'Connected' : 'Inactive'}
+      </Badge>
+    </div>
+  );
 }
 
 export default function LivePresentation() {
-  const [sseConnected, setSSEConnected] = useState(false);
-  const [eventLog, setEventLog] = useState<string[]>([]);
+  const [activeSources, setActiveSources] = useState<string[]>([]);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const { toast } = useToast();
+  const { acquireStream, acquireScreenShare, releaseStream } = useCameraStreams();
 
-  const { data: liveState, isLoading: stateLoading } = useQuery<LiveState>({
-    queryKey: ['/api/live/state'],
+  const { data: videoSourcesData, isLoading } = useQuery<{ videoSources: VideoSource[] }>({
+    queryKey: ['/api/video-sources'],
   });
 
-  const { data: presentationSets } = useQuery<PresentationSet[]>({
-    queryKey: ['/api/presentation/sets'],
-  });
-
-  const { data: scenes } = useQuery<Scene[]>({
-    queryKey: ['/api/presentation/scenes'],
-  });
+  const videoSources = videoSourcesData?.videoSources || [];
 
   useEffect(() => {
-    const eventSource = new EventSource('/api/live/stream');
+    if (videoSources.length > 0 && activeSources.length === 0) {
+      const activeIds = videoSources
+        .filter(s => s.isActive)
+        .map(s => s.id);
+      setActiveSources(activeIds);
+    }
+  }, [videoSources]);
 
-    eventSource.onopen = () => {
-      setSSEConnected(true);
-      addLog('Connected to live stream');
-    };
-
-    eventSource.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      addLog(`Event: ${message.type} - ${JSON.stringify(message.data)}`);
-      
-      if (message.type === 'state-update') {
-        queryClient.invalidateQueries({ queryKey: ['/api/live/state'] });
-      }
-    };
-
-    eventSource.onerror = () => {
-      setSSEConnected(false);
-      addLog('Connection error - attempting to reconnect...');
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, []);
-
-  const addLog = (message: string) => {
-    setEventLog(prev => [`${new Date().toLocaleTimeString()}: ${message}`, ...prev.slice(0, 49)]);
-  };
-
-  const updateStateMutation = useMutation({
-    mutationFn: async (updates: Partial<LiveState>) => {
-      const response = await fetch('/api/live/state', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-      if (!response.ok) throw new Error('Failed to update state');
+  const updateSourceMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<VideoSource> }) => {
+      const response = await apiRequest('PUT', `/api/video-sources/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/live/state'] });
-      addLog('State updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['/api/video-sources'] });
     },
   });
 
-  const quickSetupMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch('/api/live/quick-setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!response.ok) throw new Error('Failed to run quick setup');
+  const connectSourceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('POST', `/api/video-sources/${id}/connect`);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/live/state'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/presentation/scenes'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/presentation/sets'] });
-      addLog('Quick setup completed successfully');
-      toast({
-        title: 'Quick Setup Complete',
-        description: 'Your scene and presentation set are ready. Click "Take to Program" to go live!',
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'Quick Setup Failed',
-        description: 'Failed to complete quick setup. Please try again.',
-        variant: 'destructive',
-      });
+      queryClient.invalidateQueries({ queryKey: ['/api/video-sources'] });
+      toast({ title: 'Source connected' });
     },
   });
 
-  const handleLoadSet = (setId: string) => {
-    updateStateMutation.mutate({ currentSetId: setId });
+  const disconnectSourceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('POST', `/api/video-sources/${id}/disconnect`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/video-sources'] });
+      toast({ title: 'Source disconnected' });
+    },
+  });
+
+  const handleToggleSource = (sourceId: string, checked: boolean) => {
+    if (checked) {
+      setActiveSources(prev => [...prev, sourceId]);
+    } else {
+      setActiveSources(prev => prev.filter(id => id !== sourceId));
+    }
+
+    updateSourceMutation.mutate({
+      id: sourceId,
+      data: { isActive: checked }
+    });
   };
 
-  const handleTakeToProgram = () => {
-    if (liveState?.previewSceneId) {
-      updateStateMutation.mutate({ programSceneId: liveState.previewSceneId });
+  const handleToggleAllSources = (checked: boolean) => {
+    if (checked) {
+      const allIds = videoSources.map(s => s.id);
+      setActiveSources(allIds);
+      videoSources.forEach(source => {
+        updateSourceMutation.mutate({
+          id: source.id,
+          data: { isActive: true }
+        });
+      });
+    } else {
+      setActiveSources([]);
+      videoSources.forEach(source => {
+        updateSourceMutation.mutate({
+          id: source.id,
+          data: { isActive: false }
+        });
+      });
     }
   };
 
-  const handleSetPreview = (sceneId: string) => {
-    updateStateMutation.mutate({ previewSceneId: sceneId });
+  const handleConnect = (sourceId: string) => {
+    connectSourceMutation.mutate(sourceId);
   };
 
-  const handleToggleTicker = () => {
-    updateStateMutation.mutate({ tickerOn: !liveState?.tickerOn });
+  const handleDisconnect = (sourceId: string) => {
+    disconnectSourceMutation.mutate(sourceId);
   };
 
-  const handleStopFeed = () => {
-    updateStateMutation.mutate({ programSceneId: null });
-    addLog('Program feed stopped');
+  const handleStartBroadcast = () => {
+    setIsBroadcasting(true);
     toast({
-      title: 'Feed Stopped',
-      description: 'Program output has been cleared',
-      variant: 'default'
+      title: 'Broadcast Started',
+      description: 'Your program feed is now live!',
     });
   };
 
-  const handleLibraryItemSelect = (item: any) => {
-    addLog(`Library item selected: ${item.name} (${item.type})`);
-    toast({ 
-      title: 'Library Item Selected',
-      description: `${item.name} - Ready to use in scene layers`,
+  const handleStopBroadcast = () => {
+    setIsBroadcasting(false);
+    toast({
+      title: 'Broadcast Stopped',
+      description: 'Program output has been stopped',
     });
   };
 
-  const activeSet = presentationSets?.find(s => s.id === liveState?.currentSetId);
-  const programScene = scenes?.find(s => s.id === liveState?.programSceneId);
-  const previewScene = scenes?.find(s => s.id === liveState?.previewSceneId);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setActiveSources((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const activeSourceObjects = activeSources
+    .map(id => videoSources.find(s => s.id === id))
+    .filter(Boolean) as VideoSource[];
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
+      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-[1600px]">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="font-league-spartan font-black text-2xl sm:text-3xl lg:text-4xl uppercase tracking-wide text-foreground">
-                Live Presentation System
+                Live Presentation
               </h1>
               <p className="font-libre-franklin text-sm sm:text-base text-muted-foreground">
-                Broadcast-quality control with camera integration and scene management
+                Manage video sources and broadcast program output
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge 
-                variant={sseConnected ? "default" : "destructive"} 
-                className="gap-2"
-              >
-                <Radio className={`w-3 h-3 ${sseConnected ? 'animate-pulse-glow' : ''}`} />
-                {sseConnected ? 'Live' : 'Disconnected'}
-              </Badge>
-              {liveState?.programSceneId && (
+              {isBroadcasting && (
                 <Badge 
                   variant="default" 
                   className="gap-2 animate-broadcast bg-primary text-primary-foreground"
@@ -219,358 +273,367 @@ export default function LivePresentation() {
           </div>
         </div>
 
-        <Tabs defaultValue="control" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="control" className="flex items-center gap-2" data-testid="tab-control">
-              <Tv className="w-4 h-4" />
-              <span className="hidden sm:inline">Control</span>
-            </TabsTrigger>
-            <TabsTrigger value="scenes" className="flex items-center gap-2" data-testid="tab-scenes">
-              <Film className="w-4 h-4" />
-              <span className="hidden sm:inline">Scenes</span>
-            </TabsTrigger>
-            <TabsTrigger value="sets" className="flex items-center gap-2" data-testid="tab-sets">
-              <Film className="w-4 h-4" />
-              <span className="hidden sm:inline">Sets</span>
-            </TabsTrigger>
-            <TabsTrigger value="sources" className="flex items-center gap-2" data-testid="tab-sources">
-              <Video className="w-4 h-4" />
-              <span className="hidden sm:inline">Sources</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2" data-testid="tab-settings">
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="control" className="space-y-6">
-            {stateLoading ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">Loading live state...</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid lg:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <Tv className="w-5 h-5" />
-                          Program Output
-                        </div>
-                        {liveState?.programSceneId && (
-                          <div className="flex items-center gap-2">
-                            <Badge 
-                              variant="default" 
-                              className="gap-2 animate-broadcast bg-primary text-primary-foreground"
-                              data-testid="badge-program-on-air"
-                            >
-                              <div className="w-2 h-2 rounded-full bg-white animate-pulse-glow" />
-                              ON AIR
-                            </Badge>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={handleStopFeed}
-                              disabled={updateStateMutation.isPending}
-                              data-testid="button-stop-feed"
-                            >
-                              <Pause className="w-3 h-3 mr-1" />
-                              Stop Feed
-                            </Button>
-                          </div>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="aspect-video bg-black rounded-md border-2 border-primary overflow-hidden">
-                        <VideoCompositor 
-                          sceneId={liveState?.programSceneId || null}
-                          className="w-full h-full"
-                        />
-                      </div>
-                      {programScene && (
-                        <div className="text-center">
-                          <h3 className="font-bold text-sm">{programScene.name}</h3>
-                          <Badge variant="outline" className="mt-1">{programScene.layout}</Badge>
-                        </div>
-                      )}
-                      
-                      {liveState?.tickerOn && (
-                        <div className="bg-primary/20 border border-primary rounded p-2">
-                          <p className="text-xs font-mono">Ticker: Active</p>
-                        </div>
-                      )}
-                      
-                      {liveState?.bannerOn && (
-                        <div className="bg-accent/20 border border-accent rounded p-2">
-                          <p className="text-xs font-mono">Banner: {liveState.bannerText}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <AlertCircle className="w-5 h-5" />
-                        Preview
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="aspect-video bg-black rounded-md border-2 border-accent overflow-hidden">
-                        <VideoCompositor 
-                          sceneId={liveState?.previewSceneId || null}
-                          className="w-full h-full"
-                        />
-                      </div>
-                      {previewScene && (
-                        <div className="text-center mt-2">
-                          <h3 className="font-bold text-sm">{previewScene.name}</h3>
-                          <Badge variant="outline" className="mt-1">{previewScene.layout}</Badge>
-                        </div>
-                      )}
-                      
-                      <div className="mt-4 flex gap-2">
-                        <Button
-                          onClick={handleTakeToProgram}
-                          disabled={!liveState?.previewSceneId || updateStateMutation.isPending}
-                          className="flex-1"
-                          data-testid="button-take-to-program"
-                        >
-                          <Play className="w-4 h-4 mr-2" />
-                          Take to Program
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={handleToggleTicker}
-                          disabled={updateStateMutation.isPending}
-                          data-testid="button-toggle-ticker"
-                        >
-                          {liveState?.tickerOn ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Settings className="w-5 h-5" />
-                        Transition Effects
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="font-bold mb-2 text-sm">Effect Type</h3>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Current: {liveState?.transitionEffect || 'cut'}
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              variant={liveState?.transitionEffect === 'cut' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => updateStateMutation.mutate({ transitionEffect: 'cut' })}
-                              disabled={updateStateMutation.isPending}
-                              data-testid="button-effect-cut"
-                            >
-                              Cut
-                            </Button>
-                            <Button
-                              variant={liveState?.transitionEffect === 'fade' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => updateStateMutation.mutate({ transitionEffect: 'fade' })}
-                              disabled={updateStateMutation.isPending}
-                              data-testid="button-effect-fade"
-                            >
-                              Fade
-                            </Button>
-                            <Button
-                              variant={liveState?.transitionEffect === 'dissolve' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => updateStateMutation.mutate({ transitionEffect: 'dissolve' })}
-                              disabled={updateStateMutation.isPending}
-                              data-testid="button-effect-dissolve"
-                            >
-                              Dissolve
-                            </Button>
-                            <Button
-                              variant={liveState?.transitionEffect === 'slide' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => updateStateMutation.mutate({ transitionEffect: 'slide' })}
-                              disabled={updateStateMutation.isPending}
-                              data-testid="button-effect-slide"
-                            >
-                              Slide
-                            </Button>
-                          </div>
-                        </div>
-                        <div>
-                          <h3 className="font-bold mb-1 text-sm">Duration</h3>
-                          <p className="text-xs text-muted-foreground">
-                            {liveState?.transitionDuration || 500}ms
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="space-y-6">
-                  {!liveState?.previewSceneId && !liveState?.programSceneId && (
-                    <Card className="border-primary">
-                      <CardHeader>
-                        <CardTitle className="text-center">Get Started Quickly</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <p className="text-sm text-muted-foreground text-center">
-                          No scene loaded yet. Quick Setup will create a default scene with video and ticker layers, ready to go live.
-                        </p>
-                        <Button
-                          onClick={() => quickSetupMutation.mutate()}
-                          disabled={quickSetupMutation.isPending}
-                          className="w-full"
-                          size="lg"
-                          data-testid="button-quick-setup"
-                        >
-                          <Play className="w-4 h-4 mr-2" />
-                          {quickSetupMutation.isPending ? 'Setting up...' : 'Quick Setup (1 Click)'}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  <QuickSourceControls />
-                  
-                  <QuickLibraryControls onItemSelect={handleLibraryItemSelect} />
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Presentation Sets</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {presentationSets && presentationSets.length > 0 ? (
-                        presentationSets.map(set => (
-                          <Button
-                            key={set.id}
-                            variant={set.id === liveState?.currentSetId ? "default" : "outline"}
-                            className="w-full justify-start"
-                            onClick={() => handleLoadSet(set.id)}
-                            disabled={updateStateMutation.isPending}
-                            data-testid={`button-set-${set.id}`}
-                          >
-                            <div className="flex-1 text-left">
-                              <div className="font-bold">{set.name}</div>
-                              <div className="text-xs text-muted-foreground">{set.sceneIds.length} scenes</div>
-                            </div>
-                          </Button>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          No presentation sets available
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Scenes</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 max-h-96 overflow-y-auto">
-                      {scenes && scenes.length > 0 ? (
-                        scenes.map(scene => (
-                          <Button
-                            key={scene.id}
-                            variant="outline"
-                            className="w-full justify-start"
-                            onClick={() => handleSetPreview(scene.id)}
-                            disabled={updateStateMutation.isPending}
-                            data-testid={`button-scene-${scene.id}`}
-                          >
-                            <div className="flex-1 text-left">
-                              <div className="font-bold text-sm">{scene.name}</div>
-                              <div className="text-xs text-muted-foreground">{scene.layout}</div>
-                            </div>
-                            {scene.id === liveState?.previewSceneId && (
-                              <Badge variant="secondary">Preview</Badge>
-                            )}
-                            {scene.id === liveState?.programSceneId && (
-                              <Badge>Live</Badge>
-                            )}
-                          </Button>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          No scenes created yet
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Event Log</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="bg-sidebar rounded p-2 max-h-48 overflow-y-auto">
-                        {eventLog.length > 0 ? (
-                          <div className="font-mono text-xs space-y-1">
-                            {eventLog.map((log, i) => (
-                              <div key={i} className="text-muted-foreground">{log}</div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">No events yet</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="scenes">
-            <SceneManager />
-          </TabsContent>
-
-          <TabsContent value="sets">
-            <PresentationSetManager />
-          </TabsContent>
-
-          <TabsContent value="sources">
-            <VideoSourceManager />
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <Card>
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <div className="xl:col-span-3 space-y-6">
+            <Card data-testid="card-program-output">
               <CardHeader>
-                <CardTitle>Live Presentation Settings</CardTitle>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Radio className="w-5 h-5 text-primary" />
+                    <CardTitle>Program Output</CardTitle>
+                    <Badge variant="outline" data-testid="badge-active-count">
+                      {activeSources.length} Active {activeSources.length === 1 ? 'Source' : 'Sources'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!isBroadcasting ? (
+                      <Button
+                        onClick={handleStartBroadcast}
+                        disabled={activeSources.length === 0}
+                        className="bg-primary hover:bg-primary/90"
+                        data-testid="button-start-broadcast"
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        Start Broadcast
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleStopBroadcast}
+                        variant="destructive"
+                        data-testid="button-stop-broadcast"
+                      >
+                        <Square className="w-4 h-4 mr-2" />
+                        Stop Feed
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-bold mb-2">Transition Effects</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Transition effects are now available on the Control tab for easy access while managing your live output.
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-bold mb-2">Banner Configuration</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Position: {liveState?.bannerConfig?.position || 'bottom'}
-                    </p>
-                  </div>
+                <div className="relative bg-black rounded-md overflow-hidden aspect-video">
+                  <VideoCompositor
+                    activeSources={activeSources}
+                    className="w-full h-full"
+                  />
                 </div>
+                {activeSources.length === 0 && (
+                  <p className="text-center text-muted-foreground mt-4 text-sm">
+                    Select sources below to add them to the program output
+                  </p>
+                )}
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+
+            <Card data-testid="card-source-grid">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Video Sources</CardTitle>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="toggle-all"
+                        checked={activeSources.length === videoSources.length && videoSources.length > 0}
+                        onCheckedChange={handleToggleAllSources}
+                        data-testid="checkbox-toggle-all"
+                      />
+                      <label 
+                        htmlFor="toggle-all" 
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        Toggle All
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[1, 2, 3].map(i => (
+                      <Card key={i} className="animate-pulse">
+                        <CardContent className="p-4">
+                          <div className="h-32 bg-muted rounded-md mb-3" />
+                          <div className="h-4 bg-muted rounded w-2/3 mb-2" />
+                          <div className="h-3 bg-muted rounded w-1/2" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : videoSources.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Video className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-2">No video sources configured</p>
+                    <p className="text-sm text-muted-foreground">
+                      Add video sources from the Sources tab to get started
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {videoSources.map((source) => {
+                      const Icon = sourceTypeIcons[source.sourceType];
+                      const isActive = activeSources.includes(source.id);
+                      
+                      return (
+                        <Card 
+                          key={source.id} 
+                          className={`transition-all ${isActive ? 'ring-2 ring-primary' : ''}`}
+                          data-testid={`card-source-${source.id}`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="relative bg-black rounded-md mb-3 aspect-video overflow-hidden">
+                              <SourcePreview 
+                                source={source} 
+                                isActive={isActive}
+                              />
+                              
+                              <div className="absolute top-2 right-2 flex gap-1">
+                                {source.isConnected ? (
+                                  <Badge 
+                                    variant="default" 
+                                    className="text-xs bg-green-600 hover:bg-green-700"
+                                    data-testid={`badge-connected-${source.id}`}
+                                  >
+                                    <Wifi className="w-3 h-3 mr-1" />
+                                    Connected
+                                  </Badge>
+                                ) : (
+                                  <Badge 
+                                    variant="secondary" 
+                                    className="text-xs"
+                                    data-testid={`badge-disconnected-${source.id}`}
+                                  >
+                                    <WifiOff className="w-3 h-3 mr-1" />
+                                    Disconnected
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Checkbox
+                                      id={`source-${source.id}`}
+                                      checked={isActive}
+                                      onCheckedChange={(checked) => 
+                                        handleToggleSource(source.id, checked as boolean)
+                                      }
+                                      data-testid={`checkbox-source-${source.id}`}
+                                    />
+                                    <label 
+                                      htmlFor={`source-${source.id}`} 
+                                      className="text-sm font-semibold truncate cursor-pointer"
+                                    >
+                                      {source.name}
+                                    </label>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground truncate ml-6">
+                                    {source.description || 'No description'}
+                                  </p>
+                                </div>
+                                <Badge variant="outline" className="text-xs shrink-0">
+                                  <Icon className="w-3 h-3 mr-1" />
+                                  {sourceTypeLabels[source.sourceType]}
+                                </Badge>
+                              </div>
+
+                              {(source.sourceType === 'camera' || source.sourceType === 'screen') && (
+                                <div className="flex gap-2">
+                                  {!source.isConnected ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 text-xs"
+                                      onClick={() => handleConnect(source.id)}
+                                      data-testid={`button-connect-${source.id}`}
+                                    >
+                                      <Wifi className="w-3 h-3 mr-1" />
+                                      Connect
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 text-xs"
+                                      onClick={() => handleDisconnect(source.id)}
+                                      data-testid={`button-disconnect-${source.id}`}
+                                    >
+                                      <WifiOff className="w-3 h-3 mr-1" />
+                                      Disconnect
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="xl:col-span-1">
+            <Card className="sticky top-4" data-testid="card-active-sources">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                  Active Sources
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Drag to reorder layering (top = front)
+                </p>
+              </CardHeader>
+              <CardContent>
+                {activeSourceObjects.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Video className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No active sources
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Check sources below to activate them
+                    </p>
+                  </div>
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={activeSources}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-2">
+                        {activeSourceObjects.map((source) => (
+                          <SortableActiveSource key={source.id} source={source} />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                )}
+
+                {activeSourceObjects.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>
+                        <strong>Layering:</strong> Sources at the top appear in front
+                      </p>
+                      <p>
+                        <strong>Compositing:</strong> All active sources are combined in the program output
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </main>
     </div>
+  );
+}
+
+function SourcePreview({ source, isActive }: { source: VideoSource; isActive: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const animationFrameRef = useRef<number>();
+  const { acquireStream, acquireScreenShare, releaseStream } = useCameraStreams();
+
+  useEffect(() => {
+    let mounted = true;
+    let stream: MediaStream | null = null;
+
+    const initPreview = async () => {
+      if (!isActive || !source.isConnected) {
+        return;
+      }
+
+      try {
+        if (source.sourceType === 'camera' && source.deviceId) {
+          stream = await acquireStream(source.id, source.deviceId);
+        } else if (source.sourceType === 'screen') {
+          stream = await acquireScreenShare(source.id);
+        }
+
+        if (stream && mounted) {
+          if (!videoRef.current) {
+            videoRef.current = document.createElement('video');
+            videoRef.current.autoplay = true;
+            videoRef.current.muted = true;
+            videoRef.current.playsInline = true;
+          }
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+      } catch (err) {
+        console.error('Preview init error:', err);
+      }
+    };
+
+    initPreview();
+
+    return () => {
+      mounted = false;
+      if (stream) {
+        releaseStream(source.id);
+      }
+    };
+  }, [source, isActive, acquireStream, acquireScreenShare, releaseStream]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const render = () => {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!isActive) {
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Inactive', canvas.width / 2, canvas.height / 2);
+      } else if (!source.isConnected) {
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Not Connected', canvas.width / 2, canvas.height / 2);
+      } else if (videoRef.current && videoRef.current.readyState >= 2) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Loading...', canvas.width / 2, canvas.height / 2);
+      }
+
+      animationFrameRef.current = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [source, isActive]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={320}
+      height={180}
+      className="w-full h-full object-cover"
+      data-testid={`canvas-preview-${source.id}`}
+    />
   );
 }

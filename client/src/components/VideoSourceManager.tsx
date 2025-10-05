@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit2, Trash2, Video, Monitor, Film, Radio, Wifi, Play, Square } from "lucide-react";
+import { SiYoutube } from "react-icons/si";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,7 +17,7 @@ interface VideoSource {
   id: string;
   name: string;
   description: string;
-  sourceType: 'camera' | 'screen' | 'media' | 'rtmp' | 'webrtc';
+  sourceType: 'camera' | 'screen' | 'media' | 'rtmp' | 'webrtc' | 'youtube';
   deviceId?: string;
   deviceLabel?: string;
   streamUrl?: string;
@@ -37,9 +38,10 @@ export default function VideoSourceManager() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    sourceType: 'camera' as 'camera' | 'screen' | 'media' | 'rtmp' | 'webrtc',
+    sourceType: 'camera' as 'camera' | 'screen' | 'media' | 'rtmp' | 'webrtc' | 'youtube',
     deviceId: undefined as string | undefined,
     streamUrl: '',
+    youtubeUrl: '',
   });
   const { toast } = useToast();
 
@@ -51,13 +53,9 @@ export default function VideoSourceManager() {
 
   useEffect(() => {
     if (formData.sourceType === 'camera') {
-      // Request camera permission first to trigger browser prompt
       navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {
-          // Stop the stream immediately - we just needed permission
           stream.getTracks().forEach(track => track.stop());
-          
-          // Now enumerate devices with full labels
           return navigator.mediaDevices.enumerateDevices();
         })
         .then(deviceList => {
@@ -146,6 +144,28 @@ export default function VideoSourceManager() {
     },
   });
 
+  const parseYouTubeUrl = (url: string): { videoId: string; isValid: boolean } => {
+    if (!url) return { videoId: '', isValid: false };
+    
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return { videoId: match[1], isValid: true };
+      }
+    }
+    
+    return { videoId: '', isValid: false };
+  };
+
+  const getYouTubeThumbnail = (videoId: string): string => {
+    return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -153,6 +173,7 @@ export default function VideoSourceManager() {
       sourceType: 'camera',
       deviceId: undefined,
       streamUrl: '',
+      youtubeUrl: '',
     });
   };
 
@@ -182,26 +203,71 @@ export default function VideoSourceManager() {
 
   const handleCreateSource = () => {
     const selectedDevice = devices.find(d => d.deviceId === formData.deviceId);
-    const sourceData = {
-      ...formData,
-      deviceLabel: selectedDevice?.label || '',
+    
+    let sourceData: any = {
+      name: formData.name,
+      description: formData.description,
+      sourceType: formData.sourceType,
       configJson: {},
       isActive: true,
-      isConnected: true,
       tags: [],
     };
+
+    if (formData.sourceType === 'camera') {
+      sourceData.deviceId = formData.deviceId;
+      sourceData.deviceLabel = selectedDevice?.label || '';
+      sourceData.isConnected = true;
+    } else if (formData.sourceType === 'youtube') {
+      const { videoId, isValid } = parseYouTubeUrl(formData.youtubeUrl);
+      if (!isValid) {
+        toast({ title: 'Invalid YouTube URL', variant: 'destructive' });
+        return;
+      }
+      sourceData.configJson = {
+        youtubeUrl: formData.youtubeUrl,
+        videoId: videoId,
+      };
+      sourceData.isConnected = false;
+    } else if (formData.sourceType === 'rtmp' || formData.sourceType === 'webrtc') {
+      sourceData.streamUrl = formData.streamUrl;
+      sourceData.isConnected = true;
+    } else {
+      sourceData.isConnected = true;
+    }
+
     createSourceMutation.mutate(sourceData);
   };
 
   const handleUpdateSource = () => {
     if (!selectedSource) return;
     const selectedDevice = devices.find(d => d.deviceId === formData.deviceId);
+    
+    let updateData: any = {
+      name: formData.name,
+      description: formData.description,
+      sourceType: formData.sourceType,
+    };
+
+    if (formData.sourceType === 'camera') {
+      updateData.deviceId = formData.deviceId;
+      updateData.deviceLabel = selectedDevice?.label || selectedSource.deviceLabel;
+    } else if (formData.sourceType === 'youtube') {
+      const { videoId, isValid } = parseYouTubeUrl(formData.youtubeUrl);
+      if (!isValid) {
+        toast({ title: 'Invalid YouTube URL', variant: 'destructive' });
+        return;
+      }
+      updateData.configJson = {
+        youtubeUrl: formData.youtubeUrl,
+        videoId: videoId,
+      };
+    } else if (formData.sourceType === 'rtmp' || formData.sourceType === 'webrtc') {
+      updateData.streamUrl = formData.streamUrl;
+    }
+
     updateSourceMutation.mutate({
       id: selectedSource.id,
-      data: {
-        ...formData,
-        deviceLabel: selectedDevice?.label || selectedSource.deviceLabel,
-      },
+      data: updateData,
     });
   };
 
@@ -213,6 +279,7 @@ export default function VideoSourceManager() {
       sourceType: source.sourceType,
       deviceId: source.deviceId || undefined,
       streamUrl: source.streamUrl || '',
+      youtubeUrl: source.configJson?.youtubeUrl || '',
     });
     setIsDialogOpen(true);
   };
@@ -230,9 +297,21 @@ export default function VideoSourceManager() {
       case 'media': return <Film className="w-4 h-4" />;
       case 'rtmp': return <Radio className="w-4 h-4" />;
       case 'webrtc': return <Wifi className="w-4 h-4" />;
+      case 'youtube': return <SiYoutube className="w-4 h-4" />;
       default: return <Video className="w-4 h-4" />;
     }
   };
+
+  const getSourceTypeBadgeVariant = (type: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    switch (type) {
+      case 'camera': return 'default';
+      case 'screen': return 'secondary';
+      case 'youtube': return 'destructive';
+      default: return 'outline';
+    }
+  };
+
+  const youtubePreview = formData.sourceType === 'youtube' ? parseYouTubeUrl(formData.youtubeUrl) : { videoId: '', isValid: false };
 
   return (
     <div className="space-y-4">
@@ -260,7 +339,7 @@ export default function VideoSourceManager() {
                 {selectedSource ? 'Edit Video Source' : 'Add New Video Source'}
               </DialogTitle>
               <DialogDescription>
-                {selectedSource ? 'Update the video source configuration and settings.' : 'Configure a new camera, screen share, or media source for your production.'}
+                {selectedSource ? 'Update the video source configuration and settings.' : 'Configure a new camera, screen share, YouTube video, or streaming source for your production.'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -276,6 +355,7 @@ export default function VideoSourceManager() {
                   <SelectContent>
                     <SelectItem value="camera">Camera - USB/Webcam</SelectItem>
                     <SelectItem value="screen">Screen Capture</SelectItem>
+                    <SelectItem value="youtube">YouTube Video</SelectItem>
                     <SelectItem value="media">Media File</SelectItem>
                     <SelectItem value="rtmp">RTMP Stream</SelectItem>
                     <SelectItem value="webrtc">WebRTC Feed</SelectItem>
@@ -289,7 +369,7 @@ export default function VideoSourceManager() {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="DJI Osmo Pocket 3"
+                  placeholder={formData.sourceType === 'youtube' ? 'Match Highlights' : 'DJI Osmo Pocket 3'}
                   data-testid="input-source-name"
                 />
               </div>
@@ -300,7 +380,7 @@ export default function VideoSourceManager() {
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Primary camera for live broadcasts"
+                  placeholder={formData.sourceType === 'youtube' ? 'Tactical analysis highlights' : 'Primary camera for live broadcasts'}
                   rows={2}
                   data-testid="input-source-description"
                 />
@@ -339,6 +419,39 @@ export default function VideoSourceManager() {
                         {previewStream ? 'Stop' : 'Test'} Preview
                       </Button>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {formData.sourceType === 'youtube' && (
+                <div>
+                  <Label htmlFor="youtubeUrl">YouTube URL</Label>
+                  <Input
+                    id="youtubeUrl"
+                    value={formData.youtubeUrl}
+                    onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    data-testid="input-youtube-url"
+                  />
+                  {youtubePreview.isValid && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <SiYoutube className="w-4 h-4 text-red-500" />
+                        <span>Video ID: <code className="bg-sidebar px-1 rounded" data-testid="text-youtube-video-id">{youtubePreview.videoId}</code></span>
+                      </div>
+                      <div className="border rounded-md overflow-hidden" data-testid="preview-youtube-thumbnail">
+                        <img 
+                          src={getYouTubeThumbnail(youtubePreview.videoId)} 
+                          alt="YouTube thumbnail"
+                          className="w-full aspect-video object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {formData.youtubeUrl && !youtubePreview.isValid && (
+                    <p className="mt-2 text-sm text-destructive" data-testid="error-invalid-youtube-url">
+                      Invalid YouTube URL format. Please use a valid YouTube link.
+                    </p>
                   )}
                 </div>
               )}
@@ -400,77 +513,108 @@ export default function VideoSourceManager() {
         </Card>
       ) : videoSources && videoSources.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {videoSources.map((source) => (
-            <Card key={source.id} className="hover-elevate">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    {getSourceIcon(source.sourceType)}
-                    <CardTitle className="text-base">{source.name}</CardTitle>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleEditSource(source)}
-                      data-testid={`button-edit-source-${source.id}`}
-                    >
-                      <Edit2 className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => deleteSourceMutation.mutate(source.id)}
-                      disabled={deleteSourceMutation.isPending}
-                      data-testid={`button-delete-source-${source.id}`}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="aspect-video bg-sidebar rounded border flex items-center justify-center">
-                    {getSourceIcon(source.sourceType)}
-                  </div>
-                  {source.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {source.description}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between">
+          {videoSources.map((source) => {
+            const isYouTube = source.sourceType === 'youtube';
+            const videoId = isYouTube ? source.configJson?.videoId : null;
+            
+            return (
+              <Card key={source.id} className="hover-elevate" data-testid={`card-source-${source.id}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
-                      <Badge variant={source.isConnected ? "default" : "outline"} className="text-xs">
-                        {source.isConnected ? 'Connected' : 'Offline'}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {source.sourceType}
-                      </Badge>
+                      {getSourceIcon(source.sourceType)}
+                      <CardTitle className="text-base">{source.name}</CardTitle>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        const typedSource: VideoSource = source;
-                        return typedSource.isConnected 
-                          ? disconnectSourceMutation.mutate(typedSource.id)
-                          : connectSourceMutation.mutate(typedSource.id);
-                      }}
-                      data-testid={`button-toggle-connection-${source.id}`}
-                    >
-                      {source.isConnected ? 'Disconnect' : 'Connect'}
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleEditSource(source)}
+                        data-testid={`button-edit-source-${source.id}`}
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => deleteSourceMutation.mutate(source.id)}
+                        disabled={deleteSourceMutation.isPending}
+                        data-testid={`button-delete-source-${source.id}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
-                  {source.deviceLabel && (
-                    <p className="text-xs text-muted-foreground font-mono truncate">
-                      {source.deviceLabel}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="aspect-video bg-sidebar rounded border flex items-center justify-center overflow-hidden">
+                      {isYouTube && videoId ? (
+                        <img 
+                          src={getYouTubeThumbnail(videoId)} 
+                          alt={source.name}
+                          className="w-full h-full object-cover"
+                          data-testid={`img-youtube-thumbnail-${source.id}`}
+                        />
+                      ) : (
+                        getSourceIcon(source.sourceType)
+                      )}
+                    </div>
+                    {source.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {source.description}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        {!isYouTube && (
+                          <Badge 
+                            variant={source.isConnected ? "default" : "outline"} 
+                            className="text-xs"
+                            data-testid={`badge-connection-${source.id}`}
+                          >
+                            {source.isConnected ? 'Connected' : 'Offline'}
+                          </Badge>
+                        )}
+                        <Badge 
+                          variant={getSourceTypeBadgeVariant(source.sourceType)} 
+                          className="text-xs capitalize"
+                          data-testid={`badge-type-${source.id}`}
+                        >
+                          {source.sourceType === 'youtube' && <SiYoutube className="w-3 h-3 mr-1" />}
+                          {source.sourceType}
+                        </Badge>
+                      </div>
+                      {!isYouTube && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            const typedSource: VideoSource = source;
+                            return typedSource.isConnected 
+                              ? disconnectSourceMutation.mutate(typedSource.id)
+                              : connectSourceMutation.mutate(typedSource.id);
+                          }}
+                          data-testid={`button-toggle-connection-${source.id}`}
+                        >
+                          {source.isConnected ? 'Disconnect' : 'Connect'}
+                        </Button>
+                      )}
+                    </div>
+                    {isYouTube && videoId ? (
+                      <p className="text-xs text-muted-foreground font-mono truncate" data-testid={`text-video-id-${source.id}`}>
+                        ID: {videoId}
+                      </p>
+                    ) : source.deviceLabel ? (
+                      <p className="text-xs text-muted-foreground font-mono truncate">
+                        {source.deviceLabel}
+                      </p>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card>
@@ -478,7 +622,7 @@ export default function VideoSourceManager() {
             <Video className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <h3 className="font-bold mb-2">No Video Sources</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Add camera feeds, screen captures, or streaming sources
+              Add camera feeds, screen captures, YouTube videos, or streaming sources
             </p>
             <Button onClick={handleOpenNewDialog} data-testid="button-create-first-source">
               <Plus className="w-4 h-4 mr-2" />

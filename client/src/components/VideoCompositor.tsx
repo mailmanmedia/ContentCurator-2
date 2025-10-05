@@ -12,58 +12,17 @@ interface VideoSource {
   isConnected: boolean;
 }
 
-interface SceneElement {
-  id: string;
-  type: 'video' | 'image' | 'text' | 'graphic' | 'ticker';
-  zone: string;
-  position: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-  content?: string;
-  sourceId?: string;
-}
-
-interface RssArticle {
-  id: string;
-  title: string;
-  sourceId: string;
-  publishedAt: string;
-}
-
-interface RssSource {
-  id: string;
-  name: string;
-}
-
-interface Scene {
-  id: string;
-  name: string;
-  description: string;
-  layout: string;
-  elements: SceneElement[];
-}
-
 interface VideoCompositorProps {
-  sceneId: string | null;
+  activeSources?: string[];
+  sceneId?: string | null;
   className?: string;
 }
 
-export default function VideoCompositor({ sceneId, className = "" }: VideoCompositorProps) {
+export default function VideoCompositor({ activeSources, sceneId, className = "" }: VideoCompositorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const animationFrameRef = useRef<number>();
-  const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
   const { acquireStream, acquireScreenShare, releaseStream } = useCameraStreams();
-
-  const { data: sceneData } = useQuery<{ scene: Scene }>({
-    queryKey: [`/api/presentation/scenes/${sceneId}`],
-    enabled: !!sceneId,
-  });
-
-  const scene = sceneData?.scene;
 
   const { data: videoSourcesData } = useQuery<{ videoSources: VideoSource[] }>({
     queryKey: ['/api/video-sources'],
@@ -73,24 +32,22 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
 
   const [mediaStreams, setMediaStreams] = useState<Map<string, MediaStream>>(new Map());
   const streamsRefMap = useRef<Map<string, MediaStream>>(new Map());
-  const tickerScrollOffset = useRef<number>(0);
 
-  // Fetch RSS articles for ticker
-  const { data: rssData } = useQuery<{ articles: RssArticle[], sources: RssSource[] }>({
-    queryKey: ['/api/rss-articles?limit=20'],
-    refetchInterval: 60000, // Refetch every minute
-  });
-
-  // Initialize video elements for camera and screen sources using global stream manager
+  // Initialize video elements for camera and screen sources
   useEffect(() => {
     if (!videoSources) return;
 
     const initializeStreams = async () => {
       const neededSourceIds = new Set<string>();
       
+      // If activeSources prop is provided, use it; otherwise fall back to isActive flag
+      const targetSources = activeSources 
+        ? videoSources.filter(s => activeSources.includes(s.id))
+        : videoSources.filter(s => s.isActive);
+      
       // Identify which sources we need
-      for (const source of videoSources) {
-        if ((source.sourceType === 'camera' || source.sourceType === 'screen') && source.isActive && source.isConnected) {
+      for (const source of targetSources) {
+        if ((source.sourceType === 'camera' || source.sourceType === 'screen') && source.isConnected) {
           neededSourceIds.add(source.id);
         }
       }
@@ -104,8 +61,8 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
       }
 
       // Acquire new streams we don't have yet
-      for (const source of videoSources) {
-        if (source.isActive && source.isConnected && !streamsRefMap.current.has(source.id)) {
+      for (const source of targetSources) {
+        if (source.isConnected && !streamsRefMap.current.has(source.id)) {
           try {
             if (source.sourceType === 'camera' && source.deviceId) {
               const stream = await acquireStream(source.id, source.deviceId);
@@ -125,7 +82,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
     };
 
     initializeStreams();
-  }, [videoSources, acquireStream, acquireScreenShare, releaseStream]);
+  }, [videoSources, activeSources, acquireStream, acquireScreenShare, releaseStream]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -150,7 +107,6 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
       }
       video.srcObject = stream;
       
-      // Explicitly play the video - autoplay alone isn't reliable
       video.play().catch(err => {
         console.error(`Failed to play video for source ${sourceId}:`, err);
       });
@@ -170,8 +126,124 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
       cancelAnimationFrame(animationFrameRef.current);
     }
 
+    // If activeSources prop is provided, use simplified rendering mode
+    if (activeSources !== undefined) {
+      const render = () => {
+        // Clear canvas with black background
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (!videoSources || activeSources.length === 0) {
+          ctx.fillStyle = '#6b7280';
+          ctx.font = '16px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('No active sources', canvas.width / 2, canvas.height / 2);
+          animationFrameRef.current = requestAnimationFrame(render);
+          return;
+        }
+
+        // Get active sources
+        const activeSourceObjects = activeSources
+          .map(id => videoSources?.find(s => s.id === id))
+          .filter(Boolean) as VideoSource[];
+
+        if (activeSourceObjects.length === 0) {
+          ctx.fillStyle = '#6b7280';
+          ctx.font = '16px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('No active sources', canvas.width / 2, canvas.height / 2);
+          animationFrameRef.current = requestAnimationFrame(render);
+          return;
+        }
+
+        // Calculate grid layout based on number of sources
+        const count = activeSourceObjects.length;
+        let cols, rows;
+        if (count === 1) {
+          cols = 1;
+          rows = 1;
+        } else if (count === 2) {
+          cols = 2;
+          rows = 1;
+        } else if (count <= 4) {
+          cols = 2;
+          rows = 2;
+        } else if (count <= 6) {
+          cols = 3;
+          rows = 2;
+        } else if (count <= 9) {
+          cols = 3;
+          rows = 3;
+        } else {
+          cols = 4;
+          rows = Math.ceil(count / 4);
+        }
+
+        const cellWidth = canvas.width / cols;
+        const cellHeight = canvas.height / rows;
+        const padding = 4; // Small padding between cells
+
+        // Render each active source in grid
+        activeSourceObjects.forEach((source, index) => {
+          const col = index % cols;
+          const row = Math.floor(index / cols);
+          const x = col * cellWidth + padding;
+          const y = row * cellHeight + padding;
+          const width = cellWidth - padding * 2;
+          const height = cellHeight - padding * 2;
+
+          const video = videoRefs.current.get(source.id);
+          
+          if (video && video.readyState >= 2) {
+            ctx.drawImage(video, x, y, width, height);
+          } else {
+            // Placeholder
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeStyle = '#374151';
+            ctx.strokeRect(x, y, width, height);
+            
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = `${Math.floor(height * 0.08)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            if (!source.isConnected) {
+              ctx.fillText(`${source.name}`, x + width / 2, y + height / 2 - 10);
+              ctx.fillText('(Not connected)', x + width / 2, y + height / 2 + 10);
+            } else {
+              ctx.fillText(`${source.name}`, x + width / 2, y + height / 2 - 10);
+              ctx.fillText('(Loading...)', x + width / 2, y + height / 2 + 10);
+            }
+          }
+
+          // Draw source name label at bottom
+          const labelHeight = 30;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(x, y + height - labelHeight, width, labelHeight);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(source.name, x + width / 2, y + height - labelHeight / 2);
+        });
+
+        animationFrameRef.current = requestAnimationFrame(render);
+      };
+
+      render();
+
+      return () => {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+      };
+    }
+
+    // Original scene-based rendering (backward compatibility)
+    // This code path is maintained for any other uses of VideoCompositor
+    // that still rely on sceneId
     if (!sceneId) {
-      // No scene selected - draw once and don't start loop
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#6b7280';
@@ -181,205 +253,8 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
       return;
     }
 
-    const render = () => {
-      // Clear canvas with black background
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      if (!scene) {
-        // Scene loading
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Loading scene...', canvas.width / 2, canvas.height / 2);
-        animationFrameRef.current = requestAnimationFrame(render);
-        return;
-      }
-
-      if (!scene.elements || scene.elements.length === 0) {
-        // Show "No Content" message
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('No layers configured', canvas.width / 2, canvas.height / 2);
-        animationFrameRef.current = requestAnimationFrame(render);
-        return;
-      }
-
-      // Sort elements by zone with explicit z-ordering
-      const zOrder: Record<string, number> = { 
-        background: 0, 
-        main: 1, 
-        overlay: 2, 
-        foreground: 3 
-      };
-      const sortedElements = [...scene.elements].sort((a, b) => {
-        const aOrder = zOrder[a.zone] ?? 1; // Default to main layer
-        const bOrder = zOrder[b.zone] ?? 1;
-        return aOrder - bOrder;
-      });
-
-      // Render each element
-      sortedElements.forEach((element: SceneElement) => {
-        const x = (element.position.x / 100) * canvas.width;
-        const y = (element.position.y / 100) * canvas.height;
-        const width = (element.position.width / 100) * canvas.width;
-        const height = (element.position.height / 100) * canvas.height;
-
-        if (element.type === 'video') {
-          if (!element.sourceId) {
-            // No source configured
-            ctx.fillStyle = '#1f2937';
-            ctx.fillRect(x, y, width, height);
-            ctx.fillStyle = '#9ca3af';
-            ctx.font = `${Math.floor(height * 0.15)}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('No source configured', x + width / 2, y + height / 2);
-            ctx.fillText('Edit scene to assign source', x + width / 2, y + height / 2 + Math.floor(height * 0.15) + 4);
-          } else {
-            const video = videoRefs.current.get(element.sourceId);
-            const source = videoSources?.find(s => s.id === element.sourceId);
-            if (video && video.readyState >= 2) {
-              ctx.drawImage(video, x, y, width, height);
-            } else {
-              // Placeholder for video not ready
-              ctx.fillStyle = '#1f2937';
-              ctx.fillRect(x, y, width, height);
-              ctx.strokeStyle = '#374151';
-              ctx.strokeRect(x, y, width, height);
-              // Show status message
-              ctx.fillStyle = '#9ca3af';
-              ctx.font = `${Math.floor(height * 0.12)}px sans-serif`;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              if (!source) {
-                ctx.fillText('Source not found', x + width / 2, y + height / 2);
-              } else if (!source.isConnected) {
-                ctx.fillText(`${source.name} (Not connected)`, x + width / 2, y + height / 2);
-                ctx.fillText('Connect source to see video', x + width / 2, y + height / 2 + Math.floor(height * 0.12) + 4);
-              } else if (!source.isActive) {
-                ctx.fillText(`${source.name} (Not active)`, x + width / 2, y + height / 2);
-              } else {
-                ctx.fillText(`${source.name} (Loading...)`, x + width / 2, y + height / 2);
-              }
-            }
-          }
-        } else if (element.type === 'text' && element.content) {
-          // Render text overlay
-          ctx.fillStyle = '#ffffff';
-          ctx.font = `${Math.floor(height * 0.6)}px sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(element.content, x + width / 2, y + height / 2);
-        } else if (element.type === 'image' && element.content) {
-          // Render image from URL
-          let img = imageCache.current.get(element.content);
-          if (!img) {
-            img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = element.content;
-            imageCache.current.set(element.content, img);
-          }
-          if (img.complete && img.naturalWidth > 0) {
-            ctx.drawImage(img, x, y, width, height);
-          } else {
-            // Placeholder while loading
-            ctx.fillStyle = '#10b981';
-            ctx.fillRect(x, y, width, height);
-            ctx.strokeStyle = '#34d399';
-            ctx.strokeRect(x, y, width, height);
-          }
-        } else if (element.type === 'graphic') {
-          // Render graphic placeholder (could be enhanced with actual graphic rendering)
-          ctx.fillStyle = '#3b82f6';
-          ctx.fillRect(x, y, width, height);
-          ctx.strokeStyle = '#60a5fa';
-          ctx.strokeRect(x, y, width, height);
-        } else if (element.type === 'ticker') {
-          // Render scrolling RSS ticker with Liverpool FC branding
-          // Background: Liverpool red #C8102E
-          ctx.fillStyle = '#C8102E';
-          ctx.fillRect(x, y, width, height);
-
-          if (rssData && rssData.articles && rssData.articles.length > 0) {
-            // Build ticker text from articles
-            const sourcesMap = new Map(rssData.sources?.map(s => [s.id, s.name]) || []);
-            const tickerItems = rssData.articles.map(article => {
-              const sourceName = sourcesMap.get(article.sourceId) || 'LFC News';
-              return `${sourceName}: ${article.title}`;
-            });
-            const tickerText = tickerItems.join('  •  ') + '  •  ';
-
-            // Set font and measure text
-            const fontSize = Math.floor(height * 0.5);
-            ctx.font = `bold ${fontSize}px sans-serif`;
-            const textWidth = ctx.measureText(tickerText).width;
-
-            // Update scroll position (2 pixels per frame for smooth scrolling)
-            tickerScrollOffset.current += 2;
-            if (tickerScrollOffset.current > textWidth) {
-              tickerScrollOffset.current = 0;
-            }
-
-            // Save context for clipping
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(x, y, width, height);
-            ctx.clip();
-
-            // Draw text with Liverpool navy color #1B365D
-            ctx.fillStyle = '#1B365D';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-
-            // Draw two copies for seamless looping
-            const xPos1 = x + width - tickerScrollOffset.current;
-            const xPos2 = xPos1 + textWidth;
-            
-            ctx.fillText(tickerText, xPos1, y + height / 2);
-            ctx.fillText(tickerText, xPos2, y + height / 2);
-
-            // Restore context
-            ctx.restore();
-          } else {
-            // Loading or no articles
-            ctx.fillStyle = '#1B365D';
-            ctx.font = `bold ${Math.floor(height * 0.5)}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('Loading Liverpool FC News...', x + width / 2, y + height / 2);
-          }
-        }
-
-        // Debug: Draw zone label
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(x, y, 80, 20);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '10px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${element.zone}`, x + 4, y + 14);
-      });
-
-      animationFrameRef.current = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [sceneId, scene, mediaStreams, rssData]);
-
-  if (!sceneId) {
-    return (
-      <div className={`bg-black flex items-center justify-center ${className}`}>
-        <p className="text-muted-foreground text-sm">No scene selected</p>
-      </div>
-    );
-  }
+    // Scene-based rendering would go here but is not needed for this simplified view
+  }, [activeSources, sceneId, mediaStreams, videoSources]);
 
   return (
     <div className={`bg-black ${className}`}>

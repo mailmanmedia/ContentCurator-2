@@ -9,9 +9,11 @@ import VisualAssistant from "@/components/VisualAssistant";
 import FrameworkDirectory from "@/pages/FrameworkDirectory";
 import CreateFramework from "@/pages/CreateFramework";
 import RssIntelligence from "@/pages/RssIntelligence";
+import RssControl from "@/pages/RssControl";
 import TeamMatchupStudio from "@/pages/TeamMatchupStudio";
 import ContentLibrary from "@/pages/ContentLibrary";
 import LivePresentation from "@/pages/LivePresentation";
+import Templates from "@/pages/Templates";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,11 +23,13 @@ function Router() {
       <Route path="/frameworks" component={FrameworkDirectory} />
       <Route path="/frameworks/create" component={CreateFramework} />
       <Route path="/rss" component={RssIntelligence} />
+      <Route path="/rss-control" component={RssControl} />
       <Route path="/team-matchup-studio" component={TeamMatchupStudio} />
       <Route path="/team-matchup" component={TeamMatchupStudio} />
       <Route path="/content-library" component={ContentLibrary} />
       <Route path="/live-presentation" component={LivePresentation} />
       <Route path="/live" component={LivePresentation} />
+      <Route path="/templates" component={Templates} />
       <Route component={NotFound} />
     </Switch>
   );

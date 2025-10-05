@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Home, Menu, Folder, Rss, Users, Archive, Radio } from "lucide-react";
+import { Home, Menu, Folder, Rss, Users, Archive, Radio, Palette, Settings } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import mailmanLogo from "@assets/mailman-logo.png";
@@ -100,6 +100,26 @@ export default function Header() {
               <Rss className="w-5 h-5" />
             </Button>
           </Link>
+          <Link href="/rss-control">
+            <Button 
+              variant="ghost"
+              size="icon" 
+              className={`text-[#1B365D] ${location === "/rss-control" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+              data-testid="button-rss-control"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link href="/templates">
+            <Button 
+              variant="ghost"
+              size="icon" 
+              className={`text-[#1B365D] ${location === "/templates" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+              data-testid="button-templates"
+            >
+              <Palette className="w-5 h-5" />
+            </Button>
+          </Link>
           
           <div className="ml-2 pl-2 border-l-2 border-[#1B365D]/20">
             <Badge className="bg-[#C8102E] text-white border-0 font-league-spartan font-semibold uppercase text-xs">
@@ -190,6 +210,28 @@ export default function Header() {
               >
                 <Rss className="w-5 h-5 mr-3" />
                 RSS Intelligence
+              </Button>
+            </Link>
+            <Link href="/rss-control">
+              <Button 
+                variant="ghost"
+                className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/rss-control" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+                data-testid="button-rss-control-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Settings className="w-5 h-5 mr-3" />
+                RSS Control
+              </Button>
+            </Link>
+            <Link href="/templates">
+              <Button 
+                variant="ghost"
+                className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/templates" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+                data-testid="button-templates-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Palette className="w-5 h-5 mr-3" />
+                Templates
               </Button>
             </Link>
             
