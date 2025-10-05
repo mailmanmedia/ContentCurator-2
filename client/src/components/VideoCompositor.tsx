@@ -56,7 +56,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const animationFrameRef = useRef<number>();
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
-  const { getStream, hasStream } = useCameraStreams();
+  const { acquireStream, releaseStream, hasStream } = useCameraStreams();
 
   const { data: sceneData } = useQuery<{ scene: Scene }>({
     queryKey: [`/api/presentation/scenes/${sceneId}`],
@@ -72,6 +72,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
   const videoSources = videoSourcesData?.videoSources;
 
   const [mediaStreams, setMediaStreams] = useState<Map<string, MediaStream>>(new Map());
+  const acquiredStreamsRef = useRef<Set<string>>(new Set());
   const tickerScrollOffset = useRef<number>(0);
 
   // Fetch RSS articles for ticker
@@ -86,26 +87,43 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
 
     const initializeStreams = async () => {
       const newStreams = new Map<string, MediaStream>();
+      const newAcquiredSet = new Set<string>();
 
       for (const source of videoSources) {
         if (source.sourceType === 'camera' && source.deviceId && source.isActive && source.isConnected) {
           try {
-            const stream = await getStream(source.id, source.deviceId);
+            const stream = await acquireStream(source.id, source.deviceId);
             newStreams.set(source.id, stream);
+            newAcquiredSet.add(source.id);
           } catch (err) {
             console.error(`Failed to get camera stream for ${source.name}:`, err);
           }
         }
       }
 
+      // Release streams that are no longer needed
+      acquiredStreamsRef.current.forEach(sourceId => {
+        if (!newAcquiredSet.has(sourceId)) {
+          releaseStream(sourceId);
+        }
+      });
+
+      acquiredStreamsRef.current = newAcquiredSet;
       setMediaStreams(newStreams);
     };
 
     initializeStreams();
+  }, [videoSources, acquireStream, releaseStream]);
 
-    // Note: We don't cleanup streams here because they're managed globally
-    // This allows cameras to persist when switching tabs
-  }, [videoSources, getStream]);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      acquiredStreamsRef.current.forEach(sourceId => {
+        releaseStream(sourceId);
+      });
+      acquiredStreamsRef.current.clear();
+    };
+  }, [releaseStream]);
 
   // Create video elements from streams
   useEffect(() => {

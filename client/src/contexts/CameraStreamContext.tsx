@@ -1,7 +1,7 @@
 import { createContext, useContext, useRef, useCallback, ReactNode } from 'react';
 
 interface CameraStreamContextType {
-  getStream: (sourceId: string, deviceId: string) => Promise<MediaStream>;
+  acquireStream: (sourceId: string, deviceId: string) => Promise<MediaStream>;
   releaseStream: (sourceId: string) => void;
   releaseAllStreams: () => void;
   hasStream: (sourceId: string) => boolean;
@@ -13,15 +13,21 @@ interface CameraStreamProviderProps {
   children: ReactNode;
 }
 
+interface StreamInfo {
+  stream: MediaStream;
+  refCount: number;
+}
+
 export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
-  const streamsRef = useRef<Map<string, MediaStream>>(new Map());
+  const streamsRef = useRef<Map<string, StreamInfo>>(new Map());
   const requestsRef = useRef<Map<string, Promise<MediaStream>>>(new Map());
 
-  const getStream = useCallback(async (sourceId: string, deviceId: string): Promise<MediaStream> => {
-    if (streamsRef.current.has(sourceId)) {
-      const existingStream = streamsRef.current.get(sourceId)!;
-      if (existingStream.active) {
-        return existingStream;
+  const acquireStream = useCallback(async (sourceId: string, deviceId: string): Promise<MediaStream> => {
+    const existing = streamsRef.current.get(sourceId);
+    if (existing) {
+      if (existing.stream.active) {
+        existing.refCount++;
+        return existing.stream;
       } else {
         streamsRef.current.delete(sourceId);
         requestsRef.current.delete(sourceId);
@@ -29,7 +35,12 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
     }
 
     if (requestsRef.current.has(sourceId)) {
-      return requestsRef.current.get(sourceId)!;
+      const stream = await requestsRef.current.get(sourceId)!;
+      const info = streamsRef.current.get(sourceId);
+      if (info) {
+        info.refCount++;
+      }
+      return stream;
     }
 
     const streamRequest = navigator.mediaDevices.getUserMedia({
@@ -41,7 +52,7 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
 
     try {
       const stream = await streamRequest;
-      streamsRef.current.set(sourceId, stream);
+      streamsRef.current.set(sourceId, { stream, refCount: 1 });
       requestsRef.current.delete(sourceId);
       return stream;
     } catch (error) {
@@ -51,17 +62,20 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
   }, []);
 
   const releaseStream = useCallback((sourceId: string) => {
-    const stream = streamsRef.current.get(sourceId);
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      streamsRef.current.delete(sourceId);
-      requestsRef.current.delete(sourceId);
+    const info = streamsRef.current.get(sourceId);
+    if (info) {
+      info.refCount--;
+      if (info.refCount <= 0) {
+        info.stream.getTracks().forEach(track => track.stop());
+        streamsRef.current.delete(sourceId);
+        requestsRef.current.delete(sourceId);
+      }
     }
   }, []);
 
   const releaseAllStreams = useCallback(() => {
-    streamsRef.current.forEach(stream => {
-      stream.getTracks().forEach(track => track.stop());
+    streamsRef.current.forEach(info => {
+      info.stream.getTracks().forEach(track => track.stop());
     });
     streamsRef.current.clear();
     requestsRef.current.clear();
@@ -72,7 +86,7 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
   }, []);
 
   const value: CameraStreamContextType = {
-    getStream,
+    acquireStream,
     releaseStream,
     releaseAllStreams,
     hasStream,

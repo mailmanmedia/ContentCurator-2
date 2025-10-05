@@ -1712,6 +1712,134 @@ export class MemStorage implements IStorage {
     return this.videoSources.delete(id);
   }
 
+  // Source Template methods
+  async getSourceTemplates(): Promise<SourceTemplate[]> {
+    return Array.from(this.sourceTemplates.values());
+  }
+
+  async getSourceTemplate(id: string): Promise<SourceTemplate | undefined> {
+    return this.sourceTemplates.get(id);
+  }
+
+  async getSourceTemplatesByType(sourceType: string): Promise<SourceTemplate[]> {
+    return Array.from(this.sourceTemplates.values())
+      .filter(template => template.sourceType === sourceType);
+  }
+
+  async getDefaultSourceTemplates(): Promise<SourceTemplate[]> {
+    return Array.from(this.sourceTemplates.values())
+      .filter(template => template.isDefault);
+  }
+
+  async createSourceTemplate(template: InsertSourceTemplate): Promise<SourceTemplate> {
+    const newTemplate: SourceTemplate = {
+      id: randomUUID(),
+      ...template,
+      usageCount: template.usageCount ?? 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.sourceTemplates.set(newTemplate.id, newTemplate);
+    return newTemplate;
+  }
+
+  async updateSourceTemplate(id: string, updates: Partial<InsertSourceTemplate>): Promise<SourceTemplate | undefined> {
+    const template = this.sourceTemplates.get(id);
+    if (!template) return undefined;
+    
+    const updated = {
+      ...template,
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.sourceTemplates.set(id, updated);
+    return updated;
+  }
+
+  async deleteSourceTemplate(id: string): Promise<boolean> {
+    return this.sourceTemplates.delete(id);
+  }
+
+  // Set Template methods
+  async getSetTemplates(): Promise<SetTemplate[]> {
+    return Array.from(this.setTemplates.values());
+  }
+
+  async getSetTemplate(id: string): Promise<SetTemplate | undefined> {
+    return this.setTemplates.get(id);
+  }
+
+  async getDefaultSetTemplates(): Promise<SetTemplate[]> {
+    return Array.from(this.setTemplates.values())
+      .filter(template => template.isDefault);
+  }
+
+  async createSetTemplate(template: InsertSetTemplate): Promise<SetTemplate> {
+    const newTemplate: SetTemplate = {
+      id: randomUUID(),
+      ...template,
+      usageCount: template.usageCount ?? 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.setTemplates.set(newTemplate.id, newTemplate);
+    return newTemplate;
+  }
+
+  async updateSetTemplate(id: string, updates: Partial<InsertSetTemplate>): Promise<SetTemplate | undefined> {
+    const template = this.setTemplates.get(id);
+    if (!template) return undefined;
+    
+    const updated = {
+      ...template,
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.setTemplates.set(id, updated);
+    return updated;
+  }
+
+  async deleteSetTemplate(id: string): Promise<boolean> {
+    return this.setTemplates.delete(id);
+  }
+
+  // Source Name Preset methods
+  async getSourceNamePresets(): Promise<SourceNamePreset[]> {
+    return Array.from(this.sourceNamePresets.values());
+  }
+
+  async getSourceNamePreset(id: string): Promise<SourceNamePreset | undefined> {
+    return this.sourceNamePresets.get(id);
+  }
+
+  async getSourceNamePresetsByCategory(category: string): Promise<SourceNamePreset[]> {
+    return Array.from(this.sourceNamePresets.values())
+      .filter(preset => preset.category === category);
+  }
+
+  async createSourceNamePreset(preset: InsertSourceNamePreset): Promise<SourceNamePreset> {
+    const newPreset: SourceNamePreset = {
+      id: randomUUID(),
+      ...preset,
+      usageCount: preset.usageCount ?? 0,
+      createdAt: new Date()
+    };
+    this.sourceNamePresets.set(newPreset.id, newPreset);
+    return newPreset;
+  }
+
+  async incrementSourceNameUsage(id: string): Promise<void> {
+    const preset = this.sourceNamePresets.get(id);
+    if (preset) {
+      preset.usageCount++;
+      this.sourceNamePresets.set(id, preset);
+    }
+  }
+
+  async deleteSourceNamePreset(id: string): Promise<boolean> {
+    return this.sourceNamePresets.delete(id);
+  }
+
   // Live State methods (in-memory only)
   async getLiveState(): Promise<LiveState> {
     return { ...this.liveState };
