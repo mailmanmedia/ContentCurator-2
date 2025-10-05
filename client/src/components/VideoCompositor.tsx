@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useCameraStreams } from "@/contexts/CameraStreamContext";
 
 interface VideoSource {
   id: string;
@@ -55,6 +56,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const animationFrameRef = useRef<number>();
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
+  const { getStream, hasStream } = useCameraStreams();
 
   const { data: sceneData } = useQuery<{ scene: Scene }>({
     queryKey: [`/api/presentation/scenes/${sceneId}`],
@@ -70,7 +72,6 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
   const videoSources = videoSourcesData?.videoSources;
 
   const [mediaStreams, setMediaStreams] = useState<Map<string, MediaStream>>(new Map());
-  const cleanupRef = useRef<Map<string, MediaStream>>(new Map());
   const tickerScrollOffset = useRef<number>(0);
 
   // Fetch RSS articles for ticker
@@ -79,28 +80,18 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
     refetchInterval: 60000, // Refetch every minute
   });
 
-  // Initialize video elements for camera sources
+  // Initialize video elements for camera sources using global camera manager
   useEffect(() => {
     if (!videoSources) return;
 
     const initializeStreams = async () => {
-      // Stop any previous streams
-      cleanupRef.current.forEach(stream => {
-        stream.getTracks().forEach(track => track.stop());
-      });
-      cleanupRef.current.clear();
-
       const newStreams = new Map<string, MediaStream>();
 
       for (const source of videoSources) {
         if (source.sourceType === 'camera' && source.deviceId && source.isActive && source.isConnected) {
           try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-              video: { deviceId: { exact: source.deviceId } },
-              audio: false,
-            });
+            const stream = await getStream(source.id, source.deviceId);
             newStreams.set(source.id, stream);
-            cleanupRef.current.set(source.id, stream);
           } catch (err) {
             console.error(`Failed to get camera stream for ${source.name}:`, err);
           }
@@ -112,14 +103,9 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
 
     initializeStreams();
 
-    return () => {
-      // Cleanup all streams when component unmounts or dependencies change
-      cleanupRef.current.forEach(stream => {
-        stream.getTracks().forEach(track => track.stop());
-      });
-      cleanupRef.current.clear();
-    };
-  }, [videoSources]);
+    // Note: We don't cleanup streams here because they're managed globally
+    // This allows cameras to persist when switching tabs
+  }, [videoSources, getStream]);
 
   // Create video elements from streams
   useEffect(() => {

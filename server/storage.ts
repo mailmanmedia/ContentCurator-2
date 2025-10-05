@@ -16,6 +16,9 @@ import {
   type PresentationSet, type InsertPresentationSet,
   type TickerPlaylist, type InsertTickerPlaylist,
   type VideoSource, type InsertVideoSource,
+  type SourceTemplate, type InsertSourceTemplate,
+  type SetTemplate, type InsertSetTemplate,
+  type SourceNamePreset, type InsertSourceNamePreset,
   type LiveState
 } from "@shared/schema";
 import { randomUUID } from "crypto";
@@ -176,6 +179,31 @@ export interface IStorage {
   updateVideoSource(id: string, updates: Partial<InsertVideoSource>): Promise<VideoSource | undefined>;
   deleteVideoSource(id: string): Promise<boolean>;
 
+  // Source Template methods
+  getSourceTemplates(): Promise<SourceTemplate[]>;
+  getSourceTemplate(id: string): Promise<SourceTemplate | undefined>;
+  getSourceTemplatesByType(sourceType: string): Promise<SourceTemplate[]>;
+  getDefaultSourceTemplates(): Promise<SourceTemplate[]>;
+  createSourceTemplate(template: InsertSourceTemplate): Promise<SourceTemplate>;
+  updateSourceTemplate(id: string, updates: Partial<InsertSourceTemplate>): Promise<SourceTemplate | undefined>;
+  deleteSourceTemplate(id: string): Promise<boolean>;
+
+  // Set Template methods
+  getSetTemplates(): Promise<SetTemplate[]>;
+  getSetTemplate(id: string): Promise<SetTemplate | undefined>;
+  getDefaultSetTemplates(): Promise<SetTemplate[]>;
+  createSetTemplate(template: InsertSetTemplate): Promise<SetTemplate>;
+  updateSetTemplate(id: string, updates: Partial<InsertSetTemplate>): Promise<SetTemplate | undefined>;
+  deleteSetTemplate(id: string): Promise<boolean>;
+
+  // Source Name Preset methods
+  getSourceNamePresets(): Promise<SourceNamePreset[]>;
+  getSourceNamePreset(id: string): Promise<SourceNamePreset | undefined>;
+  getSourceNamePresetsByCategory(category: string): Promise<SourceNamePreset[]>;
+  createSourceNamePreset(preset: InsertSourceNamePreset): Promise<SourceNamePreset>;
+  incrementSourceNameUsage(id: string): Promise<void>;
+  deleteSourceNamePreset(id: string): Promise<boolean>;
+
   // Live State methods (in-memory only)
   getLiveState(): Promise<LiveState>;
   updateLiveState(updates: Partial<LiveState>): Promise<LiveState>;
@@ -212,6 +240,9 @@ export class MemStorage implements IStorage {
   private presentationSets: Map<string, PresentationSet>;
   private tickerPlaylists: Map<string, TickerPlaylist>;
   private videoSources: Map<string, VideoSource>;
+  private sourceTemplates: Map<string, SourceTemplate>;
+  private setTemplates: Map<string, SetTemplate>;
+  private sourceNamePresets: Map<string, SourceNamePreset>;
   private liveState: LiveState;
 
   constructor() {
@@ -232,6 +263,9 @@ export class MemStorage implements IStorage {
     this.presentationSets = new Map();
     this.tickerPlaylists = new Map();
     this.videoSources = new Map();
+    this.sourceTemplates = new Map();
+    this.setTemplates = new Map();
+    this.sourceNamePresets = new Map();
     this.liveState = {
       currentSetId: null,
       programSceneId: null,

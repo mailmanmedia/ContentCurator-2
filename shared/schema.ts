@@ -471,6 +471,38 @@ export const videoSources = pgTable("video_sources", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+export const sourceTemplates = pgTable("source_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  sourceType: text("source_type").notNull(),
+  configJson: jsonb("config_json").notNull().default('{}'),
+  isDefault: boolean("is_default").notNull().default(false),
+  tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const setTemplates = pgTable("set_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  sceneTemplateIds: text("scene_template_ids").array().notNull().default(sql`'{}'::text[]`),
+  configJson: jsonb("config_json").notNull().default('{}'),
+  isDefault: boolean("is_default").notNull().default(false),
+  tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const sourceNamePresets = pgTable("source_name_presets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  category: text("category").notNull().default('Custom'),
+  usageCount: integer("usage_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Live state will be managed in-memory, not persisted
 export interface LiveState {
   currentSetId: string | null;
@@ -523,6 +555,23 @@ export const insertVideoSourceSchema = createInsertSchema(videoSources).omit({
   lastConnectedAt: true,
 });
 
+export const insertSourceTemplateSchema = createInsertSchema(sourceTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSetTemplateSchema = createInsertSchema(setTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSourceNamePresetSchema = createInsertSchema(sourceNamePresets).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertLibraryItem = z.infer<typeof insertLibraryItemSchema>;
 export type LibraryItem = typeof libraryItems.$inferSelect;
 export type InsertScene = z.infer<typeof insertSceneSchema>;
@@ -533,3 +582,9 @@ export type InsertTickerPlaylist = z.infer<typeof insertTickerPlaylistSchema>;
 export type TickerPlaylist = typeof tickerPlaylists.$inferSelect;
 export type InsertVideoSource = z.infer<typeof insertVideoSourceSchema>;
 export type VideoSource = typeof videoSources.$inferSelect;
+export type InsertSourceTemplate = z.infer<typeof insertSourceTemplateSchema>;
+export type SourceTemplate = typeof sourceTemplates.$inferSelect;
+export type InsertSetTemplate = z.infer<typeof insertSetTemplateSchema>;
+export type SetTemplate = typeof setTemplates.$inferSelect;
+export type InsertSourceNamePreset = z.infer<typeof insertSourceNamePresetSchema>;
+export type SourceNamePreset = typeof sourceNamePresets.$inferSelect;
