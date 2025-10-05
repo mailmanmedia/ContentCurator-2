@@ -96,7 +96,7 @@ export default function VideoCompositor({ sceneId, className = "" }: VideoCompos
       }
 
       // Release streams we no longer need
-      for (const [sourceId, stream] of streamsRefMap.current) {
+      for (const [sourceId, stream] of Array.from(streamsRefMap.current.entries())) {
         if (!neededSourceIds.has(sourceId)) {
           releaseStream(sourceId);
           streamsRefMap.current.delete(sourceId);
