@@ -1526,11 +1526,26 @@ export class MemStorage implements IStorage {
     const original = await this.getScene(id);
     if (!original) return undefined;
 
+    // Auto-assign video sources to video elements that don't have them
+    const videoSources = await this.getVideoSources();
+    const connectedSource = videoSources.find(s => s.isConnected && s.isActive);
+    
+    const updatedElements = (original.elements as any[]).map((element: any) => {
+      if (element.type === 'video' && !element.sourceId && connectedSource) {
+        return {
+          ...element,
+          sourceId: connectedSource.id,
+          content: `Auto-connected: ${connectedSource.name}`
+        };
+      }
+      return element;
+    });
+
     const duplicated = await db.insert(scenesTable).values({
       name: `${original.name} (Copy)`,
       description: original.description,
       layout: original.layout,
-      elements: original.elements,
+      elements: updatedElements,
       backgroundConfig: original.backgroundConfig,
       transitionConfig: original.transitionConfig,
       aspectRatio: original.aspectRatio,

@@ -3114,6 +3114,10 @@ Return ONLY a JSON object with this structure:
   // Quick Setup endpoint - creates a complete setup in one click
   app.post("/api/live/quick-setup", async (req, res) => {
     try {
+      // Get available video sources to auto-connect
+      const videoSources = await storage.getVideoSources();
+      const connectedSource = videoSources.find(s => s.isConnected && s.isActive);
+      
       // Create a default scene with basic layers
       const sceneData = {
         name: "Quick Setup Scene",
@@ -3132,8 +3136,8 @@ Return ONLY a JSON object with this structure:
               width: 100,
               height: 90
             },
-            content: "",
-            sourceId: undefined,
+            content: connectedSource ? `Connected: ${connectedSource.name}` : "No source - connect a camera or add source in Sources tab",
+            sourceId: connectedSource?.id,
             style: {}
           },
           {
