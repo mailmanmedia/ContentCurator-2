@@ -532,4 +532,9 @@
     backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.18);
   }
+
+  /* Fix for Radix Select inside Dialog z-index conflict */
+  [data-radix-popper-content-wrapper] {
+    z-index: 100 !important;
+  }
 }
