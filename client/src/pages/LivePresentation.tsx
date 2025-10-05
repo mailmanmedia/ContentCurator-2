@@ -1,24 +1,40 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Radio, 
   Video, 
   Monitor, 
-  Film, 
-  Wifi, 
-  WifiOff, 
   Play, 
   Square,
   GripVertical,
-  Youtube,
-  CheckCircle2
+  Plus,
+  X,
+  Sparkles,
+  Layers
 } from "lucide-react";
 import Header from "@/components/Header";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import VideoCompositor from "@/components/VideoCompositor";
 import { useCameraStreams } from "@/contexts/CameraStreamContext";
@@ -40,41 +56,33 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-interface VideoSource {
+interface ActiveSource {
   id: string;
   name: string;
-  description: string;
-  sourceType: 'camera' | 'screen' | 'media' | 'rtmp' | 'webrtc' | 'youtube';
+  type: 'camera' | 'screen' | 'overlay';
   deviceId?: string;
   deviceLabel?: string;
-  streamUrl?: string;
-  mediaFileId?: string;
-  configJson: Record<string, any>;
-  isActive: boolean;
-  isConnected: boolean;
-  lastConnectedAt?: string;
-  tags: string[];
+  stream?: MediaStream;
+  overlayConfig?: {
+    text: string;
+    animation: 'scroll' | 'fade' | 'pulse';
+    template: 'ticker' | 'banner' | 'corner';
+  };
 }
 
 const sourceTypeIcons = {
   camera: Video,
   screen: Monitor,
-  media: Film,
-  rtmp: Radio,
-  webrtc: Wifi,
-  youtube: Youtube,
+  overlay: Sparkles,
 };
 
-const sourceTypeLabels = {
-  camera: 'Camera',
-  screen: 'Screen',
-  media: 'Media',
-  rtmp: 'RTMP',
-  webrtc: 'WebRTC',
-  youtube: 'YouTube',
-};
-
-function SortableActiveSource({ source }: { source: VideoSource }) {
+function SortableActiveSource({ 
+  source, 
+  onRemove 
+}: { 
+  source: ActiveSource;
+  onRemove: (id: string) => void;
+}) {
   const {
     attributes,
     listeners,
@@ -88,13 +96,13 @@ function SortableActiveSource({ source }: { source: VideoSource }) {
     transition,
   };
 
-  const Icon = sourceTypeIcons[source.sourceType];
+  const Icon = sourceTypeIcons[source.type];
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 p-2 bg-card rounded-md border hover-elevate"
+      className="flex items-center gap-2 p-2 bg-card rounded-md border hover-elevate group"
       data-testid={`sortable-active-source-${source.id}`}
     >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
@@ -102,106 +110,301 @@ function SortableActiveSource({ source }: { source: VideoSource }) {
       </div>
       <Icon className="w-4 h-4 text-primary" />
       <span className="text-sm flex-1 truncate">{source.name}</span>
-      <Badge variant="outline" className="text-xs">
-        {source.isConnected ? 'Connected' : 'Inactive'}
-      </Badge>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={() => onRemove(source.id)}
+        data-testid={`button-remove-source-${source.id}`}
+      >
+        <X className="w-3 h-3" />
+      </Button>
     </div>
   );
 }
 
 export default function LivePresentation() {
-  const [activeSources, setActiveSources] = useState<string[]>([]);
+  const [activeSources, setActiveSources] = useState<ActiveSource[]>([]);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
+  const [overlayText, setOverlayText] = useState('');
+  const [overlayAnimation, setOverlayAnimation] = useState<'scroll' | 'fade' | 'pulse'>('scroll');
+  const [overlayTemplate, setOverlayTemplate] = useState<'ticker' | 'banner' | 'corner'>('ticker');
+  const [selectedValue, setSelectedValue] = useState<string>('');
+  
   const { toast } = useToast();
-  const { acquireStream, acquireScreenShare, releaseStream } = useCameraStreams();
+  const { acquireStream, acquireScreenShare } = useCameraStreams();
+  const overlayCanvasRefs = useRef<Map<string, HTMLCanvasElement>>(new Map());
+  const overlayAnimationCleanup = useRef<Map<string, () => void>>(new Map());
 
-  const { data: videoSourcesData, isLoading } = useQuery<{ videoSources: VideoSource[] }>({
-    queryKey: ['/api/video-sources'],
-  });
-
-  const videoSources = videoSourcesData?.videoSources || [];
-
+  // Detect cameras
   useEffect(() => {
-    if (videoSources.length > 0 && activeSources.length === 0) {
-      const activeIds = videoSources
-        .filter(s => s.isActive)
-        .map(s => s.id);
-      setActiveSources(activeIds);
+    const detectCameras = async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        setCameras(videoDevices);
+      } catch (err) {
+        console.error('Camera detection error:', err);
+      }
+    };
+
+    detectCameras();
+
+    navigator.mediaDevices.addEventListener('devicechange', detectCameras);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', detectCameras);
+    };
+  }, []);
+
+  const handleSourceSelection = async (value: string) => {
+    setSelectedValue('');
+    
+    if (value === 'screen-share') {
+      await handleAddScreenShare();
+    } else if (value === 'branded-overlay') {
+      setIsOverlayDialogOpen(true);
+    } else if (value.startsWith('camera-')) {
+      const deviceId = value.replace('camera-', '');
+      await handleAddCamera(deviceId);
     }
-  }, [videoSources]);
+  };
 
-  const updateSourceMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<VideoSource> }) => {
-      const response = await apiRequest('PUT', `/api/video-sources/${id}`, data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/video-sources'] });
-    },
-  });
+  const handleAddCamera = async (deviceId: string) => {
+    try {
+      const camera = cameras.find(c => c.deviceId === deviceId);
+      if (!camera) return;
 
-  const connectSourceMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiRequest('POST', `/api/video-sources/${id}/connect`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/video-sources'] });
-      toast({ title: 'Source connected' });
-    },
-  });
+      const sourceId = `camera-${Date.now()}`;
+      const stream = await acquireStream(sourceId, deviceId);
 
-  const disconnectSourceMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiRequest('POST', `/api/video-sources/${id}/disconnect`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/video-sources'] });
-      toast({ title: 'Source disconnected' });
-    },
-  });
+      const newSource: ActiveSource = {
+        id: sourceId,
+        name: camera.label || 'Camera',
+        type: 'camera',
+        deviceId,
+        deviceLabel: camera.label,
+        stream,
+      };
 
-  const handleToggleSource = (sourceId: string, checked: boolean) => {
-    if (checked) {
-      setActiveSources(prev => [...prev, sourceId]);
-    } else {
-      setActiveSources(prev => prev.filter(id => id !== sourceId));
+      setActiveSources(prev => [...prev, newSource]);
+      toast({ title: 'Camera added', description: camera.label });
+    } catch (err) {
+      console.error('Failed to add camera:', err);
+      toast({ 
+        title: 'Failed to add camera', 
+        description: 'Please check camera permissions',
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const handleAddScreenShare = async () => {
+    try {
+      const sourceId = `screen-${Date.now()}`;
+      const stream = await acquireScreenShare(sourceId);
+
+      const newSource: ActiveSource = {
+        id: sourceId,
+        name: 'Screen Share',
+        type: 'screen',
+        stream,
+      };
+
+      setActiveSources(prev => [...prev, newSource]);
+      toast({ title: 'Screen share added' });
+    } catch (err) {
+      console.error('Failed to add screen share:', err);
+      toast({ 
+        title: 'Failed to add screen share', 
+        description: 'Screen share was cancelled or not permitted',
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const createOverlayCanvas = (sourceId: string, config: ActiveSource['overlayConfig']): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1920;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx || !config) return canvas;
+
+    const colors = {
+      primary: '#C8102E',
+      navy: '#002147', 
+      cream: '#F5F1E9',
+      blue: '#4CA9E0'
+    };
+
+    let animationFrame: number;
+    let scrollPosition = 0;
+    let opacity = 1;
+    let scale = 1;
+
+    const cleanup = () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (config.template === 'ticker') {
+        const tickerHeight = 100;
+        const y = canvas.height - tickerHeight;
+        
+        ctx.fillStyle = colors.primary;
+        ctx.fillRect(0, y, canvas.width, tickerHeight);
+        
+        ctx.fillStyle = colors.cream;
+        ctx.font = 'bold 48px Arial';
+        ctx.textBaseline = 'middle';
+
+        if (config.animation === 'scroll') {
+          scrollPosition -= 3;
+          const textWidth = ctx.measureText(config.text).width;
+          if (scrollPosition < -textWidth - 100) {
+            scrollPosition = canvas.width;
+          }
+          ctx.fillText(config.text, scrollPosition, y + tickerHeight / 2);
+        } else if (config.animation === 'fade') {
+          opacity = (Math.sin(Date.now() / 1000) + 1) / 2;
+          ctx.globalAlpha = opacity;
+          ctx.fillText(config.text, 50, y + tickerHeight / 2);
+          ctx.globalAlpha = 1;
+        } else if (config.animation === 'pulse') {
+          scale = 1 + Math.sin(Date.now() / 500) * 0.1;
+          ctx.save();
+          ctx.translate(canvas.width / 2, y + tickerHeight / 2);
+          ctx.scale(scale, scale);
+          ctx.textAlign = 'center';
+          ctx.fillText(config.text, 0, 0);
+          ctx.restore();
+        }
+      } else if (config.template === 'banner') {
+        const bannerHeight = 150;
+        
+        ctx.fillStyle = colors.navy;
+        ctx.globalAlpha = 0.9;
+        ctx.fillRect(0, 0, canvas.width, bannerHeight);
+        ctx.globalAlpha = 1;
+        
+        ctx.fillStyle = colors.cream;
+        ctx.font = 'bold 64px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        if (config.animation === 'fade') {
+          opacity = (Math.sin(Date.now() / 1000) + 1) / 2;
+          ctx.globalAlpha = opacity;
+        } else if (config.animation === 'pulse') {
+          scale = 1 + Math.sin(Date.now() / 500) * 0.1;
+          ctx.save();
+          ctx.translate(canvas.width / 2, bannerHeight / 2);
+          ctx.scale(scale, scale);
+          ctx.fillText(config.text, 0, 0);
+          ctx.restore();
+          ctx.globalAlpha = 1;
+          animationFrame = requestAnimationFrame(animate);
+          return;
+        }
+        
+        ctx.fillText(config.text, canvas.width / 2, bannerHeight / 2);
+        ctx.globalAlpha = 1;
+      } else if (config.template === 'corner') {
+        const cornerSize = 400;
+        
+        ctx.fillStyle = colors.primary;
+        ctx.globalAlpha = 0.95;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(cornerSize, 0);
+        ctx.lineTo(0, cornerSize);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        
+        ctx.fillStyle = colors.cream;
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        
+        ctx.save();
+        ctx.translate(20, 20);
+        ctx.rotate(-0.785398);
+        
+        if (config.animation === 'pulse') {
+          scale = 1 + Math.sin(Date.now() / 500) * 0.15;
+          ctx.scale(scale, scale);
+        }
+        
+        ctx.fillText(config.text, 0, 0);
+        ctx.restore();
+      }
+
+      animationFrame = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    overlayAnimationCleanup.current.set(sourceId, cleanup);
+
+    return canvas;
+  };
+
+  const handleAddOverlay = () => {
+    if (!overlayText.trim()) {
+      toast({ 
+        title: 'Enter overlay text', 
+        variant: 'destructive' 
+      });
+      return;
     }
 
-    updateSourceMutation.mutate({
+    const sourceId = `overlay-${Date.now()}`;
+    const config = {
+      text: overlayText,
+      animation: overlayAnimation,
+      template: overlayTemplate,
+    };
+
+    const canvas = createOverlayCanvas(sourceId, config);
+    overlayCanvasRefs.current.set(sourceId, canvas);
+
+    const stream = canvas.captureStream(30);
+
+    const newSource: ActiveSource = {
       id: sourceId,
-      data: { isActive: checked }
-    });
+      name: `${overlayTemplate.charAt(0).toUpperCase() + overlayTemplate.slice(1)} Overlay`,
+      type: 'overlay',
+      stream,
+      overlayConfig: config,
+    };
+
+    setActiveSources(prev => [...prev, newSource]);
+    setIsOverlayDialogOpen(false);
+    setOverlayText('');
+    toast({ title: 'Overlay added' });
   };
 
-  const handleToggleAllSources = (checked: boolean) => {
-    if (checked) {
-      const allIds = videoSources.map(s => s.id);
-      setActiveSources(allIds);
-      videoSources.forEach(source => {
-        updateSourceMutation.mutate({
-          id: source.id,
-          data: { isActive: true }
-        });
-      });
-    } else {
-      setActiveSources([]);
-      videoSources.forEach(source => {
-        updateSourceMutation.mutate({
-          id: source.id,
-          data: { isActive: false }
-        });
-      });
+  const handleRemoveSource = (sourceId: string) => {
+    const source = activeSources.find(s => s.id === sourceId);
+    if (source?.type === 'overlay') {
+      const cleanup = overlayAnimationCleanup.current.get(sourceId);
+      if (cleanup) {
+        cleanup();
+        overlayAnimationCleanup.current.delete(sourceId);
+      }
+      overlayCanvasRefs.current.delete(sourceId);
     }
-  };
-
-  const handleConnect = (sourceId: string) => {
-    connectSourceMutation.mutate(sourceId);
-  };
-
-  const handleDisconnect = (sourceId: string) => {
-    disconnectSourceMutation.mutate(sourceId);
+    
+    setActiveSources(prev => prev.filter(s => s.id !== sourceId));
+    toast({ title: 'Source removed' });
   };
 
   const handleStartBroadcast = () => {
@@ -232,16 +435,12 @@ export default function LivePresentation() {
 
     if (over && active.id !== over.id) {
       setActiveSources((items) => {
-        const oldIndex = items.indexOf(active.id as string);
-        const newIndex = items.indexOf(over.id as string);
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
         return arrayMove(items, oldIndex, newIndex);
       });
     }
   };
-
-  const activeSourceObjects = activeSources
-    .map(id => videoSources.find(s => s.id === id))
-    .filter(Boolean) as VideoSource[];
 
   return (
     <div className="min-h-screen bg-background">
@@ -255,7 +454,7 @@ export default function LivePresentation() {
                 Live Presentation
               </h1>
               <p className="font-libre-franklin text-sm sm:text-base text-muted-foreground">
-                Manage video sources and broadcast program output
+                Add sources and broadcast program output
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -318,160 +517,60 @@ export default function LivePresentation() {
                 </div>
                 {activeSources.length === 0 && (
                   <p className="text-center text-muted-foreground mt-4 text-sm">
-                    Select sources below to add them to the program output
+                    Use the dropdown below to add sources to the program output
                   </p>
                 )}
               </CardContent>
             </Card>
 
-            <Card data-testid="card-source-grid">
+            <Card data-testid="card-source-selector">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Video Sources</CardTitle>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="toggle-all"
-                        checked={activeSources.length === videoSources.length && videoSources.length > 0}
-                        onCheckedChange={handleToggleAllSources}
-                        data-testid="checkbox-toggle-all"
-                      />
-                      <label 
-                        htmlFor="toggle-all" 
-                        className="text-sm font-medium cursor-pointer"
-                      >
-                        Toggle All
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-primary" />
+                  Add Source
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                {isLoading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[1, 2, 3].map(i => (
-                      <Card key={i} className="animate-pulse">
-                        <CardContent className="p-4">
-                          <div className="h-32 bg-muted rounded-md mb-3" />
-                          <div className="h-4 bg-muted rounded w-2/3 mb-2" />
-                          <div className="h-3 bg-muted rounded w-1/2" />
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : videoSources.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Video className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-2">No video sources configured</p>
-                    <p className="text-sm text-muted-foreground">
-                      Add video sources from the Sources tab to get started
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {videoSources.map((source) => {
-                      const Icon = sourceTypeIcons[source.sourceType];
-                      const isActive = activeSources.includes(source.id);
-                      
-                      return (
-                        <Card 
-                          key={source.id} 
-                          className={`transition-all ${isActive ? 'ring-2 ring-primary' : ''}`}
-                          data-testid={`card-source-${source.id}`}
-                        >
-                          <CardContent className="p-4">
-                            <div className="relative bg-black rounded-md mb-3 aspect-video overflow-hidden">
-                              <SourcePreview 
-                                source={source} 
-                                isActive={isActive}
-                              />
-                              
-                              <div className="absolute top-2 right-2 flex gap-1">
-                                {source.isConnected ? (
-                                  <Badge 
-                                    variant="default" 
-                                    className="text-xs bg-green-600 hover:bg-green-700"
-                                    data-testid={`badge-connected-${source.id}`}
-                                  >
-                                    <Wifi className="w-3 h-3 mr-1" />
-                                    Connected
-                                  </Badge>
-                                ) : (
-                                  <Badge 
-                                    variant="secondary" 
-                                    className="text-xs"
-                                    data-testid={`badge-disconnected-${source.id}`}
-                                  >
-                                    <WifiOff className="w-3 h-3 mr-1" />
-                                    Disconnected
-                                  </Badge>
-                                )}
+                <Select value={selectedValue} onValueChange={handleSourceSelection}>
+                  <SelectTrigger className="w-full" data-testid="select-add-source">
+                    <SelectValue placeholder="Select a source to add..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cameras.length > 0 && (
+                      <>
+                        <SelectGroup>
+                          <SelectLabel>Cameras</SelectLabel>
+                          {cameras.map((camera) => (
+                            <SelectItem 
+                              key={camera.deviceId} 
+                              value={`camera-${camera.deviceId}`}
+                              data-testid={`select-camera-${camera.deviceId}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Video className="w-4 h-4" />
+                                {camera.label || 'Camera'}
                               </div>
-                            </div>
-
-                            <div className="space-y-3">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Checkbox
-                                      id={`source-${source.id}`}
-                                      checked={isActive}
-                                      onCheckedChange={(checked) => 
-                                        handleToggleSource(source.id, checked as boolean)
-                                      }
-                                      data-testid={`checkbox-source-${source.id}`}
-                                    />
-                                    <label 
-                                      htmlFor={`source-${source.id}`} 
-                                      className="text-sm font-semibold truncate cursor-pointer"
-                                    >
-                                      {source.name}
-                                    </label>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground truncate ml-6">
-                                    {source.description || 'No description'}
-                                  </p>
-                                </div>
-                                <Badge variant="outline" className="text-xs shrink-0">
-                                  <Icon className="w-3 h-3 mr-1" />
-                                  {sourceTypeLabels[source.sourceType]}
-                                </Badge>
-                              </div>
-
-                              {(source.sourceType === 'camera' || source.sourceType === 'screen') && (
-                                <div className="flex gap-2">
-                                  {!source.isConnected ? (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1 text-xs"
-                                      onClick={() => handleConnect(source.id)}
-                                      data-testid={`button-connect-${source.id}`}
-                                    >
-                                      <Wifi className="w-3 h-3 mr-1" />
-                                      Connect
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1 text-xs"
-                                      onClick={() => handleDisconnect(source.id)}
-                                      data-testid={`button-disconnect-${source.id}`}
-                                    >
-                                      <WifiOff className="w-3 h-3 mr-1" />
-                                      Disconnect
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                )}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectSeparator />
+                      </>
+                    )}
+                    <SelectItem value="screen-share" data-testid="select-screen-share">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="w-4 h-4" />
+                        Screen Share
+                      </div>
+                    </SelectItem>
+                    <SelectSeparator />
+                    <SelectItem value="branded-overlay" data-testid="select-branded-overlay">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        Mailman Media Overlay
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </CardContent>
             </Card>
           </div>
@@ -480,7 +579,7 @@ export default function LivePresentation() {
             <Card className="sticky top-4" data-testid="card-active-sources">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                  <Layers className="w-5 h-5 text-primary" />
                   Active Sources
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
@@ -488,14 +587,14 @@ export default function LivePresentation() {
                 </p>
               </CardHeader>
               <CardContent>
-                {activeSourceObjects.length === 0 ? (
+                {activeSources.length === 0 ? (
                   <div className="text-center py-8">
                     <Video className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">
                       No active sources
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Check sources below to activate them
+                      Add sources from the dropdown
                     </p>
                   </div>
                 ) : (
@@ -505,19 +604,23 @@ export default function LivePresentation() {
                     onDragEnd={handleDragEnd}
                   >
                     <SortableContext
-                      items={activeSources}
+                      items={activeSources.map(s => s.id)}
                       strategy={verticalListSortingStrategy}
                     >
                       <div className="space-y-2">
-                        {activeSourceObjects.map((source) => (
-                          <SortableActiveSource key={source.id} source={source} />
+                        {activeSources.map((source) => (
+                          <SortableActiveSource 
+                            key={source.id} 
+                            source={source}
+                            onRemove={handleRemoveSource}
+                          />
                         ))}
                       </div>
                     </SortableContext>
                   </DndContext>
                 )}
 
-                {activeSourceObjects.length > 0 && (
+                {activeSources.length > 0 && (
                   <div className="mt-4 pt-4 border-t">
                     <div className="text-xs text-muted-foreground space-y-1">
                       <p>
@@ -534,106 +637,74 @@ export default function LivePresentation() {
           </div>
         </div>
       </main>
+
+      <Dialog open={isOverlayDialogOpen} onOpenChange={setIsOverlayDialogOpen}>
+        <DialogContent data-testid="dialog-overlay-config">
+          <DialogHeader>
+            <DialogTitle>Create Branded Overlay</DialogTitle>
+            <DialogDescription>
+              Customize your Mailman Media overlay with Liverpool FC branding
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="overlay-text">Overlay Text</Label>
+              <Input
+                id="overlay-text"
+                placeholder="Enter your text..."
+                value={overlayText}
+                onChange={(e) => setOverlayText(e.target.value)}
+                data-testid="input-overlay-text"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="animation-type">Animation Type</Label>
+              <Select value={overlayAnimation} onValueChange={(v) => setOverlayAnimation(v as any)}>
+                <SelectTrigger id="animation-type" data-testid="select-animation-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scroll">Scrolling Text</SelectItem>
+                  <SelectItem value="fade">Fade In/Out</SelectItem>
+                  <SelectItem value="pulse">Pulse</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="template-style">Template Style</Label>
+              <Select value={overlayTemplate} onValueChange={(v) => setOverlayTemplate(v as any)}>
+                <SelectTrigger id="template-style" data-testid="select-template-style">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ticker">Bottom Ticker</SelectItem>
+                  <SelectItem value="banner">Top Banner</SelectItem>
+                  <SelectItem value="corner">Corner Logo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsOverlayDialogOpen(false)}
+              data-testid="button-cancel-overlay"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddOverlay}
+              data-testid="button-add-overlay"
+            >
+              Add Overlay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  );
-}
-
-function SourcePreview({ source, isActive }: { source: VideoSource; isActive: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const animationFrameRef = useRef<number>();
-  const { acquireStream, acquireScreenShare, releaseStream } = useCameraStreams();
-
-  useEffect(() => {
-    let mounted = true;
-    let stream: MediaStream | null = null;
-
-    const initPreview = async () => {
-      if (!isActive || !source.isConnected) {
-        return;
-      }
-
-      try {
-        if (source.sourceType === 'camera' && source.deviceId) {
-          stream = await acquireStream(source.id, source.deviceId);
-        } else if (source.sourceType === 'screen') {
-          stream = await acquireScreenShare(source.id);
-        }
-
-        if (stream && mounted) {
-          if (!videoRef.current) {
-            videoRef.current = document.createElement('video');
-            videoRef.current.autoplay = true;
-            videoRef.current.muted = true;
-            videoRef.current.playsInline = true;
-          }
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-      } catch (err) {
-        console.error('Preview init error:', err);
-      }
-    };
-
-    initPreview();
-
-    return () => {
-      mounted = false;
-      if (stream) {
-        releaseStream(source.id);
-      }
-    };
-  }, [source, isActive, acquireStream, acquireScreenShare, releaseStream]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const render = () => {
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      if (!isActive) {
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Inactive', canvas.width / 2, canvas.height / 2);
-      } else if (!source.isConnected) {
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Not Connected', canvas.width / 2, canvas.height / 2);
-      } else if (videoRef.current && videoRef.current.readyState >= 2) {
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-      } else {
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Loading...', canvas.width / 2, canvas.height / 2);
-      }
-
-      animationFrameRef.current = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [source, isActive]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      width={320}
-      height={180}
-      className="w-full h-full object-cover"
-      data-testid={`canvas-preview-${source.id}`}
-    />
   );
 }
