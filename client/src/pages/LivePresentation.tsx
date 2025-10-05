@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import VideoCompositor from "@/components/VideoCompositor";
@@ -97,6 +98,8 @@ interface OverlayConfig {
   fontFamily: string;
   scrollSpeed: number;
   scrollDirection: 'left' | 'right' | 'up' | 'down';
+  isBold: boolean;
+  isItalic: boolean;
 }
 
 const sourceTypeIcons = {
@@ -116,6 +119,8 @@ const TEMPLATE_PRESETS = {
     fontFamily: 'League Spartan',
     scrollSpeed: 50,
     scrollDirection: 'left' as const,
+    isBold: true,
+    isItalic: false,
   },
   'live-updates': {
     name: 'Live Updates',
@@ -128,6 +133,8 @@ const TEMPLATE_PRESETS = {
     fontFamily: 'League Spartan',
     scrollSpeed: 50,
     scrollDirection: 'left' as const,
+    isBold: true,
+    isItalic: false,
   },
   'match-info': {
     name: 'Match Info',
@@ -140,6 +147,8 @@ const TEMPLATE_PRESETS = {
     fontFamily: 'League Spartan',
     scrollSpeed: 50,
     scrollDirection: 'left' as const,
+    isBold: true,
+    isItalic: false,
   },
 };
 
@@ -244,6 +253,9 @@ export default function LivePresentation() {
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof TEMPLATE_PRESETS>('breaking-news');
   const [overlayPosition, setOverlayPosition] = useState<'top' | 'bottom'>('bottom');
   const [overlayFontFamily, setOverlayFontFamily] = useState('League Spartan');
+  const [overlayFontSize, setOverlayFontSize] = useState(28);
+  const [overlayIsBold, setOverlayIsBold] = useState(true);
+  const [overlayIsItalic, setOverlayIsItalic] = useState(false);
   const [overlayScrollSpeed, setOverlayScrollSpeed] = useState(50);
   const [overlayScrollDirection, setOverlayScrollDirection] = useState<'left' | 'right' | 'up' | 'down'>('left');
   const [selectedValue, setSelectedValue] = useState<string>('');
@@ -294,6 +306,9 @@ export default function LivePresentation() {
       setSelectedPreset('breaking-news');
       setOverlayPosition('bottom');
       setOverlayFontFamily('League Spartan');
+      setOverlayFontSize(28);
+      setOverlayIsBold(true);
+      setOverlayIsItalic(false);
       setOverlayScrollSpeed(50);
       setOverlayScrollDirection('left');
       setIsOverlayDialogOpen(true);
@@ -375,13 +390,15 @@ export default function LivePresentation() {
               text: overlayText,
               backgroundColor: preset.backgroundColor,
               textColor: preset.textColor,
-              fontSize: preset.fontSize,
+              fontSize: overlayFontSize,
               height: preset.height,
               animationType: preset.animationType,
               position: overlayPosition,
               fontFamily: overlayFontFamily,
               scrollSpeed: overlayScrollSpeed,
               scrollDirection: overlayScrollDirection,
+              isBold: overlayIsBold,
+              isItalic: overlayIsItalic,
             }
           : overlay
       ));
@@ -394,13 +411,15 @@ export default function LivePresentation() {
         templateStyle: 'ticker',
         backgroundColor: preset.backgroundColor,
         textColor: preset.textColor,
-        fontSize: preset.fontSize,
+        fontSize: overlayFontSize,
         position: overlayPosition,
         height: preset.height,
         visible: true,
         fontFamily: overlayFontFamily,
         scrollSpeed: overlayScrollSpeed,
         scrollDirection: overlayScrollDirection,
+        isBold: overlayIsBold,
+        isItalic: overlayIsItalic,
       };
 
       setOverlays(prev => [...prev, newOverlay]);
@@ -435,6 +454,9 @@ export default function LivePresentation() {
     setOverlayText(overlay.text);
     setOverlayPosition(overlay.position);
     setOverlayFontFamily(overlay.fontFamily);
+    setOverlayFontSize(overlay.fontSize);
+    setOverlayIsBold(overlay.isBold);
+    setOverlayIsItalic(overlay.isItalic);
     setOverlayScrollSpeed(overlay.scrollSpeed);
     setOverlayScrollDirection(overlay.scrollDirection);
     
@@ -965,6 +987,47 @@ export default function LivePresentation() {
                   <SelectItem value="Georgia">Georgia</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="font-size">Font Size: {overlayFontSize}px</Label>
+              <Slider
+                id="font-size"
+                min={12}
+                max={72}
+                step={1}
+                value={[overlayFontSize]}
+                onValueChange={(vals) => setOverlayFontSize(vals[0])}
+                data-testid="slider-overlay-font-size"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Adjust the text size from 12px to 72px
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="overlay-bold"
+                  checked={overlayIsBold}
+                  onCheckedChange={(checked) => setOverlayIsBold(checked === true)}
+                  data-testid="checkbox-overlay-bold"
+                />
+                <Label htmlFor="overlay-bold" className="font-normal cursor-pointer">
+                  Bold
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="overlay-italic"
+                  checked={overlayIsItalic}
+                  onCheckedChange={(checked) => setOverlayIsItalic(checked === true)}
+                  data-testid="checkbox-overlay-italic"
+                />
+                <Label htmlFor="overlay-italic" className="font-normal cursor-pointer">
+                  Italics
+                </Label>
+              </div>
             </div>
 
             <div>

@@ -23,6 +23,8 @@ interface OverlayConfig {
   fontFamily: string;
   scrollSpeed: number;
   scrollDirection: 'left' | 'right' | 'up' | 'down';
+  isBold: boolean;
+  isItalic: boolean;
 }
 
 interface VideoCompositorProps {
@@ -227,7 +229,9 @@ export default function VideoCompositor({
         ctx.fillRect(0, yPosition, canvas.width, overlay.height);
 
         ctx.fillStyle = overlay.textColor;
-        ctx.font = `bold ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
+        const fontWeight = overlay.isBold ? 'bold' : 'normal';
+        const fontStyle = overlay.isItalic ? 'italic' : 'normal';
+        ctx.font = `${fontStyle} ${fontWeight} ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
         ctx.textBaseline = 'middle';
 
         if (overlay.animationType === 'scroll') {
