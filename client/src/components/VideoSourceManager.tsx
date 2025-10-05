@@ -187,7 +187,7 @@ export default function VideoSourceManager() {
       deviceLabel: selectedDevice?.label || '',
       configJson: {},
       isActive: true,
-      isConnected: false,
+      isConnected: true,
       tags: [],
     };
     createSourceMutation.mutate(sourceData);
