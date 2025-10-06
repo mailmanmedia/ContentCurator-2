@@ -112,10 +112,12 @@ interface LibraryImage {
 }
 
 interface RssSource {
-  id: number;
+  id: string;
   name: string;
-  url: string;
+  feedUrl: string;
   isActive: boolean;
+  category: string;
+  description: string;
 }
 
 interface TeamWithStats {
@@ -240,6 +242,60 @@ const TEMPLATE_PRESETS = {
     overlayType: 'rss' as const,
     rssMaxArticles: 10,
     rssShowSource: true,
+  },
+  'mailman-red': {
+    name: 'Mailman Red',
+    backgroundColor: '#C8102E',
+    textColor: '#FFFFFF',
+    fontSize: 28,
+    height: 70,
+    width: 100,
+    zIndex: 100,
+    opacity: 0.95,
+    animationType: 'scroll' as const,
+    position: 'bottom' as const,
+    fontFamily: 'League Spartan',
+    scrollSpeed: 50,
+    scrollDirection: 'left' as const,
+    isBold: true,
+    isItalic: false,
+    overlayType: 'text' as const,
+  },
+  'mailman-gold': {
+    name: 'Mailman Gold',
+    backgroundColor: '#F7C54E',
+    textColor: '#002147',
+    fontSize: 28,
+    height: 70,
+    width: 100,
+    zIndex: 100,
+    opacity: 0.95,
+    animationType: 'scroll' as const,
+    position: 'bottom' as const,
+    fontFamily: 'League Spartan',
+    scrollSpeed: 50,
+    scrollDirection: 'left' as const,
+    isBold: true,
+    isItalic: false,
+    overlayType: 'text' as const,
+  },
+  'mailman-dark': {
+    name: 'Mailman Dark',
+    backgroundColor: '#002147',
+    textColor: '#F6EB61',
+    fontSize: 28,
+    height: 70,
+    width: 100,
+    zIndex: 100,
+    opacity: 0.95,
+    animationType: 'scroll' as const,
+    position: 'bottom' as const,
+    fontFamily: 'League Spartan',
+    scrollSpeed: 50,
+    scrollDirection: 'left' as const,
+    isBold: true,
+    isItalic: false,
+    overlayType: 'text' as const,
   },
 };
 
@@ -576,7 +632,7 @@ export default function LivePresentation() {
     if (overlayType === 'rss' && rssSources && rssSources.length > 0 && !editingOverlayId) {
       const activeSourceIds = rssSources
         .filter(source => source.isActive)
-        .map(source => String(source.id));
+        .map(source => source.id);
       
       if (activeSourceIds.length > 0 && selectedRssSourceIds.length === 0) {
         setSelectedRssSourceIds(activeSourceIds);
@@ -1845,12 +1901,12 @@ export default function LivePresentation() {
                         <div key={source.id} className="flex items-center space-x-2">
                           <Checkbox
                             id={`rss-source-${source.id}`}
-                            checked={selectedRssSourceIds.includes(String(source.id))}
+                            checked={selectedRssSourceIds.includes(source.id)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setSelectedRssSourceIds(prev => [...prev, String(source.id)]);
+                                setSelectedRssSourceIds(prev => [...prev, source.id]);
                               } else {
-                                setSelectedRssSourceIds(prev => prev.filter(id => id !== String(source.id)));
+                                setSelectedRssSourceIds(prev => prev.filter(id => id !== source.id));
                               }
                             }}
                             data-testid={`checkbox-rss-source-${source.id}`}
@@ -2078,6 +2134,25 @@ export default function LivePresentation() {
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F6EB61' }} />
                           Match Info (Gold)
+                        </div>
+                      </SelectItem>
+                      <SelectSeparator />
+                      <SelectItem value="mailman-red">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#C8102E' }} />
+                          Mailman Red
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="mailman-gold">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F7C54E' }} />
+                          Mailman Gold
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="mailman-dark">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#002147' }} />
+                          Mailman Dark
                         </div>
                       </SelectItem>
                     </>
