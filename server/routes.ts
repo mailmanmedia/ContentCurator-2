@@ -101,6 +101,44 @@ const documentUpload = multer({
   }
 });
 
+// Multer configuration for video recordings
+const video_storage_config = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const videosDir = '/tmp/videos/';
+    try {
+      await fs.mkdir(videosDir, { recursive: true });
+      cb(null, videosDir);
+    } catch (error: any) {
+      cb(error, videosDir);
+    }
+  },
+  filename: (req, file, cb) => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const uniqueSuffix = Math.round(Math.random() * 1E9);
+    cb(null, `recording-${timestamp}-${uniqueSuffix}.webm`);
+  }
+});
+
+const videoUpload = multer({
+  storage: video_storage_config,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB limit for video files
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only video files
+    const allowedMimes = [
+      'video/webm',
+      'video/mp4',
+      'video/x-matroska',
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only WebM, MP4, and MKV video files are allowed'));
+    }
+  }
+});
+
 // Server-Sent Events Manager for Live Presentation Control
 class LiveSSEManager {
   private clients: Map<string, express.Response> = new Map();
@@ -3320,6 +3358,100 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error in quick setup:', error);
       res.status(500).json({ error: "Failed to complete quick setup" });
+    }
+  });
+
+  // Video Recording Endpoints
+  
+  // Upload a new video recording
+  app.post("/api/recordings", videoUpload.single('video'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No video file uploaded" });
+      }
+
+      const { duration, resolution, codec, metadata } = req.body;
+      
+      const recording = await storage.createRecording({
+        filename: req.file.filename,
+        filepath: req.file.path,
+        duration: duration ? parseInt(duration) : undefined,
+        size: req.file.size,
+        resolution: resolution || undefined,
+        format: 'webm',
+        codec: codec || undefined,
+        metadata: metadata ? JSON.parse(metadata) : {},
+      });
+
+      res.status(201).json(recording);
+    } catch (error: any) {
+      console.error('Error uploading recording:', error);
+      res.status(500).json({ error: "Failed to upload recording" });
+    }
+  });
+
+  // Get all recordings
+  app.get("/api/recordings", async (req, res) => {
+    try {
+      const recordings = await storage.getRecordings();
+      res.json(recordings);
+    } catch (error: any) {
+      console.error('Error fetching recordings:', error);
+      res.status(500).json({ error: "Failed to fetch recordings" });
+    }
+  });
+
+  // Get a single recording
+  app.get("/api/recordings/:id", async (req, res) => {
+    try {
+      const recording = await storage.getRecording(req.params.id);
+      if (!recording) {
+        return res.status(404).json({ error: "Recording not found" });
+      }
+      res.json(recording);
+    } catch (error: any) {
+      console.error('Error fetching recording:', error);
+      res.status(500).json({ error: "Failed to fetch recording" });
+    }
+  });
+
+  // Delete a recording
+  app.delete("/api/recordings/:id", async (req, res) => {
+    try {
+      const recording = await storage.getRecording(req.params.id);
+      if (!recording) {
+        return res.status(404).json({ error: "Recording not found" });
+      }
+
+      // Delete the file from filesystem
+      try {
+        await fs.unlink(recording.filepath);
+      } catch (error) {
+        console.error('Error deleting file:', error);
+      }
+
+      // Delete from database
+      await storage.deleteRecording(req.params.id);
+      
+      res.json({ success: true, message: "Recording deleted successfully" });
+    } catch (error: any) {
+      console.error('Error deleting recording:', error);
+      res.status(500).json({ error: "Failed to delete recording" });
+    }
+  });
+
+  // Serve video files
+  app.get("/api/recordings/:id/video", async (req, res) => {
+    try {
+      const recording = await storage.getRecording(req.params.id);
+      if (!recording) {
+        return res.status(404).json({ error: "Recording not found" });
+      }
+
+      res.sendFile(path.resolve(recording.filepath));
+    } catch (error: any) {
+      console.error('Error serving video:', error);
+      res.status(500).json({ error: "Failed to serve video" });
     }
   });
 

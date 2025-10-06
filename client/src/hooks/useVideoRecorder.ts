@@ -106,7 +106,7 @@ export function useVideoRecorder(
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: selectedMimeType });
         setRecordedBlob(blob);
         setRecordingState('stopped');
@@ -115,6 +115,28 @@ export function useVideoRecorder(
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
+        }
+
+        // Auto-save to server
+        try {
+          const formData = new FormData();
+          formData.append('video', blob, `recording-${Date.now()}.webm`);
+          formData.append('duration', duration.toString());
+          formData.append('codec', selectedMimeType);
+          
+          const response = await fetch('/api/recordings', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            console.error('Failed to save recording to server');
+          } else {
+            const savedRecording = await response.json();
+            console.log('Recording auto-saved:', savedRecording);
+          }
+        } catch (error) {
+          console.error('Error auto-saving recording:', error);
         }
       };
 

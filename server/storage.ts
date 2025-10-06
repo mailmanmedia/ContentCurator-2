@@ -21,6 +21,7 @@ import {
   type SourceNamePreset, type InsertSourceNamePreset,
   type Template, type InsertTemplate,
   type LiveState, type InsertLiveState,
+  type Recording, type InsertRecording,
   videoSources as videoSourcesTable,
   scenes as scenesTable,
   presentationSets as presentationSetsTable,
@@ -28,7 +29,8 @@ import {
   rssArticles as rssArticlesTable,
   rssAnalysis as rssAnalysisTable,
   rssComparisons as rssComparisonsTable,
-  liveStates as liveStatesTable
+  liveStates as liveStatesTable,
+  recordings as recordingsTable
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
@@ -257,6 +259,13 @@ export interface IStorage {
   // Live State methods
   getLiveState(): Promise<LiveState | undefined>;
   updateLiveState(updates: Partial<InsertLiveState>): Promise<LiveState>;
+
+  // Recording methods
+  getRecordings(): Promise<import("@shared/schema").Recording[]>;
+  getRecording(id: string): Promise<import("@shared/schema").Recording | undefined>;
+  createRecording(recording: import("@shared/schema").InsertRecording): Promise<import("@shared/schema").Recording>;
+  updateRecording(id: string, updates: Partial<import("@shared/schema").InsertRecording>): Promise<import("@shared/schema").Recording | undefined>;
+  deleteRecording(id: string): Promise<boolean>;
 
   // Statistics methods
   getStatistics(): Promise<{
@@ -1982,6 +1991,35 @@ export class MemStorage implements IStorage {
         .returning();
       return results[0];
     }
+  }
+
+  // Recording methods
+  async getRecordings(): Promise<Recording[]> {
+    const results = await db.select().from(recordingsTable).orderBy(desc(recordingsTable.createdAt));
+    return results;
+  }
+
+  async getRecording(id: string): Promise<Recording | undefined> {
+    const results = await db.select().from(recordingsTable).where(eq(recordingsTable.id, id));
+    return results[0];
+  }
+
+  async createRecording(recording: InsertRecording): Promise<Recording> {
+    const results = await db.insert(recordingsTable).values(recording).returning();
+    return results[0];
+  }
+
+  async updateRecording(id: string, updates: Partial<InsertRecording>): Promise<Recording | undefined> {
+    const results = await db.update(recordingsTable)
+      .set(updates)
+      .where(eq(recordingsTable.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteRecording(id: string): Promise<boolean> {
+    await db.delete(recordingsTable).where(eq(recordingsTable.id, id));
+    return true;
   }
 
   // Statistics methods
