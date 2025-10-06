@@ -1,0 +1,667 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-10-06T00:00:00.000Z",
+  "season": "2024-25",
+  "team": {
+    "id": 40,
+    "name": "Liverpool",
+    "logo": "https://media.api-sports.io/football/teams/40.png"
+  },
+  "matches": [
+    {
+      "matchId": "M2024001",
+      "date": "2024-08-17T14:00:00Z",
+      "timestamp": 1723906800,
+      "competition": {
+        "id": 39,
+        "name": "Premier League",
+        "round": "Regular Season - 1"
+      },
+      "opponent": {
+        "id": 33,
+        "name": "Manchester United",
+        "logo": "https://media.api-sports.io/football/teams/33.png"
+      },
+      "venue": {
+        "type": "away",
+        "name": "Old Trafford",
+        "city": "Manchester"
+      },
+      "result": "W",
+      "score": {
+        "liverpool": 3,
+        "opponent": 0,
+        "halftime": {
+          "liverpool": 1,
+          "opponent": 0
+        }
+      },
+      "xG": {
+        "liverpool": 2.8,
+        "opponent": 0.4
+      },
+      "possession": {
+        "liverpool": 58,
+        "opponent": 42
+      },
+      "shots": {
+        "liverpool": 16,
+        "opponent": 8,
+        "onTarget": {
+          "liverpool": 7,
+          "opponent": 2
+        }
+      },
+      "corners": {
+        "liverpool": 6,
+        "opponent": 3
+      },
+      "tackles": {
+        "liverpool": 18,
+        "opponent": 22
+      },
+      "interceptions": {
+        "liverpool": 12,
+        "opponent": 8
+      },
+      "passes": {
+        "liverpool": 487,
+        "opponent": 356,
+        "completion": {
+          "liverpool": 84.2,
+          "opponent": 76.8
+        }
+      },
+      "progressivePasses": {
+        "liverpool": 42,
+        "opponent": 28
+      },
+      "finalThirdEntries": {
+        "liverpool": 58,
+        "opponent": 34
+      },
+      "highTurnovers": {
+        "liverpool": 8,
+        "opponent": 4
+      },
+      "defensiveActions": {
+        "liverpool": 45,
+        "opponent": 52
+      },
+      "fastBreaks": {
+        "attempts": {
+          "liverpool": 4,
+          "opponent": 2
+        },
+        "goals": {
+          "liverpool": 1,
+          "opponent": 0
+        }
+      }
+    },
+    {
+      "matchId": "M2024002",
+      "date": "2024-08-25T15:30:00Z",
+      "timestamp": 1724599800,
+      "competition": {
+        "id": 39,
+        "name": "Premier League",
+        "round": "Regular Season - 2"
+      },
+      "opponent": {
+        "id": 35,
+        "name": "Bournemouth",
+        "logo": "https://media.api-sports.io/football/teams/35.png"
+      },
+      "venue": {
+        "type": "home",
+        "name": "Anfield",
+        "city": "Liverpool"
+      },
+      "result": "W",
+      "score": {
+        "liverpool": 2,
+        "opponent": 0,
+        "halftime": {
+          "liverpool": 1,
+          "opponent": 0
+        }
+      },
+      "xG": {
+        "liverpool": 2.3,
+        "opponent": 0.6
+      },
+      "possession": {
+        "liverpool": 64,
+        "opponent": 36
+      },
+      "shots": {
+        "liverpool": 19,
+        "opponent": 6,
+        "onTarget": {
+          "liverpool": 8,
+          "opponent": 3
+        }
+      },
+      "corners": {
+        "liverpool": 7,
+        "opponent": 2
+      },
+      "tackles": {
+        "liverpool": 15,
+        "opponent": 20
+      },
+      "interceptions": {
+        "liverpool": 10,
+        "opponent": 6
+      },
+      "passes": {
+        "liverpool": 542,
+        "opponent": 298,
+        "completion": {
+          "liverpool": 86.5,
+          "opponent": 72.1
+        }
+      },
+      "progressivePasses": {
+        "liverpool": 48,
+        "opponent": 22
+      },
+      "finalThirdEntries": {
+        "liverpool": 62,
+        "opponent": 28
+      },
+      "highTurnovers": {
+        "liverpool": 10,
+        "opponent": 3
+      },
+      "defensiveActions": {
+        "liverpool": 42,
+        "opponent": 48
+      },
+      "fastBreaks": {
+        "attempts": {
+          "liverpool": 5,
+          "opponent": 1
+        },
+        "goals": {
+          "liverpool": 0,
+          "opponent": 0
+        }
+      }
+    },
+    {
+      "matchId": "M2024003",
+      "date": "2024-09-01T16:30:00Z",
+      "timestamp": 1725207000,
+      "competition": {
+        "id": 39,
+        "name": "Premier League",
+        "round": "Regular Season - 3"
+      },
+      "opponent": {
+        "id": 42,
+        "name": "Arsenal",
+        "logo": "https://media.api-sports.io/football/teams/42.png"
+      },
+      "venue": {
+        "type": "away",
+        "name": "Emirates Stadium",
+        "city": "London"
+      },
+      "result": "D",
+      "score": {
+        "liverpool": 2,
+        "opponent": 2,
+        "halftime": {
+          "liverpool": 1,
+          "opponent": 1
+        }
+      },
+      "xG": {
+        "liverpool": 1.8,
+        "opponent": 2.1
+      },
+      "possession": {
+        "liverpool": 52,
+        "opponent": 48
+      },
+      "shots": {
+        "liverpool": 14,
+        "opponent": 15,
+        "onTarget": {
+          "liverpool": 6,
+          "opponent": 7
+        }
+      },
+      "corners": {
+        "liverpool": 5,
+        "opponent": 6
+      },
+      "tackles": {
+        "liverpool": 20,
+        "opponent": 19
+      },
+      "interceptions": {
+        "liverpool": 9,
+        "opponent": 11
+      },
+      "passes": {
+        "liverpool": 445,
+        "opponent": 421,
+        "completion": {
+          "liverpool": 82.7,
+          "opponent": 83.4
+        }
+      },
+      "progressivePasses": {
+        "liverpool": 38,
+        "opponent": 41
+      },
+      "finalThirdEntries": {
+        "liverpool": 48,
+        "opponent": 52
+      },
+      "highTurnovers": {
+        "liverpool": 6,
+        "opponent": 7
+      },
+      "defensiveActions": {
+        "liverpool": 48,
+        "opponent": 46
+      },
+      "fastBreaks": {
+        "attempts": {
+          "liverpool": 3,
+          "opponent": 4
+        },
+        "goals": {
+          "liverpool": 1,
+          "opponent": 1
+        }
+      }
+    },
+    {
+      "matchId": "M2024004",
+      "date": "2024-09-14T11:30:00Z",
+      "timestamp": 1726311000,
+      "competition": {
+        "id": 39,
+        "name": "Premier League",
+        "round": "Regular Season - 4"
+      },
+      "opponent": {
+        "id": 47,
+        "name": "Tottenham",
+        "logo": "https://media.api-sports.io/football/teams/47.png"
+      },
+      "venue": {
+        "type": "home",
+        "name": "Anfield",
+        "city": "Liverpool"
+      },
+      "result": "W",
+      "score": {
+        "liverpool": 3,
+        "opponent": 1,
+        "halftime": {
+          "liverpool": 2,
+          "opponent": 0
+        }
+      },
+      "xG": {
+        "liverpool": 2.6,
+        "opponent": 1.2
+      },
+      "possession": {
+        "liverpool": 61,
+        "opponent": 39
+      },
+      "shots": {
+        "liverpool": 18,
+        "opponent": 10,
+        "onTarget": {
+          "liverpool": 9,
+          "opponent": 4
+        }
+      },
+      "corners": {
+        "liverpool": 8,
+        "opponent": 4
+      },
+      "tackles": {
+        "liverpool": 17,
+        "opponent": 21
+      },
+      "interceptions": {
+        "liverpool": 11,
+        "opponent": 7
+      },
+      "passes": {
+        "liverpool": 518,
+        "opponent": 334,
+        "completion": {
+          "liverpool": 85.3,
+          "opponent": 74.6
+        }
+      },
+      "progressivePasses": {
+        "liverpool": 45,
+        "opponent": 30
+      },
+      "finalThirdEntries": {
+        "liverpool": 60,
+        "opponent": 38
+      },
+      "highTurnovers": {
+        "liverpool": 9,
+        "opponent": 5
+      },
+      "defensiveActions": {
+        "liverpool": 43,
+        "opponent": 50
+      },
+      "fastBreaks": {
+        "attempts": {
+          "liverpool": 6,
+          "opponent": 3
+        },
+        "goals": {
+          "liverpool": 1,
+          "opponent": 0
+        }
+      }
+    },
+    {
+      "matchId": "M2024005",
+      "date": "2024-09-21T14:00:00Z",
+      "timestamp": 1726923600,
+      "competition": {
+        "id": 39,
+        "name": "Premier League",
+        "round": "Regular Season - 5"
+      },
+      "opponent": {
+        "id": 52,
+        "name": "Crystal Palace",
+        "logo": "https://media.api-sports.io/football/teams/52.png"
+      },
+      "venue": {
+        "type": "away",
+        "name": "Selhurst Park",
+        "city": "London"
+      },
+      "result": "L",
+      "score": {
+        "liverpool": 0,
+        "opponent": 1,
+        "halftime": {
+          "liverpool": 0,
+          "opponent": 0
+        }
+      },
+      "xG": {
+        "liverpool": 1.9,
+        "opponent": 0.8
+      },
+      "possession": {
+        "liverpool": 68,
+        "opponent": 32
+      },
+      "shots": {
+        "liverpool": 22,
+        "opponent": 7,
+        "onTarget": {
+          "liverpool": 6,
+          "opponent": 3
+        }
+      },
+      "corners": {
+        "liverpool": 10,
+        "opponent": 3
+      },
+      "tackles": {
+        "liverpool": 14,
+        "opponent": 25
+      },
+      "interceptions": {
+        "liverpool": 8,
+        "opponent": 12
+      },
+      "passes": {
+        "liverpool": 578,
+        "opponent": 275,
+        "completion": {
+          "liverpool": 87.2,
+          "opponent": 68.4
+        }
+      },
+      "progressivePasses": {
+        "liverpool": 52,
+        "opponent": 18
+      },
+      "finalThirdEntries": {
+        "liverpool": 68,
+        "opponent": 22
+      },
+      "highTurnovers": {
+        "liverpool": 7,
+        "opponent": 2
+      },
+      "defensiveActions": {
+        "liverpool": 38,
+        "opponent": 58
+      },
+      "fastBreaks": {
+        "attempts": {
+          "liverpool": 3,
+          "opponent": 2
+        },
+        "goals": {
+          "liverpool": 0,
+          "opponent": 1
+        }
+      }
+    },
+    {
+      "matchId": "M2024006",
+      "date": "2024-09-28T16:30:00Z",
+      "timestamp": 1727542200,
+      "competition": {
+        "id": 39,
+        "name": "Premier League",
+        "round": "Regular Season - 6"
+      },
+      "opponent": {
+        "id": 34,
+        "name": "Newcastle",
+        "logo": "https://media.api-sports.io/football/teams/34.png"
+      },
+      "venue": {
+        "type": "home",
+        "name": "Anfield",
+        "city": "Liverpool"
+      },
+      "result": "W",
+      "score": {
+        "liverpool": 2,
+        "opponent": 1,
+        "halftime": {
+          "liverpool": 1,
+          "opponent": 1
+        }
+      },
+      "xG": {
+        "liverpool": 2.4,
+        "opponent": 1.3
+      },
+      "possession": {
+        "liverpool": 59,
+        "opponent": 41
+      },
+      "shots": {
+        "liverpool": 17,
+        "opponent": 11,
+        "onTarget": {
+          "liverpool": 7,
+          "opponent": 5
+        }
+      },
+      "corners": {
+        "liverpool": 7,
+        "opponent": 5
+      },
+      "tackles": {
+        "liverpool": 16,
+        "opponent": 20
+      },
+      "interceptions": {
+        "liverpool": 10,
+        "opponent": 9
+      },
+      "passes": {
+        "liverpool": 498,
+        "opponent": 348,
+        "completion": {
+          "liverpool": 83.9,
+          "opponent": 77.3
+        }
+      },
+      "progressivePasses": {
+        "liverpool": 44,
+        "opponent": 32
+      },
+      "finalThirdEntries": {
+        "liverpool": 56,
+        "opponent": 42
+      },
+      "highTurnovers": {
+        "liverpool": 8,
+        "opponent": 6
+      },
+      "defensiveActions": {
+        "liverpool": 44,
+        "opponent": 49
+      },
+      "fastBreaks": {
+        "attempts": {
+          "liverpool": 4,
+          "opponent": 3
+        },
+        "goals": {
+          "liverpool": 0,
+          "opponent": 0
+        }
+      }
+    },
+    {
+      "matchId": "M2024007",
+      "date": "2024-10-05T14:00:00Z",
+      "timestamp": 1728133200,
+      "competition": {
+        "id": 39,
+        "name": "Premier League",
+        "round": "Regular Season - 7"
+      },
+      "opponent": {
+        "id": 49,
+        "name": "Chelsea",
+        "logo": "https://media.api-sports.io/football/teams/49.png"
+      },
+      "venue": {
+        "type": "away",
+        "name": "Stamford Bridge",
+        "city": "London"
+      },
+      "result": "L",
+      "score": {
+        "liverpool": 1,
+        "opponent": 2,
+        "halftime": {
+          "liverpool": 0,
+          "opponent": 1
+        }
+      },
+      "xG": {
+        "liverpool": 1.6,
+        "opponent": 1.9
+      },
+      "possession": {
+        "liverpool": 54,
+        "opponent": 46
+      },
+      "shots": {
+        "liverpool": 15,
+        "opponent": 13,
+        "onTarget": {
+          "liverpool": 5,
+          "opponent": 6
+        }
+      },
+      "corners": {
+        "liverpool": 6,
+        "opponent": 5
+      },
+      "tackles": {
+        "liverpool": 19,
+        "opponent": 18
+      },
+      "interceptions": {
+        "liverpool": 9,
+        "opponent": 10
+      },
+      "passes": {
+        "liverpool": 462,
+        "opponent": 398,
+        "completion": {
+          "liverpool": 81.8,
+          "opponent": 80.2
+        }
+      },
+      "progressivePasses": {
+        "liverpool": 40,
+        "opponent": 36
+      },
+      "finalThirdEntries": {
+        "liverpool": 50,
+        "opponent": 46
+      },
+      "highTurnovers": {
+        "liverpool": 7,
+        "opponent": 6
+      },
+      "defensiveActions": {
+        "liverpool": 46,
+        "opponent": 47
+      },
+      "fastBreaks": {
+        "attempts": {
+          "liverpool": 3,
+          "opponent": 4
+        },
+        "goals": {
+          "liverpool": 0,
+          "opponent": 1
+        }
+      }
+    }
+  ],
+  "summary": {
+    "totalMatches": 7,
+    "wins": 5,
+    "draws": 1,
+    "losses": 2,
+    "goalsFor": 13,
+    "goalsAgainst": 7,
+    "goalDifference": 6,
+    "points": 16,
+    "averages": {
+      "possession": 59.4,
+      "shots": 17.3,
+      "shotsOnTarget": 6.9,
+      "passCompletion": 84.5,
+      "xGFor": 2.2,
+      "xGAgainst": 1.2
+    }
+  }
+}

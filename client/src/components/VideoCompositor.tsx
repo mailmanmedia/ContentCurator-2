@@ -1,6 +1,22 @@
-import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo, useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { RssArticle, RssSource } from "@shared/schema";
+import H2HMatchCardOverlay from "./overlays/H2HMatchCardOverlay";
+import FormGuideOverlay from "./overlays/FormGuideOverlay";
+import PlayerStatsOverlay from "./overlays/PlayerStatsOverlay";
+import LeaguePositionOverlay from "./overlays/LeaguePositionOverlay";
+import RssSentimentOverlay from "./overlays/RssSentimentOverlay";
+
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 
 interface ActiveSource {
   id: string;
@@ -27,12 +43,18 @@ interface OverlayConfig {
   scrollDirection: 'left' | 'right' | 'up' | 'down';
   isBold: boolean;
   isItalic: boolean;
-  overlayType: 'text' | 'image' | 'rss';
+  overlayType: 'text' | 'image' | 'rss' | 'video' | 'metric';
   imageUrl?: string;
   imageData?: string;
   rssSourceIds?: string[];
   rssMaxArticles?: number;
   rssShowSource?: boolean;
+  width: number;
+  zIndex: number;
+  opacity: number;
+  videoUrl?: string;
+  metricType?: string;
+  metricData?: any;
 }
 
 interface VideoCompositorProps {
@@ -63,11 +85,15 @@ export default function VideoCompositor({
   className = "" 
 }: VideoCompositorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayCanvasCache = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const loadedImages = useRef<Map<string, HTMLImageElement>>(new Map());
   const animationFrameRef = useRef<number>();
   const scrollPositions = useRef<Map<string, number>>(new Map());
   const fadeStates = useRef<Map<string, number>>(new Map());
+  const [isEditing, setIsEditing] = useState(false);
+  const lastOverlayUpdate = useRef<number>(0);
 
   // Fetch RSS articles when RSS overlay exists
   const hasRssOverlay = overlays.some(o => o.overlayType === 'rss');
@@ -132,7 +158,43 @@ export default function VideoCompositor({
     return tickerItems.join(' • ');
   }, [sourceNameMap]);
 
-  const drawVideoWithAspectRatio = (
+  const createOffscreenCanvas = useCallback((width: number, height: number): HTMLCanvasElement => {
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width;
+    offscreen.height = height;
+    return offscreen;
+  }, []);
+
+  const getCachedOverlay = useCallback((
+    overlayId: string,
+    width: number,
+    height: number,
+    renderer: (ctx: CanvasRenderingContext2D) => void
+  ): HTMLCanvasElement => {
+    const cacheKey = `${overlayId}-${width}-${height}`;
+    let cached = overlayCanvasCache.current.get(cacheKey);
+    
+    if (!cached || cached.width !== width || cached.height !== height) {
+      cached = createOffscreenCanvas(width, height);
+      const ctx = cached.getContext('2d');
+      if (ctx) {
+        renderer(ctx);
+      }
+      overlayCanvasCache.current.set(cacheKey, cached);
+    }
+    
+    return cached;
+  }, [createOffscreenCanvas]);
+
+  const debouncedOverlayUpdate = useMemo(
+    () => debounce(() => {
+      overlayCanvasCache.current.clear();
+      lastOverlayUpdate.current = Date.now();
+    }, 300),
+    []
+  );
+
+  const drawVideoWithAspectRatio = useCallback((
     ctx: CanvasRenderingContext2D,
     video: HTMLVideoElement,
     cellX: number,
@@ -168,7 +230,7 @@ export default function VideoCompositor({
     }
     
     ctx.drawImage(video, drawX, drawY, drawWidth, drawHeight);
-  };
+  }, []);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -314,14 +376,138 @@ export default function VideoCompositor({
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
       };
 
-      overlays.forEach(overlay => {
-        if (!overlay.visible) return;
+      const sortedOverlays = [...overlays]
+        .filter(o => o.visible)
+        .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
+      sortedOverlays.forEach(overlay => {
+        const overlayWidth = (canvas.width * (overlay.width || 100)) / 100;
+        const xPosition = overlay.position === 'top' 
+          ? (canvas.width - overlayWidth) / 2
+          : (canvas.width - overlayWidth) / 2;
         const yPosition = overlay.position === 'top' ? 0 : canvas.height - overlay.height;
+        
+        ctx.globalAlpha = overlay.opacity !== undefined ? overlay.opacity : 1;
 
-        if (overlay.overlayType === 'image') {
+        if (overlay.overlayType === 'video') {
+          const videoSrc = overlay.videoUrl;
+          if (!videoSrc) {
+            ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.9);
+            ctx.fillRect(xPosition, yPosition, overlayWidth, overlay.height);
+            ctx.fillStyle = overlay.textColor;
+            ctx.font = `${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No video source', xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            ctx.globalAlpha = 1;
+            return;
+          }
+
+          let video = videoRefs.current.get(`overlay-${overlay.id}`);
+          if (!video) {
+            video = document.createElement('video');
+            video.src = videoSrc;
+            video.autoplay = true;
+            video.muted = true;
+            video.loop = true;
+            video.playsInline = true;
+            videoRefs.current.set(`overlay-${overlay.id}`, video);
+            video.play().catch(err => console.error('Failed to play overlay video:', err));
+          }
+
+          if (overlay.backgroundColor) {
+            ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.9);
+            ctx.fillRect(xPosition, yPosition, overlayWidth, overlay.height);
+          }
+
+          if (video.readyState >= 2) {
+            ctx.drawImage(video, xPosition, yPosition, overlayWidth, overlay.height);
+          } else {
+            ctx.fillStyle = overlay.textColor;
+            ctx.font = `14px "${overlay.fontFamily}", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Loading video...', xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+          }
+        } else if (overlay.overlayType === 'metric') {
+          ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.9);
+          ctx.fillRect(xPosition, yPosition, overlayWidth, overlay.height);
+
+          ctx.fillStyle = overlay.textColor;
+          const fontWeight = overlay.isBold ? 'bold' : 'normal';
+          const fontStyle = overlay.isItalic ? 'italic' : 'normal';
+          ctx.font = `${fontStyle} ${fontWeight} ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          const metricType = overlay.metricType || 'default';
+          const metricData = overlay.metricData;
+
+          if (metricType === 'h2h-card' && metricData) {
+            ctx.font = `bold ${overlay.fontSize + 2}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText('H2H STATS', xPosition + overlayWidth / 2, yPosition + 25);
+            ctx.font = `${fontWeight} ${overlay.fontSize - 2}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText(`Wins: ${metricData.wins || 0}`, xPosition + overlayWidth / 2, yPosition + 60);
+            ctx.fillText(`Draws: ${metricData.draws || 0}`, xPosition + overlayWidth / 2, yPosition + 90);
+            ctx.fillText(`Losses: ${metricData.losses || 0}`, xPosition + overlayWidth / 2, yPosition + 120);
+          } else if (metricType === 'form-guide' && metricData) {
+            ctx.font = `bold ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText('RECENT FORM', xPosition + overlayWidth / 2, yPosition + 25);
+            const form = metricData.form || 'WWDLL';
+            ctx.font = `bold ${overlay.fontSize + 4}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText(form, xPosition + overlayWidth / 2, yPosition + 70);
+          } else if (metricType === 'player-stats' && metricData) {
+            ctx.font = `bold ${overlay.fontSize + 2}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText(metricData.playerName || 'Player', xPosition + overlayWidth / 2, yPosition + 25);
+            ctx.font = `${fontWeight} ${overlay.fontSize - 2}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText(`Goals/90: ${metricData.goalsPerGame || 0}`, xPosition + overlayWidth / 2, yPosition + 60);
+            ctx.fillText(`Assists: ${metricData.assists || 0}`, xPosition + overlayWidth / 2, yPosition + 95);
+            ctx.fillText(`Rating: ${metricData.rating || 0}`, xPosition + overlayWidth / 2, yPosition + 130);
+          } else if (metricType === 'league-table' && metricData) {
+            ctx.font = `bold ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText('LEAGUE POSITION', xPosition + overlayWidth / 2, yPosition + 25);
+            ctx.font = `bold ${overlay.fontSize + 8}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText(`#${metricData.position || '?'}`, xPosition + overlayWidth / 2, yPosition + 80);
+            ctx.font = `${fontWeight} ${overlay.fontSize - 4}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText(`${metricData.points || 0} pts`, xPosition + overlayWidth / 2, yPosition + 130);
+          } else if (metricType === 'live-metrics') {
+            const metricsText = metricData?.text || 'Live Analytics';
+            if (overlay.animationType === 'scroll') {
+              const scrollSpeed = overlay.scrollSpeed / 10;
+              let scrollX = scrollPositions.current.get(overlay.id) || overlayWidth;
+              ctx.textAlign = 'left';
+              const textWidth = ctx.measureText(metricsText).width;
+              
+              if (overlay.scrollDirection === 'left') {
+                scrollX -= scrollSpeed;
+                if (scrollX < -textWidth - 100) scrollX = overlayWidth;
+              } else {
+                scrollX += scrollSpeed;
+                if (scrollX > overlayWidth + 100) scrollX = -textWidth;
+              }
+              
+              ctx.fillText(metricsText, xPosition + scrollX, yPosition + overlay.height / 2);
+              const x2 = overlay.scrollDirection === 'left'
+                ? scrollX + textWidth + 100
+                : scrollX - textWidth - 100;
+              ctx.fillText(metricsText, xPosition + x2, yPosition + overlay.height / 2);
+              scrollPositions.current.set(overlay.id, scrollX);
+            } else {
+              ctx.fillText(metricsText, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            }
+          } else if (metricType === 'live-score' && metricData) {
+            ctx.font = `bold ${overlay.fontSize + 8}px "${overlay.fontFamily}", sans-serif`;
+            ctx.fillText(`${metricData.homeScore || 0} - ${metricData.awayScore || 0}`, 
+              xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+          } else {
+            ctx.fillText(overlay.text || 'Metric Display', xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+          }
+        } else if (overlay.overlayType === 'image') {
           const imageSrc = overlay.imageData || overlay.imageUrl;
-          if (!imageSrc) return;
+          if (!imageSrc) {
+            ctx.globalAlpha = 1;
+            return;
+          }
 
           let img = loadedImages.current.get(imageSrc);
           
@@ -333,10 +519,10 @@ export default function VideoCompositor({
               .catch(error => {
                 console.error('Failed to load overlay image:', error);
               });
+            ctx.globalAlpha = 1;
             return;
           }
 
-          const overlayWidth = canvas.width;
           const overlayHeight = overlay.height;
           
           const imgAspect = img.width / img.height;
@@ -347,18 +533,18 @@ export default function VideoCompositor({
           if (imgAspect > overlayAspect) {
             drawWidth = overlayWidth;
             drawHeight = overlayWidth / imgAspect;
-            drawX = 0;
+            drawX = xPosition;
             drawY = (overlayHeight - drawHeight) / 2;
           } else {
             drawHeight = overlayHeight;
             drawWidth = overlayHeight * imgAspect;
-            drawX = (overlayWidth - drawWidth) / 2;
+            drawX = xPosition + (overlayWidth - drawWidth) / 2;
             drawY = 0;
           }
 
           if (overlay.backgroundColor) {
-            ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
-            ctx.fillRect(0, yPosition, overlayWidth, overlayHeight);
+            ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.95);
+            ctx.fillRect(xPosition, yPosition, overlayWidth, overlayHeight);
           }
 
           ctx.drawImage(
@@ -372,15 +558,16 @@ export default function VideoCompositor({
           // RSS Ticker Overlay
           if (!rssArticles || rssArticles.length === 0) {
             // Show loading or no data message
-            ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
-            ctx.fillRect(0, yPosition, canvas.width, overlay.height);
+            ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.95);
+            ctx.fillRect(xPosition, yPosition, overlayWidth, overlay.height);
             
             ctx.fillStyle = overlay.textColor;
             ctx.font = `bold ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const loadingMsg = rssSources ? 'No recent headlines available' : 'Loading RSS feed...';
-            ctx.fillText(loadingMsg, canvas.width / 2, yPosition + overlay.height / 2);
+            ctx.fillText(loadingMsg, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            ctx.globalAlpha = 1;
             return;
           }
 
@@ -389,20 +576,21 @@ export default function VideoCompositor({
           
           if (!tickerText || tickerText === 'No RSS sources selected' || tickerText === 'No recent headlines available') {
             // Show message
-            ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
-            ctx.fillRect(0, yPosition, canvas.width, overlay.height);
+            ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.95);
+            ctx.fillRect(xPosition, yPosition, overlayWidth, overlay.height);
             
             ctx.fillStyle = overlay.textColor;
             ctx.font = `bold ${overlay.fontSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(tickerText, canvas.width / 2, yPosition + overlay.height / 2);
+            ctx.fillText(tickerText, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            ctx.globalAlpha = 1;
             return;
           }
 
           // Render background
-          ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
-          ctx.fillRect(0, yPosition, canvas.width, overlay.height);
+          ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.95);
+          ctx.fillRect(xPosition, yPosition, overlayWidth, overlay.height);
 
           // Render scrolling ticker text
           const fontWeight = overlay.isBold ? 'bold' : 'normal';
@@ -423,7 +611,7 @@ export default function VideoCompositor({
               }
               
               ctx.textAlign = 'center';
-              ctx.fillText(tickerText, canvas.width / 2, scrollY + overlay.height / 2);
+              ctx.fillText(tickerText, xPosition + overlayWidth / 2, scrollY + overlay.height / 2);
               
               const textHeight = overlay.fontSize * 1.2;
               if (overlay.scrollDirection === 'up') {
@@ -443,7 +631,7 @@ export default function VideoCompositor({
               // Horizontal scrolling - seamless loop
               let scrollX = scrollPositions.current.get(overlay.id);
               if (scrollX === undefined) {
-                scrollX = canvas.width;
+                scrollX = overlayWidth;
               }
               
               ctx.textAlign = 'left';
@@ -452,23 +640,23 @@ export default function VideoCompositor({
               if (overlay.scrollDirection === 'left') {
                 scrollX -= scrollSpeed;
                 if (scrollX < -textWidth - 100) {
-                  scrollX = canvas.width;
+                  scrollX = overlayWidth;
                 }
               } else {
                 scrollX += scrollSpeed;
-                if (scrollX > canvas.width + 100) {
+                if (scrollX > overlayWidth + 100) {
                   scrollX = -textWidth;
                 }
               }
               
               // Draw main text
-              ctx.fillText(tickerText, scrollX, yPosition + overlay.height / 2);
+              ctx.fillText(tickerText, xPosition + scrollX, yPosition + overlay.height / 2);
               
               // Draw duplicate for seamless loop
               const x2 = overlay.scrollDirection === 'left'
                 ? scrollX + textWidth + 100
                 : scrollX - textWidth - 100;
-              ctx.fillText(tickerText, x2, yPosition + overlay.height / 2);
+              ctx.fillText(tickerText, xPosition + x2, yPosition + overlay.height / 2);
               
               scrollPositions.current.set(overlay.id, scrollX);
             }
@@ -477,22 +665,23 @@ export default function VideoCompositor({
             fadeTime += 0.02;
             
             const opacity = (Math.sin(fadeTime) + 1) / 2;
-            ctx.globalAlpha = opacity * 0.5 + 0.5;
+            const baseOpacity = overlay.opacity !== undefined ? overlay.opacity : 1;
+            ctx.globalAlpha = opacity * 0.5 * baseOpacity + 0.5 * baseOpacity;
             
             ctx.textAlign = 'center';
-            ctx.fillText(tickerText, canvas.width / 2, yPosition + overlay.height / 2);
-            ctx.globalAlpha = 1;
+            ctx.fillText(tickerText, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            ctx.globalAlpha = baseOpacity;
             
             fadeStates.current.set(overlay.id, fadeTime);
           } else {
             // Static display
             ctx.textAlign = 'center';
-            ctx.fillText(tickerText, canvas.width / 2, yPosition + overlay.height / 2);
+            ctx.fillText(tickerText, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
           }
         } else if (overlay.overlayType === 'text') {
           // Text Overlay
-          ctx.fillStyle = hexToRgba(overlay.backgroundColor, 0.95);
-          ctx.fillRect(0, yPosition, canvas.width, overlay.height);
+          ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.95);
+          ctx.fillRect(xPosition, yPosition, overlayWidth, overlay.height);
 
           ctx.fillStyle = overlay.textColor;
           const fontWeight = overlay.isBold ? 'bold' : 'normal';
@@ -511,7 +700,7 @@ export default function VideoCompositor({
               }
               
               ctx.textAlign = 'center';
-              ctx.fillText(overlay.text, canvas.width / 2, scrollY + overlay.height / 2);
+              ctx.fillText(overlay.text, xPosition + overlayWidth / 2, scrollY + overlay.height / 2);
               
               const textHeight = overlay.fontSize * 1.2;
               if (overlay.scrollDirection === 'up') {
@@ -530,21 +719,21 @@ export default function VideoCompositor({
             } else {
               let scrollX = scrollPositions.current.get(overlay.id);
               if (scrollX === undefined) {
-                scrollX = overlay.scrollDirection === 'right' ? -canvas.width : canvas.width;
+                scrollX = overlay.scrollDirection === 'right' ? -overlayWidth : overlayWidth;
               }
               
               ctx.textAlign = 'left';
-              ctx.fillText(overlay.text, scrollX, yPosition + overlay.height / 2);
+              ctx.fillText(overlay.text, xPosition + scrollX, yPosition + overlay.height / 2);
               
               const textWidth = ctx.measureText(overlay.text).width;
               if (overlay.scrollDirection === 'left') {
                 scrollX -= scrollSpeed;
                 if (scrollX < -textWidth - 50) {
-                  scrollX = canvas.width;
+                  scrollX = overlayWidth;
                 }
               } else {
                 scrollX += scrollSpeed;
-                if (scrollX > canvas.width + 50) {
+                if (scrollX > overlayWidth + 50) {
                   scrollX = -textWidth;
                 }
               }
@@ -556,18 +745,21 @@ export default function VideoCompositor({
             fadeTime += 0.02;
             
             const opacity = (Math.sin(fadeTime) + 1) / 2;
-            ctx.globalAlpha = opacity * 0.5 + 0.5;
+            const baseOpacity = overlay.opacity !== undefined ? overlay.opacity : 1;
+            ctx.globalAlpha = opacity * 0.5 * baseOpacity + 0.5 * baseOpacity;
             
             ctx.textAlign = 'center';
-            ctx.fillText(overlay.text, canvas.width / 2, yPosition + overlay.height / 2);
-            ctx.globalAlpha = 1;
+            ctx.fillText(overlay.text, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            ctx.globalAlpha = baseOpacity;
             
             fadeStates.current.set(overlay.id, fadeTime);
           } else {
             ctx.textAlign = 'center';
-            ctx.fillText(overlay.text, canvas.width / 2, yPosition + overlay.height / 2);
+            ctx.fillText(overlay.text, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
           }
         }
+        
+        ctx.globalAlpha = 1;
       });
 
       animationFrameRef.current = requestAnimationFrame(render);
@@ -582,8 +774,88 @@ export default function VideoCompositor({
     };
   }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes, rssArticles, sourceNameMap, formatRssTicker]);
 
+  const renderMetricOverlay = (overlay: OverlayConfig) => {
+    const { metricType, metricData, width, height, opacity, position } = overlay;
+
+    const style: React.CSSProperties = {
+      position: 'absolute',
+      width: `${width}%`,
+      height: `${height}px`,
+      [position]: 0,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: overlay.zIndex || 100,
+      pointerEvents: 'none',
+    };
+
+    switch (metricType) {
+      case 'h2h-card':
+        return (
+          <div key={overlay.id} style={style}>
+            <H2HMatchCardOverlay
+              homeTeamId={metricData?.homeTeamId || 40}
+              awayTeamId={metricData?.awayTeamId || 47}
+              width={100}
+              height={height}
+              opacity={opacity}
+            />
+          </div>
+        );
+      case 'form-guide':
+        return (
+          <div key={overlay.id} style={style}>
+            <FormGuideOverlay
+              width={100}
+              height={height}
+              opacity={opacity}
+              layout={metricData?.layout || 'horizontal'}
+            />
+          </div>
+        );
+      case 'player-stats':
+        return (
+          <div key={overlay.id} style={style}>
+            <PlayerStatsOverlay
+              playerId={metricData?.playerId || 1}
+              width={100}
+              height={height}
+              opacity={opacity}
+            />
+          </div>
+        );
+      case 'league-table':
+        return (
+          <div key={overlay.id} style={style}>
+            <LeaguePositionOverlay
+              width={100}
+              height={height}
+              opacity={opacity}
+            />
+          </div>
+        );
+      case 'rss-sentiment':
+        return (
+          <div key={overlay.id} style={style}>
+            <RssSentimentOverlay
+              width={100}
+              height={height}
+              opacity={opacity}
+            />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const metricOverlays = overlays.filter(o => 
+    o.visible && 
+    o.overlayType === 'metric' && 
+    ['h2h-card', 'form-guide', 'player-stats', 'league-table', 'rss-sentiment'].includes(o.metricType || '')
+  );
+
   return (
-    <div className={`bg-black ${className}`}>
+    <div className={`bg-black ${className}`} style={{ position: 'relative' }}>
       <canvas
         ref={canvasRef}
         width={outputResolution.width}
@@ -591,6 +863,7 @@ export default function VideoCompositor({
         className="w-full h-full object-contain"
         data-testid="canvas-video-compositor"
       />
+      {metricOverlays.map(overlay => renderMetricOverlay(overlay))}
     </div>
   );
 }

@@ -14,6 +14,8 @@ import TeamMatchupStudio from "@/pages/TeamMatchupStudio";
 import ContentLibrary from "@/pages/ContentLibrary";
 import LivePresentation from "@/pages/LivePresentation";
 import Templates from "@/pages/Templates";
+import OverlayTemplateBuilder from "@/pages/OverlayTemplateBuilder";
+import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -30,6 +32,8 @@ function Router() {
       <Route path="/live-presentation" component={LivePresentation} />
       <Route path="/live" component={LivePresentation} />
       <Route path="/templates" component={Templates} />
+      <Route path="/overlay-templates" component={OverlayTemplateBuilder} />
+      <Route path="/analytics" component={AnalyticsDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

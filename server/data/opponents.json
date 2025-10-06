@@ -1,0 +1,542 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-10-06T00:00:00.000Z",
+  "season": "2024-25",
+  "competition": {
+    "id": 39,
+    "name": "Premier League"
+  },
+  "opponents": [
+    {
+      "teamId": 50,
+      "teamName": "Manchester City",
+      "logo": "https://media.api-sports.io/football/teams/50.png",
+      "strengthRating": 95,
+      "tier": "Elite",
+      "form": {
+        "current": "Excellent",
+        "last5": "WWWDW",
+        "points": 13
+      },
+      "stats": {
+        "averageGoalsScored": 2.57,
+        "averageGoalsConceded": 0.71,
+        "possession": 68.2,
+        "passAccuracy": 89.4,
+        "shotsPerGame": 18.3,
+        "xGPerGame": 2.4,
+        "defensiveStrength": 92,
+        "attackingStrength": 96
+      },
+      "keyPlayers": [
+        { "name": "Erling Haaland", "position": "ST", "rating": 9.2 },
+        { "name": "Kevin De Bruyne", "position": "CM", "rating": 8.8 },
+        { "name": "Rodri", "position": "DM", "rating": 8.6 }
+      ]
+    },
+    {
+      "teamId": 42,
+      "teamName": "Arsenal",
+      "logo": "https://media.api-sports.io/football/teams/42.png",
+      "strengthRating": 90,
+      "tier": "Elite",
+      "form": {
+        "current": "Excellent",
+        "last5": "WWDWL",
+        "points": 13
+      },
+      "stats": {
+        "averageGoalsScored": 2.29,
+        "averageGoalsConceded": 1.14,
+        "possession": 62.8,
+        "passAccuracy": 86.7,
+        "shotsPerGame": 16.2,
+        "xGPerGame": 2.1,
+        "defensiveStrength": 88,
+        "attackingStrength": 90
+      },
+      "keyPlayers": [
+        { "name": "Bukayo Saka", "position": "RW", "rating": 8.6 },
+        { "name": "Martin Ødegaard", "position": "AM", "rating": 8.4 },
+        { "name": "William Saliba", "position": "CB", "rating": 8.3 }
+      ]
+    },
+    {
+      "teamId": 49,
+      "teamName": "Chelsea",
+      "logo": "https://media.api-sports.io/football/teams/49.png",
+      "strengthRating": 82,
+      "tier": "Strong",
+      "form": {
+        "current": "Good",
+        "last5": "WDWLW",
+        "points": 11
+      },
+      "stats": {
+        "averageGoalsScored": 2.0,
+        "averageGoalsConceded": 1.29,
+        "possession": 58.4,
+        "passAccuracy": 84.2,
+        "shotsPerGame": 14.8,
+        "xGPerGame": 1.8,
+        "defensiveStrength": 80,
+        "attackingStrength": 83
+      },
+      "keyPlayers": [
+        { "name": "Cole Palmer", "position": "AM", "rating": 8.5 },
+        { "name": "Nicolas Jackson", "position": "ST", "rating": 7.8 },
+        { "name": "Enzo Fernández", "position": "CM", "rating": 7.6 }
+      ]
+    },
+    {
+      "teamId": 47,
+      "teamName": "Tottenham",
+      "logo": "https://media.api-sports.io/football/teams/47.png",
+      "strengthRating": 81,
+      "tier": "Strong",
+      "form": {
+        "current": "Good",
+        "last5": "WLWWL",
+        "points": 10
+      },
+      "stats": {
+        "averageGoalsScored": 2.0,
+        "averageGoalsConceded": 1.29,
+        "possession": 54.6,
+        "passAccuracy": 82.8,
+        "shotsPerGame": 15.4,
+        "xGPerGame": 1.9,
+        "defensiveStrength": 76,
+        "attackingStrength": 85
+      },
+      "keyPlayers": [
+        { "name": "Son Heung-min", "position": "LW", "rating": 8.2 },
+        { "name": "James Maddison", "position": "AM", "rating": 7.9 },
+        { "name": "Cristian Romero", "position": "CB", "rating": 7.8 }
+      ]
+    },
+    {
+      "teamId": 33,
+      "teamName": "Manchester United",
+      "logo": "https://media.api-sports.io/football/teams/33.png",
+      "strengthRating": 78,
+      "tier": "Strong",
+      "form": {
+        "current": "Inconsistent",
+        "last5": "LDWDW",
+        "points": 9
+      },
+      "stats": {
+        "averageGoalsScored": 1.29,
+        "averageGoalsConceded": 1.43,
+        "possession": 52.3,
+        "passAccuracy": 81.6,
+        "shotsPerGame": 13.2,
+        "xGPerGame": 1.5,
+        "defensiveStrength": 74,
+        "attackingStrength": 76
+      },
+      "keyPlayers": [
+        { "name": "Bruno Fernandes", "position": "AM", "rating": 7.8 },
+        { "name": "Rasmus Højlund", "position": "ST", "rating": 7.4 },
+        { "name": "Lisandro Martínez", "position": "CB", "rating": 7.6 }
+      ]
+    },
+    {
+      "teamId": 34,
+      "teamName": "Newcastle",
+      "logo": "https://media.api-sports.io/football/teams/34.png",
+      "strengthRating": 80,
+      "tier": "Strong",
+      "form": {
+        "current": "Good",
+        "last5": "WDWLL",
+        "points": 10
+      },
+      "stats": {
+        "averageGoalsScored": 1.57,
+        "averageGoalsConceded": 1.0,
+        "possession": 56.2,
+        "passAccuracy": 83.4,
+        "shotsPerGame": 14.6,
+        "xGPerGame": 1.7,
+        "defensiveStrength": 82,
+        "attackingStrength": 78
+      },
+      "keyPlayers": [
+        { "name": "Alexander Isak", "position": "ST", "rating": 8.1 },
+        { "name": "Bruno Guimarães", "position": "CM", "rating": 7.9 },
+        { "name": "Anthony Gordon", "position": "LW", "rating": 7.7 }
+      ]
+    },
+    {
+      "teamId": 66,
+      "teamName": "Aston Villa",
+      "logo": "https://media.api-sports.io/football/teams/66.png",
+      "strengthRating": 79,
+      "tier": "Strong",
+      "form": {
+        "current": "Good",
+        "last5": "WWLWL",
+        "points": 10
+      },
+      "stats": {
+        "averageGoalsScored": 1.71,
+        "averageGoalsConceded": 1.14,
+        "possession": 54.8,
+        "passAccuracy": 82.1,
+        "shotsPerGame": 13.8,
+        "xGPerGame": 1.6,
+        "defensiveStrength": 78,
+        "attackingStrength": 80
+      },
+      "keyPlayers": [
+        { "name": "Ollie Watkins", "position": "ST", "rating": 7.9 },
+        { "name": "John McGinn", "position": "CM", "rating": 7.6 },
+        { "name": "Emiliano Martínez", "position": "GK", "rating": 7.8 }
+      ]
+    },
+    {
+      "teamId": 51,
+      "teamName": "Brighton",
+      "logo": "https://media.api-sports.io/football/teams/51.png",
+      "strengthRating": 75,
+      "tier": "Medium",
+      "form": {
+        "current": "Decent",
+        "last5": "DWDWL",
+        "points": 9
+      },
+      "stats": {
+        "averageGoalsScored": 1.57,
+        "averageGoalsConceded": 1.14,
+        "possession": 58.6,
+        "passAccuracy": 84.8,
+        "shotsPerGame": 12.4,
+        "xGPerGame": 1.5,
+        "defensiveStrength": 73,
+        "attackingStrength": 76
+      },
+      "keyPlayers": [
+        { "name": "João Pedro", "position": "ST", "rating": 7.6 },
+        { "name": "Kaoru Mitoma", "position": "LW", "rating": 7.4 },
+        { "name": "Lewis Dunk", "position": "CB", "rating": 7.3 }
+      ]
+    },
+    {
+      "teamId": 35,
+      "teamName": "Bournemouth",
+      "logo": "https://media.api-sports.io/football/teams/35.png",
+      "strengthRating": 70,
+      "tier": "Medium",
+      "form": {
+        "current": "Inconsistent",
+        "last5": "WLLDW",
+        "points": 7
+      },
+      "stats": {
+        "averageGoalsScored": 1.29,
+        "averageGoalsConceded": 1.43,
+        "possession": 48.2,
+        "passAccuracy": 78.6,
+        "shotsPerGame": 11.2,
+        "xGPerGame": 1.3,
+        "defensiveStrength": 68,
+        "attackingStrength": 71
+      },
+      "keyPlayers": [
+        { "name": "Dominic Solanke", "position": "ST", "rating": 7.5 },
+        { "name": "Antoine Semenyo", "position": "RW", "rating": 7.2 },
+        { "name": "Neto", "position": "GK", "rating": 7.1 }
+      ]
+    },
+    {
+      "teamId": 52,
+      "teamName": "Crystal Palace",
+      "logo": "https://media.api-sports.io/football/teams/52.png",
+      "strengthRating": 68,
+      "tier": "Medium",
+      "form": {
+        "current": "Poor",
+        "last5": "LLWDW",
+        "points": 7
+      },
+      "stats": {
+        "averageGoalsScored": 0.86,
+        "averageGoalsConceded": 1.14,
+        "possession": 45.8,
+        "passAccuracy": 76.2,
+        "shotsPerGame": 9.8,
+        "xGPerGame": 1.1,
+        "defensiveStrength": 70,
+        "attackingStrength": 65
+      },
+      "keyPlayers": [
+        { "name": "Eberechi Eze", "position": "AM", "rating": 7.4 },
+        { "name": "Jean-Philippe Mateta", "position": "ST", "rating": 7.0 },
+        { "name": "Marc Guéhi", "position": "CB", "rating": 7.2 }
+      ]
+    },
+    {
+      "teamId": 48,
+      "teamName": "West Ham",
+      "logo": "https://media.api-sports.io/football/teams/48.png",
+      "strengthRating": 72,
+      "tier": "Medium",
+      "form": {
+        "current": "Inconsistent",
+        "last5": "WDDLW",
+        "points": 8
+      },
+      "stats": {
+        "averageGoalsScored": 1.43,
+        "averageGoalsConceded": 1.57,
+        "possession": 50.4,
+        "passAccuracy": 79.8,
+        "shotsPerGame": 11.8,
+        "xGPerGame": 1.4,
+        "defensiveStrength": 69,
+        "attackingStrength": 73
+      },
+      "keyPlayers": [
+        { "name": "Jarrod Bowen", "position": "RW", "rating": 7.5 },
+        { "name": "Mohammed Kudus", "position": "AM", "rating": 7.3 },
+        { "name": "Lucas Paquetá", "position": "CM", "rating": 7.2 }
+      ]
+    },
+    {
+      "teamId": 36,
+      "teamName": "Fulham",
+      "logo": "https://media.api-sports.io/football/teams/36.png",
+      "strengthRating": 71,
+      "tier": "Medium",
+      "form": {
+        "current": "Good",
+        "last5": "WDLLW",
+        "points": 8
+      },
+      "stats": {
+        "averageGoalsScored": 1.43,
+        "averageGoalsConceded": 1.57,
+        "possession": 51.2,
+        "passAccuracy": 80.4,
+        "shotsPerGame": 12.0,
+        "xGPerGame": 1.3,
+        "defensiveStrength": 70,
+        "attackingStrength": 72
+      },
+      "keyPlayers": [
+        { "name": "Raúl Jiménez", "position": "ST", "rating": 7.3 },
+        { "name": "Andreas Pereira", "position": "AM", "rating": 7.2 },
+        { "name": "Bernd Leno", "position": "GK", "rating": 7.1 }
+      ]
+    },
+    {
+      "teamId": 65,
+      "teamName": "Nottingham Forest",
+      "logo": "https://media.api-sports.io/football/teams/65.png",
+      "strengthRating": 67,
+      "tier": "Medium",
+      "form": {
+        "current": "Inconsistent",
+        "last5": "DDWLL",
+        "points": 7
+      },
+      "stats": {
+        "averageGoalsScored": 1.0,
+        "averageGoalsConceded": 1.14,
+        "possession": 46.8,
+        "passAccuracy": 77.2,
+        "shotsPerGame": 10.4,
+        "xGPerGame": 1.2,
+        "defensiveStrength": 71,
+        "attackingStrength": 66
+      },
+      "keyPlayers": [
+        { "name": "Chris Wood", "position": "ST", "rating": 7.2 },
+        { "name": "Morgan Gibbs-White", "position": "AM", "rating": 7.1 },
+        { "name": "Murillo", "position": "CB", "rating": 7.0 }
+      ]
+    },
+    {
+      "teamId": 55,
+      "teamName": "Brentford",
+      "logo": "https://media.api-sports.io/football/teams/55.png",
+      "strengthRating": 69,
+      "tier": "Medium",
+      "form": {
+        "current": "Poor",
+        "last5": "DWLLW",
+        "points": 7
+      },
+      "stats": {
+        "averageGoalsScored": 1.29,
+        "averageGoalsConceded": 1.71,
+        "possession": 48.6,
+        "passAccuracy": 78.4,
+        "shotsPerGame": 11.6,
+        "xGPerGame": 1.4,
+        "defensiveStrength": 66,
+        "attackingStrength": 70
+      },
+      "keyPlayers": [
+        { "name": "Bryan Mbeumo", "position": "RW", "rating": 7.4 },
+        { "name": "Yoane Wissa", "position": "ST", "rating": 7.2 },
+        { "name": "Christian Nørgaard", "position": "DM", "rating": 7.0 }
+      ]
+    },
+    {
+      "teamId": 45,
+      "teamName": "Everton",
+      "logo": "https://media.api-sports.io/football/teams/45.png",
+      "strengthRating": 65,
+      "tier": "Weak",
+      "form": {
+        "current": "Poor",
+        "last5": "WDLLL",
+        "points": 6
+      },
+      "stats": {
+        "averageGoalsScored": 1.14,
+        "averageGoalsConceded": 1.57,
+        "possession": 44.2,
+        "passAccuracy": 75.8,
+        "shotsPerGame": 9.6,
+        "xGPerGame": 1.1,
+        "defensiveStrength": 67,
+        "attackingStrength": 63
+      },
+      "keyPlayers": [
+        { "name": "Dominic Calvert-Lewin", "position": "ST", "rating": 6.9 },
+        { "name": "Jordan Pickford", "position": "GK", "rating": 7.1 },
+        { "name": "Dwight McNeil", "position": "LW", "rating": 6.8 }
+      ]
+    },
+    {
+      "teamId": 46,
+      "teamName": "Leicester",
+      "logo": "https://media.api-sports.io/football/teams/46.png",
+      "strengthRating": 64,
+      "tier": "Weak",
+      "form": {
+        "current": "Poor",
+        "last5": "DDLWL",
+        "points": 5
+      },
+      "stats": {
+        "averageGoalsScored": 1.29,
+        "averageGoalsConceded": 1.86,
+        "possession": 46.4,
+        "passAccuracy": 76.2,
+        "shotsPerGame": 10.2,
+        "xGPerGame": 1.2,
+        "defensiveStrength": 62,
+        "attackingStrength": 65
+      },
+      "keyPlayers": [
+        { "name": "Jamie Vardy", "position": "ST", "rating": 6.8 },
+        { "name": "James Maddison", "position": "AM", "rating": 6.7 },
+        { "name": "Mads Hermansen", "position": "GK", "rating": 6.6 }
+      ]
+    },
+    {
+      "teamId": 39,
+      "teamName": "Wolves",
+      "logo": "https://media.api-sports.io/football/teams/39.png",
+      "strengthRating": 66,
+      "tier": "Weak",
+      "form": {
+        "current": "Poor",
+        "last5": "LDLDW",
+        "points": 5
+      },
+      "stats": {
+        "averageGoalsScored": 1.0,
+        "averageGoalsConceded": 2.0,
+        "possession": 47.2,
+        "passAccuracy": 77.6,
+        "shotsPerGame": 10.8,
+        "xGPerGame": 1.1,
+        "defensiveStrength": 60,
+        "attackingStrength": 67
+      },
+      "keyPlayers": [
+        { "name": "Matheus Cunha", "position": "ST", "rating": 7.0 },
+        { "name": "Pedro Neto", "position": "RW", "rating": 6.8 },
+        { "name": "Max Kilman", "position": "CB", "rating": 6.7 }
+      ]
+    },
+    {
+      "teamId": 41,
+      "teamName": "Southampton",
+      "logo": "https://media.api-sports.io/football/teams/41.png",
+      "strengthRating": 60,
+      "tier": "Weak",
+      "form": {
+        "current": "Very Poor",
+        "last5": "DLLdl",
+        "points": 2
+      },
+      "stats": {
+        "averageGoalsScored": 0.57,
+        "averageGoalsConceded": 1.86,
+        "possession": 44.8,
+        "passAccuracy": 74.2,
+        "shotsPerGame": 8.4,
+        "xGPerGame": 0.9,
+        "defensiveStrength": 58,
+        "attackingStrength": 58
+      },
+      "keyPlayers": [
+        { "name": "Adam Armstrong", "position": "ST", "rating": 6.5 },
+        { "name": "Gavin Bazunu", "position": "GK", "rating": 6.4 },
+        { "name": "Kyle Walker-Peters", "position": "RB", "rating": 6.3 }
+      ]
+    },
+    {
+      "teamId": 57,
+      "teamName": "Ipswich",
+      "logo": "https://media.api-sports.io/football/teams/57.png",
+      "strengthRating": 58,
+      "tier": "Weak",
+      "form": {
+        "current": "Very Poor",
+        "last5": "DLLدL",
+        "points": 2
+      },
+      "stats": {
+        "averageGoalsScored": 0.71,
+        "averageGoalsConceded": 2.29,
+        "possession": 42.6,
+        "passAccuracy": 72.8,
+        "shotsPerGame": 8.8,
+        "xGPerGame": 0.8,
+        "defensiveStrength": 55,
+        "attackingStrength": 56
+      },
+      "keyPlayers": [
+        { "name": "Liam Delap", "position": "ST", "rating": 6.6 },
+        { "name": "Sam Morsy", "position": "CM", "rating": 6.4 },
+        { "name": "Arijanet Muric", "position": "GK", "rating": 6.2 }
+      ]
+    }
+  ],
+  "strengthTiers": {
+    "Elite": {
+      "range": "88-100",
+      "teams": ["Manchester City", "Arsenal"]
+    },
+    "Strong": {
+      "range": "75-87",
+      "teams": ["Chelsea", "Tottenham", "Manchester United", "Newcastle", "Aston Villa"]
+    },
+    "Medium": {
+      "range": "67-74",
+      "teams": ["Brighton", "West Ham", "Fulham", "Brentford", "Bournemouth", "Crystal Palace", "Nottingham Forest"]
+    },
+    "Weak": {
+      "range": "50-66",
+      "teams": ["Everton", "Leicester", "Wolves", "Southampton", "Ipswich"]
+    }
+  }
+}

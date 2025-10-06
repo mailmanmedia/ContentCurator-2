@@ -52,7 +52,10 @@ import {
   Upload,
   Images,
   AlertTriangle,
-  Rss
+  Rss,
+  BarChart3,
+  Users,
+  Target
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
@@ -63,6 +66,7 @@ import { useToast } from "@/hooks/use-toast";
 import VideoCompositor from "@/components/VideoCompositor";
 import { useCameraStreams } from "@/contexts/CameraStreamContext";
 import { useQuery } from "@tanstack/react-query";
+import { overlayTemplates, getAllTemplateCategories, getTemplatesByCategory, type OverlayTemplate } from "@/lib/overlayTemplates";
 import {
   DndContext,
   closestCenter,
@@ -121,12 +125,18 @@ interface OverlayConfig {
   scrollDirection: 'left' | 'right' | 'up' | 'down';
   isBold: boolean;
   isItalic: boolean;
-  overlayType: 'text' | 'image' | 'rss';
+  overlayType: 'text' | 'image' | 'rss' | 'video' | 'metric';
   imageUrl?: string;
   imageData?: string;
   rssSourceIds?: string[];
   rssMaxArticles?: number;
   rssShowSource?: boolean;
+  width: number;
+  zIndex: number;
+  opacity: number;
+  videoUrl?: string;
+  metricType?: string;
+  metricData?: any;
 }
 
 const sourceTypeIcons = {
@@ -141,6 +151,9 @@ const TEMPLATE_PRESETS = {
     textColor: '#FFFFFF',
     fontSize: 28,
     height: 70,
+    width: 100,
+    zIndex: 100,
+    opacity: 0.95,
     animationType: 'scroll' as const,
     position: 'bottom' as const,
     fontFamily: 'League Spartan',
@@ -156,6 +169,9 @@ const TEMPLATE_PRESETS = {
     textColor: '#F6EB61',
     fontSize: 28,
     height: 70,
+    width: 100,
+    zIndex: 100,
+    opacity: 0.9,
     animationType: 'scroll' as const,
     position: 'bottom' as const,
     fontFamily: 'League Spartan',
@@ -171,6 +187,9 @@ const TEMPLATE_PRESETS = {
     textColor: '#002147',
     fontSize: 32,
     height: 80,
+    width: 100,
+    zIndex: 150,
+    opacity: 0.92,
     animationType: 'fade' as const,
     position: 'top' as const,
     fontFamily: 'League Spartan',
@@ -186,6 +205,9 @@ const TEMPLATE_PRESETS = {
     textColor: '#FFFFFF',
     fontSize: 24,
     height: 60,
+    width: 100,
+    zIndex: 200,
+    opacity: 0.85,
     animationType: 'scroll' as const,
     position: 'bottom' as const,
     fontFamily: 'League Spartan',
@@ -314,12 +336,20 @@ export default function LivePresentation() {
   const [sourceFitModes, setSourceFitModes] = useState<Record<string, 'contain' | 'cover' | 'fill'>>({});
   const [overlayImageUrl, setOverlayImageUrl] = useState('');
   const [overlayImageData, setOverlayImageData] = useState('');
-  const [overlayType, setOverlayType] = useState<'text' | 'image' | 'rss'>('text');
+  const [overlayType, setOverlayType] = useState<'text' | 'image' | 'rss' | 'video' | 'metric'>('text');
   const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
   const [positionConflict, setPositionConflict] = useState(false);
   const [selectedRssSourceIds, setSelectedRssSourceIds] = useState<string[]>([]);
   const [rssMaxArticles, setRssMaxArticles] = useState(10);
   const [rssShowSource, setRssShowSource] = useState(true);
+  const [overlayWidth, setOverlayWidth] = useState(100);
+  const [overlayZIndex, setOverlayZIndex] = useState(100);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.95);
+  const [overlayVideoUrl, setOverlayVideoUrl] = useState('');
+  const [overlayMetricType, setOverlayMetricType] = useState('');
+  const [overlayMetricData, setOverlayMetricData] = useState<any>(null);
+  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
+  const [selectedTemplateCategory, setSelectedTemplateCategory] = useState<string>('all');
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
@@ -643,6 +673,12 @@ export default function LivePresentation() {
               rssSourceIds: overlayType === 'rss' ? selectedRssSourceIds : undefined,
               rssMaxArticles: overlayType === 'rss' ? rssMaxArticles : undefined,
               rssShowSource: overlayType === 'rss' ? rssShowSource : undefined,
+              width: overlayWidth,
+              zIndex: overlayZIndex,
+              opacity: overlayOpacity,
+              videoUrl: overlayVideoUrl || undefined,
+              metricType: overlayMetricType || undefined,
+              metricData: overlayMetricData,
             }
           : overlay
       ));
@@ -667,6 +703,12 @@ export default function LivePresentation() {
         overlayType: overlayType,
         imageUrl: overlayImageUrl || undefined,
         imageData: overlayImageData || undefined,
+        width: overlayWidth,
+        zIndex: overlayZIndex,
+        opacity: overlayOpacity,
+        videoUrl: overlayVideoUrl || undefined,
+        metricType: overlayMetricType || undefined,
+        metricData: overlayMetricData,
       };
 
       if (overlayType === 'rss') {
@@ -721,6 +763,12 @@ export default function LivePresentation() {
     setOverlayType(overlay.overlayType);
     setOverlayImageUrl(overlay.imageUrl || '');
     setOverlayImageData(overlay.imageData || '');
+    setOverlayWidth(overlay.width || 100);
+    setOverlayZIndex(overlay.zIndex || 100);
+    setOverlayOpacity(overlay.opacity !== undefined ? overlay.opacity : 0.95);
+    setOverlayVideoUrl(overlay.videoUrl || '');
+    setOverlayMetricType(overlay.metricType || '');
+    setOverlayMetricData(overlay.metricData || null);
     
     if (overlay.overlayType === 'rss') {
       setSelectedRssSourceIds(overlay.rssSourceIds || []);
@@ -1049,6 +1097,16 @@ export default function LivePresentation() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+
+                <Button
+                  onClick={() => setIsTemplatePickerOpen(true)}
+                  className="w-full mt-4"
+                  variant="outline"
+                  data-testid="button-browse-overlay-templates"
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Browse Overlay Templates
+                </Button>
               </CardContent>
             </Card>
 
@@ -1403,6 +1461,54 @@ export default function LivePresentation() {
               )}
             </div>
 
+            <div>
+              <Label htmlFor="overlay-width">Width: {overlayWidth}%</Label>
+              <Slider
+                id="overlay-width"
+                min={10}
+                max={100}
+                step={5}
+                value={[overlayWidth]}
+                onValueChange={(vals) => setOverlayWidth(vals[0])}
+                data-testid="slider-overlay-width"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Overlay width as percentage of screen (10% - 100%)
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="overlay-zindex">Z-Index (Layer Order): {overlayZIndex}</Label>
+              <Slider
+                id="overlay-zindex"
+                min={0}
+                max={1000}
+                step={10}
+                value={[overlayZIndex]}
+                onValueChange={(vals) => setOverlayZIndex(vals[0])}
+                data-testid="slider-overlay-zindex"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Higher values appear on top (0-1000)
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="overlay-opacity">Opacity: {(overlayOpacity * 100).toFixed(0)}%</Label>
+              <Slider
+                id="overlay-opacity"
+                min={0}
+                max={1}
+                step={0.05}
+                value={[overlayOpacity]}
+                onValueChange={(vals) => setOverlayOpacity(vals[0])}
+                data-testid="slider-overlay-opacity"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Transparency of overlay (0% = invisible, 100% = opaque)
+              </p>
+            </div>
+
             {(overlayType === 'text' || overlayType === 'rss') && (
               <>
                 <div>
@@ -1663,6 +1769,133 @@ export default function LivePresentation() {
               data-testid="button-close-library-picker"
             >
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTemplatePickerOpen} onOpenChange={setIsTemplatePickerOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Browse Overlay Templates</DialogTitle>
+            <DialogDescription>
+              Select a template to add specialized overlays with live analytics and data
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant={selectedTemplateCategory === 'all' ? 'default' : 'outline'}
+                onClick={() => setSelectedTemplateCategory('all')}
+              >
+                All
+              </Button>
+              {getAllTemplateCategories().map(category => (
+                <Button
+                  key={category}
+                  size="sm"
+                  variant={selectedTemplateCategory === category ? 'default' : 'outline'}
+                  onClick={() => setSelectedTemplateCategory(category)}
+                >
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </Button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {Object.values(overlayTemplates)
+                .filter(template => 
+                  selectedTemplateCategory === 'all' || template.category === selectedTemplateCategory
+                )
+                .map((template: OverlayTemplate) => (
+                  <button
+                    key={template.id}
+                    onClick={() => {
+                      const newOverlay: OverlayConfig = {
+                        id: Date.now().toString(),
+                        text: template.name,
+                        animationType: template.animationType,
+                        templateStyle: template.templateStyle,
+                        backgroundColor: template.backgroundColor,
+                        textColor: template.textColor,
+                        fontSize: template.fontSize,
+                        position: template.position,
+                        height: template.height,
+                        visible: true,
+                        fontFamily: template.fontFamily,
+                        scrollSpeed: template.scrollSpeed || 50,
+                        scrollDirection: template.scrollDirection || 'left',
+                        isBold: template.isBold,
+                        isItalic: template.isItalic,
+                        overlayType: template.overlayType,
+                        width: template.width,
+                        zIndex: template.zIndex,
+                        opacity: template.opacity,
+                        metricType: template.metricType,
+                        metricData: template.metricType === 'h2h-card' ? { homeTeamId: 40, awayTeamId: 47 } 
+                                  : template.metricType === 'player-stats' ? { playerId: 1 }
+                                  : {},
+                      };
+                      setOverlays(prev => [...prev, newOverlay]);
+                      setIsTemplatePickerOpen(false);
+                      toast({
+                        title: 'Overlay Added',
+                        description: `${template.name} has been added to your broadcast`,
+                      });
+                    }}
+                    className="group relative overflow-hidden rounded-lg border-2 border-border hover-elevate active-elevate-2 transition-all"
+                    data-testid={`template-${template.id}`}
+                  >
+                    <div 
+                      className="w-full aspect-video flex items-center justify-center p-4"
+                      style={{
+                        backgroundColor: template.backgroundColor,
+                        color: template.textColor,
+                      }}
+                    >
+                      <div className="text-center">
+                        {template.overlayType === 'metric' && template.metricType === 'h2h-card' && (
+                          <Target className="w-8 h-8 mx-auto mb-2" />
+                        )}
+                        {template.overlayType === 'metric' && template.metricType === 'form-guide' && (
+                          <BarChart3 className="w-8 h-8 mx-auto mb-2" />
+                        )}
+                        {template.overlayType === 'metric' && template.metricType === 'player-stats' && (
+                          <Users className="w-8 h-8 mx-auto mb-2" />
+                        )}
+                        {template.overlayType === 'metric' && template.metricType === 'league-table' && (
+                          <BarChart3 className="w-8 h-8 mx-auto mb-2" />
+                        )}
+                        {template.overlayType === 'metric' && template.metricType === 'rss-sentiment' && (
+                          <Rss className="w-8 h-8 mx-auto mb-2" />
+                        )}
+                        {template.overlayType === 'rss' && (
+                          <Rss className="w-8 h-8 mx-auto mb-2" />
+                        )}
+                        {template.overlayType === 'text' && (
+                          <Sparkles className="w-8 h-8 mx-auto mb-2" />
+                        )}
+                        <div className="text-xs font-bold">{template.name}</div>
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card">
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {template.description}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsTemplatePickerOpen(false)}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

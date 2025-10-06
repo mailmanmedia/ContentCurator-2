@@ -1,0 +1,571 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-10-06T00:00:00.000Z",
+  "team": {
+    "id": 40,
+    "name": "Liverpool",
+    "logo": "https://media.api-sports.io/football/teams/40.png"
+  },
+  "headToHead": [
+    {
+      "opponentId": 33,
+      "opponentName": "Manchester United",
+      "opponentLogo": "https://media.api-sports.io/football/teams/33.png",
+      "last10Matches": [
+        {
+          "date": "2024-08-17",
+          "venue": "away",
+          "result": "W",
+          "score": {
+            "liverpool": 3,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2024-04-07",
+          "venue": "home",
+          "result": "D",
+          "score": {
+            "liverpool": 2,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-12-17",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 0,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-09-03",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 3,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-03-05",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 7,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2022-08-22",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 1,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2022-04-19",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 4,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-10-24",
+          "venue": "away",
+          "result": "W",
+          "score": {
+            "liverpool": 5,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-05-13",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 2,
+            "opponent": 4
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-01-17",
+          "venue": "home",
+          "result": "L",
+          "score": {
+            "liverpool": 0,
+            "opponent": 3
+          },
+          "competition": "FA Cup"
+        }
+      ],
+      "record": {
+        "wins": 5,
+        "draws": 1,
+        "losses": 4
+      }
+    },
+    {
+      "opponentId": 50,
+      "opponentName": "Manchester City",
+      "opponentLogo": "https://media.api-sports.io/football/teams/50.png",
+      "last10Matches": [
+        {
+          "date": "2024-03-10",
+          "venue": "home",
+          "result": "D",
+          "score": {
+            "liverpool": 1,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-11-25",
+          "venue": "away",
+          "result": "D",
+          "score": {
+            "liverpool": 1,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-04-01",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 1,
+            "opponent": 4
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2022-10-16",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 1,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2022-04-10",
+          "venue": "away",
+          "result": "D",
+          "score": {
+            "liverpool": 2,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-10-03",
+          "venue": "home",
+          "result": "D",
+          "score": {
+            "liverpool": 2,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-04-10",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 1,
+            "opponent": 4
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-02-07",
+          "venue": "home",
+          "result": "L",
+          "score": {
+            "liverpool": 1,
+            "opponent": 4
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2020-11-08",
+          "venue": "away",
+          "result": "D",
+          "score": {
+            "liverpool": 1,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2020-07-02",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 0,
+            "opponent": 4
+          },
+          "competition": "Premier League"
+        }
+      ],
+      "record": {
+        "wins": 1,
+        "draws": 5,
+        "losses": 4
+      }
+    },
+    {
+      "opponentId": 42,
+      "opponentName": "Arsenal",
+      "opponentLogo": "https://media.api-sports.io/football/teams/42.png",
+      "last10Matches": [
+        {
+          "date": "2024-09-01",
+          "venue": "away",
+          "result": "D",
+          "score": {
+            "liverpool": 2,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2024-02-04",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 3,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-12-23",
+          "venue": "away",
+          "result": "D",
+          "score": {
+            "liverpool": 1,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-04-09",
+          "venue": "home",
+          "result": "D",
+          "score": {
+            "liverpool": 2,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2022-10-09",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 2,
+            "opponent": 3
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2022-04-06",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 0,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-11-20",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 4,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-04-03",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 0,
+            "opponent": 3
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2020-09-28",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 3,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2020-07-15",
+          "venue": "away",
+          "result": "W",
+          "score": {
+            "liverpool": 2,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        }
+      ],
+      "record": {
+        "wins": 4,
+        "draws": 3,
+        "losses": 3
+      }
+    },
+    {
+      "opponentId": 49,
+      "opponentName": "Chelsea",
+      "opponentLogo": "https://media.api-sports.io/football/teams/49.png",
+      "last10Matches": [
+        {
+          "date": "2024-10-05",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 1,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2024-02-25",
+          "venue": "neutral",
+          "result": "L",
+          "score": {
+            "liverpool": 0,
+            "opponent": 1
+          },
+          "competition": "League Cup"
+        },
+        {
+          "date": "2024-01-31",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 4,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-08-13",
+          "venue": "away",
+          "result": "D",
+          "score": {
+            "liverpool": 1,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-04-04",
+          "venue": "away",
+          "result": "D",
+          "score": {
+            "liverpool": 0,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-01-21",
+          "venue": "home",
+          "result": "D",
+          "score": {
+            "liverpool": 0,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2022-05-14",
+          "venue": "neutral",
+          "result": "D",
+          "score": {
+            "liverpool": 0,
+            "opponent": 0
+          },
+          "competition": "FA Cup"
+        },
+        {
+          "date": "2022-02-27",
+          "venue": "neutral",
+          "result": "D",
+          "score": {
+            "liverpool": 0,
+            "opponent": 0
+          },
+          "competition": "League Cup"
+        },
+        {
+          "date": "2022-01-02",
+          "venue": "away",
+          "result": "D",
+          "score": {
+            "liverpool": 2,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-08-28",
+          "venue": "home",
+          "result": "D",
+          "score": {
+            "liverpool": 1,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        }
+      ],
+      "record": {
+        "wins": 1,
+        "draws": 7,
+        "losses": 2
+      }
+    },
+    {
+      "opponentId": 47,
+      "opponentName": "Tottenham",
+      "opponentLogo": "https://media.api-sports.io/football/teams/47.png",
+      "last10Matches": [
+        {
+          "date": "2024-09-14",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 3,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2024-05-05",
+          "venue": "away",
+          "result": "W",
+          "score": {
+            "liverpool": 4,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-09-30",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 2,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2023-04-30",
+          "venue": "away",
+          "result": "L",
+          "score": {
+            "liverpool": 3,
+            "opponent": 4
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2022-11-06",
+          "venue": "away",
+          "result": "W",
+          "score": {
+            "liverpool": 2,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2022-05-07",
+          "venue": "home",
+          "result": "D",
+          "score": {
+            "liverpool": 1,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-12-19",
+          "venue": "away",
+          "result": "D",
+          "score": {
+            "liverpool": 2,
+            "opponent": 2
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2021-05-16",
+          "venue": "home",
+          "result": "W",
+          "score": {
+            "liverpool": 2,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2020-12-16",
+          "venue": "away",
+          "result": "W",
+          "score": {
+            "liverpool": 2,
+            "opponent": 1
+          },
+          "competition": "Premier League"
+        },
+        {
+          "date": "2020-07-11",
+          "venue": "home",
+          "result": "D",
+          "score": {
+            "liverpool": 0,
+            "opponent": 0
+          },
+          "competition": "Premier League"
+        }
+      ],
+      "record": {
+        "wins": 6,
+        "draws": 3,
+        "losses": 1
+      }
+    }
+  ]
+}

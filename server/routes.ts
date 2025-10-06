@@ -34,6 +34,7 @@ import { footballService } from "./football/footballService";
 import { iCalService } from "./football/iCalService";
 import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplates";
 import { renderOBSScene } from "./obs/obsRenderer";
+import { registerAnalyticsRoutes } from "./routes/analytics";
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -3309,6 +3310,8 @@ Return ONLY a JSON object with this structure:
       res.status(500).json({ error: "Failed to complete quick setup" });
     }
   });
+
+  registerAnalyticsRoutes(app);
 
   const httpServer = createServer(app);
 
