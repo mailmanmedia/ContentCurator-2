@@ -297,8 +297,8 @@ export default function AnalyticsDashboard() {
                 className="hover-elevate cursor-pointer"
                 onClick={() => setSelectedMetric({
                   title: "Slot Intensity Index (SII)",
-                  value: dashboardData?.keyMetrics.slotIntensityIndex.value || 0,
-                  interpretation: dashboardData?.keyMetrics.slotIntensityIndex.interpretation || ""
+                  value: dashboardData?.keyMetrics?.slotIntensityIndex?.value ?? 0,
+                  interpretation: dashboardData?.keyMetrics?.slotIntensityIndex?.interpretation ?? ""
                 })}
                 data-testid="card-metric-sii"
               >
@@ -308,12 +308,12 @@ export default function AnalyticsDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-foreground">
-                    {dashboardData?.keyMetrics.slotIntensityIndex.value.toFixed(2)}
+                    {(dashboardData?.keyMetrics?.slotIntensityIndex?.value ?? 0).toFixed(2)}
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    {getTrendIcon(dashboardData?.keyMetrics.slotIntensityIndex.interpretation || "")}
-                    <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics.slotIntensityIndex.interpretation || "")}`}>
-                      {dashboardData?.keyMetrics.slotIntensityIndex.interpretation}
+                    {getTrendIcon(dashboardData?.keyMetrics?.slotIntensityIndex?.interpretation ?? "")}
+                    <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics?.slotIntensityIndex?.interpretation ?? "")}`}>
+                      {dashboardData?.keyMetrics?.slotIntensityIndex?.interpretation}
                     </p>
                   </div>
                 </CardContent>
@@ -323,8 +323,8 @@ export default function AnalyticsDashboard() {
                 className="hover-elevate cursor-pointer"
                 onClick={() => setSelectedMetric({
                   title: "Form Index",
-                  value: dashboardData?.keyMetrics.formIndex.value || 0,
-                  interpretation: dashboardData?.keyMetrics.formIndex.interpretation || ""
+                  value: dashboardData?.keyMetrics?.formIndex?.value ?? 0,
+                  interpretation: dashboardData?.keyMetrics?.formIndex?.interpretation ?? ""
                 })}
                 data-testid="card-metric-form"
               >
@@ -334,12 +334,12 @@ export default function AnalyticsDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-foreground">
-                    {dashboardData?.keyMetrics.formIndex.value.toFixed(2)}
+                    {(dashboardData?.keyMetrics?.formIndex?.value ?? 0).toFixed(2)}
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    {getTrendIcon(dashboardData?.keyMetrics.formIndex.interpretation || "")}
-                    <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics.formIndex.interpretation || "")}`}>
-                      {dashboardData?.keyMetrics.formIndex.interpretation}
+                    {getTrendIcon(dashboardData?.keyMetrics?.formIndex?.interpretation ?? "")}
+                    <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics?.formIndex?.interpretation ?? "")}`}>
+                      {dashboardData?.keyMetrics?.formIndex?.interpretation}
                     </p>
                   </div>
                 </CardContent>
@@ -349,8 +349,8 @@ export default function AnalyticsDashboard() {
                 className="hover-elevate cursor-pointer"
                 onClick={() => setSelectedMetric({
                   title: "Expected Points (xPTS)",
-                  value: dashboardData?.keyMetrics.expectedPoints.value || 0,
-                  interpretation: dashboardData?.keyMetrics.expectedPoints.interpretation || ""
+                  value: dashboardData?.keyMetrics?.expectedPoints?.value ?? 0,
+                  interpretation: dashboardData?.keyMetrics?.expectedPoints?.interpretation ?? ""
                 })}
                 data-testid="card-metric-xpts"
               >
@@ -360,12 +360,12 @@ export default function AnalyticsDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-foreground">
-                    {dashboardData?.keyMetrics.expectedPoints.value.toFixed(2)}
+                    {(dashboardData?.keyMetrics?.expectedPoints?.value ?? 0).toFixed(2)}
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    {getTrendIcon(dashboardData?.keyMetrics.expectedPoints.interpretation || "")}
-                    <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics.expectedPoints.interpretation || "")}`}>
-                      {dashboardData?.keyMetrics.expectedPoints.interpretation}
+                    {getTrendIcon(dashboardData?.keyMetrics?.expectedPoints?.interpretation ?? "")}
+                    <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics?.expectedPoints?.interpretation ?? "")}`}>
+                      {dashboardData?.keyMetrics?.expectedPoints?.interpretation}
                     </p>
                   </div>
                 </CardContent>
@@ -377,8 +377,8 @@ export default function AnalyticsDashboard() {
                 className="hover-elevate cursor-pointer"
                 onClick={() => setSelectedMetric({
                   title: "Goal Efficiency",
-                  value: dashboardData?.keyMetrics.goalEfficiency.value || 0,
-                  interpretation: dashboardData?.keyMetrics.goalEfficiency.interpretation || ""
+                  value: dashboardData?.keyMetrics?.goalEfficiency?.value ?? 0,
+                  interpretation: dashboardData?.keyMetrics?.goalEfficiency?.interpretation ?? ""
                 })}
                 data-testid="card-metric-goal-efficiency"
               >
@@ -387,11 +387,11 @@ export default function AnalyticsDashboard() {
                   <Trophy className="w-4 h-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{(dashboardData?.keyMetrics.goalEfficiency.value || 0).toFixed(2)}</div>
-                  <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics.goalEfficiency.interpretation || "")}`}>
-                    {dashboardData?.keyMetrics.goalEfficiency.interpretation}
+                  <div className="text-2xl font-bold">{(dashboardData?.keyMetrics?.goalEfficiency?.value ?? 0).toFixed(2)}</div>
+                  <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics?.goalEfficiency?.interpretation ?? "")}`}>
+                    {dashboardData?.keyMetrics?.goalEfficiency?.interpretation}
                   </p>
-                  <Progress value={(dashboardData?.keyMetrics.goalEfficiency.value || 0) * 100} className="mt-2" />
+                  <Progress value={(dashboardData?.keyMetrics?.goalEfficiency?.value ?? 0) * 100} className="mt-2" />
                 </CardContent>
               </Card>
 
@@ -399,8 +399,8 @@ export default function AnalyticsDashboard() {
                 className="hover-elevate cursor-pointer"
                 onClick={() => setSelectedMetric({
                   title: "Defensive Solidity Index (DSI)",
-                  value: dashboardData?.keyMetrics.defensiveSolidityIndex.value || 0,
-                  interpretation: dashboardData?.keyMetrics.defensiveSolidityIndex.interpretation || ""
+                  value: dashboardData?.keyMetrics?.defensiveSolidityIndex?.value ?? 0,
+                  interpretation: dashboardData?.keyMetrics?.defensiveSolidityIndex?.interpretation ?? ""
                 })}
                 data-testid="card-metric-dsi"
               >
@@ -409,11 +409,11 @@ export default function AnalyticsDashboard() {
                   <Shield className="w-4 h-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{(dashboardData?.keyMetrics.defensiveSolidityIndex.value || 0).toFixed(2)}</div>
-                  <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics.defensiveSolidityIndex.interpretation || "")}`}>
-                    {dashboardData?.keyMetrics.defensiveSolidityIndex.interpretation}
+                  <div className="text-2xl font-bold">{(dashboardData?.keyMetrics?.defensiveSolidityIndex?.value ?? 0).toFixed(2)}</div>
+                  <p className={`text-xs ${getMetricColor(dashboardData?.keyMetrics?.defensiveSolidityIndex?.interpretation ?? "")}`}>
+                    {dashboardData?.keyMetrics?.defensiveSolidityIndex?.interpretation}
                   </p>
-                  <Progress value={(dashboardData?.keyMetrics.defensiveSolidityIndex.value || 0) * 100} className="mt-2" />
+                  <Progress value={(dashboardData?.keyMetrics?.defensiveSolidityIndex?.value ?? 0) * 100} className="mt-2" />
                 </CardContent>
               </Card>
 
@@ -423,12 +423,12 @@ export default function AnalyticsDashboard() {
                   <BarChart3 className="w-4 h-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">#{dashboardData?.overview.position}</div>
+                  <div className="text-2xl font-bold">#{dashboardData?.overview?.position ?? 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    {dashboardData?.overview.points} points from {dashboardData?.overview.played} matches
+                    {dashboardData?.overview?.points ?? 0} points from {dashboardData?.overview?.played ?? 0} matches
                   </p>
                   <div className="mt-2 flex items-center gap-1">
-                    {dashboardData?.overview.form.split('').map((result, i) => (
+                    {dashboardData?.overview?.form?.split('').map((result, i) => (
                       <Badge
                         key={i}
                         className={
@@ -589,38 +589,38 @@ export default function AnalyticsDashboard() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className={`p-3 rounded-lg ${getMetricBgColor(rssData?.sentiment.aggregatedScore.interpretation || "")}`}>
+                      <div className={`p-3 rounded-lg ${getMetricBgColor(rssData?.sentiment?.aggregatedScore?.interpretation ?? "")}`}>
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">Sentiment Score</span>
-                          <span className={`text-2xl font-bold ${getMetricColor(rssData?.sentiment.aggregatedScore.interpretation || "")}`}>
-                            {(rssData?.sentiment.aggregatedScore.value || 0).toFixed(2)}
+                          <span className={`text-2xl font-bold ${getMetricColor(rssData?.sentiment?.aggregatedScore?.interpretation ?? "")}`}>
+                            {(rssData?.sentiment?.aggregatedScore?.value ?? 0).toFixed(2)}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Based on {rssData?.sentiment.sampleSize} articles
+                          Based on {rssData?.sentiment?.sampleSize ?? 0} articles
                         </p>
                       </div>
 
-                      <div className={`p-3 rounded-lg ${getMetricBgColor(rssData?.trending.topicScore.interpretation || "")}`}>
+                      <div className={`p-3 rounded-lg ${getMetricBgColor(rssData?.trending?.topicScore?.interpretation ?? "")}`}>
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">Topic Trending</span>
-                          <span className={`text-2xl font-bold ${getMetricColor(rssData?.trending.topicScore.interpretation || "")}`}>
-                            {(rssData?.trending.topicScore.value || 0).toFixed(2)}
+                          <span className={`text-2xl font-bold ${getMetricColor(rssData?.trending?.topicScore?.interpretation ?? "")}`}>
+                            {(rssData?.trending?.topicScore?.value ?? 0).toFixed(2)}
                           </span>
                         </div>
-                        <p className={`text-xs mt-1 ${getMetricColor(rssData?.trending.topicScore.interpretation || "")}`}>
-                          {rssData?.trending.topicScore.interpretation}
+                        <p className={`text-xs mt-1 ${getMetricColor(rssData?.trending?.topicScore?.interpretation ?? "")}`}>
+                          {rssData?.trending?.topicScore?.interpretation}
                         </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="p-2 rounded-lg bg-card">
                           <div className="text-xs text-muted-foreground">Coverage Intensity</div>
-                          <div className="text-lg font-bold">{(rssData?.coverage.intensity.value || 0).toFixed(2)}</div>
+                          <div className="text-lg font-bold">{(rssData?.coverage?.intensity?.value ?? 0).toFixed(2)}</div>
                         </div>
                         <div className="p-2 rounded-lg bg-card">
                           <div className="text-xs text-muted-foreground">Source Diversity</div>
-                          <div className="text-lg font-bold">{(rssData?.coverage.diversity.value || 0).toFixed(2)}</div>
+                          <div className="text-lg font-bold">{(rssData?.coverage?.diversity?.value ?? 0).toFixed(2)}</div>
                         </div>
                       </div>
                     </div>
@@ -636,11 +636,11 @@ export default function AnalyticsDashboard() {
                     <CardTitle>Title Race Index</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold mb-2">{seasonData.projections.titleRaceIndex.value.toFixed(2)}</div>
-                    <p className={`text-sm ${getMetricColor(seasonData.projections.titleRaceIndex.interpretation)}`}>
-                      {seasonData.projections.titleRaceIndex.interpretation}
+                    <div className="text-3xl font-bold mb-2">{(seasonData?.projections?.titleRaceIndex?.value ?? 0).toFixed(2)}</div>
+                    <p className={`text-sm ${getMetricColor(seasonData?.projections?.titleRaceIndex?.interpretation ?? "")}`}>
+                      {seasonData?.projections?.titleRaceIndex?.interpretation}
                     </p>
-                    <Progress value={seasonData.projections.titleRaceIndex.value * 100} className="mt-3" />
+                    <Progress value={(seasonData?.projections?.titleRaceIndex?.value ?? 0) * 100} className="mt-3" />
                   </CardContent>
                 </Card>
 
@@ -649,11 +649,11 @@ export default function AnalyticsDashboard() {
                     <CardTitle>Top 4 Probability</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold mb-2">{(seasonData.projections.top4Probability.value * 100).toFixed(1)}%</div>
-                    <p className={`text-sm ${getMetricColor(seasonData.projections.top4Probability.interpretation)}`}>
-                      {seasonData.projections.top4Probability.interpretation}
+                    <div className="text-3xl font-bold mb-2">{((seasonData?.projections?.top4Probability?.value ?? 0) * 100).toFixed(1)}%</div>
+                    <p className={`text-sm ${getMetricColor(seasonData?.projections?.top4Probability?.interpretation ?? "")}`}>
+                      {seasonData?.projections?.top4Probability?.interpretation}
                     </p>
-                    <Progress value={seasonData.projections.top4Probability.value * 100} className="mt-3" />
+                    <Progress value={(seasonData?.projections?.top4Probability?.value ?? 0) * 100} className="mt-3" />
                   </CardContent>
                 </Card>
               </div>
@@ -675,12 +675,12 @@ export default function AnalyticsDashboard() {
                   ) : (
                     <>
                       <div className="text-4xl font-bold mb-2">
-                        {((tacticalData?.pressing.successRate.value || 0) * 100).toFixed(1)}%
+                        {((tacticalData?.pressing?.successRate?.value ?? 0) * 100).toFixed(1)}%
                       </div>
-                      <p className={`text-sm mb-4 ${getMetricColor(tacticalData?.pressing.successRate.interpretation || "")}`}>
-                        {tacticalData?.pressing.successRate.interpretation}
+                      <p className={`text-sm mb-4 ${getMetricColor(tacticalData?.pressing?.successRate?.interpretation ?? "")}`}>
+                        {tacticalData?.pressing?.successRate?.interpretation}
                       </p>
-                      <Progress value={(tacticalData?.pressing.successRate.value || 0) * 100} className="h-3" />
+                      <Progress value={(tacticalData?.pressing?.successRate?.value ?? 0) * 100} className="h-3" />
                     </>
                   )}
                 </CardContent>
@@ -699,12 +699,12 @@ export default function AnalyticsDashboard() {
                   ) : (
                     <>
                       <div className="text-4xl font-bold mb-2">
-                        {(tacticalData?.possession.efficiency.value || 0).toFixed(2)}
+                        {(tacticalData?.possession?.efficiency?.value ?? 0).toFixed(2)}
                       </div>
-                      <p className={`text-sm mb-4 ${getMetricColor(tacticalData?.possession.efficiency.interpretation || "")}`}>
-                        {tacticalData?.possession.efficiency.interpretation}
+                      <p className={`text-sm mb-4 ${getMetricColor(tacticalData?.possession?.efficiency?.interpretation ?? "")}`}>
+                        {tacticalData?.possession?.efficiency?.interpretation}
                       </p>
-                      <Progress value={(tacticalData?.possession.efficiency.value || 0) * 50} className="h-3" />
+                      <Progress value={(tacticalData?.possession?.efficiency?.value ?? 0) * 50} className="h-3" />
                     </>
                   )}
                 </CardContent>
@@ -723,12 +723,12 @@ export default function AnalyticsDashboard() {
                   ) : (
                     <>
                       <div className="text-4xl font-bold mb-2">
-                        {((tacticalData?.counterAttacks.effectiveness.value || 0) * 100).toFixed(1)}%
+                        {((tacticalData?.counterAttacks?.effectiveness?.value ?? 0) * 100).toFixed(1)}%
                       </div>
-                      <p className={`text-sm mb-4 ${getMetricColor(tacticalData?.counterAttacks.effectiveness.interpretation || "")}`}>
-                        {tacticalData?.counterAttacks.effectiveness.interpretation}
+                      <p className={`text-sm mb-4 ${getMetricColor(tacticalData?.counterAttacks?.effectiveness?.interpretation ?? "")}`}>
+                        {tacticalData?.counterAttacks?.effectiveness?.interpretation}
                       </p>
-                      <Progress value={(tacticalData?.counterAttacks.effectiveness.value || 0) * 100} className="h-3" />
+                      <Progress value={(tacticalData?.counterAttacks?.effectiveness?.value ?? 0) * 100} className="h-3" />
                     </>
                   )}
                 </CardContent>
@@ -747,12 +747,12 @@ export default function AnalyticsDashboard() {
                   ) : (
                     <>
                       <div className="text-4xl font-bold mb-2">
-                        {(tacticalData?.setPieces.threatIndex.value || 0).toFixed(2)}
+                        {(tacticalData?.setPieces?.threatIndex?.value ?? 0).toFixed(2)}
                       </div>
-                      <p className={`text-sm mb-4 ${getMetricColor(tacticalData?.setPieces.threatIndex.interpretation || "")}`}>
-                        {tacticalData?.setPieces.threatIndex.interpretation}
+                      <p className={`text-sm mb-4 ${getMetricColor(tacticalData?.setPieces?.threatIndex?.interpretation ?? "")}`}>
+                        {tacticalData?.setPieces?.threatIndex?.interpretation}
                       </p>
-                      <Progress value={(tacticalData?.setPieces.threatIndex.value || 0) * 50} className="h-3" />
+                      <Progress value={(tacticalData?.setPieces?.threatIndex?.value ?? 0) * 50} className="h-3" />
                     </>
                   )}
                 </CardContent>
@@ -772,19 +772,19 @@ export default function AnalyticsDashboard() {
                       data={[
                         {
                           name: 'Pressing',
-                          value: (tacticalData?.pressing.successRate.value || 0) * 100,
+                          value: (tacticalData?.pressing?.successRate?.value ?? 0) * 100,
                         },
                         {
                           name: 'Possession',
-                          value: (tacticalData?.possession.efficiency.value || 0) * 50,
+                          value: (tacticalData?.possession?.efficiency?.value ?? 0) * 50,
                         },
                         {
                           name: 'Counter-Attack',
-                          value: (tacticalData?.counterAttacks.effectiveness.value || 0) * 100,
+                          value: (tacticalData?.counterAttacks?.effectiveness?.value ?? 0) * 100,
                         },
                         {
                           name: 'Set Pieces',
-                          value: (tacticalData?.setPieces.threatIndex.value || 0) * 50,
+                          value: (tacticalData?.setPieces?.threatIndex?.value ?? 0) * 50,
                         },
                       ]}
                     >
@@ -818,16 +818,16 @@ export default function AnalyticsDashboard() {
                   ) : (
                     <>
                       <div className="text-3xl font-bold mb-2">
-                        {(comparativeData?.vsLeagueAverage.goalsFor.value || 0).toFixed(2)}
+                        {(comparativeData?.vsLeagueAverage?.goalsFor?.value ?? 0).toFixed(2)}
                       </div>
                       <div className="flex items-center gap-2">
-                        {(comparativeData?.vsLeagueAverage.goalsFor.value || 0) > 1 ? (
+                        {(comparativeData?.vsLeagueAverage?.goalsFor?.value ?? 0) > 1 ? (
                           <ArrowUp className="w-4 h-4 text-[#00B140]" />
                         ) : (
                           <ArrowDown className="w-4 h-4 text-[#C8102E]" />
                         )}
-                        <p className={`text-xs ${getMetricColor(comparativeData?.vsLeagueAverage.goalsFor.interpretation || "")}`}>
-                          {comparativeData?.vsLeagueAverage.goalsFor.interpretation}
+                        <p className={`text-xs ${getMetricColor(comparativeData?.vsLeagueAverage?.goalsFor?.interpretation ?? "")}`}>
+                          {comparativeData?.vsLeagueAverage?.goalsFor?.interpretation}
                         </p>
                       </div>
                     </>
@@ -845,16 +845,16 @@ export default function AnalyticsDashboard() {
                   ) : (
                     <>
                       <div className="text-3xl font-bold mb-2">
-                        {(comparativeData?.vsLeagueAverage.goalsAgainst.value || 0).toFixed(2)}
+                        {(comparativeData?.vsLeagueAverage?.goalsAgainst?.value ?? 0).toFixed(2)}
                       </div>
                       <div className="flex items-center gap-2">
-                        {(comparativeData?.vsLeagueAverage.goalsAgainst.value || 0) < 1 ? (
+                        {(comparativeData?.vsLeagueAverage?.goalsAgainst?.value ?? 0) < 1 ? (
                           <ArrowUp className="w-4 h-4 text-[#00B140]" />
                         ) : (
                           <ArrowDown className="w-4 h-4 text-[#C8102E]" />
                         )}
-                        <p className={`text-xs ${getMetricColor(comparativeData?.vsLeagueAverage.goalsAgainst.interpretation || "")}`}>
-                          {comparativeData?.vsLeagueAverage.goalsAgainst.interpretation}
+                        <p className={`text-xs ${getMetricColor(comparativeData?.vsLeagueAverage?.goalsAgainst?.interpretation ?? "")}`}>
+                          {comparativeData?.vsLeagueAverage?.goalsAgainst?.interpretation}
                         </p>
                       </div>
                     </>
@@ -872,16 +872,16 @@ export default function AnalyticsDashboard() {
                   ) : (
                     <>
                       <div className="text-3xl font-bold mb-2">
-                        {(comparativeData?.vsLeagueAverage.xG.value || 0).toFixed(2)}
+                        {(comparativeData?.vsLeagueAverage?.xG?.value ?? 0).toFixed(2)}
                       </div>
                       <div className="flex items-center gap-2">
-                        {(comparativeData?.vsLeagueAverage.xG.value || 0) > 1 ? (
+                        {(comparativeData?.vsLeagueAverage?.xG?.value ?? 0) > 1 ? (
                           <ArrowUp className="w-4 h-4 text-[#00B140]" />
                         ) : (
                           <ArrowDown className="w-4 h-4 text-[#C8102E]" />
                         )}
-                        <p className={`text-xs ${getMetricColor(comparativeData?.vsLeagueAverage.xG.interpretation || "")}`}>
-                          {comparativeData?.vsLeagueAverage.xG.interpretation}
+                        <p className={`text-xs ${getMetricColor(comparativeData?.vsLeagueAverage?.xG?.interpretation ?? "")}`}>
+                          {comparativeData?.vsLeagueAverage?.xG?.interpretation}
                         </p>
                       </div>
                     </>
@@ -952,9 +952,9 @@ export default function AnalyticsDashboard() {
             <DialogDescription>Detailed metric information and interpretation</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className={`p-4 rounded-lg ${getMetricBgColor(selectedMetric?.interpretation || "")}`}>
-              <div className="text-4xl font-bold mb-2">{selectedMetric?.value.toFixed(2)}</div>
-              <p className={`text-sm ${getMetricColor(selectedMetric?.interpretation || "")}`}>
+            <div className={`p-4 rounded-lg ${getMetricBgColor(selectedMetric?.interpretation ?? "")}`}>
+              <div className="text-4xl font-bold mb-2">{(selectedMetric?.value ?? 0).toFixed(2)}</div>
+              <p className={`text-sm ${getMetricColor(selectedMetric?.interpretation ?? "")}`}>
                 {selectedMetric?.interpretation}
               </p>
             </div>
