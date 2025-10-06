@@ -337,18 +337,14 @@ export class MemStorage implements IStorage {
       refreshInterval: 300
     };
     this.liveState = {
-      currentSetId: null,
-      programSceneId: null,
-      previewSceneId: null,
-      tickerOn: false,
-      tickerPlaylistId: null,
-      bannerOn: false,
-      bannerText: '',
-      bannerConfig: {},
-      transitionDuration: 500,
-      transitionEffect: 'fade',
-      activeVideoSources: {},
-      lastUpdate: new Date()
+      id: 'default',
+      activeSources: JSON.stringify([]),
+      overlays: JSON.stringify([]),
+      outputResolution: JSON.stringify({ width: 3840, height: 2160 }),
+      globalFitMode: 'contain',
+      sourceFitModes: JSON.stringify({}),
+      isBroadcasting: false,
+      updatedAt: new Date()
     };
     
     // Add some sample data

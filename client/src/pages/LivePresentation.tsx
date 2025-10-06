@@ -598,17 +598,13 @@ export default function LivePresentation() {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      apiRequest('/api/live-state', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          activeSources: JSON.stringify(activeSources),
-          overlays: JSON.stringify(overlays),
-          outputResolution: JSON.stringify(outputResolution),
-          globalFitMode,
-          sourceFitModes: JSON.stringify(sourceFitModes),
-          isBroadcasting,
-        }),
-        headers: { 'Content-Type': 'application/json' },
+      apiRequest('PATCH', '/api/live-state', {
+        activeSources: JSON.stringify(activeSources),
+        overlays: JSON.stringify(overlays),
+        outputResolution: JSON.stringify(outputResolution),
+        globalFitMode,
+        sourceFitModes: JSON.stringify(sourceFitModes),
+        isBroadcasting,
       }).catch(err => console.error('Failed to save live state:', err));
     }, 1000);
 

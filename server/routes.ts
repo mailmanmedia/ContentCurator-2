@@ -3168,42 +3168,7 @@ Return ONLY a JSON object with this structure:
     }
   });
 
-  app.put("/api/live/state", async (req, res) => {
-    try {
-      const updates = z.object({
-        currentSetId: z.string().nullable().optional(),
-        programSceneId: z.string().nullable().optional(),
-        previewSceneId: z.string().nullable().optional(),
-        tickerOn: z.boolean().optional(),
-        tickerPlaylistId: z.string().nullable().optional(),
-        bannerOn: z.boolean().optional(),
-        bannerText: z.string().optional(),
-        bannerConfig: z.object({
-          position: z.enum(['top', 'bottom']).optional(),
-          fontSize: z.number().optional(),
-          backgroundColor: z.string().optional(),
-          textColor: z.string().optional()
-        }).optional(),
-        transitionDuration: z.number().optional(),
-        transitionEffect: z.string().optional(),
-        activeVideoSources: z.record(z.string(), z.string()).optional()
-      }).parse(req.body);
-      
-      const liveState = await storage.updateLiveState(updates);
-      
-      // Broadcast the update to all connected SSE clients
-      liveSSEManager.broadcast('state-update', liveState);
-      
-      res.json(liveState);
-    } catch (error) {
-      console.error('Error updating live state:', error);
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid data", details: error.errors });
-      } else {
-        res.status(500).json({ error: "Failed to update live state" });
-      }
-    }
-  });
+  // Old PUT /api/live/state route removed - replaced by PATCH /api/live-state with new schema
 
   // Server-Sent Events endpoint for real-time live presentation updates
   app.get("/api/live/stream", (req, res) => {
@@ -3239,96 +3204,7 @@ Return ONLY a JSON object with this structure:
     });
   });
 
-  // Live control commands endpoint
-  app.post("/api/live/commands", async (req, res) => {
-    try {
-      const { command, token, params } = req.body;
-      
-      // Validate control token
-      if (!validateControlToken(token)) {
-        return res.status(401).json({ error: "Invalid or expired control token" });
-      }
-
-      const commandSchema = z.object({
-        command: z.enum(['take', 'next', 'previous', 'set-scene', 'toggle-ticker', 'set-ticker', 'toggle-banner', 'set-banner']),
-        params: z.any().optional()
-      });
-
-      const { command: cmd, params: cmdParams } = commandSchema.parse({ command, params });
-
-      let updates: Partial<LiveState> = {};
-      
-      switch (cmd) {
-        case 'take':
-          // Take current preview to program
-          const currentState = await storage.getLiveState();
-          if (currentState.previewSceneId) {
-            updates.programSceneId = currentState.previewSceneId;
-          }
-          break;
-          
-        case 'set-scene':
-          if (cmdParams?.sceneId && cmdParams?.target) {
-            if (cmdParams.target === 'program') {
-              updates.programSceneId = cmdParams.sceneId;
-            } else if (cmdParams.target === 'preview') {
-              updates.previewSceneId = cmdParams.sceneId;
-            }
-          }
-          break;
-          
-        case 'toggle-ticker':
-          const state = await storage.getLiveState();
-          updates.tickerOn = !state.tickerOn;
-          break;
-          
-        case 'set-ticker':
-          if (cmdParams?.playlistId !== undefined) {
-            updates.tickerPlaylistId = cmdParams.playlistId;
-            updates.tickerOn = cmdParams.playlistId !== null;
-          }
-          break;
-          
-        case 'toggle-banner':
-          const bannerState = await storage.getLiveState();
-          updates.bannerOn = !bannerState.bannerOn;
-          break;
-          
-        case 'set-banner':
-          if (cmdParams?.text !== undefined) {
-            updates.bannerText = cmdParams.text;
-            updates.bannerOn = cmdParams.text.length > 0;
-          }
-          break;
-          
-        default:
-          return res.status(400).json({ error: "Unknown command" });
-      }
-
-      // Update live state
-      const newState = await storage.updateLiveState(updates);
-      
-      // Broadcast to all connected clients
-      liveSSEManager.broadcast('command-executed', {
-        command: cmd,
-        params: cmdParams,
-        newState
-      });
-
-      res.json({ 
-        success: true, 
-        command: cmd,
-        newState 
-      });
-    } catch (error) {
-      console.error('Error executing live command:', error);
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid command data", details: error.errors });
-      } else {
-        res.status(500).json({ error: "Failed to execute command" });
-      }
-    }
-  });
+  // Old live control commands endpoint removed - used old LiveState schema with programSceneId, previewSceneId, tickerOn, etc.
 
   // Generate control token endpoint (for authenticated users)
   app.post("/api/live/token", async (req, res) => {
@@ -3427,27 +3303,19 @@ Return ONLY a JSON object with this structure:
 
       const presentationSet = await storage.createPresentationSet(setData);
 
-      // Load the scene into preview and the set as current
-      const liveStateUpdates = {
-        currentSetId: presentationSet.id,
-        previewSceneId: scene.id
-      };
-
-      const liveState = await storage.updateLiveState(liveStateUpdates);
-
+      // Note: Old LiveState update removed (currentSetId, previewSceneId no longer exist in new schema)
+      
       // Broadcast the update to all connected SSE clients
       liveSSEManager.broadcast('quick-setup-complete', {
         scene,
-        presentationSet,
-        liveState
+        presentationSet
       });
 
       res.status(201).json({
         success: true,
         message: "Quick setup completed successfully",
         scene,
-        presentationSet,
-        liveState
+        presentationSet
       });
     } catch (error) {
       console.error('Error in quick setup:', error);
