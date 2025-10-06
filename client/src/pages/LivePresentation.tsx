@@ -1862,10 +1862,10 @@ export default function LivePresentation() {
                                         {overlay.overlayType === 'metric' && overlay.metricData && (
                                           <>
                                             {overlay.metricType === 'h2h-card' && overlay.metricData.homeTeamId && overlay.metricData.awayTeamId && (
-                                              <span> • {teamsData?.teams.find(t => t.teamId === overlay.metricData.homeTeamId)?.teamName || `Team ${overlay.metricData.homeTeamId}`} vs {teamsData?.teams.find(t => t.teamId === overlay.metricData.awayTeamId)?.teamName || `Team ${overlay.metricData.awayTeamId}`}</span>
+                                              <span> • {teamsData?.find((t: any) => t.teamId === overlay.metricData.homeTeamId)?.teamName || `Team ${overlay.metricData.homeTeamId}`} vs {teamsData?.find((t: any) => t.teamId === overlay.metricData.awayTeamId)?.teamName || `Team ${overlay.metricData.awayTeamId}`}</span>
                                             )}
                                             {overlay.metricType === 'form-guide' && overlay.metricData.teamId && (
-                                              <span> • {teamsData?.teams.find(t => t.teamId === overlay.metricData.teamId)?.teamName || `Team ${overlay.metricData.teamId}`}</span>
+                                              <span> • {teamsData?.find((t: any) => t.teamId === overlay.metricData.teamId)?.teamName || `Team ${overlay.metricData.teamId}`}</span>
                                             )}
                                           </>
                                         )}
@@ -2138,7 +2138,7 @@ export default function LivePresentation() {
                           <div className="text-center py-4">
                             <p className="text-sm text-muted-foreground">Loading teams...</p>
                           </div>
-                        ) : teamsData && teamsData.teams && teamsData.teams.length > 0 ? (
+                        ) : teamsData && Array.isArray(teamsData) && teamsData.length > 0 ? (
                           <>
                             <div>
                               <Label htmlFor="home-team">Home Team</Label>
@@ -2150,7 +2150,7 @@ export default function LivePresentation() {
                                   <SelectValue placeholder="Select home team" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {teamsData.teams.map((team) => (
+                                  {teamsData.map((team: any) => (
                                     <SelectItem key={team.teamId} value={String(team.teamId)}>
                                       {team.teamName}
                                     </SelectItem>
@@ -2172,7 +2172,7 @@ export default function LivePresentation() {
                                   <SelectValue placeholder="Select away team" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {teamsData.teams.map((team) => (
+                                  {teamsData.map((team: any) => (
                                     <SelectItem key={team.teamId} value={String(team.teamId)}>
                                       {team.teamName}
                                     </SelectItem>
@@ -2201,7 +2201,7 @@ export default function LivePresentation() {
                           <div className="text-center py-4">
                             <p className="text-sm text-muted-foreground">Loading teams...</p>
                           </div>
-                        ) : teamsData && teamsData.teams && teamsData.teams.length > 0 ? (
+                        ) : teamsData && Array.isArray(teamsData) && teamsData.length > 0 ? (
                           <div>
                             <Label htmlFor="team">Team</Label>
                             <Select 
@@ -2212,7 +2212,7 @@ export default function LivePresentation() {
                                 <SelectValue placeholder="Select team" />
                               </SelectTrigger>
                               <SelectContent>
-                                {teamsData.teams.map((team) => (
+                                {teamsData.map((team: any) => (
                                   <SelectItem key={team.teamId} value={String(team.teamId)}>
                                     {team.teamName}
                                   </SelectItem>
