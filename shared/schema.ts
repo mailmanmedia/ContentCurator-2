@@ -550,6 +550,87 @@ export const liveStates = pgTable("live_states", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+// Video Library System Schema
+export const recordings = pgTable("recordings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  filename: text("filename").notNull(),
+  filepath: text("filepath").notNull(), // Path on filesystem (e.g., /tmp/videos/recording-1234.webm)
+  duration: integer("duration"), // Duration in seconds
+  size: integer("size").notNull(), // File size in bytes
+  resolution: text("resolution"), // e.g., "1920x1080"
+  format: text("format").notNull().default('webm'), // File format
+  codec: text("codec"), // Video codec used
+  metadata: jsonb("metadata").notNull().default('{}'), // Additional metadata (output settings, overlays used, etc.)
+  thumbnailPath: text("thumbnail_path"), // Path to thumbnail image
+  isProcessed: boolean("is_processed").notNull().default(false), // Whether it's been edited
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// AI Video Editor System Schema
+export const videoProjects = pgTable("video_projects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  recordingId: varchar("recording_id").notNull(), // Source recording
+  status: text("status").notNull().default('draft'), // 'draft', 'processing', 'completed', 'failed'
+  templateId: varchar("template_id"), // Applied template if any
+  aiSettings: jsonb("ai_settings").notNull().default('{}'), // Auto-cut, scene detection, etc.
+  outputSettings: jsonb("output_settings").notNull().default('{}'), // Resolution, format, bitrate
+  duration: integer("duration"), // Total duration in seconds
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const videoClips = pgTable("video_clips", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  sourceRecordingId: varchar("source_recording_id").notNull(),
+  startTime: integer("start_time").notNull(), // Start time in milliseconds
+  endTime: integer("end_time").notNull(), // End time in milliseconds
+  duration: integer("duration").notNull(), // Duration in milliseconds
+  order: integer("order").notNull(), // Position in timeline
+  trimStart: integer("trim_start").notNull().default(0), // Trim from start in ms
+  trimEnd: integer("trim_end").notNull().default(0), // Trim from end in ms
+  effects: jsonb("effects").notNull().default('{}'), // Applied effects (transitions, filters)
+  metadata: jsonb("metadata").notNull().default('{}'), // Scene type, detected objects, etc.
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const renderJobs = pgTable("render_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  status: text("status").notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
+  progress: integer("progress").notNull().default(0), // 0-100
+  outputPath: text("output_path"), // Path to rendered video
+  outputSize: integer("output_size"), // File size in bytes
+  outputDuration: integer("output_duration"), // Duration in seconds
+  processingTime: integer("processing_time"), // Time taken in seconds
+  errorMessage: text("error_message"),
+  processingSteps: jsonb("processing_steps").notNull().default('[]'), // Array of completed steps
+  qualityMetrics: jsonb("quality_metrics").notNull().default('{}'), // VMAF, PSNR scores
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  completedAt: timestamp("completed_at"),
+});
+
+export const editTemplates = pgTable("edit_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").default(''),
+  category: text("category").notNull(), // 'pre_match', 'highlights', 'post_match', 'interview'
+  thumbnail: text("thumbnail"),
+  introClip: jsonb("intro_clip").notNull().default('{}'), // Intro template config
+  outroClip: jsonb("outro_clip").notNull().default('{}'), // Outro template config
+  overlaySettings: jsonb("overlay_settings").notNull().default('{}'), // Default overlays
+  colorGrading: text("color_grading"), // LUT preset name
+  audioSettings: jsonb("audio_settings").notNull().default('{}'), // Audio enhancement settings
+  pacingRules: jsonb("pacing_rules").notNull().default('{}'), // Automated pacing algorithms
+  isLiverpoolBranded: boolean("is_liverpool_branded").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  usageCount: integer("usage_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 export const insertLibraryItemSchema = createInsertSchema(libraryItems).omit({
   id: true,
   createdAt: true,
@@ -609,6 +690,34 @@ export const insertLiveStateSchema = createInsertSchema(liveStates).omit({
   updatedAt: true,
 });
 
+export const insertRecordingSchema = createInsertSchema(recordings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertVideoProjectSchema = createInsertSchema(videoProjects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVideoClipSchema = createInsertSchema(videoClips).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRenderJobSchema = createInsertSchema(renderJobs).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export const insertEditTemplateSchema = createInsertSchema(editTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertLibraryItem = z.infer<typeof insertLibraryItemSchema>;
 export type LibraryItem = typeof libraryItems.$inferSelect;
 export type InsertScene = z.infer<typeof insertSceneSchema>;
@@ -629,3 +738,13 @@ export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
 export type Template = typeof templates.$inferSelect;
 export type InsertLiveState = z.infer<typeof insertLiveStateSchema>;
 export type LiveState = typeof liveStates.$inferSelect;
+export type InsertRecording = z.infer<typeof insertRecordingSchema>;
+export type Recording = typeof recordings.$inferSelect;
+export type InsertVideoProject = z.infer<typeof insertVideoProjectSchema>;
+export type VideoProject = typeof videoProjects.$inferSelect;
+export type InsertVideoClip = z.infer<typeof insertVideoClipSchema>;
+export type VideoClip = typeof videoClips.$inferSelect;
+export type InsertRenderJob = z.infer<typeof insertRenderJobSchema>;
+export type RenderJob = typeof renderJobs.$inferSelect;
+export type InsertEditTemplate = z.infer<typeof insertEditTemplateSchema>;
+export type EditTemplate = typeof editTemplates.$inferSelect;
