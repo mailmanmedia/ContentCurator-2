@@ -70,7 +70,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import VideoCompositor, { type VideoCompositorRef } from "@/components/VideoCompositor";
-import { useCameraStreams } from "@/contexts/CameraStreamContext";
+import { useCameraStreams, ScreenShareError, ScreenShareErrorType } from "@/contexts/CameraStreamContext";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -819,11 +819,48 @@ export default function LivePresentation() {
       });
     } catch (err) {
       console.error('Failed to add screen share:', err);
-      toast({ 
-        title: 'Screen sharing cancelled', 
-        description: 'On iPad: Select "Entire Screen" or "Safari" to mirror your display',
-        variant: 'destructive' 
-      });
+      
+      // Provide specific error messages based on error type
+      if (err instanceof ScreenShareError) {
+        switch (err.type) {
+          case ScreenShareErrorType.NOT_SUPPORTED:
+            toast({ 
+              title: 'Screen sharing not supported', 
+              description: 'Please use Chrome, Edge, Safari 13+, or Firefox for screen sharing.',
+              variant: 'destructive' 
+            });
+            break;
+          
+          case ScreenShareErrorType.USER_CANCELLED:
+            toast({ 
+              title: 'Screen sharing cancelled', 
+              description: 'You need to select a screen, window, or tab to share. Try again and click "Share".',
+              variant: 'destructive' 
+            });
+            break;
+          
+          case ScreenShareErrorType.PERMISSION_DENIED:
+            toast({ 
+              title: 'Permission denied', 
+              description: 'Screen sharing permission was denied. Check your browser settings to allow screen sharing.',
+              variant: 'destructive' 
+            });
+            break;
+          
+          default:
+            toast({ 
+              title: 'Screen sharing failed', 
+              description: err.message || 'An unknown error occurred. Please try again.',
+              variant: 'destructive' 
+            });
+        }
+      } else {
+        toast({ 
+          title: 'Screen sharing failed', 
+          description: 'On iPad: Select "Entire Screen" or "Safari" to mirror your display',
+          variant: 'destructive' 
+        });
+      }
     }
   };
 
