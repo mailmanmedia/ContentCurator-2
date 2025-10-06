@@ -55,7 +55,8 @@ import {
   Rss,
   BarChart3,
   Users,
-  Target
+  Target,
+  Move
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
@@ -353,6 +354,10 @@ export default function LivePresentation() {
   const [overlayMetricData, setOverlayMetricData] = useState<any>(null);
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState<string>('all');
+  const [isPositionEditorOpen, setIsPositionEditorOpen] = useState(false);
+  const [editingPositionOverlayId, setEditingPositionOverlayId] = useState<string | null>(null);
+  const [overlayX, setOverlayX] = useState(0);
+  const [overlayY, setOverlayY] = useState(0);
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
@@ -879,6 +884,67 @@ export default function LivePresentation() {
     }
   };
 
+  const snapToGrid = (value: number, gridSize: number = 20): number => {
+    return Math.round(value / gridSize) * gridSize;
+  };
+
+  const handleOpenPositionEditor = (overlayId: string) => {
+    const overlay = overlays.find(o => o.id === overlayId);
+    if (overlay) {
+      setEditingPositionOverlayId(overlayId);
+      setOverlayX(overlay.x);
+      setOverlayY(overlay.y);
+      setIsPositionEditorOpen(true);
+    }
+  };
+
+  const handleGridClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const scaleX = outputResolution.width / rect.width;
+    const scaleY = outputResolution.height / rect.height;
+    
+    const rawX = (e.clientX - rect.left) * scaleX;
+    const rawY = (e.clientY - rect.top) * scaleY;
+    
+    const snappedX = snapToGrid(rawX);
+    const snappedY = snapToGrid(rawY);
+    
+    setOverlayX(snappedX);
+    setOverlayY(snappedY);
+  };
+
+  const handleUpdatePosition = () => {
+    if (!editingPositionOverlayId) return;
+    
+    const snappedX = snapToGrid(overlayX);
+    const snappedY = snapToGrid(overlayY);
+    
+    setOverlays(prev => prev.map(overlay =>
+      overlay.id === editingPositionOverlayId
+        ? { ...overlay, x: snappedX, y: snappedY }
+        : overlay
+    ));
+    
+    toast({
+      title: 'Position updated',
+      description: `Overlay positioned at (${snappedX}, ${snappedY})`
+    });
+    
+    setIsPositionEditorOpen(false);
+    setEditingPositionOverlayId(null);
+  };
+
+  const handlePositionInputChange = (axis: 'x' | 'y', value: string) => {
+    const numValue = parseInt(value) || 0;
+    const clampedValue = Math.max(0, Math.min(numValue, axis === 'x' ? outputResolution.width : outputResolution.height));
+    
+    if (axis === 'x') {
+      setOverlayX(clampedValue);
+    } else {
+      setOverlayY(clampedValue);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -1185,11 +1251,11 @@ export default function LivePresentation() {
                               <p className="text-sm font-medium truncate">{overlay.text}</p>
                             )}
                             <Badge 
-                              variant={overlay.position === 'top' ? 'default' : 'secondary'}
-                              className={overlay.position === 'top' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}
-                              data-testid={`badge-position-${overlay.id}`}
+                              variant="outline"
+                              className="bg-primary/10"
+                              data-testid={`badge-coordinates-${overlay.id}`}
                             >
-                              {overlay.position === 'top' ? 'Top' : 'Bottom'}
+                              ({overlay.x}, {overlay.y})
                             </Badge>
                             {overlay.overlayType === 'rss' && overlay.rssSourceIds && (
                               <Badge variant="outline" className="bg-primary/10">
@@ -1208,6 +1274,15 @@ export default function LivePresentation() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => handleOpenPositionEditor(overlay.id)}
+                            data-testid={`button-reposition-overlay-${overlay.id}`}
+                          >
+                            <Move className="w-4 h-4" />
+                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -1940,6 +2015,104 @@ export default function LivePresentation() {
               onClick={() => setIsTemplatePickerOpen(false)}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPositionEditorOpen} onOpenChange={setIsPositionEditorOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Reposition Overlay</DialogTitle>
+            <DialogDescription>
+              Click on the grid to set position (snaps to 20px grid) or enter coordinates manually
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div 
+              className="relative bg-black rounded-md overflow-hidden cursor-crosshair border-2 border-primary/20"
+              style={{ 
+                aspectRatio: `${outputResolution.width}/${outputResolution.height}`,
+                backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255,255,255,0.1) 19px, rgba(255,255,255,0.1) 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(255,255,255,0.1) 19px, rgba(255,255,255,0.1) 20px)',
+                backgroundSize: '20px 20px'
+              }}
+              onClick={handleGridClick}
+              data-testid="grid-preview"
+            >
+              {editingPositionOverlayId && overlays.find(o => o.id === editingPositionOverlayId) && (
+                <div
+                  className="absolute bg-primary/30 border-2 border-primary rounded pointer-events-none"
+                  style={{
+                    left: `${(overlayX / outputResolution.width) * 100}%`,
+                    top: `${(overlayY / outputResolution.height) * 100}%`,
+                    width: '60px',
+                    height: '40px',
+                  }}
+                >
+                  <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
+                    ({snapToGrid(overlayX)}, {snapToGrid(overlayY)})
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="overlay-x">X Position (px)</Label>
+                <Input
+                  id="overlay-x"
+                  type="number"
+                  min="0"
+                  max={outputResolution.width}
+                  step="20"
+                  value={overlayX}
+                  onChange={(e) => handlePositionInputChange('x', e.target.value)}
+                  onBlur={() => setOverlayX(snapToGrid(overlayX))}
+                  data-testid="input-overlay-x"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Snapped: {snapToGrid(overlayX)}px
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="overlay-y">Y Position (px)</Label>
+                <Input
+                  id="overlay-y"
+                  type="number"
+                  min="0"
+                  max={outputResolution.height}
+                  step="20"
+                  value={overlayY}
+                  onChange={(e) => handlePositionInputChange('y', e.target.value)}
+                  onBlur={() => setOverlayY(snapToGrid(overlayY))}
+                  data-testid="input-overlay-y"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Snapped: {snapToGrid(overlayY)}px
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="w-4 h-4 bg-primary/30 border border-primary rounded" />
+              <span>Preview shows overlay position on {outputResolution.width}×{outputResolution.height} canvas</span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPositionEditorOpen(false)}
+              data-testid="button-cancel-position"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdatePosition}
+              data-testid="button-update-position"
+            >
+              Update Position
             </Button>
           </DialogFooter>
         </DialogContent>

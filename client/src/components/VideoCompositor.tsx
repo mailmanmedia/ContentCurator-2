@@ -55,6 +55,9 @@ interface OverlayConfig {
   videoUrl?: string;
   metricType?: string;
   metricData?: any;
+  x: number;
+  y: number;
+  category: string;
 }
 
 interface VideoCompositorProps {
@@ -382,10 +385,8 @@ export default function VideoCompositor({
 
       sortedOverlays.forEach(overlay => {
         const overlayWidth = (canvas.width * (overlay.width || 100)) / 100;
-        const xPosition = overlay.position === 'top' 
-          ? (canvas.width - overlayWidth) / 2
-          : (canvas.width - overlayWidth) / 2;
-        const yPosition = overlay.position === 'top' ? 0 : canvas.height - overlay.height;
+        const xPosition = overlay.x;
+        const yPosition = overlay.y;
         
         ctx.globalAlpha = overlay.opacity !== undefined ? overlay.opacity : 1;
 
@@ -775,15 +776,14 @@ export default function VideoCompositor({
   }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes, rssArticles, sourceNameMap, formatRssTicker]);
 
   const renderMetricOverlay = (overlay: OverlayConfig) => {
-    const { metricType, metricData, width, height, opacity, position } = overlay;
+    const { metricType, metricData, width, height, opacity, x, y } = overlay;
 
     const style: React.CSSProperties = {
       position: 'absolute',
       width: `${width}%`,
       height: `${height}px`,
-      [position]: 0,
-      left: '50%',
-      transform: 'translateX(-50%)',
+      left: `${x}px`,
+      top: `${y}px`,
       zIndex: overlay.zIndex || 100,
       pointerEvents: 'none',
     };
