@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +58,10 @@ import {
   Target,
   Move,
   Trophy,
-  ChevronDown
+  ChevronDown,
+  Circle,
+  Pause,
+  Download
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
@@ -66,8 +69,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
-import VideoCompositor from "@/components/VideoCompositor";
+import VideoCompositor, { type VideoCompositorRef } from "@/components/VideoCompositor";
 import { useCameraStreams } from "@/contexts/CameraStreamContext";
+import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { useQuery } from "@tanstack/react-query";
 import { overlayTemplates, getAllTemplateCategories, getTemplatesByCategory, type OverlayTemplate } from "@/lib/overlayTemplates";
 import {
@@ -374,9 +378,29 @@ export default function LivePresentation() {
   const [overlayAwayTeamId, setOverlayAwayTeamId] = useState<number | null>(null);
   const [overlayTeamId, setOverlayTeamId] = useState<number | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  const [showClearConfirmDialog, setShowClearConfirmDialog] = useState(false);
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
+  
+  const compositorRef = useRef<VideoCompositorRef>(null);
+  const canvasRef = compositorRef.current?.canvasRef || { current: null };
+  
+  const {
+    isRecording,
+    isPaused,
+    duration,
+    recordedBlob,
+    recordingState,
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    resumeRecording,
+    downloadRecording,
+    clearRecording,
+    isMediaRecorderSupported,
+    error: recordingError,
+  } = useVideoRecorder(canvasRef);
 
   const { data: libraryImages, isLoading: isLoadingImages } = useQuery<LibraryImage[]>({
     queryKey: ['/api/images'],
@@ -1051,6 +1075,45 @@ export default function LivePresentation() {
     }
   };
 
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleStartRecording = async () => {
+    try {
+      await startRecording();
+      toast({
+        title: "Recording Started",
+        description: "Your broadcast is now being recorded",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Recording Failed",
+        description: err.message || "Failed to start recording",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleClearRecording = () => {
+    if (recordedBlob) {
+      setShowClearConfirmDialog(true);
+    } else {
+      clearRecording();
+    }
+  };
+
+  const confirmClearRecording = () => {
+    clearRecording();
+    setShowClearConfirmDialog(false);
+    toast({
+      title: "Recording Cleared",
+      description: "Ready to start a new recording",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -1083,6 +1146,149 @@ export default function LivePresentation() {
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           <div className="xl:col-span-3 space-y-6">
+            {!isMediaRecorderSupported && (
+              <Alert variant="destructive" data-testid="alert-no-media-recorder">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Video recording is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Edge.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {recordingError && (
+              <Alert variant="destructive" data-testid="alert-recording-error">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {recordingError}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <Card data-testid="card-recording-controls">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-lg">Recording Controls</CardTitle>
+                    {isRecording && (
+                      <Badge 
+                        className="gap-2 bg-[#C8102E] text-white hover:bg-[#C8102E] animate-pulse"
+                        data-testid="badge-recording"
+                      >
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                        RECORDING
+                      </Badge>
+                    )}
+                    {isPaused && (
+                      <Badge variant="outline" data-testid="badge-paused">
+                        PAUSED
+                      </Badge>
+                    )}
+                    {recordingState === 'stopped' && recordedBlob && (
+                      <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400" data-testid="badge-ready">
+                        READY TO DOWNLOAD
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {(isRecording || isPaused) && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Duration:</span>
+                      <span 
+                        className="text-lg font-mono font-bold"
+                        data-testid="text-duration"
+                      >
+                        {formatDuration(duration)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap items-center gap-2">
+                  {recordingState === 'idle' && (
+                    <Button
+                      onClick={handleStartRecording}
+                      disabled={!isMediaRecorderSupported}
+                      className="bg-[#C8102E] hover:bg-[#A00E26]"
+                      data-testid="button-start-recording"
+                    >
+                      <Circle className="w-4 h-4 mr-2 fill-current" />
+                      Start Recording
+                    </Button>
+                  )}
+                  
+                  {isRecording && (
+                    <>
+                      <Button
+                        onClick={stopRecording}
+                        variant="outline"
+                        data-testid="button-stop-recording"
+                      >
+                        <Square className="w-4 h-4 mr-2" />
+                        Stop
+                      </Button>
+                      <Button
+                        onClick={pauseRecording}
+                        variant="outline"
+                        data-testid="button-pause-recording"
+                      >
+                        <Pause className="w-4 h-4 mr-2" />
+                        Pause
+                      </Button>
+                    </>
+                  )}
+                  
+                  {isPaused && (
+                    <>
+                      <Button
+                        onClick={resumeRecording}
+                        className="bg-[#C8102E] hover:bg-[#A00E26]"
+                        data-testid="button-resume-recording"
+                      >
+                        <Circle className="w-4 h-4 mr-2 fill-current" />
+                        Resume
+                      </Button>
+                      <Button
+                        onClick={stopRecording}
+                        variant="outline"
+                        data-testid="button-stop-recording"
+                      >
+                        <Square className="w-4 h-4 mr-2" />
+                        Stop
+                      </Button>
+                    </>
+                  )}
+                  
+                  {recordingState === 'stopped' && recordedBlob && (
+                    <>
+                      <Button
+                        onClick={() => downloadRecording()}
+                        className="bg-green-600 hover:bg-green-700"
+                        data-testid="button-download-recording"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Recording
+                      </Button>
+                      <Button
+                        onClick={handleClearRecording}
+                        variant="outline"
+                        data-testid="button-clear-recording"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Clear
+                      </Button>
+                    </>
+                  )}
+                  
+                  {(isRecording || isPaused) && (
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      Recording at {outputResolution.width}×{outputResolution.height}
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             <Card data-testid="card-program-output">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1125,6 +1331,7 @@ export default function LivePresentation() {
               <CardContent>
                 <div className="relative bg-black rounded-md overflow-hidden aspect-video">
                   <VideoCompositor
+                    ref={compositorRef}
                     activeSources={activeSources}
                     outputResolution={outputResolution}
                     globalFitMode={globalFitMode}
@@ -2425,6 +2632,33 @@ export default function LivePresentation() {
               data-testid="button-update-position"
             >
               Update Position
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showClearConfirmDialog} onOpenChange={setShowClearConfirmDialog}>
+        <DialogContent data-testid="dialog-clear-confirm">
+          <DialogHeader>
+            <DialogTitle>Clear Recording?</DialogTitle>
+            <DialogDescription>
+              You have an undownloaded recording. Are you sure you want to clear it? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowClearConfirmDialog(false)}
+              data-testid="button-cancel-clear"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={confirmClearRecording}
+              data-testid="button-confirm-clear"
+            >
+              Clear Recording
             </Button>
           </DialogFooter>
         </DialogContent>

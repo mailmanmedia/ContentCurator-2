@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useCallback, useState } from "react";
+import { useEffect, useRef, useMemo, useCallback, useState, forwardRef, useImperativeHandle } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { RssArticle, RssSource } from "@shared/schema";
 import H2HMatchCardOverlay from "./overlays/H2HMatchCardOverlay";
@@ -77,6 +77,10 @@ interface VideoCompositorProps {
   className?: string;
 }
 
+export interface VideoCompositorRef {
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+}
+
 const loadImage = (src: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -87,14 +91,14 @@ const loadImage = (src: string): Promise<HTMLImageElement> => {
   });
 };
 
-export default function VideoCompositor({ 
+const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({ 
   activeSources = [], 
   outputResolution = { width: 1920, height: 1080 },
   globalFitMode = 'contain',
   sourceFitModes = {},
   overlays = [],
   className = "" 
-}: VideoCompositorProps) {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasCache = useRef<Map<string, HTMLCanvasElement>>(new Map());
@@ -105,6 +109,10 @@ export default function VideoCompositor({
   const fadeStates = useRef<Map<string, number>>(new Map());
   const [isEditing, setIsEditing] = useState(false);
   const lastOverlayUpdate = useRef<number>(0);
+
+  useImperativeHandle(ref, () => ({
+    canvasRef
+  }), []);
 
   // Fetch RSS articles when RSS overlay exists
   const hasRssOverlay = overlays.some(o => o.overlayType === 'rss');
@@ -882,4 +890,8 @@ export default function VideoCompositor({
       {metricOverlays.map(overlay => renderMetricOverlay(overlay))}
     </div>
   );
-}
+});
+
+VideoCompositor.displayName = 'VideoCompositor';
+
+export default VideoCompositor;
