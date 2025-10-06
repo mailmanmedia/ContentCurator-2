@@ -736,6 +736,20 @@ export function registerAnalyticsRoutes(app: Express) {
               expectedGoals: xGComparison,
             },
             strengthOfSchedule: sosAdjustment,
+            standings: {
+              liverpoolPosition: liverpoolStanding?.position || 0,
+              liverpoolPoints: liverpoolStanding?.points || 0,
+              pointsFromLeader: liverpoolStanding
+                ? leagueTable.standings[0].points - liverpoolStanding.points
+                : 0,
+              pointsFromTop4: liverpoolStanding
+                ? Math.max(
+                    0,
+                    leagueTable.standings[3].points - liverpoolStanding.points
+                  )
+                : 0,
+              top6Standings: top6Teams,
+            },
             leagueContext: {
               currentPosition: liverpoolStanding?.position,
               pointsFromTop: liverpoolStanding

@@ -455,12 +455,16 @@ export default function LivePresentation() {
   const [showClearConfirmDialog, setShowClearConfirmDialog] = useState(false);
   const [overlayBorderWidth, setOverlayBorderWidth] = useState(0);
   const [overlayBorderColor, setOverlayBorderColor] = useState('#000000');
+  const [gridScale, setGridScale] = useState(1);
+  const [overlayHeight, setOverlayHeight] = useState(70);
+  const [overlayAnimationType, setOverlayAnimationType] = useState<'scroll' | 'fade' | 'static'>('scroll');
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
   
   const compositorRef = useRef<VideoCompositorRef>(null);
   const canvasRef = compositorRef.current?.canvasRef || { current: null };
+  const gridPreviewRef = useRef<HTMLDivElement>(null);
   
   const {
     isRecording,
@@ -684,6 +688,41 @@ export default function LivePresentation() {
 
     return () => clearTimeout(timeoutId);
   }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes, isBroadcasting]);
+
+  useEffect(() => {
+    if (!gridPreviewRef.current || !isPositionEditorOpen) return;
+    
+    const updateGridScale = () => {
+      const rect = gridPreviewRef.current?.getBoundingClientRect();
+      if (rect) {
+        const scale = rect.width / outputResolution.width;
+        setGridScale(scale);
+      }
+    };
+    
+    updateGridScale();
+    
+    const resizeObserver = new ResizeObserver(updateGridScale);
+    if (gridPreviewRef.current) {
+      resizeObserver.observe(gridPreviewRef.current);
+    }
+    
+    window.addEventListener('resize', updateGridScale);
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateGridScale);
+    };
+  }, [outputResolution.width, isPositionEditorOpen]);
+
+  useEffect(() => {
+    // Only apply preset defaults when creating new overlays, not when editing
+    if (selectedPreset && TEMPLATE_PRESETS[selectedPreset] && !editingOverlayId) {
+      const preset = TEMPLATE_PRESETS[selectedPreset];
+      setOverlayHeight(preset.height || 80);
+      setOverlayAnimationType(preset.animationType || 'scroll');
+    }
+  }, [selectedPreset, editingOverlayId]);
 
   const handleSourceSelection = async (value: string) => {
     setSelectedValue('');
@@ -918,8 +957,8 @@ export default function LivePresentation() {
               backgroundColor: preset.backgroundColor,
               textColor: preset.textColor,
               fontSize: overlayFontSize,
-              height: preset.height,
-              animationType: preset.animationType,
+              height: overlayHeight,
+              animationType: overlayAnimationType,
               position: overlayPosition,
               fontFamily: overlayFontFamily,
               scrollSpeed: overlayScrollSpeed,
@@ -951,13 +990,13 @@ export default function LivePresentation() {
       const newOverlay: OverlayConfig = {
         id: `overlay-${Date.now()}`,
         text: overlayText,
-        animationType: preset.animationType,
+        animationType: overlayAnimationType,
         templateStyle: 'ticker',
         backgroundColor: preset.backgroundColor,
         textColor: preset.textColor,
         fontSize: overlayFontSize,
         position: overlayPosition,
-        height: preset.height,
+        height: overlayHeight,
         visible: true,
         fontFamily: overlayFontFamily,
         scrollSpeed: overlayScrollSpeed,
@@ -1044,6 +1083,8 @@ export default function LivePresentation() {
     setOverlayMetricData(overlay.metricData || null);
     setOverlayBorderWidth(overlay.borderWidth || 0);
     setOverlayBorderColor(overlay.borderColor || '#000000');
+    setOverlayHeight(overlay.height || 70);
+    setOverlayAnimationType(overlay.animationType || 'scroll');
     
     if (overlay.overlayType === 'rss') {
       setSelectedRssSourceIds(overlay.rssSourceIds || []);
@@ -2240,6 +2281,39 @@ export default function LivePresentation() {
             </div>
 
             <div>
+              <Label htmlFor="overlay-height">Height: {overlayHeight}px</Label>
+              <Slider
+                id="overlay-height"
+                min={30}
+                max={300}
+                step={10}
+                value={[overlayHeight]}
+                onValueChange={(vals) => setOverlayHeight(vals[0])}
+                data-testid="slider-overlay-height"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Overlay height in pixels (30px - 300px)
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="animation-type">Animation Type</Label>
+              <Select value={overlayAnimationType} onValueChange={(v) => setOverlayAnimationType(v as 'scroll' | 'fade' | 'static')}>
+                <SelectTrigger id="animation-type" data-testid="select-animation-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scroll">Scrolling</SelectItem>
+                  <SelectItem value="fade">Fade In/Out</SelectItem>
+                  <SelectItem value="static">Static (No Animation)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                How the overlay appears and behaves
+              </p>
+            </div>
+
+            <div>
               <Label htmlFor="overlay-zindex">Z-Index (Layer Order): {overlayZIndex}</Label>
               <Slider
                 id="overlay-zindex"
@@ -2709,30 +2783,36 @@ export default function LivePresentation() {
 
           <div className="space-y-4">
             <div 
+              ref={gridPreviewRef}
               className="relative bg-black rounded-md overflow-hidden cursor-crosshair border-2 border-primary/20"
               style={{ 
                 aspectRatio: `${outputResolution.width}/${outputResolution.height}`,
-                backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255,255,255,0.1) 19px, rgba(255,255,255,0.1) 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(255,255,255,0.1) 19px, rgba(255,255,255,0.1) 20px)',
-                backgroundSize: '20px 20px'
+                backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent ${20 * gridScale - 0.5}px, rgba(255,255,255,0.1) ${20 * gridScale - 0.5}px, rgba(255,255,255,0.1) ${20 * gridScale}px), repeating-linear-gradient(90deg, transparent, transparent ${20 * gridScale - 0.5}px, rgba(255,255,255,0.1) ${20 * gridScale - 0.5}px, rgba(255,255,255,0.1) ${20 * gridScale}px)`,
+                backgroundSize: `${20 * gridScale}px ${20 * gridScale}px`
               }}
               onClick={handleGridClick}
               data-testid="grid-preview"
             >
-              {editingPositionOverlayId && overlays.find(o => o.id === editingPositionOverlayId) && (
-                <div
-                  className="absolute bg-primary/30 border-2 border-primary rounded pointer-events-none"
-                  style={{
-                    left: `${(overlayX / outputResolution.width) * 100}%`,
-                    top: `${(overlayY / outputResolution.height) * 100}%`,
-                    width: '60px',
-                    height: '40px',
-                  }}
-                >
-                  <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
-                    ({snapToGrid(overlayX)}, {snapToGrid(overlayY)})
+              {editingPositionOverlayId && (() => {
+                const editOverlay = overlays.find(o => o.id === editingPositionOverlayId);
+                if (!editOverlay) return null;
+                
+                return (
+                  <div
+                    className="absolute bg-primary/30 border-2 border-primary rounded pointer-events-none"
+                    style={{
+                      left: `${(overlayX / outputResolution.width) * 100}%`,
+                      top: `${(overlayY / outputResolution.height) * 100}%`,
+                      width: `${editOverlay.width || 20}%`,
+                      height: `${(editOverlay.height / outputResolution.height) * 100}%`,
+                    }}
+                  >
+                    <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
+                      ({snapToGrid(overlayX)}, {snapToGrid(overlayY)}) - {editOverlay.width}% × {editOverlay.height}px
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
