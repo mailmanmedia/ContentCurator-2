@@ -7,6 +7,14 @@ import PlayerStatsOverlay from "./overlays/PlayerStatsOverlay";
 import LeaguePositionOverlay from "./overlays/LeaguePositionOverlay";
 import RssSentimentOverlay from "./overlays/RssSentimentOverlay";
 
+interface RssArticlesResponse {
+  articles: RssArticle[];
+}
+
+interface RssSourcesResponse {
+  sources: RssSource[];
+}
+
 const debounce = <T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -101,18 +109,18 @@ export default function VideoCompositor({
   // Fetch RSS articles when RSS overlay exists
   const hasRssOverlay = overlays.some(o => o.overlayType === 'rss');
   
-  const { data: rssArticlesData } = useQuery({
+  const { data: rssArticlesData } = useQuery<RssArticlesResponse>({
     queryKey: ['/api/rss-articles', { limit: 50 }],
     enabled: hasRssOverlay,
   });
 
-  const { data: rssSourcesData } = useQuery({
+  const { data: rssSourcesData } = useQuery<RssSourcesResponse>({
     queryKey: ['/api/rss-sources'],
     enabled: hasRssOverlay,
   });
 
-  const rssArticles = rssArticlesData?.articles as RssArticle[] | undefined;
-  const rssSources = rssSourcesData?.sources as RssSource[] | undefined;
+  const rssArticles = rssArticlesData?.articles;
+  const rssSources = rssSourcesData?.sources;
 
   // Build source name lookup map
   const sourceNameMap = useMemo(() => {
@@ -385,8 +393,15 @@ export default function VideoCompositor({
 
       sortedOverlays.forEach(overlay => {
         const overlayWidth = (canvas.width * (overlay.width || 100)) / 100;
-        const xPosition = overlay.x;
-        const yPosition = overlay.y;
+        const xPosition = overlay.x || 0;
+
+        // Handle legacy position field or use y coordinate
+        let yPosition = overlay.y || 0;
+        if (overlay.position === 'bottom') {
+          yPosition = canvas.height - overlay.height;
+        } else if (overlay.position === 'top') {
+          yPosition = 0;
+        }
         
         ctx.globalAlpha = overlay.opacity !== undefined ? overlay.opacity : 1;
 
