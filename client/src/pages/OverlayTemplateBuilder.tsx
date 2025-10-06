@@ -110,8 +110,9 @@ export default function OverlayTemplateBuilder() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
-  const { data: templates = [] } = useQuery<Template[]>({
+  const { data: templates = [] } = useQuery({
     queryKey: ['/api/templates'],
+    select: (response: any) => (response?.templates || []) as Template[],
   });
 
   const filteredTemplates = templates.filter(t => 

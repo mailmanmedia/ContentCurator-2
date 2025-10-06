@@ -60,6 +60,7 @@ export default function TeamMatchupStudio() {
   const { data: competitionsData, isLoading: competitionsLoading } = useQuery({
     queryKey: ['/api/football/competitions'],
     staleTime: 30 * 60 * 1000, // 30 minutes - competitions don't change often
+    select: (response: any) => response?.competitions || [],
   });
 
   // Fetch teams for selected competition (rarely changes, long cache)
@@ -67,6 +68,7 @@ export default function TeamMatchupStudio() {
     queryKey: ['/api/football/competitions', selectedCompetition, 'teams'],
     enabled: !!selectedCompetition,
     staleTime: 30 * 60 * 1000, // 30 minutes - teams don't change often
+    select: (response: any) => response?.teams || [],
   });
 
   // Fetch head-to-head data when two teams are selected (historical data, long cache)
@@ -74,6 +76,7 @@ export default function TeamMatchupStudio() {
     queryKey: ['/api/football/head-to-head', selectedTeam1, selectedTeam2],
     enabled: !!(selectedTeam1 && selectedTeam2 && analysisMode === 'head_to_head'),
     staleTime: 60 * 60 * 1000, // 1 hour - historical data changes infrequently
+    select: (response: any) => response?.fixtures || [],
   });
 
   // Parallel fetch for single team analysis (stats + squad)
@@ -142,9 +145,9 @@ export default function TeamMatchupStudio() {
     },
   });
 
-  const competitions: Competition[] = (competitionsData as any)?.competitions || [];
-  const teams: Team[] = (teamsData as any)?.teams || [];
-  const headToHeadFixtures: Fixture[] = (headToHeadData as any)?.fixtures || [];
+  const competitions: Competition[] = (competitionsData as any) || [];
+  const teams: Team[] = (teamsData as any) || [];
+  const headToHeadFixtures: Fixture[] = (headToHeadData as any) || [];
 
   const selectedTeam1Data = teams.find(t => t.id === selectedTeam1);
   const selectedTeam2Data = teams.find(t => t.id === selectedTeam2);

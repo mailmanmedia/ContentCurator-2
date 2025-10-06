@@ -482,23 +482,27 @@ export default function LivePresentation() {
     error: recordingError,
   } = useVideoRecorder(canvasRef);
 
-  const { data: liveStateData } = useQuery<{ liveState: LiveState | null }>({
+  const { data: liveStateData } = useQuery({
     queryKey: ['/api/live-state'],
+    select: (response: any) => response?.liveState || null,
   });
 
-  const { data: libraryImages, isLoading: isLoadingImages } = useQuery<LibraryImage[]>({
+  const { data: libraryImages, isLoading: isLoadingImages } = useQuery({
     queryKey: ['/api/images'],
     enabled: isLibraryPickerOpen,
+    select: (response: any) => (response?.images || []) as LibraryImage[],
   });
 
-  const { data: rssSources, isLoading: isLoadingRssSources } = useQuery<RssSource[]>({
+  const { data: rssSources, isLoading: isLoadingRssSources } = useQuery({
     queryKey: ['/api/rss-sources'],
     enabled: overlayType === 'rss' && isOverlayDialogOpen,
+    select: (response: any) => (response?.sources || []) as RssSource[],
   });
 
-  const { data: teamsData, isLoading: isLoadingTeams } = useQuery<{ teams: TeamWithStats[] }>({
+  const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
     queryKey: ['/api/cached-stats/teams'],
     enabled: overlayType === 'metric' && isOverlayDialogOpen,
+    select: (response: any) => response?.teams || [],
   });
 
   const checkPositionConflict = (position: 'top' | 'bottom', excludeId?: string): boolean => {
