@@ -110,6 +110,16 @@ interface RssSource {
   isActive: boolean;
 }
 
+interface TeamWithStats {
+  teamId: number;
+  teamName: string;
+  leagueId: number;
+  season: number;
+  lastUpdated: Date | null;
+  matchesPlayed: number | null;
+  form: string | null;
+}
+
 interface OverlayConfig {
   id: string;
   text: string;
@@ -358,6 +368,9 @@ export default function LivePresentation() {
   const [editingPositionOverlayId, setEditingPositionOverlayId] = useState<string | null>(null);
   const [overlayX, setOverlayX] = useState(0);
   const [overlayY, setOverlayY] = useState(0);
+  const [overlayHomeTeamId, setOverlayHomeTeamId] = useState<number | null>(null);
+  const [overlayAwayTeamId, setOverlayAwayTeamId] = useState<number | null>(null);
+  const [overlayTeamId, setOverlayTeamId] = useState<number | null>(null);
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
@@ -370,6 +383,11 @@ export default function LivePresentation() {
   const { data: rssSources, isLoading: isLoadingRssSources } = useQuery<RssSource[]>({
     queryKey: ['/api/rss-sources'],
     enabled: overlayType === 'rss' && isOverlayDialogOpen,
+  });
+
+  const { data: teamsData, isLoading: isLoadingTeams } = useQuery<{ teams: TeamWithStats[] }>({
+    queryKey: ['/api/cached-stats/teams'],
+    enabled: overlayType === 'metric' && isOverlayDialogOpen,
   });
 
   const checkPositionConflict = (position: 'top' | 'bottom', excludeId?: string): boolean => {
@@ -660,6 +678,25 @@ export default function LivePresentation() {
       return;
     }
 
+    if (overlayType === 'metric') {
+      if (overlayMetricType === 'h2h-card' && (!overlayHomeTeamId || !overlayAwayTeamId)) {
+        toast({ 
+          title: 'Select both teams', 
+          description: 'Please select both home and away teams for the H2H card.',
+          variant: 'destructive' 
+        });
+        return;
+      }
+      if (overlayMetricType === 'form-guide' && !overlayTeamId) {
+        toast({ 
+          title: 'Select a team', 
+          description: 'Please select a team for the form guide.',
+          variant: 'destructive' 
+        });
+        return;
+      }
+    }
+
     if (!editingOverlayId && checkPositionConflict(overlayPosition)) {
       toast({ 
         title: `An overlay already exists at ${overlayPosition} position.`,
@@ -684,6 +721,20 @@ export default function LivePresentation() {
       overlayType, 
       overlayMetricType
     );
+    
+    let metricDataToSave: any = null;
+    if (overlayType === 'metric') {
+      if (overlayMetricType === 'h2h-card') {
+        metricDataToSave = {
+          homeTeamId: overlayHomeTeamId,
+          awayTeamId: overlayAwayTeamId,
+        };
+      } else if (overlayMetricType === 'form-guide') {
+        metricDataToSave = {
+          teamId: overlayTeamId,
+        };
+      }
+    }
     
     if (editingOverlayId) {
       setOverlays(prev => prev.map(overlay => 
@@ -713,7 +764,7 @@ export default function LivePresentation() {
               opacity: overlayOpacity,
               videoUrl: overlayVideoUrl || undefined,
               metricType: overlayMetricType || undefined,
-              metricData: overlayMetricData,
+              metricData: metricDataToSave,
               x: overlay.position !== overlayPosition ? defaultX : overlay.x,
               y: overlay.position !== overlayPosition ? defaultY : overlay.y,
               category: defaultCategory,
@@ -746,7 +797,7 @@ export default function LivePresentation() {
         opacity: overlayOpacity,
         videoUrl: overlayVideoUrl || undefined,
         metricType: overlayMetricType || undefined,
-        metricData: overlayMetricData,
+        metricData: metricDataToSave,
         x: defaultX,
         y: defaultY,
         category: defaultCategory,
@@ -770,6 +821,10 @@ export default function LivePresentation() {
     setSelectedRssSourceIds([]);
     setRssMaxArticles(10);
     setRssShowSource(true);
+    setOverlayHomeTeamId(null);
+    setOverlayAwayTeamId(null);
+    setOverlayTeamId(null);
+    setOverlayMetricType('');
     setEditingOverlayId(null);
   };
 
@@ -815,6 +870,15 @@ export default function LivePresentation() {
       setSelectedRssSourceIds(overlay.rssSourceIds || []);
       setRssMaxArticles(overlay.rssMaxArticles || 10);
       setRssShowSource(overlay.rssShowSource !== undefined ? overlay.rssShowSource : true);
+    }
+    
+    if (overlay.overlayType === 'metric' && overlay.metricData) {
+      if (overlay.metricType === 'h2h-card') {
+        setOverlayHomeTeamId(overlay.metricData.homeTeamId || null);
+        setOverlayAwayTeamId(overlay.metricData.awayTeamId || null);
+      } else if (overlay.metricType === 'form-guide') {
+        setOverlayTeamId(overlay.metricData.teamId || null);
+      }
     }
     
     const presetKey = Object.entries(TEMPLATE_PRESETS).find(([_, preset]) => 
@@ -1247,6 +1311,17 @@ export default function LivePresentation() {
                                 <Rss className="w-4 h-4 text-primary" />
                                 <p className="text-sm font-medium">RSS Feed Ticker</p>
                               </>
+                            ) : overlay.overlayType === 'metric' ? (
+                              <>
+                                <BarChart3 className="w-4 h-4 text-primary" />
+                                <p className="text-sm font-medium">
+                                  {overlay.metricType === 'h2h-card' ? 'H2H Match Card' :
+                                   overlay.metricType === 'form-guide' ? 'Form Guide' :
+                                   overlay.metricType === 'league-table' ? 'League Table' :
+                                   overlay.metricType === 'rss-sentiment' ? 'RSS Sentiment' :
+                                   'Metric Overlay'}
+                                </p>
+                              </>
                             ) : (
                               <p className="text-sm font-medium truncate">{overlay.text}</p>
                             )}
@@ -1271,6 +1346,16 @@ export default function LivePresentation() {
                           <p className="text-xs text-muted-foreground">
                             {overlay.animationType}
                             {overlay.overlayType === 'rss' && overlay.rssShowSource && ' • Shows source names'}
+                            {overlay.overlayType === 'metric' && overlay.metricData && (
+                              <>
+                                {overlay.metricType === 'h2h-card' && overlay.metricData.homeTeamId && overlay.metricData.awayTeamId && (
+                                  <span> • {teamsData?.teams.find(t => t.teamId === overlay.metricData.homeTeamId)?.teamName || `Team ${overlay.metricData.homeTeamId}`} vs {teamsData?.teams.find(t => t.teamId === overlay.metricData.awayTeamId)?.teamName || `Team ${overlay.metricData.awayTeamId}`}</span>
+                                )}
+                                {overlay.metricType === 'form-guide' && overlay.metricData.teamId && (
+                                  <span> • {teamsData?.teams.find(t => t.teamId === overlay.metricData.teamId)?.teamName || `Team ${overlay.metricData.teamId}`}</span>
+                                )}
+                              </>
+                            )}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -1497,6 +1582,149 @@ export default function LivePresentation() {
                   <Label htmlFor="rss-show-source" className="font-normal cursor-pointer">
                     Show Source Names
                   </Label>
+                </div>
+              </>
+            )}
+
+            {overlayType === 'metric' && (
+              <>
+                <div className="pt-4 border-t">
+                  <h3 className="text-sm font-semibold mb-3">Content Settings</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="metric-type">Metric Type</Label>
+                      <Select 
+                        value={overlayMetricType} 
+                        onValueChange={setOverlayMetricType}
+                      >
+                        <SelectTrigger id="metric-type" data-testid="select-metric-type">
+                          <SelectValue placeholder="Select metric type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="h2h-card">Head-to-Head Card</SelectItem>
+                          <SelectItem value="form-guide">Form Guide</SelectItem>
+                          <SelectItem value="league-table">League Table</SelectItem>
+                          <SelectItem value="rss-sentiment">RSS Sentiment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Choose the type of metric overlay to display
+                      </p>
+                    </div>
+
+                    {overlayMetricType === 'h2h-card' && (
+                      <>
+                        {isLoadingTeams ? (
+                          <div className="text-center py-4">
+                            <p className="text-sm text-muted-foreground">Loading teams...</p>
+                          </div>
+                        ) : teamsData && teamsData.teams && teamsData.teams.length > 0 ? (
+                          <>
+                            <div>
+                              <Label htmlFor="home-team">Home Team</Label>
+                              <Select 
+                                value={overlayHomeTeamId ? String(overlayHomeTeamId) : undefined} 
+                                onValueChange={(v) => setOverlayHomeTeamId(parseInt(v))}
+                              >
+                                <SelectTrigger id="home-team" data-testid="select-home-team">
+                                  <SelectValue placeholder="Select home team" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {teamsData.teams.map((team) => (
+                                    <SelectItem key={team.teamId} value={String(team.teamId)}>
+                                      {team.teamName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                The home team in the matchup
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="away-team">Away Team</Label>
+                              <Select 
+                                value={overlayAwayTeamId ? String(overlayAwayTeamId) : undefined} 
+                                onValueChange={(v) => setOverlayAwayTeamId(parseInt(v))}
+                              >
+                                <SelectTrigger id="away-team" data-testid="select-away-team">
+                                  <SelectValue placeholder="Select away team" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {teamsData.teams.map((team) => (
+                                    <SelectItem key={team.teamId} value={String(team.teamId)}>
+                                      {team.teamName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                The away team in the matchup
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <Alert data-testid="alert-no-teams">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                              No teams available. Please ensure teams have cached statistics.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </>
+                    )}
+
+                    {overlayMetricType === 'form-guide' && (
+                      <>
+                        {isLoadingTeams ? (
+                          <div className="text-center py-4">
+                            <p className="text-sm text-muted-foreground">Loading teams...</p>
+                          </div>
+                        ) : teamsData && teamsData.teams && teamsData.teams.length > 0 ? (
+                          <div>
+                            <Label htmlFor="team">Team</Label>
+                            <Select 
+                              value={overlayTeamId ? String(overlayTeamId) : undefined} 
+                              onValueChange={(v) => setOverlayTeamId(parseInt(v))}
+                            >
+                              <SelectTrigger id="team" data-testid="select-team">
+                                <SelectValue placeholder="Select team" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {teamsData.teams.map((team) => (
+                                  <SelectItem key={team.teamId} value={String(team.teamId)}>
+                                    {team.teamName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              The team whose form guide will be displayed
+                            </p>
+                          </div>
+                        ) : (
+                          <Alert data-testid="alert-no-teams">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                              No teams available. Please ensure teams have cached statistics.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </>
+                    )}
+
+                    {(overlayMetricType === 'league-table' || overlayMetricType === 'rss-sentiment') && (
+                      <Alert>
+                        <AlertDescription>
+                          {overlayMetricType === 'league-table' 
+                            ? 'League Table shows all teams automatically - no team selection needed.'
+                            : 'RSS Sentiment displays aggregated news sentiment - no team selection needed.'}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
                 </div>
               </>
             )}
