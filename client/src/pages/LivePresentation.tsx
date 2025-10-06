@@ -351,7 +351,7 @@ export default function LivePresentation() {
   const [overlayScrollDirection, setOverlayScrollDirection] = useState<'left' | 'right' | 'up' | 'down'>('left');
   const [selectedValue, setSelectedValue] = useState<string>('');
   const [editingOverlayId, setEditingOverlayId] = useState<string | null>(null);
-  const [outputResolution, setOutputResolution] = useState({ width: 1920, height: 1080 });
+  const [outputResolution, setOutputResolution] = useState({ width: 3840, height: 2160 });
   const [globalFitMode, setGlobalFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
   const [sourceFitModes, setSourceFitModes] = useState<Record<string, 'contain' | 'cover' | 'fill'>>({});
   const [overlayImageUrl, setOverlayImageUrl] = useState('');
