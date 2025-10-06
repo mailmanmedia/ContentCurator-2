@@ -34,6 +34,12 @@ A professional broadcast control system for multi-camera live productions, featu
 - **iOS Camera Detection & Text Customization (Oct 2025)**: Enhanced overlay system with comprehensive controls and iOS device support via `getUserMedia()` permission flow before device enumeration, enabling iPad Pro, iPhone, and Continuity Camera detection.
 - **Output Dimension Controls**: Manages resolution (Full HD, 2K, 4K), global fit modes (Contain, Cover, Fill), and per-source fit mode overrides, with canvas dimensions updating based on selected resolution.
 - **Responsive Output System**: Dynamic grid layout calculation in `VideoCompositor` that auto-adapts based on active source count (e.g., 1 source = full canvas, 2 sources = 2x1, 3-4 sources = 2x2), with proper aspect ratio rendering.
+- **Video Recording & Export System (Oct 2025)**: Professional recording capabilities for capturing live broadcasts with full editing compatibility:
+  - **MediaRecorder Integration**: Canvas stream capture at 30fps using MediaRecorder API with intelligent codec fallback (VP9 → VP8 → H264 → WebM), 5 Mbps bitrate for high-quality output.
+  - **Recording Controls**: Complete recording workflow with start/stop/pause/resume controls, Liverpool FC-branded UI with animated recording indicator, real-time duration timer (MM:SS format), and state-based button visibility.
+  - **Export Functionality**: Download recordings as WebM files compatible with professional editing software (Filmora, Premiere Pro, Final Cut, etc.), filename pattern: `broadcast-recording-{timestamp}.webm`, captures at user-selected output resolution.
+  - **Timer Management**: Monotonic duration tracking with proper pause/resume bookkeeping, reset functionality for new recordings, prevents timing artifacts and negative values.
+  - **User Experience**: Browser compatibility detection, confirmation dialogs for destructive actions, toast notifications for all recording events, comprehensive error handling, clear visual indicators for recording states.
 
 #### Navigation System
 A global header provides consistent, responsive navigation.
