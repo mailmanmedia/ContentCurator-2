@@ -137,6 +137,9 @@ interface OverlayConfig {
   videoUrl?: string;
   metricType?: string;
   metricData?: any;
+  x: number;
+  y: number;
+  category: string;
 }
 
 const sourceTypeIcons = {
@@ -369,6 +372,28 @@ export default function LivePresentation() {
       overlay.position === position && 
       overlay.id !== excludeId
     );
+  };
+
+  const getDefaultCoordinatesAndCategory = (position: 'top' | 'bottom', overlayType: string, metricType?: string): { x: number; y: number; category: string } => {
+    const defaultY = position === 'top' ? 0 : 1000;
+    const defaultX = 0;
+    
+    let category = 'graphics';
+    if (overlayType === 'rss') {
+      category = 'news';
+    } else if (overlayType === 'metric') {
+      if (metricType?.includes('match') || metricType?.includes('score')) {
+        category = 'match-stats';
+      } else if (metricType?.includes('team')) {
+        category = 'team-info';
+      } else if (metricType?.includes('player')) {
+        category = 'player-stats';
+      } else {
+        category = 'match-stats';
+      }
+    }
+    
+    return { x: defaultX, y: defaultY, category };
   };
 
   useEffect(() => {
@@ -649,6 +674,11 @@ export default function LivePresentation() {
     }
 
     const preset = TEMPLATE_PRESETS[selectedPreset];
+    const { x: defaultX, y: defaultY, category: defaultCategory } = getDefaultCoordinatesAndCategory(
+      overlayPosition, 
+      overlayType, 
+      overlayMetricType
+    );
     
     if (editingOverlayId) {
       setOverlays(prev => prev.map(overlay => 
@@ -679,6 +709,9 @@ export default function LivePresentation() {
               videoUrl: overlayVideoUrl || undefined,
               metricType: overlayMetricType || undefined,
               metricData: overlayMetricData,
+              x: overlay.position !== overlayPosition ? defaultX : overlay.x,
+              y: overlay.position !== overlayPosition ? defaultY : overlay.y,
+              category: defaultCategory,
             }
           : overlay
       ));
@@ -709,6 +742,9 @@ export default function LivePresentation() {
         videoUrl: overlayVideoUrl || undefined,
         metricType: overlayMetricType || undefined,
         metricData: overlayMetricData,
+        x: defaultX,
+        y: defaultY,
+        category: defaultCategory,
       };
 
       if (overlayType === 'rss') {
@@ -1813,6 +1849,11 @@ export default function LivePresentation() {
                   <button
                     key={template.id}
                     onClick={() => {
+                      const { x: defaultX, y: defaultY, category: defaultCategory } = getDefaultCoordinatesAndCategory(
+                        template.position, 
+                        template.overlayType, 
+                        template.metricType
+                      );
                       const newOverlay: OverlayConfig = {
                         id: Date.now().toString(),
                         text: template.name,
@@ -1837,6 +1878,9 @@ export default function LivePresentation() {
                         metricData: template.metricType === 'h2h-card' ? { homeTeamId: 40, awayTeamId: 47 } 
                                   : template.metricType === 'player-stats' ? { playerId: 1 }
                                   : {},
+                        x: defaultX,
+                        y: defaultY,
+                        category: defaultCategory,
                       };
                       setOverlays(prev => [...prev, newOverlay]);
                       setIsTemplatePickerOpen(false);
