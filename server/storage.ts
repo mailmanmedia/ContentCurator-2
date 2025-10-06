@@ -20,14 +20,15 @@ import {
   type SetTemplate, type InsertSetTemplate,
   type SourceNamePreset, type InsertSourceNamePreset,
   type Template, type InsertTemplate,
-  type LiveState,
+  type LiveState, type InsertLiveState,
   videoSources as videoSourcesTable,
   scenes as scenesTable,
   presentationSets as presentationSetsTable,
   rssSources as rssSourcesTable,
   rssArticles as rssArticlesTable,
   rssAnalysis as rssAnalysisTable,
-  rssComparisons as rssComparisonsTable
+  rssComparisons as rssComparisonsTable,
+  liveStates as liveStatesTable
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
@@ -253,9 +254,9 @@ export interface IStorage {
     refreshInterval: number;
   }>): Promise<void>;
 
-  // Live State methods (in-memory only)
-  getLiveState(): Promise<LiveState>;
-  updateLiveState(updates: Partial<LiveState>): Promise<LiveState>;
+  // Live State methods
+  getLiveState(): Promise<LiveState | undefined>;
+  updateLiveState(updates: Partial<InsertLiveState>): Promise<LiveState>;
 
   // Statistics methods
   getStatistics(): Promise<{
@@ -1965,18 +1966,26 @@ export class MemStorage implements IStorage {
     }
   }
 
-  // Live State methods (in-memory only)
-  async getLiveState(): Promise<LiveState> {
-    return { ...this.liveState };
+  // Live State methods
+  async getLiveState(): Promise<LiveState | undefined> {
+    const results = await db.select().from(liveStatesTable).where(eq(liveStatesTable.id, 'default'));
+    return results[0];
   }
 
-  async updateLiveState(updates: Partial<LiveState>): Promise<LiveState> {
-    this.liveState = {
-      ...this.liveState,
-      ...updates,
-      lastUpdate: new Date()
-    };
-    return { ...this.liveState };
+  async updateLiveState(updates: Partial<InsertLiveState>): Promise<LiveState> {
+    const existing = await this.getLiveState();
+    if (existing) {
+      const results = await db.update(liveStatesTable)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(liveStatesTable.id, 'default'))
+        .returning();
+      return results[0];
+    } else {
+      const results = await db.insert(liveStatesTable)
+        .values({ id: 'default', ...updates })
+        .returning();
+      return results[0];
+    }
   }
 
   // Statistics methods

@@ -539,26 +539,16 @@ export const templates = pgTable("templates", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
-// Live state will be managed in-memory, not persisted
-export interface LiveState {
-  currentSetId: string | null;
-  programSceneId: string | null;
-  previewSceneId: string | null;
-  tickerOn: boolean;
-  tickerPlaylistId: string | null;
-  bannerOn: boolean;
-  bannerText: string;
-  bannerConfig: {
-    position?: 'top' | 'bottom';
-    fontSize?: number;
-    backgroundColor?: string;
-    textColor?: string;
-  };
-  transitionDuration: number;
-  transitionEffect: string; // 'cut', 'fade', 'dissolve', 'slide'
-  activeVideoSources: { [key: string]: string }; // Map of zone IDs to video source IDs
-  lastUpdate: Date;
-}
+export const liveStates = pgTable("live_states", {
+  id: varchar("id").primaryKey().default('default'),
+  activeSources: jsonb("active_sources").notNull().default('[]'),
+  overlays: jsonb("overlays").notNull().default('[]'),
+  outputResolution: jsonb("output_resolution").notNull().default('{"width":3840,"height":2160}'),
+  globalFitMode: text("global_fit_mode").notNull().default('contain'),
+  sourceFitModes: jsonb("source_fit_modes").notNull().default('{}'),
+  isBroadcasting: boolean("is_broadcasting").notNull().default(false),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
 
 export const insertLibraryItemSchema = createInsertSchema(libraryItems).omit({
   id: true,
@@ -614,6 +604,11 @@ export const insertTemplateSchema = createInsertSchema(templates).omit({
   updatedAt: true,
 });
 
+export const insertLiveStateSchema = createInsertSchema(liveStates).omit({
+  id: true,
+  updatedAt: true,
+});
+
 export type InsertLibraryItem = z.infer<typeof insertLibraryItemSchema>;
 export type LibraryItem = typeof libraryItems.$inferSelect;
 export type InsertScene = z.infer<typeof insertSceneSchema>;
@@ -632,3 +627,5 @@ export type InsertSourceNamePreset = z.infer<typeof insertSourceNamePresetSchema
 export type SourceNamePreset = typeof sourceNamePresets.$inferSelect;
 export type InsertTemplate = z.infer<typeof insertTemplateSchema>;
 export type Template = typeof templates.$inferSelect;
+export type InsertLiveState = z.infer<typeof insertLiveStateSchema>;
+export type LiveState = typeof liveStates.$inferSelect;

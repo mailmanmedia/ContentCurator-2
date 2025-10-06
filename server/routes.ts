@@ -1767,6 +1767,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Live State API Routes
+  app.get("/api/live-state", async (req, res) => {
+    try {
+      const liveState = await storage.getLiveState();
+      res.json({ liveState: liveState || null });
+    } catch (error) {
+      console.error('Error fetching live state:', error);
+      res.status(500).json({ error: "Failed to fetch live state" });
+    }
+  });
+
+  app.patch("/api/live-state", async (req, res) => {
+    try {
+      const liveState = await storage.updateLiveState(req.body);
+      res.json({ liveState });
+    } catch (error) {
+      console.error('Error updating live state:', error);
+      res.status(500).json({ error: "Failed to update live state" });
+    }
+  });
+
   // Football API Routes for Team Matchup Studio
   
   // Get static data statistics

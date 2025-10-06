@@ -73,6 +73,8 @@ import VideoCompositor, { type VideoCompositorRef } from "@/components/VideoComp
 import { useCameraStreams } from "@/contexts/CameraStreamContext";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { LiveState } from "@shared/schema";
 import { overlayTemplates, getAllTemplateCategories, getTemplatesByCategory, type OverlayTemplate } from "@/lib/overlayTemplates";
 import {
   DndContext,
@@ -402,6 +404,10 @@ export default function LivePresentation() {
     error: recordingError,
   } = useVideoRecorder(canvasRef);
 
+  const { data: liveStateData } = useQuery<{ liveState: LiveState | null }>({
+    queryKey: ['/api/live-state'],
+  });
+
   const { data: libraryImages, isLoading: isLoadingImages } = useQuery<LibraryImage[]>({
     queryKey: ['/api/images'],
     enabled: isLibraryPickerOpen,
@@ -577,6 +583,37 @@ export default function LivePresentation() {
       }
     }
   }, [overlayType, rssSources, editingOverlayId, selectedRssSourceIds.length]);
+
+  useEffect(() => {
+    if (liveStateData?.liveState) {
+      const state = liveStateData.liveState;
+      if (state.activeSources) setActiveSources(JSON.parse(state.activeSources as any));
+      if (state.overlays) setOverlays(JSON.parse(state.overlays as any));
+      if (state.outputResolution) setOutputResolution(JSON.parse(state.outputResolution as any));
+      if (state.globalFitMode) setGlobalFitMode(state.globalFitMode as any);
+      if (state.sourceFitModes) setSourceFitModes(JSON.parse(state.sourceFitModes as any));
+      if (state.isBroadcasting !== undefined) setIsBroadcasting(state.isBroadcasting);
+    }
+  }, [liveStateData]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      apiRequest('/api/live-state', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          activeSources: JSON.stringify(activeSources),
+          overlays: JSON.stringify(overlays),
+          outputResolution: JSON.stringify(outputResolution),
+          globalFitMode,
+          sourceFitModes: JSON.stringify(sourceFitModes),
+          isBroadcasting,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }).catch(err => console.error('Failed to save live state:', err));
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes, isBroadcasting]);
 
   const handleSourceSelection = async (value: string) => {
     setSelectedValue('');
