@@ -56,7 +56,9 @@ import {
   BarChart3,
   Users,
   Target,
-  Move
+  Move,
+  Trophy,
+  ChevronDown
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
@@ -371,6 +373,7 @@ export default function LivePresentation() {
   const [overlayHomeTeamId, setOverlayHomeTeamId] = useState<number | null>(null);
   const [overlayAwayTeamId, setOverlayAwayTeamId] = useState<number | null>(null);
   const [overlayTeamId, setOverlayTeamId] = useState<number | null>(null);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
@@ -417,6 +420,45 @@ export default function LivePresentation() {
     }
     
     return { x: defaultX, y: defaultY, category };
+  };
+
+  const groupOverlaysByCategory = () => {
+    const categories = {
+      'match-stats': [] as OverlayConfig[],
+      'team-info': [] as OverlayConfig[],
+      'player-stats': [] as OverlayConfig[],
+      'news': [] as OverlayConfig[],
+      'graphics': [] as OverlayConfig[],
+    };
+
+    overlays.forEach(overlay => {
+      const category = overlay.category || 'graphics';
+      if (categories[category as keyof typeof categories]) {
+        categories[category as keyof typeof categories].push(overlay);
+      } else {
+        categories['graphics'].push(overlay);
+      }
+    });
+
+    return categories;
+  };
+
+  const toggleCategory = (category: string) => {
+    setCollapsedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
+  const getCategoryInfo = (category: string) => {
+    const categoryMap = {
+      'match-stats': { icon: BarChart3, label: 'Match Statistics' },
+      'team-info': { icon: Trophy, label: 'Team Information' },
+      'player-stats': { icon: Users, label: 'Player Statistics' },
+      'news': { icon: Rss, label: 'News & Updates' },
+      'graphics': { icon: Layers, label: 'Graphics & Overlays' },
+    };
+    return categoryMap[category as keyof typeof categoryMap] || { icon: Layers, label: 'Other' };
   };
 
   useEffect(() => {
@@ -1284,124 +1326,166 @@ export default function LivePresentation() {
                     Active Overlays
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    Manage your broadcast overlays
+                    Manage your broadcast overlays by category
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {overlays.map((overlay) => (
-                      <div
-                        key={overlay.id}
-                        className="flex items-center gap-3 p-3 bg-card rounded-md border hover-elevate group"
-                        data-testid={`overlay-item-${overlay.id}`}
-                      >
-                        <div 
-                          className="w-12 h-8 rounded flex items-center justify-center text-xs font-bold"
-                          style={{
-                            backgroundColor: overlay.backgroundColor,
-                            color: overlay.textColor,
-                          }}
+                  <div className="space-y-4">
+                    {Object.entries(groupOverlaysByCategory()).map(([category, categoryOverlays]) => {
+                      if (categoryOverlays.length === 0) return null;
+                      
+                      const categoryInfo = getCategoryInfo(category);
+                      const CategoryIcon = categoryInfo.icon;
+                      const isCollapsed = collapsedCategories[category];
+                      
+                      return (
+                        <Collapsible
+                          key={category}
+                          open={!isCollapsed}
+                          onOpenChange={() => toggleCategory(category)}
                         >
-                          {overlay.position === 'top' ? 'TOP' : 'BOT'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {overlay.overlayType === 'rss' ? (
-                              <>
-                                <Rss className="w-4 h-4 text-primary" />
-                                <p className="text-sm font-medium">RSS Feed Ticker</p>
-                              </>
-                            ) : overlay.overlayType === 'metric' ? (
-                              <>
-                                <BarChart3 className="w-4 h-4 text-primary" />
-                                <p className="text-sm font-medium">
-                                  {overlay.metricType === 'h2h-card' ? 'H2H Match Card' :
-                                   overlay.metricType === 'form-guide' ? 'Form Guide' :
-                                   overlay.metricType === 'league-table' ? 'League Table' :
-                                   overlay.metricType === 'rss-sentiment' ? 'RSS Sentiment' :
-                                   'Metric Overlay'}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="text-sm font-medium truncate">{overlay.text}</p>
-                            )}
-                            <Badge 
-                              variant="outline"
-                              className="bg-primary/10"
-                              data-testid={`badge-coordinates-${overlay.id}`}
-                            >
-                              ({overlay.x}, {overlay.y})
-                            </Badge>
-                            {overlay.overlayType === 'rss' && overlay.rssSourceIds && (
-                              <Badge variant="outline" className="bg-primary/10">
-                                {overlay.rssSourceIds.length} {overlay.rssSourceIds.length === 1 ? 'source' : 'sources'}
-                              </Badge>
-                            )}
-                            {overlay.overlayType === 'rss' && overlay.rssMaxArticles && (
-                              <Badge variant="outline" className="bg-primary/10">
-                                Max: {overlay.rssMaxArticles} articles
-                              </Badge>
-                            )}
+                          <div className="border rounded-md">
+                            <CollapsibleTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className="w-full justify-between p-3 h-auto hover-elevate"
+                                data-testid={`button-toggle-category-${category}`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <CategoryIcon className="w-4 h-4 text-primary" />
+                                  <span className="font-medium">{categoryInfo.label}</span>
+                                  <Badge variant="outline" className="bg-primary/10">
+                                    {categoryOverlays.length}
+                                  </Badge>
+                                </div>
+                                <ChevronDown 
+                                  className={`w-4 h-4 text-muted-foreground transition-transform ${
+                                    isCollapsed ? '-rotate-90' : ''
+                                  }`}
+                                />
+                              </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="space-y-2 p-3 pt-0">
+                                {categoryOverlays.map((overlay) => (
+                                  <div
+                                    key={overlay.id}
+                                    className="flex items-center gap-3 p-3 bg-muted/50 rounded-md border hover-elevate group"
+                                    data-testid={`overlay-item-${overlay.id}`}
+                                  >
+                                    <div 
+                                      className="w-12 h-8 rounded flex items-center justify-center text-xs font-bold"
+                                      style={{
+                                        backgroundColor: overlay.backgroundColor,
+                                        color: overlay.textColor,
+                                      }}
+                                    >
+                                      {overlay.position === 'top' ? 'TOP' : 'BOT'}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        {overlay.overlayType === 'rss' ? (
+                                          <>
+                                            <Rss className="w-4 h-4 text-primary" />
+                                            <p className="text-sm font-medium">RSS Feed Ticker</p>
+                                          </>
+                                        ) : overlay.overlayType === 'metric' ? (
+                                          <>
+                                            <BarChart3 className="w-4 h-4 text-primary" />
+                                            <p className="text-sm font-medium">
+                                              {overlay.metricType === 'h2h-card' ? 'H2H Match Card' :
+                                               overlay.metricType === 'form-guide' ? 'Form Guide' :
+                                               overlay.metricType === 'league-table' ? 'League Table' :
+                                               overlay.metricType === 'rss-sentiment' ? 'RSS Sentiment' :
+                                               'Metric Overlay'}
+                                            </p>
+                                          </>
+                                        ) : (
+                                          <p className="text-sm font-medium truncate">{overlay.text}</p>
+                                        )}
+                                        <Badge 
+                                          variant="outline"
+                                          className="bg-primary/10"
+                                          data-testid={`badge-coordinates-${overlay.id}`}
+                                        >
+                                          ({overlay.x}, {overlay.y})
+                                        </Badge>
+                                        {overlay.overlayType === 'rss' && overlay.rssSourceIds && (
+                                          <Badge variant="outline" className="bg-primary/10">
+                                            {overlay.rssSourceIds.length} {overlay.rssSourceIds.length === 1 ? 'source' : 'sources'}
+                                          </Badge>
+                                        )}
+                                        {overlay.overlayType === 'rss' && overlay.rssMaxArticles && (
+                                          <Badge variant="outline" className="bg-primary/10">
+                                            Max: {overlay.rssMaxArticles} articles
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">
+                                        {overlay.animationType}
+                                        {overlay.overlayType === 'rss' && overlay.rssShowSource && ' • Shows source names'}
+                                        {overlay.overlayType === 'metric' && overlay.metricData && (
+                                          <>
+                                            {overlay.metricType === 'h2h-card' && overlay.metricData.homeTeamId && overlay.metricData.awayTeamId && (
+                                              <span> • {teamsData?.teams.find(t => t.teamId === overlay.metricData.homeTeamId)?.teamName || `Team ${overlay.metricData.homeTeamId}`} vs {teamsData?.teams.find(t => t.teamId === overlay.metricData.awayTeamId)?.teamName || `Team ${overlay.metricData.awayTeamId}`}</span>
+                                            )}
+                                            {overlay.metricType === 'form-guide' && overlay.metricData.teamId && (
+                                              <span> • {teamsData?.teams.find(t => t.teamId === overlay.metricData.teamId)?.teamName || `Team ${overlay.metricData.teamId}`}</span>
+                                            )}
+                                          </>
+                                        )}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8"
+                                        onClick={() => handleOpenPositionEditor(overlay.id)}
+                                        data-testid={`button-reposition-overlay-${overlay.id}`}
+                                      >
+                                        <Move className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8"
+                                        onClick={() => handleToggleOverlayVisibility(overlay.id)}
+                                        data-testid={`button-toggle-overlay-${overlay.id}`}
+                                      >
+                                        {overlay.visible ? (
+                                          <Eye className="w-4 h-4" />
+                                        ) : (
+                                          <EyeOff className="w-4 h-4 text-muted-foreground" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8"
+                                        onClick={() => handleEditOverlay(overlay)}
+                                        data-testid={`button-edit-overlay-${overlay.id}`}
+                                      >
+                                        <Pencil className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8"
+                                        onClick={() => handleRemoveOverlay(overlay.id)}
+                                        data-testid={`button-remove-overlay-${overlay.id}`}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CollapsibleContent>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {overlay.animationType}
-                            {overlay.overlayType === 'rss' && overlay.rssShowSource && ' • Shows source names'}
-                            {overlay.overlayType === 'metric' && overlay.metricData && (
-                              <>
-                                {overlay.metricType === 'h2h-card' && overlay.metricData.homeTeamId && overlay.metricData.awayTeamId && (
-                                  <span> • {teamsData?.teams.find(t => t.teamId === overlay.metricData.homeTeamId)?.teamName || `Team ${overlay.metricData.homeTeamId}`} vs {teamsData?.teams.find(t => t.teamId === overlay.metricData.awayTeamId)?.teamName || `Team ${overlay.metricData.awayTeamId}`}</span>
-                                )}
-                                {overlay.metricType === 'form-guide' && overlay.metricData.teamId && (
-                                  <span> • {teamsData?.teams.find(t => t.teamId === overlay.metricData.teamId)?.teamName || `Team ${overlay.metricData.teamId}`}</span>
-                                )}
-                              </>
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => handleOpenPositionEditor(overlay.id)}
-                            data-testid={`button-reposition-overlay-${overlay.id}`}
-                          >
-                            <Move className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => handleToggleOverlayVisibility(overlay.id)}
-                            data-testid={`button-toggle-overlay-${overlay.id}`}
-                          >
-                            {overlay.visible ? (
-                              <Eye className="w-4 h-4" />
-                            ) : (
-                              <EyeOff className="w-4 h-4 text-muted-foreground" />
-                            )}
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => handleEditOverlay(overlay)}
-                            data-testid={`button-edit-overlay-${overlay.id}`}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => handleRemoveOverlay(overlay.id)}
-                            data-testid={`button-remove-overlay-${overlay.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                        </Collapsible>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>

@@ -6,6 +6,7 @@ interface FormGuideOverlayProps {
   height: number;
   opacity?: number;
   layout?: 'horizontal' | 'vertical';
+  teamId?: number;
 }
 
 export default function FormGuideOverlay({
@@ -13,11 +14,12 @@ export default function FormGuideOverlay({
   height,
   opacity = 0.9,
   layout = 'horizontal',
+  teamId = 40,
 }: FormGuideOverlayProps) {
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['/api/cached-stats/team', 40, 39],
+    queryKey: ['/api/cached-stats/team', teamId, 39],
     queryFn: async () => {
-      const res = await fetch(`/api/cached-stats/team/40/39`);
+      const res = await fetch(`/api/cached-stats/team/${teamId}/39`);
       if (!res.ok) throw new Error('Failed to fetch team stats');
       return res.json();
     },

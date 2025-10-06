@@ -809,6 +809,7 @@ export default function VideoCompositor({
               height={height}
               opacity={opacity}
               layout={metricData?.layout || 'horizontal'}
+              teamId={metricData?.teamId || 40}
             />
           </div>
         );
