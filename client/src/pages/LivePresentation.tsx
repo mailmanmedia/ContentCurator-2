@@ -813,12 +813,15 @@ export default function LivePresentation() {
       };
 
       setActiveSources(prev => [...prev, newSource]);
-      toast({ title: 'Screen share added' });
+      toast({ 
+        title: 'Screen mirroring active', 
+        description: 'Your screen is now visible in the broadcast feed. Mark images and annotations will appear live!' 
+      });
     } catch (err) {
       console.error('Failed to add screen share:', err);
       toast({ 
-        title: 'Failed to add screen share', 
-        description: 'Screen share was cancelled or not permitted',
+        title: 'Screen sharing cancelled', 
+        description: 'On iPad: Select "Entire Screen" or "Safari" to mirror your display',
         variant: 'destructive' 
       });
     }
@@ -1645,12 +1648,20 @@ export default function LivePresentation() {
                         <SelectSeparator />
                       </>
                     )}
-                    <SelectItem value="screen-share" data-testid="select-screen-share">
-                      <div className="flex items-center gap-2">
-                        <Monitor className="w-4 h-4" />
-                        Screen Share
-                      </div>
-                    </SelectItem>
+                    <SelectGroup>
+                      <SelectLabel>Screen Mirroring</SelectLabel>
+                      <SelectItem value="screen-share" data-testid="select-screen-share">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <Monitor className="w-4 h-4" />
+                            <span className="font-medium">Mirror Your Screen</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground ml-6">
+                            Works on iPad, iPhone, desktop (Safari/Chrome)
+                          </span>
+                        </div>
+                      </SelectItem>
+                    </SelectGroup>
                     <SelectSeparator />
                     <SelectItem value="branded-overlay" data-testid="select-branded-overlay">
                       <div className="flex items-center gap-2">
