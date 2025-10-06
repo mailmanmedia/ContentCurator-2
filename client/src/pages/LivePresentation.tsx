@@ -175,8 +175,8 @@ const TEMPLATE_PRESETS = {
     name: 'Breaking News',
     backgroundColor: '#C8102E',
     textColor: '#FFFFFF',
-    fontSize: 28,
-    height: 70,
+    fontSize: 36,
+    height: 90,
     width: 100,
     zIndex: 100,
     opacity: 0.95,
@@ -188,15 +188,15 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
-    borderWidth: 0,
-    borderColor: '#000000',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   'live-updates': {
     name: 'Live Updates',
     backgroundColor: '#002147',
     textColor: '#F6EB61',
-    fontSize: 28,
-    height: 70,
+    fontSize: 36,
+    height: 90,
     width: 100,
     zIndex: 100,
     opacity: 0.9,
@@ -208,15 +208,15 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
-    borderWidth: 0,
-    borderColor: '#000000',
+    borderWidth: 3,
+    borderColor: '#F6EB61',
   },
   'match-info': {
     name: 'Match Info',
     backgroundColor: '#F6EB61',
     textColor: '#002147',
-    fontSize: 32,
-    height: 80,
+    fontSize: 36,
+    height: 90,
     width: 100,
     zIndex: 150,
     opacity: 0.92,
@@ -228,15 +228,15 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
-    borderWidth: 0,
-    borderColor: '#000000',
+    borderWidth: 3,
+    borderColor: '#002147',
   },
   'rss-ticker': {
     name: 'RSS News Ticker',
     backgroundColor: '#C8102E',
     textColor: '#FFFFFF',
-    fontSize: 24,
-    height: 60,
+    fontSize: 36,
+    height: 90,
     width: 100,
     zIndex: 200,
     opacity: 0.85,
@@ -250,15 +250,15 @@ const TEMPLATE_PRESETS = {
     overlayType: 'rss' as const,
     rssMaxArticles: 10,
     rssShowSource: true,
-    borderWidth: 0,
-    borderColor: '#000000',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   'mailman-red': {
     name: 'Mailman Red',
     backgroundColor: '#C8102E',
     textColor: '#FFFFFF',
-    fontSize: 28,
-    height: 70,
+    fontSize: 36,
+    height: 90,
     width: 100,
     zIndex: 100,
     opacity: 0.95,
@@ -270,15 +270,15 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
-    borderWidth: 0,
-    borderColor: '#000000',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   'mailman-gold': {
     name: 'Mailman Gold',
     backgroundColor: '#F7C54E',
     textColor: '#002147',
-    fontSize: 28,
-    height: 70,
+    fontSize: 36,
+    height: 90,
     width: 100,
     zIndex: 100,
     opacity: 0.95,
@@ -290,15 +290,15 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
-    borderWidth: 0,
-    borderColor: '#000000',
+    borderWidth: 3,
+    borderColor: '#002147',
   },
   'mailman-dark': {
     name: 'Mailman Dark',
     backgroundColor: '#002147',
-    textColor: '#F6EB61',
-    fontSize: 28,
-    height: 70,
+    textColor: '#F7C54E',
+    fontSize: 36,
+    height: 90,
     width: 100,
     zIndex: 100,
     opacity: 0.95,
@@ -310,8 +310,8 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
-    borderWidth: 0,
-    borderColor: '#000000',
+    borderWidth: 3,
+    borderColor: '#F7C54E',
   },
 };
 
@@ -665,11 +665,11 @@ export default function LivePresentation() {
   useEffect(() => {
     if (liveStateData?.liveState) {
       const state = liveStateData.liveState;
-      if (state.activeSources) setActiveSources(JSON.parse(state.activeSources as any));
-      if (state.overlays) setOverlays(JSON.parse(state.overlays as any));
-      if (state.outputResolution) setOutputResolution(JSON.parse(state.outputResolution as any));
+      if (state.activeSources) setActiveSources(typeof state.activeSources === 'string' ? JSON.parse(state.activeSources) : state.activeSources);
+      if (state.overlays) setOverlays(typeof state.overlays === 'string' ? JSON.parse(state.overlays) : state.overlays);
+      if (state.outputResolution) setOutputResolution(typeof state.outputResolution === 'string' ? JSON.parse(state.outputResolution) : state.outputResolution);
       if (state.globalFitMode) setGlobalFitMode(state.globalFitMode as any);
-      if (state.sourceFitModes) setSourceFitModes(JSON.parse(state.sourceFitModes as any));
+      if (state.sourceFitModes) setSourceFitModes(typeof state.sourceFitModes === 'string' ? JSON.parse(state.sourceFitModes) : state.sourceFitModes);
       if (state.isBroadcasting !== undefined) setIsBroadcasting(state.isBroadcasting);
     }
   }, [liveStateData]);
@@ -731,11 +731,11 @@ export default function LivePresentation() {
       await handleAddScreenShare();
     } else if (value === 'branded-overlay') {
       setEditingOverlayId(null);
-      setOverlayText('');
-      setSelectedPreset('breaking-news');
+      setOverlayText('MAILMAN MEDIA • LIVERPOOL FC ANALYSIS');
+      setSelectedPreset('mailman-red');
       setOverlayPosition('bottom');
       setOverlayFontFamily('League Spartan');
-      setOverlayFontSize(28);
+      setOverlayFontSize(36);
       setOverlayIsBold(true);
       setOverlayIsItalic(false);
       setOverlayScrollSpeed(50);
