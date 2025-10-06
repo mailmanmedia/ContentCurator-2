@@ -266,6 +266,12 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
     activeSources.forEach((source) => {
       if (!source.stream) return;
+      
+      // Verify stream is actually a MediaStream (not a serialized object)
+      if (!(source.stream instanceof MediaStream)) {
+        console.warn(`Source ${source.id} has invalid stream object, skipping`);
+        return;
+      }
 
       let video = videoRefs.current.get(source.id);
       if (!video) {
