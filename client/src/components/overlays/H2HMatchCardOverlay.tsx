@@ -18,9 +18,9 @@ export default function H2HMatchCardOverlay({
   opacity = 0.95,
 }: H2HMatchCardOverlayProps) {
   const { data: prediction, isLoading } = useQuery({
-    queryKey: ['/api/analytics/match-prediction', homeTeamId, awayTeamId],
+    queryKey: ['/api/cached-stats/matchup', homeTeamId, awayTeamId],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/match-prediction/${homeTeamId}/${awayTeamId}`);
+      const res = await fetch(`/api/cached-stats/matchup/${homeTeamId}/${awayTeamId}`);
       if (!res.ok) throw new Error('Failed to fetch match prediction');
       return res.json();
     },

@@ -15,7 +15,12 @@ export default function FormGuideOverlay({
   layout = 'horizontal',
 }: FormGuideOverlayProps) {
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['/api/analytics/team-metrics'],
+    queryKey: ['/api/cached-stats/team', 40, 39],
+    queryFn: async () => {
+      const res = await fetch(`/api/cached-stats/team/40/39`);
+      if (!res.ok) throw new Error('Failed to fetch team stats');
+      return res.json();
+    },
   });
 
   if (isLoading || !metrics) {
@@ -38,7 +43,7 @@ export default function FormGuideOverlay({
     );
   }
 
-  const formString = metrics.overview?.form || '';
+  const formString = metrics.statistics?.form || '';
   const formArray = formString.split('').slice(0, 5);
 
   const getResultColor = (result: string) => {
@@ -90,7 +95,7 @@ export default function FormGuideOverlay({
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {formArray.map((result, index) => (
+        {formArray.map((result: string, index: number) => (
           <motion.div
             key={index}
             initial={{ scale: 0, opacity: 0 }}
@@ -139,9 +144,9 @@ export default function FormGuideOverlay({
       }}>
         <span>Last 5 Matches</span>
         <span style={{ color: '#F6EB61' }}>
-          {formArray.filter(r => r === 'W').length}W-
-          {formArray.filter(r => r === 'D').length}D-
-          {formArray.filter(r => r === 'L').length}L
+          {formArray.filter((r: string) => r === 'W').length}W-
+          {formArray.filter((r: string) => r === 'D').length}D-
+          {formArray.filter((r: string) => r === 'L').length}L
         </span>
       </div>
     </motion.div>
