@@ -23,12 +23,16 @@ import {
   type LiveState,
   videoSources as videoSourcesTable,
   scenes as scenesTable,
-  presentationSets as presentationSetsTable
+  presentationSets as presentationSetsTable,
+  rssSources as rssSourcesTable,
+  rssArticles as rssArticlesTable,
+  rssAnalysis as rssAnalysisTable,
+  rssComparisons as rssComparisonsTable
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
 import { db } from "./db";
-import { eq, desc, ilike, or } from "drizzle-orm";
+import { eq, desc, ilike, or, and, gte, lte } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -1111,210 +1115,142 @@ export class MemStorage implements IStorage {
 
   // RSS Source methods
   async getRssSources(): Promise<RssSource[]> {
-    return Array.from(this.rssSources.values())
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const results = await db.select().from(rssSourcesTable).orderBy(desc(rssSourcesTable.updatedAt));
+    return results;
   }
 
   async getRssSource(id: string): Promise<RssSource | undefined> {
-    return this.rssSources.get(id);
+    const results = await db.select().from(rssSourcesTable).where(eq(rssSourcesTable.id, id));
+    return results[0];
   }
 
   async getRssSourceByUrl(feedUrl: string): Promise<RssSource | undefined> {
-    return Array.from(this.rssSources.values()).find(source => source.feedUrl === feedUrl);
+    const results = await db.select().from(rssSourcesTable).where(eq(rssSourcesTable.feedUrl, feedUrl));
+    return results[0];
   }
 
   async getActiveRssSources(): Promise<RssSource[]> {
-    return Array.from(this.rssSources.values()).filter(source => source.isActive);
+    const results = await db.select().from(rssSourcesTable).where(eq(rssSourcesTable.isActive, true));
+    return results;
   }
 
   async getRssSourcesByCategory(category: string): Promise<RssSource[]> {
-    return Array.from(this.rssSources.values()).filter(source => source.category === category);
+    const results = await db.select().from(rssSourcesTable).where(eq(rssSourcesTable.category, category));
+    return results;
   }
 
   async createRssSource(insertSource: InsertRssSource): Promise<RssSource> {
-    const id = randomUUID();
-    const now = new Date();
-    const source: RssSource = {
-      id,
-      name: insertSource.name,
-      description: insertSource.description,
-      feedUrl: insertSource.feedUrl,
-      category: insertSource.category,
-      language: insertSource.language || 'en',
-      updateFrequency: insertSource.updateFrequency || 60,
-      isActive: insertSource.isActive ?? true,
-      isVerified: insertSource.isVerified ?? false,
-      totalArticles: insertSource.totalArticles || 0,
-      lastFetchedAt: insertSource.lastFetchedAt || null,
-      lastArticleDate: insertSource.lastArticleDate || null,
-      fetchErrors: insertSource.fetchErrors || 0,
-      metadataJson: insertSource.metadataJson || {},
-      createdAt: now,
-      updatedAt: now
-    };
-    this.rssSources.set(id, source);
-    return source;
+    const results = await db.insert(rssSourcesTable).values(insertSource).returning();
+    return results[0];
   }
 
   async updateRssSource(id: string, updates: Partial<InsertRssSource>): Promise<RssSource | undefined> {
-    const existing = this.rssSources.get(id);
-    if (!existing) return undefined;
-    
-    const updated: RssSource = { 
-      ...existing, 
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.rssSources.set(id, updated);
-    return updated;
+    const results = await db.update(rssSourcesTable)
+      .set(updates)
+      .where(eq(rssSourcesTable.id, id))
+      .returning();
+    return results[0];
   }
 
   async deleteRssSource(id: string): Promise<boolean> {
-    const deleted = this.rssSources.delete(id);
-    if (deleted) {
-      // Also delete all articles and analyses for this source
-      const articlesToDelete = Array.from(this.rssArticles.entries()).filter(
-        ([_, article]) => article.sourceId === id
-      );
-      for (const [articleId, _] of articlesToDelete) {
-        await this.deleteRssArticle(articleId);
-      }
+    const articlesToDelete = await db.select().from(rssArticlesTable).where(eq(rssArticlesTable.sourceId, id));
+    for (const article of articlesToDelete) {
+      await this.deleteRssArticle(article.id);
     }
-    return deleted;
+    const results = await db.delete(rssSourcesTable).where(eq(rssSourcesTable.id, id)).returning();
+    return results.length > 0;
   }
 
   // RSS Article methods
   async getRssArticles(): Promise<RssArticle[]> {
-    return Array.from(this.rssArticles.values())
-      .sort((a, b) => {
-        const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-        const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-        return bDate - aDate;
-      });
+    const results = await db.select().from(rssArticlesTable).orderBy(desc(rssArticlesTable.publishedAt));
+    return results;
   }
 
   async getRssArticle(id: string): Promise<RssArticle | undefined> {
-    return this.rssArticles.get(id);
+    const results = await db.select().from(rssArticlesTable).where(eq(rssArticlesTable.id, id));
+    return results[0];
   }
 
   async getRssArticlesBySource(sourceId: string): Promise<RssArticle[]> {
-    return Array.from(this.rssArticles.values())
-      .filter(article => article.sourceId === sourceId)
-      .sort((a, b) => {
-        const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-        const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-        return bDate - aDate;
-      });
+    const results = await db.select().from(rssArticlesTable)
+      .where(eq(rssArticlesTable.sourceId, sourceId))
+      .orderBy(desc(rssArticlesTable.publishedAt));
+    return results;
   }
 
   async getRssArticleByGuid(guid: string): Promise<RssArticle | undefined> {
-    return Array.from(this.rssArticles.values()).find(article => article.guid === guid);
+    const results = await db.select().from(rssArticlesTable).where(eq(rssArticlesTable.guid, guid));
+    return results[0];
   }
 
   async getRssArticleByContentHash(contentHash: string): Promise<RssArticle | undefined> {
-    return Array.from(this.rssArticles.values()).find(article => article.contentHash === contentHash);
+    const results = await db.select().from(rssArticlesTable).where(eq(rssArticlesTable.contentHash, contentHash));
+    return results[0];
   }
 
   async getRecentRssArticles(limit: number = 50): Promise<RssArticle[]> {
-    const articles = await this.getRssArticles();
-    return articles.slice(0, limit);
+    const results = await db.select().from(rssArticlesTable)
+      .orderBy(desc(rssArticlesTable.publishedAt))
+      .limit(limit);
+    return results;
   }
 
   async getRssArticlesByDateRange(startDate: Date, endDate: Date): Promise<RssArticle[]> {
-    return Array.from(this.rssArticles.values()).filter(article => {
-      if (!article.publishedAt) return false;
-      const publishedAt = new Date(article.publishedAt);
-      return publishedAt >= startDate && publishedAt <= endDate;
-    }).sort((a, b) => {
-      const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-      const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-      return bDate - aDate;
-    });
+    const results = await db.select().from(rssArticlesTable)
+      .where(
+        and(
+          gte(rssArticlesTable.publishedAt, startDate),
+          lte(rssArticlesTable.publishedAt, endDate)
+        )
+      )
+      .orderBy(desc(rssArticlesTable.publishedAt));
+    return results;
   }
 
   async searchRssArticles(query: string): Promise<RssArticle[]> {
-    const lowerQuery = query.toLowerCase();
-    return Array.from(this.rssArticles.values()).filter(article => 
-      article.title.toLowerCase().includes(lowerQuery) ||
-      (article.description && article.description.toLowerCase().includes(lowerQuery)) ||
-      (article.content && article.content.toLowerCase().includes(lowerQuery)) ||
-      (article.author && article.author.toLowerCase().includes(lowerQuery)) ||
-      article.topics?.some(topic => topic.toLowerCase().includes(lowerQuery)) ||
-      article.keywords?.some(keyword => keyword.toLowerCase().includes(lowerQuery))
-    ).sort((a, b) => {
-      const aDate = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-      const bDate = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-      return bDate - aDate;
-    });
+    const results = await db.select().from(rssArticlesTable)
+      .where(
+        or(
+          ilike(rssArticlesTable.title, `%${query}%`),
+          ilike(rssArticlesTable.description, `%${query}%`),
+          ilike(rssArticlesTable.content, `%${query}%`),
+          ilike(rssArticlesTable.author, `%${query}%`)
+        )
+      )
+      .orderBy(desc(rssArticlesTable.publishedAt));
+    return results;
   }
 
   async createRssArticle(insertArticle: InsertRssArticle): Promise<RssArticle> {
-    const id = randomUUID();
-    const now = new Date();
-    const article: RssArticle = {
-      id,
-      sourceId: insertArticle.sourceId,
-      title: insertArticle.title,
-      description: insertArticle.description || null,
-      content: insertArticle.content || null,
-      link: insertArticle.link,
-      guid: insertArticle.guid || null,
-      author: insertArticle.author || null,
-      categories: insertArticle.categories || [],
-      publishedAt: insertArticle.publishedAt || null,
-      imageUrl: insertArticle.imageUrl || null,
-      wordCount: insertArticle.wordCount || null,
-      readingTime: insertArticle.readingTime || null,
-      sentiment: insertArticle.sentiment || null,
-      topics: insertArticle.topics || [],
-      keywords: insertArticle.keywords || [],
-      isAnalyzed: insertArticle.isAnalyzed ?? false,
-      qualityScore: insertArticle.qualityScore || null,
-      engagementPotential: insertArticle.engagementPotential || null,
-      contentHash: insertArticle.contentHash || null,
-      rawDataJson: insertArticle.rawDataJson || {},
-      createdAt: now,
-      updatedAt: now
-    };
-    this.rssArticles.set(id, article);
+    const results = await db.insert(rssArticlesTable).values(insertArticle).returning();
     
-    // Update source article count
     const source = await this.getRssSource(insertArticle.sourceId);
     if (source) {
       await this.updateRssSource(insertArticle.sourceId, { 
         totalArticles: source.totalArticles + 1,
-        lastArticleDate: insertArticle.publishedAt || now
+        lastArticleDate: insertArticle.publishedAt || new Date()
       });
     }
     
-    return article;
+    return results[0];
   }
 
   async updateRssArticle(id: string, updates: Partial<InsertRssArticle>): Promise<RssArticle | undefined> {
-    const existing = this.rssArticles.get(id);
-    if (!existing) return undefined;
-    
-    const updated: RssArticle = { 
-      ...existing, 
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.rssArticles.set(id, updated);
-    return updated;
+    const results = await db.update(rssArticlesTable)
+      .set(updates)
+      .where(eq(rssArticlesTable.id, id))
+      .returning();
+    return results[0];
   }
 
   async deleteRssArticle(id: string): Promise<boolean> {
-    const deleted = this.rssArticles.delete(id);
-    if (deleted) {
-      // Also delete all analyses for this article
-      const analysesToDelete = Array.from(this.rssAnalyses.entries()).filter(
-        ([_, analysis]) => analysis.articleId === id
-      );
-      for (const [analysisId, _] of analysesToDelete) {
-        this.rssAnalyses.delete(analysisId);
-      }
+    const analysesToDelete = await db.select().from(rssAnalysisTable).where(eq(rssAnalysisTable.articleId, id));
+    for (const analysis of analysesToDelete) {
+      await db.delete(rssAnalysisTable).where(eq(rssAnalysisTable.id, analysis.id));
     }
-    return deleted;
+    const results = await db.delete(rssArticlesTable).where(eq(rssArticlesTable.id, id)).returning();
+    return results.length > 0;
   }
 
   // RSS Analysis methods
