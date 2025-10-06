@@ -29,7 +29,8 @@ export function useVideoRecorder(
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
-  const pausedTimeRef = useRef<number>(0);
+  const pauseStartRef = useRef<number>(0);
+  const totalPausedDurationRef = useRef<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -38,7 +39,7 @@ export function useVideoRecorder(
   // Update duration timer
   const updateDuration = useCallback(() => {
     if (recordingState === 'recording') {
-      const elapsed = Math.floor((Date.now() - startTimeRef.current - pausedTimeRef.current) / 1000);
+      const elapsed = Math.floor((Date.now() - startTimeRef.current - totalPausedDurationRef.current) / 1000);
       setDuration(elapsed);
     }
   }, [recordingState]);
@@ -128,7 +129,8 @@ export function useVideoRecorder(
       // Start recording
       mediaRecorder.start(100); // Collect data every 100ms
       startTimeRef.current = Date.now();
-      pausedTimeRef.current = 0;
+      pauseStartRef.current = 0;
+      totalPausedDurationRef.current = 0;
       setDuration(0);
       setRecordingState('recording');
       setError(null);
@@ -147,13 +149,16 @@ export function useVideoRecorder(
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      
+      totalPausedDurationRef.current = 0;
+      pauseStartRef.current = 0;
     }
   }, [recordingState]);
 
   const pauseRecording = useCallback(() => {
     if (mediaRecorderRef.current && recordingState === 'recording') {
       mediaRecorderRef.current.pause();
-      pausedTimeRef.current += Date.now() - startTimeRef.current;
+      pauseStartRef.current = Date.now();
       setRecordingState('paused');
       
       if (timerRef.current) {
@@ -166,7 +171,7 @@ export function useVideoRecorder(
   const resumeRecording = useCallback(() => {
     if (mediaRecorderRef.current && recordingState === 'paused') {
       mediaRecorderRef.current.resume();
-      startTimeRef.current = Date.now();
+      totalPausedDurationRef.current += Date.now() - pauseStartRef.current;
       setRecordingState('recording');
     }
   }, [recordingState]);
@@ -194,6 +199,10 @@ export function useVideoRecorder(
     setDuration(0);
     setError(null);
     chunksRef.current = [];
+    
+    startTimeRef.current = 0;
+    pauseStartRef.current = 0;
+    totalPausedDurationRef.current = 0;
     
     if (timerRef.current) {
       clearInterval(timerRef.current);
