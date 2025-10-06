@@ -460,7 +460,7 @@ export default function LivePresentation() {
   const [overlayAnimationType, setOverlayAnimationType] = useState<'scroll' | 'fade' | 'static'>('scroll');
   
   const { toast } = useToast();
-  const { acquireStream, acquireScreenShare } = useCameraStreams();
+  const { acquireStream, acquireScreenShare, isScreenShareSupported } = useCameraStreams();
   
   const compositorRef = useRef<VideoCompositorRef>(null);
   const canvasRef = compositorRef.current?.canvasRef || { current: null };
@@ -1685,21 +1685,43 @@ export default function LivePresentation() {
                         <SelectSeparator />
                       </>
                     )}
-                    <SelectGroup>
-                      <SelectLabel>Screen Mirroring</SelectLabel>
-                      <SelectItem value="screen-share" data-testid="select-screen-share">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <Monitor className="w-4 h-4" />
-                            <span className="font-medium">Mirror Your Screen</span>
+                    {isScreenShareSupported ? (
+                      <>
+                        <SelectGroup>
+                          <SelectLabel>Screen Mirroring</SelectLabel>
+                          <SelectItem value="screen-share" data-testid="select-screen-share">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <Monitor className="w-4 h-4" />
+                                <span className="font-medium">Mirror Your Screen</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground ml-6">
+                                Works on iPad, iPhone, desktop (Safari/Chrome)
+                              </span>
+                            </div>
+                          </SelectItem>
+                        </SelectGroup>
+                        <SelectSeparator />
+                      </>
+                    ) : (
+                      <>
+                        <SelectGroup>
+                          <SelectLabel>Screen Mirroring</SelectLabel>
+                          <div className="px-2 py-3 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <div className="flex flex-col gap-1">
+                                <span className="font-medium">Screen sharing not supported</span>
+                                <span className="text-xs">
+                                  Please use Chrome, Edge, Safari 13+, or Firefox to enable screen mirroring.
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <span className="text-xs text-muted-foreground ml-6">
-                            Works on iPad, iPhone, desktop (Safari/Chrome)
-                          </span>
-                        </div>
-                      </SelectItem>
-                    </SelectGroup>
-                    <SelectSeparator />
+                        </SelectGroup>
+                        <SelectSeparator />
+                      </>
+                    )}
                     <SelectItem value="branded-overlay" data-testid="select-branded-overlay">
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-4 h-4" />
