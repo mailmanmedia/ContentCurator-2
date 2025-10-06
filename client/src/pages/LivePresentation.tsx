@@ -161,6 +161,8 @@ interface OverlayConfig {
   x: number;
   y: number;
   category: string;
+  borderWidth?: number;
+  borderColor?: string;
 }
 
 const sourceTypeIcons = {
@@ -186,6 +188,8 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
+    borderWidth: 0,
+    borderColor: '#000000',
   },
   'live-updates': {
     name: 'Live Updates',
@@ -204,6 +208,8 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
+    borderWidth: 0,
+    borderColor: '#000000',
   },
   'match-info': {
     name: 'Match Info',
@@ -222,6 +228,8 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
+    borderWidth: 0,
+    borderColor: '#000000',
   },
   'rss-ticker': {
     name: 'RSS News Ticker',
@@ -242,6 +250,8 @@ const TEMPLATE_PRESETS = {
     overlayType: 'rss' as const,
     rssMaxArticles: 10,
     rssShowSource: true,
+    borderWidth: 0,
+    borderColor: '#000000',
   },
   'mailman-red': {
     name: 'Mailman Red',
@@ -260,6 +270,8 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
+    borderWidth: 0,
+    borderColor: '#000000',
   },
   'mailman-gold': {
     name: 'Mailman Gold',
@@ -278,6 +290,8 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
+    borderWidth: 0,
+    borderColor: '#000000',
   },
   'mailman-dark': {
     name: 'Mailman Dark',
@@ -296,6 +310,8 @@ const TEMPLATE_PRESETS = {
     isBold: true,
     isItalic: false,
     overlayType: 'text' as const,
+    borderWidth: 0,
+    borderColor: '#000000',
   },
 };
 
@@ -437,6 +453,8 @@ export default function LivePresentation() {
   const [overlayTeamId, setOverlayTeamId] = useState<number | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [showClearConfirmDialog, setShowClearConfirmDialog] = useState(false);
+  const [overlayBorderWidth, setOverlayBorderWidth] = useState(0);
+  const [overlayBorderColor, setOverlayBorderColor] = useState('#000000');
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare } = useCameraStreams();
@@ -923,6 +941,8 @@ export default function LivePresentation() {
               x: overlay.position !== overlayPosition ? defaultX : overlay.x,
               y: overlay.position !== overlayPosition ? defaultY : overlay.y,
               category: defaultCategory,
+              borderWidth: overlayBorderWidth,
+              borderColor: overlayBorderColor,
             }
           : overlay
       ));
@@ -956,6 +976,8 @@ export default function LivePresentation() {
         x: defaultX,
         y: defaultY,
         category: defaultCategory,
+        borderWidth: overlayBorderWidth,
+        borderColor: overlayBorderColor,
       };
 
       if (overlayType === 'rss') {
@@ -1020,6 +1042,8 @@ export default function LivePresentation() {
     setOverlayVideoUrl(overlay.videoUrl || '');
     setOverlayMetricType(overlay.metricType || '');
     setOverlayMetricData(overlay.metricData || null);
+    setOverlayBorderWidth(overlay.borderWidth || 0);
+    setOverlayBorderColor(overlay.borderColor || '#000000');
     
     if (overlay.overlayType === 'rss') {
       setSelectedRssSourceIds(overlay.rssSourceIds || []);
@@ -2270,14 +2294,14 @@ export default function LivePresentation() {
                   <Slider
                     id="font-size"
                     min={12}
-                    max={72}
+                    max={144}
                     step={1}
                     value={[overlayFontSize]}
                     onValueChange={(vals) => setOverlayFontSize(vals[0])}
                     data-testid="slider-overlay-font-size"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Adjust the text size from 12px to 72px
+                    Adjust the text size from 12px to 144px
                   </p>
                 </div>
 
@@ -2304,6 +2328,33 @@ export default function LivePresentation() {
                       Italics
                     </Label>
                   </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="border-width">Border Width: {overlayBorderWidth || 0}px</Label>
+                  <Slider
+                    id="border-width"
+                    min={0}
+                    max={10}
+                    step={1}
+                    value={[overlayBorderWidth || 0]}
+                    onValueChange={(vals) => setOverlayBorderWidth(vals[0])}
+                    data-testid="slider-overlay-border-width"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Add outline/stroke to text (0-10px)
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="border-color">Border Color</Label>
+                  <Input
+                    id="border-color"
+                    type="color"
+                    value={overlayBorderColor || '#000000'}
+                    onChange={(e) => setOverlayBorderColor(e.target.value)}
+                    data-testid="input-overlay-border-color"
+                  />
                 </div>
               </>
             )}

@@ -66,6 +66,8 @@ interface OverlayConfig {
   x: number;
   y: number;
   category: string;
+  borderWidth?: number;
+  borderColor?: string;
 }
 
 interface VideoCompositorProps {
@@ -635,6 +637,11 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               }
               
               ctx.textAlign = 'center';
+              if (overlay.borderWidth && overlay.borderWidth > 0) {
+                ctx.strokeStyle = overlay.borderColor || '#000000';
+                ctx.lineWidth = overlay.borderWidth;
+                ctx.strokeText(tickerText, xPosition + overlayWidth / 2, scrollY + overlay.height / 2);
+              }
               ctx.fillText(tickerText, xPosition + overlayWidth / 2, scrollY + overlay.height / 2);
               
               const textHeight = overlay.fontSize * 1.2;
@@ -674,12 +681,22 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               }
               
               // Draw main text
+              if (overlay.borderWidth && overlay.borderWidth > 0) {
+                ctx.strokeStyle = overlay.borderColor || '#000000';
+                ctx.lineWidth = overlay.borderWidth;
+                ctx.strokeText(tickerText, xPosition + scrollX, yPosition + overlay.height / 2);
+              }
               ctx.fillText(tickerText, xPosition + scrollX, yPosition + overlay.height / 2);
               
               // Draw duplicate for seamless loop
               const x2 = overlay.scrollDirection === 'left'
                 ? scrollX + textWidth + 100
                 : scrollX - textWidth - 100;
+              if (overlay.borderWidth && overlay.borderWidth > 0) {
+                ctx.strokeStyle = overlay.borderColor || '#000000';
+                ctx.lineWidth = overlay.borderWidth;
+                ctx.strokeText(tickerText, xPosition + x2, yPosition + overlay.height / 2);
+              }
               ctx.fillText(tickerText, xPosition + x2, yPosition + overlay.height / 2);
               
               scrollPositions.current.set(overlay.id, scrollX);
@@ -693,6 +710,11 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             ctx.globalAlpha = opacity * 0.5 * baseOpacity + 0.5 * baseOpacity;
             
             ctx.textAlign = 'center';
+            if (overlay.borderWidth && overlay.borderWidth > 0) {
+              ctx.strokeStyle = overlay.borderColor || '#000000';
+              ctx.lineWidth = overlay.borderWidth;
+              ctx.strokeText(tickerText, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            }
             ctx.fillText(tickerText, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
             ctx.globalAlpha = baseOpacity;
             
@@ -700,6 +722,11 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           } else {
             // Static display
             ctx.textAlign = 'center';
+            if (overlay.borderWidth && overlay.borderWidth > 0) {
+              ctx.strokeStyle = overlay.borderColor || '#000000';
+              ctx.lineWidth = overlay.borderWidth;
+              ctx.strokeText(tickerText, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            }
             ctx.fillText(tickerText, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
           }
         } else if (overlay.overlayType === 'text') {
@@ -724,6 +751,11 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               }
               
               ctx.textAlign = 'center';
+              if (overlay.borderWidth && overlay.borderWidth > 0) {
+                ctx.strokeStyle = overlay.borderColor || '#000000';
+                ctx.lineWidth = overlay.borderWidth;
+                ctx.strokeText(overlay.text, xPosition + overlayWidth / 2, scrollY + overlay.height / 2);
+              }
               ctx.fillText(overlay.text, xPosition + overlayWidth / 2, scrollY + overlay.height / 2);
               
               const textHeight = overlay.fontSize * 1.2;
@@ -747,6 +779,11 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               }
               
               ctx.textAlign = 'left';
+              if (overlay.borderWidth && overlay.borderWidth > 0) {
+                ctx.strokeStyle = overlay.borderColor || '#000000';
+                ctx.lineWidth = overlay.borderWidth;
+                ctx.strokeText(overlay.text, xPosition + scrollX, yPosition + overlay.height / 2);
+              }
               ctx.fillText(overlay.text, xPosition + scrollX, yPosition + overlay.height / 2);
               
               const textWidth = ctx.measureText(overlay.text).width;
@@ -773,12 +810,22 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             ctx.globalAlpha = opacity * 0.5 * baseOpacity + 0.5 * baseOpacity;
             
             ctx.textAlign = 'center';
+            if (overlay.borderWidth && overlay.borderWidth > 0) {
+              ctx.strokeStyle = overlay.borderColor || '#000000';
+              ctx.lineWidth = overlay.borderWidth;
+              ctx.strokeText(overlay.text, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            }
             ctx.fillText(overlay.text, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
             ctx.globalAlpha = baseOpacity;
             
             fadeStates.current.set(overlay.id, fadeTime);
           } else {
             ctx.textAlign = 'center';
+            if (overlay.borderWidth && overlay.borderWidth > 0) {
+              ctx.strokeStyle = overlay.borderColor || '#000000';
+              ctx.lineWidth = overlay.borderWidth;
+              ctx.strokeText(overlay.text, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
+            }
             ctx.fillText(overlay.text, xPosition + overlayWidth / 2, yPosition + overlay.height / 2);
           }
         }
