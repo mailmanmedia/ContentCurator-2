@@ -35,6 +35,9 @@ import { iCalService } from "./football/iCalService";
 import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplates";
 import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
+import { db } from "./db";
+import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams } from "@shared/schema";
+import { desc, eq, and } from "drizzle-orm";
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -2160,6 +2163,126 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error initializing football data:', error);
       res.status(500).json({ error: "Failed to initialize football data" });
+    }
+  });
+
+  // === CACHED STATS ENDPOINTS ===
+  // These endpoints serve pre-computed stats from the database
+  
+  // Get latest team statistics from cache
+  app.get("/api/cached-stats/team/:teamId/:leagueId", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const leagueId = parseInt(req.params.leagueId);
+      
+      if (isNaN(teamId) || isNaN(leagueId)) {
+        return res.status(400).json({ error: "Invalid team ID or league ID" });
+      }
+
+      const currentSeason = new Date().getFullYear();
+      
+      const stats = await db
+        .select()
+        .from(teamSeasonStatistics)
+        .where(
+          and(
+            eq(teamSeasonStatistics.teamId, teamId),
+            eq(teamSeasonStatistics.leagueId, leagueId),
+            eq(teamSeasonStatistics.season, currentSeason)
+          )
+        )
+        .orderBy(desc(teamSeasonStatistics.lastUpdated))
+        .limit(1);
+
+      if (!stats || stats.length === 0) {
+        return res.status(404).json({ error: "No cached statistics found for this team" });
+      }
+
+      res.json({ statistics: stats[0] });
+    } catch (error) {
+      console.error('Error fetching cached team stats:', error);
+      res.status(500).json({ error: "Failed to fetch cached team statistics" });
+    }
+  });
+
+  // Get latest matchup analysis from cache
+  app.get("/api/cached-stats/matchup/:homeTeamId/:awayTeamId", async (req, res) => {
+    try {
+      const homeTeamId = parseInt(req.params.homeTeamId);
+      const awayTeamId = parseInt(req.params.awayTeamId);
+      
+      if (isNaN(homeTeamId) || isNaN(awayTeamId)) {
+        return res.status(400).json({ error: "Invalid team IDs" });
+      }
+
+      const analysis = await db
+        .select()
+        .from(teamMatchupAnalysis)
+        .where(
+          and(
+            eq(teamMatchupAnalysis.homeTeamId, homeTeamId),
+            eq(teamMatchupAnalysis.awayTeamId, awayTeamId)
+          )
+        )
+        .orderBy(desc(teamMatchupAnalysis.generatedAt))
+        .limit(1);
+
+      if (!analysis || analysis.length === 0) {
+        return res.status(404).json({ error: "No cached matchup analysis found" });
+      }
+
+      const matchupData = analysis[0];
+      const resultJson = matchupData.resultJson as any;
+      
+      if (resultJson && resultJson.prediction) {
+        res.json({
+          prediction: resultJson.prediction,
+          analysis: matchupData,
+          generatedAt: matchupData.generatedAt
+        });
+      } else {
+        res.json({
+          analysis: matchupData,
+          resultJson: resultJson,
+          generatedAt: matchupData.generatedAt
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching cached matchup analysis:', error);
+      res.status(500).json({ error: "Failed to fetch cached matchup analysis" });
+    }
+  });
+
+  // Get all teams with cached statistics
+  app.get("/api/cached-stats/teams", async (req, res) => {
+    try {
+      const currentSeason = new Date().getFullYear();
+      const leagueId = req.query.leagueId ? parseInt(req.query.leagueId as string) : 39;
+      
+      const teamsWithStats = await db
+        .select({
+          teamId: teamSeasonStatistics.teamId,
+          teamName: footballTeams.name,
+          leagueId: teamSeasonStatistics.leagueId,
+          season: teamSeasonStatistics.season,
+          lastUpdated: teamSeasonStatistics.lastUpdated,
+          matchesPlayed: teamSeasonStatistics.matchesPlayed,
+          form: teamSeasonStatistics.form
+        })
+        .from(teamSeasonStatistics)
+        .innerJoin(footballTeams, eq(teamSeasonStatistics.teamId, footballTeams.id))
+        .where(
+          and(
+            eq(teamSeasonStatistics.leagueId, leagueId),
+            eq(teamSeasonStatistics.season, currentSeason)
+          )
+        )
+        .orderBy(desc(teamSeasonStatistics.lastUpdated));
+
+      res.json({ teams: teamsWithStats });
+    } catch (error) {
+      console.error('Error fetching teams with cached stats:', error);
+      res.status(500).json({ error: "Failed to fetch teams with cached statistics" });
     }
   });
 
