@@ -280,10 +280,6 @@ export class MemStorage implements IStorage {
   private frameworkCategories: Map<string, FrameworkCategory>;
   private frameworks: Map<string, Framework>;
   private frameworkVersions: Map<string, FrameworkVersion>;
-  private rssSources: Map<string, RssSource>;
-  private rssArticles: Map<string, RssArticle>;
-  private rssAnalyses: Map<string, RssAnalysis>;
-  private rssComparisons: Map<string, RssComparison>;
   private libraryItems: Map<string, LibraryItem>;
   private scenes: Map<string, Scene>;
   private presentationSets: Map<string, PresentationSet>;
@@ -317,10 +313,6 @@ export class MemStorage implements IStorage {
     this.frameworkCategories = new Map();
     this.frameworks = new Map();
     this.frameworkVersions = new Map();
-    this.rssSources = new Map();
-    this.rssArticles = new Map();
-    this.rssAnalyses = new Map();
-    this.rssComparisons = new Map();
     this.libraryItems = new Map();
     this.scenes = new Map();
     this.presentationSets = new Map();
@@ -587,7 +579,10 @@ export class MemStorage implements IStorage {
     ];
 
     for (const sourceData of rssSources) {
-      await this.createRssSource(sourceData);
+      const existing = await this.getRssSourceByUrl(sourceData.feedUrl);
+      if (!existing) {
+        await this.createRssSource(sourceData);
+      }
     }
 
     // Seed sample images
@@ -1255,123 +1250,88 @@ export class MemStorage implements IStorage {
 
   // RSS Analysis methods
   async getRssAnalyses(): Promise<RssAnalysis[]> {
-    return Array.from(this.rssAnalyses.values())
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const results = await db.select().from(rssAnalysisTable).orderBy(desc(rssAnalysisTable.updatedAt));
+    return results;
   }
 
   async getRssAnalysis(id: string): Promise<RssAnalysis | undefined> {
-    return this.rssAnalyses.get(id);
+    const results = await db.select().from(rssAnalysisTable).where(eq(rssAnalysisTable.id, id));
+    return results[0];
   }
 
   async getRssAnalysesByArticle(articleId: string): Promise<RssAnalysis[]> {
-    return Array.from(this.rssAnalyses.values())
-      .filter(analysis => analysis.articleId === articleId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const results = await db.select().from(rssAnalysisTable)
+      .where(eq(rssAnalysisTable.articleId, articleId))
+      .orderBy(desc(rssAnalysisTable.createdAt));
+    return results;
   }
 
   async getRssAnalysesByType(analysisType: string): Promise<RssAnalysis[]> {
-    return Array.from(this.rssAnalyses.values())
-      .filter(analysis => analysis.analysisType === analysisType)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const results = await db.select().from(rssAnalysisTable)
+      .where(eq(rssAnalysisTable.analysisType, analysisType))
+      .orderBy(desc(rssAnalysisTable.createdAt));
+    return results;
   }
 
   async createRssAnalysis(insertAnalysis: InsertRssAnalysis): Promise<RssAnalysis> {
-    const id = randomUUID();
-    const now = new Date();
-    const analysis: RssAnalysis = {
-      id,
-      articleId: insertAnalysis.articleId,
-      analysisType: insertAnalysis.analysisType,
-      resultJson: insertAnalysis.resultJson,
-      confidence: insertAnalysis.confidence || null,
-      aiModel: insertAnalysis.aiModel || 'gpt-4',
-      processingTime: insertAnalysis.processingTime || null,
-      tokensUsed: insertAnalysis.tokensUsed || null,
-      status: insertAnalysis.status || 'pending',
-      errorMessage: insertAnalysis.errorMessage || null,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.rssAnalyses.set(id, analysis);
-    return analysis;
+    const results = await db.insert(rssAnalysisTable).values(insertAnalysis).returning();
+    return results[0];
   }
 
   async updateRssAnalysis(id: string, updates: Partial<InsertRssAnalysis>): Promise<RssAnalysis | undefined> {
-    const existing = this.rssAnalyses.get(id);
-    if (!existing) return undefined;
-    
-    const updated: RssAnalysis = { 
-      ...existing, 
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.rssAnalyses.set(id, updated);
-    return updated;
+    const results = await db.update(rssAnalysisTable)
+      .set(updates)
+      .where(eq(rssAnalysisTable.id, id))
+      .returning();
+    return results[0];
   }
 
   async deleteRssAnalysis(id: string): Promise<boolean> {
-    return this.rssAnalyses.delete(id);
+    const results = await db.delete(rssAnalysisTable).where(eq(rssAnalysisTable.id, id)).returning();
+    return results.length > 0;
   }
 
   // RSS Comparison methods
   async getRssComparisons(): Promise<RssComparison[]> {
-    return Array.from(this.rssComparisons.values())
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    const results = await db.select().from(rssComparisonsTable).orderBy(desc(rssComparisonsTable.updatedAt));
+    return results;
   }
 
   async getRssComparison(id: string): Promise<RssComparison | undefined> {
-    return this.rssComparisons.get(id);
+    const results = await db.select().from(rssComparisonsTable).where(eq(rssComparisonsTable.id, id));
+    return results[0];
   }
 
   async getRssComparisonsByType(comparisonType: string): Promise<RssComparison[]> {
-    return Array.from(this.rssComparisons.values())
-      .filter(comparison => comparison.comparisonType === comparisonType)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const results = await db.select().from(rssComparisonsTable)
+      .where(eq(rssComparisonsTable.comparisonType, comparisonType))
+      .orderBy(desc(rssComparisonsTable.createdAt));
+    return results;
   }
 
   async getPublicRssComparisons(): Promise<RssComparison[]> {
-    return Array.from(this.rssComparisons.values())
-      .filter(comparison => comparison.isPublic)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const results = await db.select().from(rssComparisonsTable)
+      .where(eq(rssComparisonsTable.isPublic, true))
+      .orderBy(desc(rssComparisonsTable.createdAt));
+    return results;
   }
 
   async createRssComparison(insertComparison: InsertRssComparison): Promise<RssComparison> {
-    const id = randomUUID();
-    const now = new Date();
-    const comparison: RssComparison = {
-      id,
-      title: insertComparison.title,
-      description: insertComparison.description || null,
-      articleIds: insertComparison.articleIds,
-      comparisonType: insertComparison.comparisonType,
-      timeRange: insertComparison.timeRange,
-      resultJson: insertComparison.resultJson,
-      insights: insertComparison.insights || [],
-      visualizationConfig: insertComparison.visualizationConfig || {},
-      isPublic: insertComparison.isPublic ?? false,
-      generatedBy: insertComparison.generatedBy || 'system',
-      createdAt: now,
-      updatedAt: now
-    };
-    this.rssComparisons.set(id, comparison);
-    return comparison;
+    const results = await db.insert(rssComparisonsTable).values(insertComparison).returning();
+    return results[0];
   }
 
   async updateRssComparison(id: string, updates: Partial<InsertRssComparison>): Promise<RssComparison | undefined> {
-    const existing = this.rssComparisons.get(id);
-    if (!existing) return undefined;
-    
-    const updated: RssComparison = { 
-      ...existing, 
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.rssComparisons.set(id, updated);
-    return updated;
+    const results = await db.update(rssComparisonsTable)
+      .set(updates)
+      .where(eq(rssComparisonsTable.id, id))
+      .returning();
+    return results[0];
   }
 
   async deleteRssComparison(id: string): Promise<boolean> {
-    return this.rssComparisons.delete(id);
+    const results = await db.delete(rssComparisonsTable).where(eq(rssComparisonsTable.id, id)).returning();
+    return results.length > 0;
   }
 
   // Football methods (delegated to footballService)
@@ -2033,7 +1993,8 @@ export class MemStorage implements IStorage {
   }> {
     const frameworks = this.frameworks.size;
     const images = this.images.size;
-    const rssArticles = this.rssArticles.size;
+    const rssArticlesCount = await db.select().from(rssArticlesTable);
+    const rssArticles = rssArticlesCount.length;
     const libraryItems = this.libraryItems.size;
     const scenes = this.scenes.size;
     const presentationSets = this.presentationSets.size;
