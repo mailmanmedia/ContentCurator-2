@@ -1,11 +1,34 @@
 import { createContext, useContext, useRef, useCallback, useMemo, ReactNode } from 'react';
 
+export enum ScreenShareErrorType {
+  NOT_SUPPORTED = 'NOT_SUPPORTED',
+  USER_CANCELLED = 'USER_CANCELLED',
+  PERMISSION_DENIED = 'PERMISSION_DENIED',
+  UNKNOWN = 'UNKNOWN'
+}
+
+export class ScreenShareError extends Error {
+  constructor(
+    public type: ScreenShareErrorType,
+    message: string,
+    public originalError?: Error
+  ) {
+    super(message);
+    this.name = 'ScreenShareError';
+  }
+}
+
+export function checkScreenShareSupport(): boolean {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+}
+
 interface CameraStreamContextType {
   acquireStream: (sourceId: string, deviceId: string) => Promise<MediaStream>;
   acquireScreenShare: (sourceId: string) => Promise<MediaStream>;
   releaseStream: (sourceId: string) => void;
   releaseAllStreams: () => void;
   hasStream: (sourceId: string) => boolean;
+  isScreenShareSupported: boolean;
 }
 
 const CameraStreamContext = createContext<CameraStreamContextType | null>(null);
@@ -22,6 +45,7 @@ interface StreamInfo {
 export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
   const streamsRef = useRef<Map<string, StreamInfo>>(new Map());
   const requestsRef = useRef<Map<string, Promise<MediaStream>>>(new Map());
+  const isScreenShareSupported = useMemo(() => checkScreenShareSupport(), []);
 
   const acquireStream = useCallback(async (sourceId: string, deviceId: string): Promise<MediaStream> => {
     const existing = streamsRef.current.get(sourceId);
@@ -63,6 +87,14 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
   }, []);
 
   const acquireScreenShare = useCallback(async (sourceId: string): Promise<MediaStream> => {
+    // Check if screen sharing is supported
+    if (!checkScreenShareSupport()) {
+      throw new ScreenShareError(
+        ScreenShareErrorType.NOT_SUPPORTED,
+        'Screen sharing is not supported in this browser. Please use Chrome, Edge, Safari 13+, or Firefox.'
+      );
+    }
+
     const existing = streamsRef.current.get(sourceId);
     if (existing) {
       if (existing.stream.active) {
@@ -97,7 +129,46 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
       return stream;
     } catch (error) {
       requestsRef.current.delete(sourceId);
-      throw error;
+      
+      // Parse error to determine type
+      const err = error as Error;
+      const errorMessage = err.message?.toLowerCase() || '';
+      const errorName = err.name?.toLowerCase() || '';
+
+      // User cancelled the screen share dialog
+      if (
+        errorName === 'notallowederror' ||
+        errorName === 'aborterror' ||
+        errorMessage.includes('cancel') ||
+        errorMessage.includes('denied by the user')
+      ) {
+        throw new ScreenShareError(
+          ScreenShareErrorType.USER_CANCELLED,
+          'Screen sharing was cancelled. Please try again and select a screen/window to share.',
+          err
+        );
+      }
+
+      // Permission denied
+      if (
+        errorName === 'notallowederror' ||
+        errorName === 'permissiondeniederror' ||
+        errorMessage.includes('permission') ||
+        errorMessage.includes('denied')
+      ) {
+        throw new ScreenShareError(
+          ScreenShareErrorType.PERMISSION_DENIED,
+          'Screen sharing permission was denied. Please check your browser settings and allow screen sharing.',
+          err
+        );
+      }
+
+      // Unknown error
+      throw new ScreenShareError(
+        ScreenShareErrorType.UNKNOWN,
+        'Failed to start screen sharing. Please try again.',
+        err
+      );
     }
   }, []);
 
@@ -131,7 +202,8 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
     releaseStream,
     releaseAllStreams,
     hasStream,
-  }), [acquireStream, acquireScreenShare, releaseStream, releaseAllStreams, hasStream]);
+    isScreenShareSupported,
+  }), [acquireStream, acquireScreenShare, releaseStream, releaseAllStreams, hasStream, isScreenShareSupported]);
 
   return (
     <CameraStreamContext.Provider value={value}>
