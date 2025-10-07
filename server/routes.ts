@@ -18,6 +18,8 @@ import {
   insertPresentationSetSchema,
   insertTickerPlaylistSchema,
   insertVideoSourceSchema,
+  insertSourceTemplateSchema,
+  insertSetTemplateSchema,
   insertTemplateSchema,
   type LiveState
 } from "@shared/schema";
@@ -3486,6 +3488,134 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error disconnecting video source:', error);
       res.status(500).json({ error: "Failed to disconnect video source" });
+    }
+  });
+
+  // Source Template routes
+  app.get("/api/source-templates", async (req, res) => {
+    try {
+      const templates = await storage.getSourceTemplates();
+      res.json({ sourceTemplates: templates });
+    } catch (error) {
+      console.error('Error fetching source templates:', error);
+      res.status(500).json({ error: "Failed to fetch source templates" });
+    }
+  });
+
+  app.get("/api/source-templates/:id", async (req, res) => {
+    try {
+      const template = await storage.getSourceTemplateById(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Source template not found" });
+      }
+      res.json({ sourceTemplate: template });
+    } catch (error) {
+      console.error('Error fetching source template:', error);
+      res.status(500).json({ error: "Failed to fetch source template" });
+    }
+  });
+
+  app.post("/api/source-templates", async (req, res) => {
+    try {
+      const validatedData = insertSourceTemplateSchema.parse(req.body);
+      const template = await storage.createSourceTemplate(validatedData);
+      res.status(201).json({ sourceTemplate: template });
+    } catch (error) {
+      console.error('Error creating source template:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create source template" });
+      }
+    }
+  });
+
+  app.patch("/api/source-templates/:id", async (req, res) => {
+    try {
+      const updates = insertSourceTemplateSchema.partial().parse(req.body);
+      const template = await storage.updateSourceTemplate(req.params.id, updates);
+      res.json({ sourceTemplate: template });
+    } catch (error) {
+      console.error('Error updating source template:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update source template" });
+      }
+    }
+  });
+
+  app.delete("/api/source-templates/:id", async (req, res) => {
+    try {
+      await storage.deleteSourceTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting source template:', error);
+      res.status(500).json({ error: "Failed to delete source template" });
+    }
+  });
+
+  // Set Template routes
+  app.get("/api/set-templates", async (req, res) => {
+    try {
+      const templates = await storage.getSetTemplates();
+      res.json({ setTemplates: templates });
+    } catch (error) {
+      console.error('Error fetching set templates:', error);
+      res.status(500).json({ error: "Failed to fetch set templates" });
+    }
+  });
+
+  app.get("/api/set-templates/:id", async (req, res) => {
+    try {
+      const template = await storage.getSetTemplateById(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Set template not found" });
+      }
+      res.json({ setTemplate: template });
+    } catch (error) {
+      console.error('Error fetching set template:', error);
+      res.status(500).json({ error: "Failed to fetch set template" });
+    }
+  });
+
+  app.post("/api/set-templates", async (req, res) => {
+    try {
+      const validatedData = insertSetTemplateSchema.parse(req.body);
+      const template = await storage.createSetTemplate(validatedData);
+      res.status(201).json({ setTemplate: template });
+    } catch (error) {
+      console.error('Error creating set template:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create set template" });
+      }
+    }
+  });
+
+  app.patch("/api/set-templates/:id", async (req, res) => {
+    try {
+      const updates = insertSetTemplateSchema.partial().parse(req.body);
+      const template = await storage.updateSetTemplate(req.params.id, updates);
+      res.json({ setTemplate: template });
+    } catch (error) {
+      console.error('Error updating set template:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update set template" });
+      }
+    }
+  });
+
+  app.delete("/api/set-templates/:id", async (req, res) => {
+    try {
+      await storage.deleteSetTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting set template:', error);
+      res.status(500).json({ error: "Failed to delete set template" });
     }
   });
 

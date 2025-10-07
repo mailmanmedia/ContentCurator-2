@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Plus, Edit2, Trash2, Film, GripVertical, ChevronsUpDown, Check } from "lucide-react";
+import { Plus, Edit2, Trash2, Film, GripVertical, ChevronsUpDown, Check, FileDown, Save } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,16 @@ interface Scene {
   name: string;
   description: string;
   layout: string;
+}
+
+interface SetTemplate {
+  id: string;
+  name: string;
+  description: string;
+  sceneTemplateIds: string[];
+  configJson: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const PRESET_SET_NAMES = [
@@ -93,12 +103,18 @@ function SortableSceneItem({ scene, onRemove }: { scene: Scene; onRemove: () => 
 export default function PresentationSetManager() {
   const [selectedSet, setSelectedSet] = useState<PresentationSet | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [isSaveTemplateDialogOpen, setIsSaveTemplateDialogOpen] = useState(false);
   const [nameComboboxOpen, setNameComboboxOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     defaultTransition: 'fade',
     sceneIds: [] as string[],
+  });
+  const [templateFormData, setTemplateFormData] = useState({
+    name: '',
+    description: '',
   });
   const { toast } = useToast();
   
@@ -116,6 +132,12 @@ export default function PresentationSetManager() {
   const { data: scenes } = useQuery<Scene[]>({
     queryKey: ['/api/presentation/scenes'],
   });
+
+  const { data: templatesData, isLoading: templatesLoading } = useQuery<{ setTemplates: SetTemplate[] }>({
+    queryKey: ['/api/set-templates'],
+  });
+
+  const setTemplates = templatesData?.setTemplates || [];
 
   const createSetMutation = useMutation({
     mutationFn: async (setData: any) => {
@@ -161,6 +183,22 @@ export default function PresentationSetManager() {
     },
     onError: () => {
       toast({ title: 'Failed to delete set', variant: 'destructive' });
+    },
+  });
+
+  const createTemplateMutation = useMutation({
+    mutationFn: async (templateData: any) => {
+      const response = await apiRequest('POST', '/api/set-templates', templateData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/set-templates'] });
+      toast({ title: 'Template saved successfully' });
+      setIsSaveTemplateDialogOpen(false);
+      setTemplateFormData({ name: '', description: '' });
+    },
+    onError: () => {
+      toast({ title: 'Failed to save template', variant: 'destructive' });
     },
   });
 
@@ -237,6 +275,35 @@ export default function PresentationSetManager() {
       ...prev,
       sceneIds: prev.sceneIds.filter(id => id !== sceneId),
     }));
+  };
+
+  const handleLoadTemplate = (template: SetTemplate) => {
+    setFormData({
+      name: '',
+      description: template.description || '',
+      defaultTransition: template.configJson?.defaultTransition || 'fade',
+      sceneIds: template.sceneTemplateIds || [],
+    });
+    setIsTemplateDialogOpen(false);
+    toast({ title: `Template "${template.name}" loaded` });
+  };
+
+  const handleSaveAsTemplate = () => {
+    if (!templateFormData.name.trim()) {
+      toast({ title: 'Template name is required', variant: 'destructive' });
+      return;
+    }
+
+    const templateData = {
+      name: templateFormData.name,
+      description: templateFormData.description || '',
+      sceneTemplateIds: formData.sceneIds,
+      configJson: {
+        defaultTransition: formData.defaultTransition,
+      },
+    };
+
+    createTemplateMutation.mutate(templateData);
   };
 
   const selectedScenes = scenes?.filter(s => formData.sceneIds.includes(s.id)) || [];
@@ -382,25 +449,46 @@ export default function PresentationSetManager() {
                 )}
               </div>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsDialogOpen(false);
-                  setSelectedSet(null);
-                  resetForm();
-                }}
-                data-testid="button-cancel"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={selectedSet ? handleUpdateSet : handleCreateSet}
-                disabled={!formData.name || formData.sceneIds.length === 0 || createSetMutation.isPending || updateSetMutation.isPending}
-                data-testid="button-save-set"
-              >
-                {selectedSet ? 'Update' : 'Create'} Set
-              </Button>
+            <DialogFooter className="gap-2">
+              <div className="flex gap-2 flex-1">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsTemplateDialogOpen(true)}
+                  data-testid="button-load-template"
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Load from Template
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSaveTemplateDialogOpen(true)}
+                  disabled={formData.sceneIds.length === 0}
+                  data-testid="button-save-as-template"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save as Template
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    setSelectedSet(null);
+                    resetForm();
+                  }}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={selectedSet ? handleUpdateSet : handleCreateSet}
+                  disabled={!formData.name || formData.sceneIds.length === 0 || createSetMutation.isPending || updateSetMutation.isPending}
+                  data-testid="button-save-set"
+                >
+                  {selectedSet ? 'Update' : 'Create'} Set
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -503,6 +591,131 @@ export default function PresentationSetManager() {
           </CardContent>
         </Card>
       )}
+
+      {/* Load from Template Dialog */}
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Load from Template</DialogTitle>
+            <DialogDescription>
+              Select a template to populate your set configuration.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {templatesLoading ? (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">Loading templates...</p>
+              </div>
+            ) : setTemplates.length > 0 ? (
+              setTemplates.map((template) => (
+                <Card
+                  key={template.id}
+                  className="hover-elevate cursor-pointer"
+                  onClick={() => handleLoadTemplate(template)}
+                  data-testid={`card-template-${template.id}`}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Film className="w-4 h-4" />
+                        <CardTitle className="text-base">{template.name}</CardTitle>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {template.sceneTemplateIds.length} scenes
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  {template.description && (
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {template.description}
+                      </p>
+                    </CardContent>
+                  )}
+                </Card>
+              ))
+            ) : (
+              <div className="p-8 text-center">
+                <Film className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="font-bold mb-2">No Templates</h3>
+                <p className="text-sm text-muted-foreground">
+                  Save your first template to reuse configurations
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsTemplateDialogOpen(false)}
+              data-testid="button-close-template-dialog"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save as Template Dialog */}
+      <Dialog open={isSaveTemplateDialogOpen} onOpenChange={setIsSaveTemplateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as Template</DialogTitle>
+            <DialogDescription>
+              Save the current set configuration as a reusable template.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="templateName">Template Name</Label>
+              <Input
+                id="templateName"
+                value={templateFormData.name}
+                onChange={(e) => setTemplateFormData({ ...templateFormData, name: e.target.value })}
+                placeholder="Match Day Set Template"
+                data-testid="input-template-name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="templateDescription">Description</Label>
+              <Textarea
+                id="templateDescription"
+                value={templateFormData.description}
+                onChange={(e) => setTemplateFormData({ ...templateFormData, description: e.target.value })}
+                placeholder="Standard match day presentation setup with pre and post-match scenes"
+                rows={3}
+                data-testid="input-template-description"
+              />
+            </div>
+            <div className="p-3 bg-sidebar rounded-md">
+              <p className="text-sm font-medium mb-2">Template will save:</p>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• {formData.sceneIds.length} scene{formData.sceneIds.length !== 1 ? 's' : ''}</li>
+                <li>• Transition: {formData.defaultTransition}</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsSaveTemplateDialogOpen(false);
+                setTemplateFormData({ name: '', description: '' });
+              }}
+              data-testid="button-cancel-save-template"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveAsTemplate}
+              disabled={!templateFormData.name.trim() || createTemplateMutation.isPending}
+              data-testid="button-save-template"
+            >
+              Save Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

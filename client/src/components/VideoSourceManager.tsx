@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Video, Monitor, Film, Radio, Wifi, Play, Square } from "lucide-react";
+import { Plus, Edit2, Trash2, Video, Monitor, Film, Radio, Wifi, Play, Square, FileDown, Save } from "lucide-react";
 import { SiYoutube } from "react-icons/si";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -29,9 +29,23 @@ interface VideoSource {
   tags: string[];
 }
 
+interface SourceTemplate {
+  id: string;
+  name: string;
+  description: string;
+  sourceType: 'camera' | 'screen' | 'media' | 'rtmp' | 'webrtc' | 'youtube';
+  configJson: Record<string, any>;
+  isDefault: boolean;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function VideoSourceManager() {
   const [selectedSource, setSelectedSource] = useState<VideoSource | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [isSaveTemplateDialogOpen, setIsSaveTemplateDialogOpen] = useState(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -43,13 +57,22 @@ export default function VideoSourceManager() {
     streamUrl: '',
     youtubeUrl: '',
   });
+  const [templateFormData, setTemplateFormData] = useState({
+    name: '',
+    description: '',
+  });
   const { toast } = useToast();
 
   const { data, isLoading } = useQuery<{ videoSources: VideoSource[] }>({
     queryKey: ['/api/video-sources'],
   });
 
+  const { data: templatesData, isLoading: templatesLoading } = useQuery<{ sourceTemplates: SourceTemplate[] }>({
+    queryKey: ['/api/source-templates'],
+  });
+
   const videoSources = data?.videoSources;
+  const sourceTemplates = templatesData?.sourceTemplates || [];
 
   useEffect(() => {
     if (formData.sourceType === 'camera') {
@@ -141,6 +164,22 @@ export default function VideoSourceManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/video-sources'] });
       toast({ title: 'Source disconnected' });
+    },
+  });
+
+  const createTemplateMutation = useMutation({
+    mutationFn: async (templateData: any) => {
+      const response = await apiRequest('POST', '/api/source-templates', templateData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/source-templates'] });
+      toast({ title: 'Template saved successfully' });
+      setIsSaveTemplateDialogOpen(false);
+      setTemplateFormData({ name: '', description: '' });
+    },
+    onError: () => {
+      toast({ title: 'Failed to save template', variant: 'destructive' });
     },
   });
 
@@ -288,6 +327,51 @@ export default function VideoSourceManager() {
     setSelectedSource(null);
     resetForm();
     setIsDialogOpen(true);
+  };
+
+  const handleLoadTemplate = (template: SourceTemplate) => {
+    setFormData({
+      name: '',
+      description: template.description || '',
+      sourceType: template.sourceType,
+      deviceId: undefined,
+      streamUrl: template.configJson?.streamUrl || '',
+      youtubeUrl: template.configJson?.youtubeUrl || '',
+    });
+    setIsTemplateDialogOpen(false);
+    toast({ title: `Template "${template.name}" loaded` });
+  };
+
+  const handleSaveAsTemplate = () => {
+    if (!templateFormData.name.trim()) {
+      toast({ title: 'Template name is required', variant: 'destructive' });
+      return;
+    }
+
+    let configToSave: Record<string, any> = {};
+
+    if (formData.sourceType === 'youtube') {
+      const { videoId } = parseYouTubeUrl(formData.youtubeUrl);
+      configToSave = {
+        youtubeUrl: formData.youtubeUrl,
+        videoId: videoId,
+      };
+    } else if (formData.sourceType === 'rtmp' || formData.sourceType === 'webrtc') {
+      configToSave = {
+        streamUrl: formData.streamUrl,
+      };
+    }
+
+    const templateData = {
+      name: templateFormData.name,
+      description: templateFormData.description || '',
+      sourceType: formData.sourceType,
+      configJson: configToSave,
+      isDefault: false,
+      tags: [],
+    };
+
+    createTemplateMutation.mutate(templateData);
   };
 
   const getSourceIcon = (type: string) => {
@@ -480,26 +564,47 @@ export default function VideoSourceManager() {
                 </div>
               )}
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsDialogOpen(false);
-                  setSelectedSource(null);
-                  resetForm();
-                  stopPreview();
-                }}
-                data-testid="button-cancel"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={selectedSource ? handleUpdateSource : handleCreateSource}
-                disabled={!formData.name || createSourceMutation.isPending || updateSourceMutation.isPending}
-                data-testid="button-save-source"
-              >
-                {selectedSource ? 'Update' : 'Add'} Source
-              </Button>
+            <DialogFooter className="gap-2">
+              <div className="flex gap-2 flex-1">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsTemplateDialogOpen(true)}
+                  data-testid="button-load-template"
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Load from Template
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSaveTemplateDialogOpen(true)}
+                  disabled={!formData.sourceType}
+                  data-testid="button-save-as-template"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save as Template
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    setSelectedSource(null);
+                    resetForm();
+                    stopPreview();
+                  }}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={selectedSource ? handleUpdateSource : handleCreateSource}
+                  disabled={!formData.name || createSourceMutation.isPending || updateSourceMutation.isPending}
+                  data-testid="button-save-source"
+                >
+                  {selectedSource ? 'Update' : 'Add'} Source
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -631,6 +736,146 @@ export default function VideoSourceManager() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Load from Template</DialogTitle>
+            <DialogDescription>
+              Select a template to populate the source configuration
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {templatesLoading ? (
+              <div className="py-8 text-center text-muted-foreground">
+                Loading templates...
+              </div>
+            ) : sourceTemplates.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-muted-foreground">No templates available</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Save your first template to get started
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {sourceTemplates.map((template) => (
+                  <Card 
+                    key={template.id} 
+                    className="hover-elevate cursor-pointer"
+                    onClick={() => handleLoadTemplate(template)}
+                    data-testid={`template-card-${template.id}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="mt-1">
+                            {getSourceIcon(template.sourceType)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-sm" data-testid={`template-name-${template.id}`}>
+                              {template.name}
+                            </h4>
+                            {template.description && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {template.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant={getSourceTypeBadgeVariant(template.sourceType)} className="text-xs">
+                                {template.sourceType}
+                              </Badge>
+                              {template.isDefault && (
+                                <Badge variant="outline" className="text-xs">
+                                  Default
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsTemplateDialogOpen(false)}
+              data-testid="button-close-template-dialog"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSaveTemplateDialogOpen} onOpenChange={setIsSaveTemplateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as Template</DialogTitle>
+            <DialogDescription>
+              Save the current source configuration as a reusable template
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="templateName">Template Name</Label>
+              <Input
+                id="templateName"
+                value={templateFormData.name}
+                onChange={(e) => setTemplateFormData({ ...templateFormData, name: e.target.value })}
+                placeholder="e.g., Main Camera Setup"
+                data-testid="input-template-name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="templateDescription">Description (Optional)</Label>
+              <Textarea
+                id="templateDescription"
+                value={templateFormData.description}
+                onChange={(e) => setTemplateFormData({ ...templateFormData, description: e.target.value })}
+                placeholder="Describe this template configuration"
+                rows={3}
+                data-testid="input-template-description"
+              />
+            </div>
+            <div className="rounded-md bg-sidebar p-3 space-y-2">
+              <p className="text-sm font-medium">Template will save:</p>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Source Type: <span className="font-mono">{formData.sourceType}</span></li>
+                {formData.sourceType === 'youtube' && formData.youtubeUrl && (
+                  <li>• YouTube URL configuration</li>
+                )}
+                {(formData.sourceType === 'rtmp' || formData.sourceType === 'webrtc') && formData.streamUrl && (
+                  <li>• Stream URL: <span className="font-mono text-xs truncate">{formData.streamUrl}</span></li>
+                )}
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsSaveTemplateDialogOpen(false);
+                setTemplateFormData({ name: '', description: '' });
+              }}
+              data-testid="button-cancel-save-template"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveAsTemplate}
+              disabled={!templateFormData.name.trim() || createTemplateMutation.isPending}
+              data-testid="button-confirm-save-template"
+            >
+              {createTemplateMutation.isPending ? 'Saving...' : 'Save Template'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

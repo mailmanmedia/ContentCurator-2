@@ -42,7 +42,9 @@ import {
   renderJobs as renderJobsTable,
   textOverlays as textOverlaysTable,
   keyframes as keyframesTable,
-  audioTracks as audioTracksTable
+  audioTracks as audioTracksTable,
+  sourceTemplates as sourceTemplatesTable,
+  setTemplates as setTemplatesTable
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
@@ -207,20 +209,17 @@ export interface IStorage {
 
   // Source Template methods
   getSourceTemplates(): Promise<SourceTemplate[]>;
-  getSourceTemplate(id: string): Promise<SourceTemplate | undefined>;
-  getSourceTemplatesByType(sourceType: string): Promise<SourceTemplate[]>;
-  getDefaultSourceTemplates(): Promise<SourceTemplate[]>;
+  getSourceTemplateById(id: string): Promise<SourceTemplate | undefined>;
   createSourceTemplate(template: InsertSourceTemplate): Promise<SourceTemplate>;
-  updateSourceTemplate(id: string, updates: Partial<InsertSourceTemplate>): Promise<SourceTemplate | undefined>;
-  deleteSourceTemplate(id: string): Promise<boolean>;
+  updateSourceTemplate(id: string, template: Partial<InsertSourceTemplate>): Promise<SourceTemplate>;
+  deleteSourceTemplate(id: string): Promise<void>;
 
   // Set Template methods
   getSetTemplates(): Promise<SetTemplate[]>;
-  getSetTemplate(id: string): Promise<SetTemplate | undefined>;
-  getDefaultSetTemplates(): Promise<SetTemplate[]>;
+  getSetTemplateById(id: string): Promise<SetTemplate | undefined>;
   createSetTemplate(template: InsertSetTemplate): Promise<SetTemplate>;
-  updateSetTemplate(id: string, updates: Partial<InsertSetTemplate>): Promise<SetTemplate | undefined>;
-  deleteSetTemplate(id: string): Promise<boolean>;
+  updateSetTemplate(id: string, template: Partial<InsertSetTemplate>): Promise<SetTemplate>;
+  deleteSetTemplate(id: string): Promise<void>;
 
   // Source Name Preset methods
   getSourceNamePresets(): Promise<SourceNamePreset[]>;
@@ -1779,101 +1778,64 @@ export class MemStorage implements IStorage {
 
   // Source Template methods
   async getSourceTemplates(): Promise<SourceTemplate[]> {
-    return Array.from(this.sourceTemplates.values());
+    const results = await db.select().from(sourceTemplatesTable).orderBy(desc(sourceTemplatesTable.createdAt));
+    return results;
   }
 
-  async getSourceTemplate(id: string): Promise<SourceTemplate | undefined> {
-    return this.sourceTemplates.get(id);
-  }
-
-  async getSourceTemplatesByType(sourceType: string): Promise<SourceTemplate[]> {
-    return Array.from(this.sourceTemplates.values())
-      .filter(template => template.sourceType === sourceType);
-  }
-
-  async getDefaultSourceTemplates(): Promise<SourceTemplate[]> {
-    return Array.from(this.sourceTemplates.values())
-      .filter(template => template.isDefault);
+  async getSourceTemplateById(id: string): Promise<SourceTemplate | undefined> {
+    const results = await db.select().from(sourceTemplatesTable).where(eq(sourceTemplatesTable.id, id));
+    return results[0];
   }
 
   async createSourceTemplate(template: InsertSourceTemplate): Promise<SourceTemplate> {
-    const newTemplate: SourceTemplate = {
-      id: randomUUID(),
-      name: template.name,
-      description: template.description ?? null,
-      sourceType: template.sourceType,
-      configJson: template.configJson ?? {},
-      isDefault: template.isDefault ?? false,
-      tags: template.tags ?? [],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.sourceTemplates.set(newTemplate.id, newTemplate);
-    return newTemplate;
+    const results = await db.insert(sourceTemplatesTable).values(template).returning();
+    return results[0];
   }
 
-  async updateSourceTemplate(id: string, updates: Partial<InsertSourceTemplate>): Promise<SourceTemplate | undefined> {
-    const template = this.sourceTemplates.get(id);
-    if (!template) return undefined;
-    
-    const updated = {
-      ...template,
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.sourceTemplates.set(id, updated);
-    return updated;
+  async updateSourceTemplate(id: string, template: Partial<InsertSourceTemplate>): Promise<SourceTemplate> {
+    const results = await db.update(sourceTemplatesTable)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(sourceTemplatesTable.id, id))
+      .returning();
+    if (!results[0]) {
+      throw new Error(`Source template with id ${id} not found`);
+    }
+    return results[0];
   }
 
-  async deleteSourceTemplate(id: string): Promise<boolean> {
-    return this.sourceTemplates.delete(id);
+  async deleteSourceTemplate(id: string): Promise<void> {
+    await db.delete(sourceTemplatesTable).where(eq(sourceTemplatesTable.id, id));
   }
 
   // Set Template methods
   async getSetTemplates(): Promise<SetTemplate[]> {
-    return Array.from(this.setTemplates.values());
+    const results = await db.select().from(setTemplatesTable).orderBy(desc(setTemplatesTable.createdAt));
+    return results;
   }
 
-  async getSetTemplate(id: string): Promise<SetTemplate | undefined> {
-    return this.setTemplates.get(id);
-  }
-
-  async getDefaultSetTemplates(): Promise<SetTemplate[]> {
-    return Array.from(this.setTemplates.values())
-      .filter(template => template.isDefault);
+  async getSetTemplateById(id: string): Promise<SetTemplate | undefined> {
+    const results = await db.select().from(setTemplatesTable).where(eq(setTemplatesTable.id, id));
+    return results[0];
   }
 
   async createSetTemplate(template: InsertSetTemplate): Promise<SetTemplate> {
-    const newTemplate: SetTemplate = {
-      id: randomUUID(),
-      name: template.name,
-      description: template.description ?? null,
-      sceneTemplateIds: template.sceneTemplateIds ?? [],
-      configJson: template.configJson ?? {},
-      isDefault: template.isDefault ?? false,
-      tags: template.tags ?? [],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.setTemplates.set(newTemplate.id, newTemplate);
-    return newTemplate;
+    const results = await db.insert(setTemplatesTable).values(template).returning();
+    return results[0];
   }
 
-  async updateSetTemplate(id: string, updates: Partial<InsertSetTemplate>): Promise<SetTemplate | undefined> {
-    const template = this.setTemplates.get(id);
-    if (!template) return undefined;
-    
-    const updated = {
-      ...template,
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.setTemplates.set(id, updated);
-    return updated;
+  async updateSetTemplate(id: string, template: Partial<InsertSetTemplate>): Promise<SetTemplate> {
+    const results = await db.update(setTemplatesTable)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(setTemplatesTable.id, id))
+      .returning();
+    if (!results[0]) {
+      throw new Error(`Set template with id ${id} not found`);
+    }
+    return results[0];
   }
 
-  async deleteSetTemplate(id: string): Promise<boolean> {
-    return this.setTemplates.delete(id);
+  async deleteSetTemplate(id: string): Promise<void> {
+    await db.delete(setTemplatesTable).where(eq(setTemplatesTable.id, id));
   }
 
   // Source Name Preset methods
