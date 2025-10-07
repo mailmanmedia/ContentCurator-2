@@ -664,8 +664,57 @@ export const videoClips = pgTable("video_clips", {
   order: integer("order").notNull(), // Position in timeline
   trimStart: integer("trim_start").notNull().default(0), // Trim from start in ms
   trimEnd: integer("trim_end").notNull().default(0), // Trim from end in ms
-  effects: jsonb("effects").notNull().default('{}'), // Applied effects (transitions, filters)
+  speed: integer("speed").notNull().default(100), // Playback speed (100 = normal, 50 = half, 200 = double)
+  transition: text("transition"), // Transition type: 'fade', 'dissolve', 'wipe', 'cut'
+  transitionDuration: integer("transition_duration").default(500), // Transition duration in ms
+  effects: jsonb("effects").notNull().default('{}'), // Applied effects (blur, vignette, stabilization, etc.)
+  colorAdjustments: jsonb("color_adjustments").notNull().default('{}'), // Brightness, contrast, saturation
   metadata: jsonb("metadata").notNull().default('{}'), // Scene type, detected objects, etc.
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Text overlays and graphics system
+export const textOverlays = pgTable("text_overlays", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  clipId: varchar("clip_id"), // Optional: attach to specific clip
+  type: text("type").notNull(), // 'title', 'subtitle', 'lower_third', 'scoreboard', 'custom'
+  text: text("text").notNull(),
+  startTime: integer("start_time").notNull(), // Start time in milliseconds
+  endTime: integer("end_time").notNull(), // End time in milliseconds
+  position: jsonb("position").notNull().default('{"x": 50, "y": 50, "anchor": "center"}'), // Position on screen
+  styling: jsonb("styling").notNull().default('{}'), // Font, color, size, shadow, etc.
+  animation: text("animation"), // Entry/exit animation: 'fade', 'slide', 'zoom', 'typewriter'
+  animationDuration: integer("animation_duration").default(300), // Animation duration in ms
+  isLiverpoolBranded: boolean("is_liverpool_branded").default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Keyframe animation system
+export const keyframes = pgTable("keyframes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clipId: varchar("clip_id").notNull(),
+  property: text("property").notNull(), // 'zoom', 'pan_x', 'pan_y', 'rotation', 'opacity'
+  time: integer("time").notNull(), // Keyframe time in milliseconds (relative to clip start)
+  value: text("value").notNull(), // Value at this keyframe
+  easing: text("easing").default('linear'), // 'linear', 'ease-in', 'ease-out', 'ease-in-out'
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Audio tracks for multi-track audio support
+export const audioTracks = pgTable("audio_tracks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // 'original', 'music', 'voiceover', 'effects'
+  audioFilePath: text("audio_file_path"),
+  startTime: integer("start_time").notNull().default(0), // Start time in project timeline (ms)
+  duration: integer("duration").notNull(),
+  volume: integer("volume").notNull().default(100), // 0-200
+  fadeIn: integer("fade_in").default(0), // Fade in duration (ms)
+  fadeOut: integer("fade_out").default(0), // Fade out duration (ms)
+  effects: jsonb("effects").notNull().default('{}'), // Audio effects: EQ, compression, reverb
+  isMuted: boolean("is_muted").default(false),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
@@ -791,6 +840,21 @@ export const insertEditTemplateSchema = createInsertSchema(editTemplates).omit({
   updatedAt: true,
 });
 
+export const insertTextOverlaySchema = createInsertSchema(textOverlays).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertKeyframeSchema = createInsertSchema(keyframes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAudioTrackSchema = createInsertSchema(audioTracks).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertLibraryItem = z.infer<typeof insertLibraryItemSchema>;
 export type LibraryItem = typeof libraryItems.$inferSelect;
 export type InsertScene = z.infer<typeof insertSceneSchema>;
@@ -821,3 +885,9 @@ export type InsertRenderJob = z.infer<typeof insertRenderJobSchema>;
 export type RenderJob = typeof renderJobs.$inferSelect;
 export type InsertEditTemplate = z.infer<typeof insertEditTemplateSchema>;
 export type EditTemplate = typeof editTemplates.$inferSelect;
+export type InsertTextOverlay = z.infer<typeof insertTextOverlaySchema>;
+export type TextOverlay = typeof textOverlays.$inferSelect;
+export type InsertKeyframe = z.infer<typeof insertKeyframeSchema>;
+export type Keyframe = typeof keyframes.$inferSelect;
+export type InsertAudioTrack = z.infer<typeof insertAudioTrackSchema>;
+export type AudioTrack = typeof audioTracks.$inferSelect;
