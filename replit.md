@@ -76,10 +76,27 @@ Generates broadcast-quality visual content following Claude's artifact creation 
 #### Creative Visual Enhancement System
 Integrated animation and visual effects for engaging user experiences while maintaining broadcast standards. All animations use GPU-accelerated CSS transforms. Key effects include shimmer for loading, pulse glows, broadcast pulse for "ON AIR" badges, 3D card transforms on hover, spring animations, slide animations, and stagger delays. Enhancements are applied across components like the Homepage, Live Presentation, and Team Matchup Studio, with a focus on performance and accessibility.
 
+#### AI-Powered Framework System (Oct 2025)
+A comprehensive framework management system for creating and executing analytical content templates with integrated AI capabilities. The system provides:
+- **Document-to-Framework Adaptation**: Upload PDF or Word documents and automatically convert them to structured frameworks using AI (Claude or OpenAI), extracting sections, metrics, and analytical queries from document content.
+- **API Capabilities Configuration**: Frameworks can be configured with access to multiple APIs:
+  - **Database Access**: Query the PostgreSQL database for real-time data analysis
+  - **Perplexity API**: Access web search and real-time information
+  - **Claude API (Anthropic)**: Advanced reasoning and content generation
+  - **OpenAI API**: GPT-4 powered analysis and insights
+  - **Football APIs**: Access fixture data, team statistics, and match information
+- **Framework Executor Service**: Runtime execution engine that provides secure API access during framework execution, with proper error handling and context management.
+- **Document Parsing**: Supports PDF (via pdf-parse) and Word documents (.doc, .docx via officeparser) with text extraction and AI-powered structural analysis.
+- **Storage Architecture**: All document processing and AI adaptation occurs on Replit, with frameworks stored in the database including their API configurations and execution metadata.
+- **Version Management**: Complete version control system for frameworks with changelog tracking, download counts, and source file management.
+- **UI Integration**: CreateFramework page features AI-powered document upload with provider selection (Claude/OpenAI), category assignment, and real-time processing status.
+
 ## External Dependencies
 
 ### AI Integration
 - **OpenAI GPT-4**: For content suggestions, creative generation, and AI-powered tactical analysis.
+- **Claude (Anthropic)**: For advanced reasoning, document analysis, and framework adaptation.
+- **Perplexity API**: For real-time web search and current information retrieval.
 
 ### Database and Storage
 - **Neon Database**: Serverless PostgreSQL provider.
@@ -102,3 +119,5 @@ Integrated animation and visual effects for engaging user experiences while main
 - **React Hook Form**: Form state management.
 - **date-fns**: Date manipulation.
 - **class-variance-authority**: Dynamic styling system.
+- **pdf-parse**: PDF document text extraction.
+- **officeparser**: Word document (.doc, .docx) text extraction.
