@@ -651,6 +651,11 @@ export default function LivePresentation() {
     select: (response: any) => response?.teams || [],
   });
 
+  const { data: broadcastRecordings = [], refetch: refetchRecordings } = useQuery({
+    queryKey: ['/api/recordings'],
+    select: (response: any) => response?.recordings || [],
+  });
+
   const checkPositionConflict = (position: 'top' | 'bottom', excludeId?: string): boolean => {
     return overlays.some(overlay => 
       overlay.position === position && 
@@ -2001,6 +2006,87 @@ export default function LivePresentation() {
                     </span>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-broadcast-recordings">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <CardTitle className="text-lg">Broadcast Recordings</CardTitle>
+                  <Button
+                    onClick={() => refetchRecordings()}
+                    variant="outline"
+                    size="sm"
+                    data-testid="button-refresh-recordings"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {broadcastRecordings.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Video className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No recordings yet
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Start a recording to capture your broadcast
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {broadcastRecordings.slice(0, 5).map((recording: any) => (
+                      <div 
+                        key={recording.id}
+                        className="flex items-center justify-between p-3 border rounded-md hover-elevate"
+                        data-testid={`recording-item-${recording.id}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {recording.filename}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {recording.duration || 0}s · {(recording.size / 1024 / 1024).toFixed(1)}MB · {new Date(recording.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={() => {
+                              window.open(`/api/recordings/${recording.id}/video`, '_blank');
+                            }}
+                            variant="outline"
+                            size="sm"
+                            data-testid={`button-view-${recording.id}`}
+                          >
+                            <Eye className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              const a = document.createElement('a');
+                              a.href = `/api/recordings/${recording.id}/video`;
+                              a.download = recording.filename;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                            }}
+                            variant="outline"
+                            size="sm"
+                            data-testid={`button-download-${recording.id}`}
+                          >
+                            <Download className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {broadcastRecordings.length > 5 && (
+                      <p className="text-xs text-muted-foreground text-center pt-2">
+                        Showing 5 of {broadcastRecordings.length} recordings
+                      </p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
