@@ -1228,6 +1228,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload document and create new framework automatically
+  app.post("/api/frameworks/upload-document", documentUpload.single('document'), async (req, res) => {
+    try {
+      const file = req.file;
+      const { categoryId, aiProvider = 'claude' } = req.body;
+
+      if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      if (!categoryId) {
+        await fs.unlink(file.path).catch(console.error);
+        return res.status(400).json({ error: "Category ID is required" });
+      }
+
+      // Import document adapter
+      const { processDocumentToFramework } = await import('./services/documentAdapter');
+
+      const fileBuffer = await fs.readFile(file.path);
+      
+      // Process document and convert to framework
+      const { framework, extractedText, metadata } = await processDocumentToFramework(
+        fileBuffer,
+        file.originalname,
+        file.mimetype,
+        aiProvider as 'openai' | 'claude'
+      );
+
+      // Create the framework
+      const createdFramework = await storage.createFramework({
+        name: framework.name,
+        description: framework.description,
+        categoryId,
+        tags: framework.suggestedTags,
+        isPublic: false,
+        isStarred: false,
+        totalDownloads: '0',
+        apiCapabilities: framework.apiCapabilities,
+        apiConfig: {}
+      });
+
+      // Get file size
+      const stats = await fs.stat(file.path);
+      const fileSizeKB = Math.round(stats.size / 1024);
+
+      // Create initial version with extracted content
+      const versionData = {
+        frameworkId: createdFramework.id,
+        version: '1.0.0',
+        title: 'Imported from ' + file.originalname,
+        contentJson: {
+          sections: framework.sections,
+          extractedMetrics: framework.extractedMetrics || [],
+          extractedQueries: framework.extractedQueries || []
+        },
+        templateStructure: {},
+        changelogMarkdown: `Automatically generated from ${file.originalname} using ${aiProvider}`,
+        isActive: true,
+        downloadCount: '0',
+        fileSize: `${fileSizeKB} KB`,
+        sourceType: 'upload',
+        sourceFileName: file.originalname,
+        sourceFileUrl: `/uploads/documents/${file.filename}`,
+        processingStatus: 'completed',
+        extractedText: extractedText,
+        extractionError: null
+      };
+
+      const version = await storage.createFrameworkVersion(versionData);
+
+      // Update framework with current version
+      await storage.updateFramework(createdFramework.id, {
+        currentVersionId: version.id
+      });
+
+      res.json({
+        framework: createdFramework,
+        version,
+        metadata,
+        success: true,
+        message: 'Framework created successfully from document'
+      });
+    } catch (error) {
+      console.error('Error creating framework from document:', error);
+      if (req.file) {
+        await fs.unlink(req.file.path).catch(console.error);
+      }
+      res.status(500).json({ error: "Failed to create framework from document" });
+    }
+  });
+
   // Document upload and processing for frameworks
   app.post("/api/frameworks/:id/upload-document", documentUpload.single('document'), async (req, res) => {
     try {
@@ -1324,6 +1415,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await fs.unlink(req.file.path).catch(console.error);
       }
       res.status(500).json({ error: "Failed to upload and process document" });
+    }
+  });
+
+  // Framework execution with API access
+  app.post("/api/frameworks/:id/execute", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const inputData = req.body;
+
+      const framework = await storage.getFramework(id);
+      if (!framework) {
+        return res.status(404).json({ error: "Framework not found" });
+      }
+
+      const { executeFramework, createExecutionContext } = await import('./services/frameworkExecutor');
+      
+      const result = await executeFramework(framework, inputData);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error executing framework:', error);
+      res.status(500).json({ error: "Failed to execute framework" });
+    }
+  });
+
+  // Get framework execution context (available APIs)
+  app.get("/api/frameworks/:id/execution-context", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const framework = await storage.getFramework(id);
+      if (!framework) {
+        return res.status(404).json({ error: "Framework not found" });
+      }
+
+      const { createExecutionContext } = await import('./services/frameworkExecutor');
+      const context = createExecutionContext(framework);
+      
+      res.json({ context });
+    } catch (error) {
+      console.error('Error getting execution context:', error);
+      res.status(500).json({ error: "Failed to get execution context" });
     }
   });
 
