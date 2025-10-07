@@ -101,7 +101,18 @@ interface ActiveSource {
   deviceId?: string;
   deviceLabel?: string;
   stream?: MediaStream;
+  resolution?: string;
+  customWidth?: number;
+  customHeight?: number;
 }
+
+const RESOLUTION_PRESETS = {
+  '4K': { width: 3840, height: 2160, label: '4K (3840×2160)' },
+  '1080p': { width: 1920, height: 1080, label: '1080p (1920×1080)' },
+  '720p': { width: 1280, height: 720, label: '720p (1280×720)' },
+  '480p': { width: 640, height: 480, label: '480p (640×480)' },
+  'custom': { width: 0, height: 0, label: 'Custom' },
+} as const;
 
 interface LibraryImage {
   id: number;
@@ -428,6 +439,7 @@ export default function LivePresentation() {
   const [outputResolution, setOutputResolution] = useState({ width: 3840, height: 2160 });
   const [globalFitMode, setGlobalFitMode] = useState<'contain' | 'cover' | 'fill'>('contain');
   const [sourceFitModes, setSourceFitModes] = useState<Record<string, 'contain' | 'cover' | 'fill'>>({});
+  const [sourceSettings, setSourceSettings] = useState<Record<string, { resolution?: string; customWidth?: number; customHeight?: number }>>({});
   const [overlayImageUrl, setOverlayImageUrl] = useState('');
   const [overlayImageData, setOverlayImageData] = useState('');
   const [overlayType, setOverlayType] = useState<'text' | 'image' | 'rss' | 'video' | 'metric'>('text');
@@ -674,6 +686,7 @@ export default function LivePresentation() {
       if (state.outputResolution) setOutputResolution(typeof state.outputResolution === 'string' ? JSON.parse(state.outputResolution) : state.outputResolution);
       if (state.globalFitMode) setGlobalFitMode(state.globalFitMode as any);
       if (state.sourceFitModes) setSourceFitModes(typeof state.sourceFitModes === 'string' ? JSON.parse(state.sourceFitModes) : state.sourceFitModes);
+      if (state.sourceSettings) setSourceSettings(typeof state.sourceSettings === 'string' ? JSON.parse(state.sourceSettings) : state.sourceSettings);
       if (state.isBroadcasting !== undefined) setIsBroadcasting(state.isBroadcasting);
     }
   }, [liveStateData]);
@@ -686,12 +699,13 @@ export default function LivePresentation() {
         outputResolution: JSON.stringify(outputResolution),
         globalFitMode,
         sourceFitModes: JSON.stringify(sourceFitModes),
+        sourceSettings: JSON.stringify(sourceSettings),
         isBroadcasting,
       }).catch(err => console.error('Failed to save live state:', err));
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes, isBroadcasting]);
+  }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes, sourceSettings, isBroadcasting]);
 
   useEffect(() => {
     if (!gridPreviewRef.current || !isPositionEditorOpen) return;
@@ -781,7 +795,19 @@ export default function LivePresentation() {
       if (!camera) return;
 
       const sourceId = `camera-${Date.now()}`;
-      const stream = await acquireStream(sourceId, deviceId);
+      
+      const settings = sourceSettings[deviceId] || { resolution: '1080p' };
+      const resolution = settings.resolution || '1080p';
+      
+      let resolutionConstraints = undefined;
+      if (resolution && resolution !== 'custom' && RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS]) {
+        const preset = RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS];
+        resolutionConstraints = { width: preset.width, height: preset.height };
+      } else if (resolution === 'custom' && settings.customWidth && settings.customHeight) {
+        resolutionConstraints = { width: settings.customWidth, height: settings.customHeight };
+      }
+      
+      const stream = await acquireStream(sourceId, deviceId, resolutionConstraints);
 
       const newSource: ActiveSource = {
         id: sourceId,
@@ -790,6 +816,9 @@ export default function LivePresentation() {
         deviceId,
         deviceLabel: camera.label,
         stream,
+        resolution,
+        customWidth: settings.customWidth,
+        customHeight: settings.customHeight,
       };
 
       setActiveSources(prev => [...prev, newSource]);
