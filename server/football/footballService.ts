@@ -1368,7 +1368,7 @@ class FootballService {
 
   async getHeadToHeadStats(homeTeamId: number, awayTeamId: number, last: number = 10): Promise<FootballFixture[]> {
     // PHASE 1: Query database first for persistent H2H fixtures (CURRENT SEASON ONLY)
-    const currentSeason = 2024; // 2024-25 Premier League season
+    const currentSeason = 2025; // 2025-26 Premier League season
     try {
       const dbFixtures = await db
         .select()
