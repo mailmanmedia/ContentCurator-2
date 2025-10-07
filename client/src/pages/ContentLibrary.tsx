@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,7 @@ import { format } from "date-fns";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 interface ContentItem {
   id: string;
@@ -121,6 +122,7 @@ const contentTypeConfig = {
 
 export default function ContentLibrary() {
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
@@ -297,34 +299,38 @@ export default function ContentLibrary() {
     }))
   ];
 
-  // Filter content
-  const filteredContent = allContent.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesType = selectedType === "all" || item.type === selectedType;
-    const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
-    const matchesStarred = !showStarredOnly || item.isStarred;
-    
-    return matchesSearch && matchesType && matchesCategory && matchesStarred;
-  });
+  // Filter content with memoization
+  const filteredContent = useMemo(() => {
+    return allContent.filter(item => {
+      const matchesSearch = item.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+                           item.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+                           item.tags.some(tag => tag.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
+      
+      const matchesType = selectedType === "all" || item.type === selectedType;
+      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+      const matchesStarred = !showStarredOnly || item.isStarred;
+      
+      return matchesSearch && matchesType && matchesCategory && matchesStarred;
+    });
+  }, [allContent, debouncedSearchQuery, selectedType, selectedCategory, showStarredOnly]);
 
-  // Sort content
-  const sortedContent = [...filteredContent].sort((a, b) => {
-    switch (sortBy) {
-      case "newest":
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      case "oldest":
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      case "name":
-        return a.title.localeCompare(b.title);
-      case "type":
-        return a.type.localeCompare(b.type);
-      default:
-        return 0;
-    }
-  });
+  // Sort content with memoization
+  const sortedContent = useMemo(() => {
+    return [...filteredContent].sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "oldest":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "name":
+          return a.title.localeCompare(b.title);
+        case "type":
+          return a.type.localeCompare(b.type);
+        default:
+          return 0;
+      }
+    });
+  }, [filteredContent, sortBy]);
 
   // Get unique categories
   const categories = Array.from(new Set(allContent.map(item => item.category).filter(Boolean))) as string[];
