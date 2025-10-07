@@ -1273,7 +1273,7 @@ class FootballService {
     return await smartFootballCache.get(
       `teams_competition_${competitionId}`,
       async () => {
-        // Get teams that have played in this competition
+        // First, try to get teams from database via fixtures
         const teamIds = await db.selectDistinct({ teamId: footballFixtures.homeTeamId })
           .from(footballFixtures)
           .where(eq(footballFixtures.leagueId, competitionId))
@@ -1283,27 +1283,87 @@ class FootballService {
               .where(eq(footballFixtures.leagueId, competitionId))
           );
 
-        if (teamIds.length === 0) {
-          // If no fixtures, try to sync teams for this competition
+        // If we found teams from fixtures, return those
+        if (teamIds.length > 0) {
+          const teams = await db.select()
+            .from(footballTeams)
+            .where(inArray(footballTeams.id, teamIds.map(t => t.teamId)))
+            .orderBy(footballTeams.name);
+          
+          if (teams.length > 0) {
+            return teams;
+          }
+        }
+
+        // No teams from fixtures, try to sync from API
+        try {
           const competition = await db.select()
             .from(footballCompetitions)
             .where(eq(footballCompetitions.id, competitionId))
             .limit(1);
 
-          // Use current season as default if competition not found
-          const season = competition.length > 0 ? competition[0].season : 2024;
+          const season = competition.length > 0 ? competition[0].season : 2025;
           const syncedTeams = await this.syncTeamsForCompetition(competitionId, season);
-          // Return synced/fallback teams directly
-          return syncedTeams;
+          
+          if (syncedTeams.length > 0) {
+            return syncedTeams;
+          }
+        } catch (error) {
+          console.log(`API sync failed for competition ${competitionId}, using static data:`, error);
         }
 
-        return await db.select()
-          .from(footballTeams)
-          .where(inArray(footballTeams.id, teamIds.map(t => t.teamId)))
-          .orderBy(footballTeams.name);
+        // API failed or returned no teams, use static hardcoded data
+        console.log(`Using static team data for competition ${competitionId}`);
+        return this.getStaticTeamsForCompetition(competitionId);
       },
       'teams'
     );
+  }
+
+  // Static team data for when API is unavailable
+  private getStaticTeamsForCompetition(competitionId: number): FootballTeam[] {
+    const PREMIER_LEAGUE_TEAMS = [
+      { id: 40, name: "Liverpool", code: "LIV", country: "England", founded: 1892, national: false, logo: "https://media.api-sports.io/football/teams/40.png", venue: { id: 550, name: "Anfield", city: "Liverpool" }, lastUpdated: new Date() },
+      { id: 50, name: "Manchester City", code: "MCI", country: "England", founded: 1880, national: false, logo: "https://media.api-sports.io/football/teams/50.png", venue: { id: 555, name: "Etihad Stadium", city: "Manchester" }, lastUpdated: new Date() },
+      { id: 42, name: "Arsenal", code: "ARS", country: "England", founded: 1886, national: false, logo: "https://media.api-sports.io/football/teams/42.png", venue: { id: 494, name: "Emirates Stadium", city: "London" }, lastUpdated: new Date() },
+      { id: 49, name: "Chelsea", code: "CHE", country: "England", founded: 1905, national: false, logo: "https://media.api-sports.io/football/teams/49.png", venue: { id: 519, name: "Stamford Bridge", city: "London" }, lastUpdated: new Date() },
+      { id: 33, name: "Manchester United", code: "MUN", country: "England", founded: 1878, national: false, logo: "https://media.api-sports.io/football/teams/33.png", venue: { id: 556, name: "Old Trafford", city: "Manchester" }, lastUpdated: new Date() },
+      { id: 47, name: "Tottenham", code: "TOT", country: "England", founded: 1882, national: false, logo: "https://media.api-sports.io/football/teams/47.png", venue: { id: 562, name: "Tottenham Hotspur Stadium", city: "London" }, lastUpdated: new Date() },
+      { id: 34, name: "Newcastle", code: "NEW", country: "England", founded: 1892, national: false, logo: "https://media.api-sports.io/football/teams/34.png", venue: { id: 557, name: "St. James' Park", city: "Newcastle" }, lastUpdated: new Date() },
+      { id: 66, name: "Aston Villa", code: "AVL", country: "England", founded: 1872, national: false, logo: "https://media.api-sports.io/football/teams/66.png", venue: { id: 532, name: "Villa Park", city: "Birmingham" }, lastUpdated: new Date() },
+      { id: 51, name: "Brighton", code: "BHA", country: "England", founded: 1901, national: false, logo: "https://media.api-sports.io/football/teams/51.png", venue: { id: 508, name: "Amex Stadium", city: "Brighton" }, lastUpdated: new Date() },
+      { id: 35, name: "Bournemouth", code: "BOU", country: "England", founded: 1899, national: false, logo: "https://media.api-sports.io/football/teams/35.png", venue: { id: 504, name: "Vitality Stadium", city: "Bournemouth" }, lastUpdated: new Date() },
+      { id: 36, name: "Fulham", code: "FUL", country: "England", founded: 1879, national: false, logo: "https://media.api-sports.io/football/teams/36.png", venue: { id: 525, name: "Craven Cottage", city: "London" }, lastUpdated: new Date() },
+      { id: 48, name: "West Ham", code: "WHU", country: "England", founded: 1895, national: false, logo: "https://media.api-sports.io/football/teams/48.png", venue: { id: 566, name: "London Stadium", city: "London" }, lastUpdated: new Date() },
+      { id: 39, name: "Wolves", code: "WOL", country: "England", founded: 1877, national: false, logo: "https://media.api-sports.io/football/teams/39.png", venue: { id: 600, name: "Molineux Stadium", city: "Wolverhampton" }, lastUpdated: new Date() },
+      { id: 52, name: "Crystal Palace", code: "CRY", country: "England", founded: 1905, national: false, logo: "https://media.api-sports.io/football/teams/52.png", venue: { id: 523, name: "Selhurst Park", city: "London" }, lastUpdated: new Date() },
+      { id: 65, name: "Nottingham Forest", code: "NOT", country: "England", founded: 1865, national: false, logo: "https://media.api-sports.io/football/teams/65.png", venue: { id: 564, name: "City Ground", city: "Nottingham" }, lastUpdated: new Date() },
+      { id: 56, name: "Everton", code: "EVE", country: "England", founded: 1878, national: false, logo: "https://media.api-sports.io/football/teams/56.png", venue: { id: 524, name: "Goodison Park", city: "Liverpool" }, lastUpdated: new Date() },
+      { id: 55, name: "Brentford", code: "BRE", country: "England", founded: 1889, national: false, logo: "https://media.api-sports.io/football/teams/55.png", venue: { id: 502, name: "Brentford Community Stadium", city: "Brentford" }, lastUpdated: new Date() },
+      { id: 45, name: "Leicester", code: "LEI", country: "England", founded: 1884, national: false, logo: "https://media.api-sports.io/football/teams/45.png", venue: { id: 540, name: "King Power Stadium", city: "Leicester" }, lastUpdated: new Date() },
+      { id: 41, name: "Southampton", code: "SOU", country: "England", founded: 1885, national: false, logo: "https://media.api-sports.io/football/teams/41.png", venue: { id: 559, name: "St. Mary's Stadium", city: "Southampton" }, lastUpdated: new Date() },
+      { id: 57, name: "Ipswich Town", code: "IPS", country: "England", founded: 1878, national: false, logo: "https://media.api-sports.io/football/teams/57.png", venue: { id: 535, name: "Portman Road", city: "Ipswich" }, lastUpdated: new Date() }
+    ];
+
+    const CHAMPIONS_LEAGUE_TEAMS = [
+      ...PREMIER_LEAGUE_TEAMS.slice(0, 5), // Top 5 PL teams typically qualify
+      { id: 529, name: "Barcelona", code: "BAR", country: "Spain", founded: 1899, national: false, logo: "https://media.api-sports.io/football/teams/529.png", venue: { id: 1459, name: "Camp Nou", city: "Barcelona" }, lastUpdated: new Date() },
+      { id: 541, name: "Real Madrid", code: "RMA", country: "Spain", founded: 1902, national: false, logo: "https://media.api-sports.io/football/teams/541.png", venue: { id: 1456, name: "Santiago Bernabéu", city: "Madrid" }, lastUpdated: new Date() },
+      { id: 489, name: "AC Milan", code: "MIL", country: "Italy", founded: 1899, national: false, logo: "https://media.api-sports.io/football/teams/489.png", venue: { id: 906, name: "San Siro", city: "Milano" }, lastUpdated: new Date() },
+      { id: 487, name: "Juventus", code: "JUV", country: "Italy", founded: 1897, national: false, logo: "https://media.api-sports.io/football/teams/487.png", venue: { id: 904, name: "Allianz Stadium", city: "Torino" }, lastUpdated: new Date() },
+      { id: 157, name: "Bayern Munich", code: "BAY", country: "Germany", founded: 1900, national: false, logo: "https://media.api-sports.io/football/teams/157.png", venue: { id: 700, name: "Allianz Arena", city: "München" }, lastUpdated: new Date() },
+      { id: 85, name: "Paris Saint Germain", code: "PSG", country: "France", founded: 1970, national: false, logo: "https://media.api-sports.io/football/teams/85.png", venue: { id: 671, name: "Parc des Princes", city: "Paris" }, lastUpdated: new Date() }
+    ];
+
+    // Map competition IDs to team sets
+    const competitionTeams: Record<number, FootballTeam[]> = {
+      39: PREMIER_LEAGUE_TEAMS,  // Premier League
+      2: CHAMPIONS_LEAGUE_TEAMS,  // Champions League
+      45: PREMIER_LEAGUE_TEAMS,   // FA Cup (all PL teams can participate)
+      48: PREMIER_LEAGUE_TEAMS    // League Cup (all PL teams can participate)
+    };
+
+    return competitionTeams[competitionId] || PREMIER_LEAGUE_TEAMS;
   }
 
   async getHeadToHeadStats(homeTeamId: number, awayTeamId: number, last: number = 10): Promise<FootballFixture[]> {
