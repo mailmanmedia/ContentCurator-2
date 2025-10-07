@@ -548,6 +548,7 @@ export const liveStates = pgTable("live_states", {
   outputResolution: jsonb("output_resolution").notNull().default('{"width":3840,"height":2160}'),
   globalFitMode: text("global_fit_mode").notNull().default('contain'),
   sourceFitModes: jsonb("source_fit_modes").notNull().default('{}'),
+  sourceSettings: jsonb("source_settings").notNull().default('{}'),
   isBroadcasting: boolean("is_broadcasting").notNull().default(false),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
