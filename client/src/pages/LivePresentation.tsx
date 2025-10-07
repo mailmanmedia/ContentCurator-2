@@ -331,13 +331,15 @@ function SortableActiveSource({
   onRemove,
   sourceFitModes,
   globalFitMode,
-  onFitModeChange
+  onFitModeChange,
+  onChangeResolution
 }: { 
   source: ActiveSource;
   onRemove: (id: string) => void;
   sourceFitModes: Record<string, 'contain' | 'cover' | 'fill'>;
   globalFitMode: 'contain' | 'cover' | 'fill';
   onFitModeChange: (sourceId: string, fitMode: 'contain' | 'cover' | 'fill' | 'auto') => void;
+  onChangeResolution?: (sourceId: string, resolution: string, customWidth?: number, customHeight?: number) => void;
 }) {
   const {
     attributes,
@@ -403,6 +405,43 @@ function SortableActiveSource({
           </div>
         </PopoverContent>
       </Popover>
+
+      {source.type === 'camera' && onChangeResolution && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+              data-testid={`button-resolution-${source.id}`}
+            >
+              <Monitor className="w-3 h-3 text-primary" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56" align="end">
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Resolution</h4>
+              <Select
+                value={source.resolution || '1080p'}
+                onValueChange={(value) => onChangeResolution(source.id, value, source.customWidth, source.customHeight)}
+              >
+                <SelectTrigger data-testid={`select-source-resolution-${source.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="4k">4K (3840x2160)</SelectItem>
+                  <SelectItem value="1080p">Full HD (1920x1080)</SelectItem>
+                  <SelectItem value="720p">HD (1280x720)</SelectItem>
+                  <SelectItem value="480p">SD (854x480)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Current: {RESOLUTION_PRESETS[source.resolution as keyof typeof RESOLUTION_PRESETS]?.label || source.resolution || '1080p'}
+              </p>
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
 
       <Button
         size="icon"
@@ -1120,6 +1159,52 @@ export default function LivePresentation() {
   const handleRemoveSource = (sourceId: string) => {
     setActiveSources(prev => prev.filter(s => s.id !== sourceId));
     toast({ title: 'Source removed' });
+  };
+
+  const handleChangeResolution = async (sourceId: string, resolution: string, customWidth?: number, customHeight?: number) => {
+    try {
+      const source = activeSources.find(s => s.id === sourceId);
+      if (!source || source.type !== 'camera' || !source.deviceId) return;
+
+      const deviceId = source.deviceId;
+      
+      setSourceSettings(prev => ({
+        ...prev,
+        [deviceId]: { resolution, customWidth, customHeight }
+      }));
+
+      if (source.stream) {
+        source.stream.getTracks().forEach(track => track.stop());
+      }
+
+      let resolutionConstraints = undefined;
+      if (resolution && resolution !== 'custom' && RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS]) {
+        const preset = RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS];
+        resolutionConstraints = { width: preset.width, height: preset.height };
+      } else if (resolution === 'custom' && customWidth && customHeight) {
+        resolutionConstraints = { width: customWidth, height: customHeight };
+      }
+
+      const newStream = await acquireStream(sourceId, deviceId, resolutionConstraints);
+
+      setActiveSources(prev => prev.map(s =>
+        s.id === sourceId
+          ? { ...s, stream: newStream, resolution, customWidth, customHeight }
+          : s
+      ));
+
+      toast({ 
+        title: 'Resolution changed', 
+        description: resolution === 'custom' ? `${customWidth}x${customHeight}` : RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS]?.label || resolution
+      });
+    } catch (err) {
+      console.error('Failed to change resolution:', err);
+      toast({ 
+        title: 'Failed to change resolution', 
+        description: 'Please try again',
+        variant: 'destructive' 
+      });
+    }
   };
 
   const handleRemoveOverlay = (overlayId: string) => {
@@ -1997,6 +2082,7 @@ export default function LivePresentation() {
                             sourceFitModes={sourceFitModes}
                             globalFitMode={globalFitMode}
                             onFitModeChange={handleSourceFitModeChange}
+                            onChangeResolution={handleChangeResolution}
                           />
                         ))}
                       </div>
