@@ -39,6 +39,14 @@ export default function VideoPreview({
     }
   };
 
+  const handleLoadedMetadata = () => {
+    console.log('Video metadata loaded');
+  };
+
+  const handleError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    console.error('Video error:', e.currentTarget.error);
+  };
+
   return (
     <Card data-testid="video-preview">
       <CardContent className="p-4">
@@ -49,7 +57,10 @@ export default function VideoPreview({
               src={videoUrl}
               className="w-full h-full"
               onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onError={handleError}
               data-testid="video-player"
+              controls
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
