@@ -4193,7 +4193,7 @@ Return ONLY a JSON object with this structure:
       );
 
       // Get other table stats
-      const rssArticles = await storage.getRssArticles({});
+      const rssArticles = await storage.getRssArticles();
       const players = await db.select().from(footballPlayers);
       const teamStats = await db.select().from(teamSeasonStatistics);
       const recordings = await storage.getRecordings();
@@ -4206,12 +4206,39 @@ Return ONLY a JSON object with this structure:
 
       const h2hData = h2hResult.rows[0] || { count: 0, earliest: null, latest: null };
 
+      // Helper function to safely get dates from articles
+      const getArticleDates = (articles: typeof rssArticles) => {
+        const articlesWithDates = articles.filter(a => a.publishedAt);
+        if (articlesWithDates.length === 0) return { earliest: null, latest: null };
+        
+        const timestamps = articlesWithDates.map(a => new Date(a.publishedAt!).getTime());
+        return {
+          earliest: new Date(Math.min(...timestamps)).toISOString(),
+          latest: new Date(Math.max(...timestamps)).toISOString()
+        };
+      };
+
+      const articleDates = getArticleDates(rssArticles);
+
+      // Helper function to safely get recording dates
+      const getRecordingDates = (recs: typeof recordings) => {
+        if (recs.length === 0) return { earliest: null, latest: null };
+        
+        const timestamps = recs.map(r => new Date(r.createdAt).getTime());
+        return {
+          earliest: new Date(Math.min(...timestamps)).toISOString(),
+          latest: new Date(Math.max(...timestamps)).toISOString()
+        };
+      };
+
+      const recordingDates = getRecordingDates(recordings);
+
       const tables = [
         {
           tableName: 'RSS Articles',
           recordCount: rssArticles.length,
-          earliestDate: rssArticles.length > 0 ? new Date(Math.min(...rssArticles.filter(a => a.publishedAt).map(a => new Date(a.publishedAt).getTime()))).toISOString() : null,
-          latestDate: rssArticles.length > 0 ? new Date(Math.max(...rssArticles.filter(a => a.publishedAt).map(a => new Date(a.publishedAt).getTime()))).toISOString() : null
+          earliestDate: articleDates.earliest,
+          latestDate: articleDates.latest
         },
         {
           tableName: 'Football Players',
@@ -4228,8 +4255,8 @@ Return ONLY a JSON object with this structure:
         {
           tableName: 'Historical Head-to-Head',
           recordCount: Number(h2hData.count) || 0,
-          earliestDate: h2hData.earliest ? new Date(h2hData.earliest).toISOString() : null,
-          latestDate: h2hData.latest ? new Date(h2hData.latest).toISOString() : null
+          earliestDate: h2hData.earliest ? new Date(String(h2hData.earliest)).toISOString() : null,
+          latestDate: h2hData.latest ? new Date(String(h2hData.latest)).toISOString() : null
         },
         {
           tableName: 'Video Projects',
@@ -4240,8 +4267,8 @@ Return ONLY a JSON object with this structure:
         {
           tableName: 'Recordings',
           recordCount: recordings.length,
-          earliestDate: recordings.length > 0 ? new Date(Math.min(...recordings.map(r => new Date(r.createdAt).getTime()))).toISOString() : null,
-          latestDate: recordings.length > 0 ? new Date(Math.max(...recordings.map(r => new Date(r.createdAt).getTime()))).toISOString() : null
+          earliestDate: recordingDates.earliest,
+          latestDate: recordingDates.latest
         }
       ];
 
