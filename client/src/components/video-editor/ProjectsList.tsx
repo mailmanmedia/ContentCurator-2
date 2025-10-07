@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Folder, Trash2, Clock } from "lucide-react";
+import { Folder, Trash2, Clock, Video } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { VideoProject } from "@shared/schema";
@@ -20,9 +20,7 @@ export default function ProjectsList({ onOpenProject }: ProjectsListProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (projectId: string) => {
-      return apiRequest<{ success: boolean }>(`/api/video-projects/${projectId}`, {
-        method: 'DELETE'
-      });
+      return apiRequest('DELETE', `/api/video-projects/${projectId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/video-projects'] });
@@ -84,7 +82,7 @@ export default function ProjectsList({ onOpenProject }: ProjectsListProps) {
   if (!projects || projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
-        <FolderVideo className="w-16 h-16 text-muted-foreground mb-4" />
+        <Video className="w-16 h-16 text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Projects Yet</h3>
         <p className="text-sm text-muted-foreground">
           Create a project from a recording to start editing

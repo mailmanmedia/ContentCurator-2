@@ -56,10 +56,7 @@ export default function ExportPanel({ projectId }: ExportPanelProps) {
         fps: 30
       };
 
-      return apiRequest(`/api/video-projects/${projectId}/render`, {
-        method: 'POST',
-        body: JSON.stringify({ settings })
-      });
+      return apiRequest('POST', `/api/video-projects/${projectId}/render`, { settings });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/render-jobs'] });

@@ -23,9 +23,7 @@ export default function AutoEditPanel({ projectId }: AutoEditPanelProps) {
 
   const autoCutMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/video-projects/${projectId}/analyze`, {
-        method: 'POST'
-      });
+      return apiRequest('POST', `/api/video-projects/${projectId}/analyze`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/video-projects', projectId, 'clips'] });
