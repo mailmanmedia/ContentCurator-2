@@ -111,17 +111,21 @@ export function useVideoRecorder(
         setRecordedBlob(blob);
         setRecordingState('stopped');
         
+        // Calculate final duration at stop time
+        const finalDuration = Math.floor((Date.now() - startTimeRef.current - totalPausedDurationRef.current) / 1000);
+        setDuration(finalDuration);
+        
         // Stop all tracks in the stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
         }
 
-        // Auto-save to server
+        // Auto-save to server with accurate duration
         try {
           const formData = new FormData();
           formData.append('video', blob, `recording-${Date.now()}.webm`);
-          formData.append('duration', duration.toString());
+          formData.append('duration', finalDuration.toString());
           formData.append('codec', selectedMimeType);
           
           const response = await fetch('/api/recordings', {
