@@ -22,8 +22,13 @@ export function checkScreenShareSupport(): boolean {
   return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
 }
 
+export interface ResolutionConstraints {
+  width?: number;
+  height?: number;
+}
+
 interface CameraStreamContextType {
-  acquireStream: (sourceId: string, deviceId: string) => Promise<MediaStream>;
+  acquireStream: (sourceId: string, deviceId: string, resolution?: ResolutionConstraints) => Promise<MediaStream>;
   acquireScreenShare: (sourceId: string) => Promise<MediaStream>;
   releaseStream: (sourceId: string) => void;
   releaseAllStreams: () => void;
@@ -47,7 +52,7 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
   const requestsRef = useRef<Map<string, Promise<MediaStream>>>(new Map());
   const isScreenShareSupported = useMemo(() => checkScreenShareSupport(), []);
 
-  const acquireStream = useCallback(async (sourceId: string, deviceId: string): Promise<MediaStream> => {
+  const acquireStream = useCallback(async (sourceId: string, deviceId: string, resolution?: ResolutionConstraints): Promise<MediaStream> => {
     const existing = streamsRef.current.get(sourceId);
     if (existing) {
       if (existing.stream.active) {
@@ -68,8 +73,19 @@ export function CameraStreamProvider({ children }: CameraStreamProviderProps) {
       return stream;
     }
 
+    const videoConstraints: MediaTrackConstraints = {
+      deviceId: { exact: deviceId }
+    };
+
+    if (resolution?.width) {
+      videoConstraints.width = { ideal: resolution.width };
+    }
+    if (resolution?.height) {
+      videoConstraints.height = { ideal: resolution.height };
+    }
+
     const streamRequest = navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId } },
+      video: videoConstraints,
       audio: false,
     });
 
