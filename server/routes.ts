@@ -3885,7 +3885,27 @@ Return ONLY a JSON object with this structure:
   app.post("/api/video-projects", async (req, res) => {
     try {
       const validatedData = insertVideoProjectSchema.parse(req.body);
+      
+      // Get the recording to get its duration
+      const recording = await storage.getRecording(validatedData.recordingId);
+      if (!recording) {
+        return res.status(404).json({ error: "Recording not found" });
+      }
+      
+      // Create the project
       const project = await storage.createVideoProject(validatedData);
+      
+      // Create an initial clip that spans the entire recording
+      const durationMs = (recording.duration || 0) * 1000;
+      await storage.createVideoClip({
+        projectId: project.id,
+        sourceRecordingId: recording.id,
+        startTime: 0,
+        endTime: durationMs,
+        duration: durationMs,
+        order: 0
+      });
+      
       res.status(201).json(project);
     } catch (error: any) {
       console.error('Error creating video project:', error);
