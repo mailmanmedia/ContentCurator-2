@@ -352,6 +352,7 @@ export class MemStorage implements IStorage {
       outputResolution: JSON.stringify({ width: 3840, height: 2160 }),
       globalFitMode: 'contain',
       sourceFitModes: JSON.stringify({}),
+      sourceSettings: JSON.stringify({}),
       isBroadcasting: false,
       updatedAt: new Date()
     };
@@ -1009,6 +1010,8 @@ export class MemStorage implements IStorage {
       isStarred: insertFramework.isStarred ?? false,
       totalDownloads: insertFramework.totalDownloads || '0',
       currentVersionId: insertFramework.currentVersionId || null,
+      apiCapabilities: insertFramework.apiCapabilities || { database: false, perplexity: false, claude: false, openai: false, football: false },
+      apiConfig: insertFramework.apiConfig || {},
       createdAt: now,
       updatedAt: now
     };
