@@ -25,6 +25,9 @@ import {
   type VideoProject, type InsertVideoProject,
   type VideoClip, type InsertVideoClip,
   type RenderJob, type InsertRenderJob,
+  type TextOverlay, type InsertTextOverlay,
+  type Keyframe, type InsertKeyframe,
+  type AudioTrack, type InsertAudioTrack,
   videoSources as videoSourcesTable,
   scenes as scenesTable,
   presentationSets as presentationSetsTable,
@@ -36,7 +39,10 @@ import {
   recordings as recordingsTable,
   videoProjects as videoProjectsTable,
   videoClips as videoClipsTable,
-  renderJobs as renderJobsTable
+  renderJobs as renderJobsTable,
+  textOverlays as textOverlaysTable,
+  keyframes as keyframesTable,
+  audioTracks as audioTracksTable
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
@@ -286,6 +292,27 @@ export interface IStorage {
   createVideoClip(clip: import("@shared/schema").InsertVideoClip): Promise<import("@shared/schema").VideoClip>;
   updateVideoClip(id: string, updates: Partial<import("@shared/schema").InsertVideoClip>): Promise<import("@shared/schema").VideoClip | undefined>;
   deleteVideoClip(id: string): Promise<boolean>;
+
+  // Text Overlay methods
+  getTextOverlays(projectId: string): Promise<import("@shared/schema").TextOverlay[]>;
+  getTextOverlay(id: string): Promise<import("@shared/schema").TextOverlay | undefined>;
+  createTextOverlay(overlay: import("@shared/schema").InsertTextOverlay): Promise<import("@shared/schema").TextOverlay>;
+  updateTextOverlay(id: string, updates: Partial<import("@shared/schema").InsertTextOverlay>): Promise<import("@shared/schema").TextOverlay | undefined>;
+  deleteTextOverlay(id: string): Promise<boolean>;
+
+  // Keyframe methods
+  getKeyframes(clipId: string): Promise<import("@shared/schema").Keyframe[]>;
+  getKeyframe(id: string): Promise<import("@shared/schema").Keyframe | undefined>;
+  createKeyframe(keyframe: import("@shared/schema").InsertKeyframe): Promise<import("@shared/schema").Keyframe>;
+  updateKeyframe(id: string, updates: Partial<import("@shared/schema").InsertKeyframe>): Promise<import("@shared/schema").Keyframe | undefined>;
+  deleteKeyframe(id: string): Promise<boolean>;
+
+  // Audio Track methods
+  getAudioTracks(projectId: string): Promise<import("@shared/schema").AudioTrack[]>;
+  getAudioTrack(id: string): Promise<import("@shared/schema").AudioTrack | undefined>;
+  createAudioTrack(track: import("@shared/schema").InsertAudioTrack): Promise<import("@shared/schema").AudioTrack>;
+  updateAudioTrack(id: string, updates: Partial<import("@shared/schema").InsertAudioTrack>): Promise<import("@shared/schema").AudioTrack | undefined>;
+  deleteAudioTrack(id: string): Promise<boolean>;
 
   // Render Job methods
   getRenderJobs(): Promise<import("@shared/schema").RenderJob[]>;
@@ -2114,6 +2141,99 @@ export class MemStorage implements IStorage {
 
   async deleteVideoClip(id: string): Promise<boolean> {
     await db.delete(videoClipsTable).where(eq(videoClipsTable.id, id));
+    return true;
+  }
+
+  // Text Overlay methods
+  async getTextOverlays(projectId: string): Promise<import("@shared/schema").TextOverlay[]> {
+    const results = await db.select().from(textOverlaysTable)
+      .where(eq(textOverlaysTable.projectId, projectId))
+      .orderBy(textOverlaysTable.startTime);
+    return results;
+  }
+
+  async getTextOverlay(id: string): Promise<import("@shared/schema").TextOverlay | undefined> {
+    const results = await db.select().from(textOverlaysTable).where(eq(textOverlaysTable.id, id));
+    return results[0];
+  }
+
+  async createTextOverlay(overlay: import("@shared/schema").InsertTextOverlay): Promise<import("@shared/schema").TextOverlay> {
+    const results = await db.insert(textOverlaysTable).values(overlay).returning();
+    return results[0];
+  }
+
+  async updateTextOverlay(id: string, updates: Partial<import("@shared/schema").InsertTextOverlay>): Promise<import("@shared/schema").TextOverlay | undefined> {
+    const results = await db.update(textOverlaysTable)
+      .set(updates)
+      .where(eq(textOverlaysTable.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteTextOverlay(id: string): Promise<boolean> {
+    await db.delete(textOverlaysTable).where(eq(textOverlaysTable.id, id));
+    return true;
+  }
+
+  // Keyframe methods
+  async getKeyframes(clipId: string): Promise<import("@shared/schema").Keyframe[]> {
+    const results = await db.select().from(keyframesTable)
+      .where(eq(keyframesTable.clipId, clipId))
+      .orderBy(keyframesTable.time);
+    return results;
+  }
+
+  async getKeyframe(id: string): Promise<import("@shared/schema").Keyframe | undefined> {
+    const results = await db.select().from(keyframesTable).where(eq(keyframesTable.id, id));
+    return results[0];
+  }
+
+  async createKeyframe(keyframe: import("@shared/schema").InsertKeyframe): Promise<import("@shared/schema").Keyframe> {
+    const results = await db.insert(keyframesTable).values(keyframe).returning();
+    return results[0];
+  }
+
+  async updateKeyframe(id: string, updates: Partial<import("@shared/schema").InsertKeyframe>): Promise<import("@shared/schema").Keyframe | undefined> {
+    const results = await db.update(keyframesTable)
+      .set(updates)
+      .where(eq(keyframesTable.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteKeyframe(id: string): Promise<boolean> {
+    await db.delete(keyframesTable).where(eq(keyframesTable.id, id));
+    return true;
+  }
+
+  // Audio Track methods
+  async getAudioTracks(projectId: string): Promise<import("@shared/schema").AudioTrack[]> {
+    const results = await db.select().from(audioTracksTable)
+      .where(eq(audioTracksTable.projectId, projectId))
+      .orderBy(audioTracksTable.startTime);
+    return results;
+  }
+
+  async getAudioTrack(id: string): Promise<import("@shared/schema").AudioTrack | undefined> {
+    const results = await db.select().from(audioTracksTable).where(eq(audioTracksTable.id, id));
+    return results[0];
+  }
+
+  async createAudioTrack(track: import("@shared/schema").InsertAudioTrack): Promise<import("@shared/schema").AudioTrack> {
+    const results = await db.insert(audioTracksTable).values(track).returning();
+    return results[0];
+  }
+
+  async updateAudioTrack(id: string, updates: Partial<import("@shared/schema").InsertAudioTrack>): Promise<import("@shared/schema").AudioTrack | undefined> {
+    const results = await db.update(audioTracksTable)
+      .set(updates)
+      .where(eq(audioTracksTable.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteAudioTrack(id: string): Promise<boolean> {
+    await db.delete(audioTracksTable).where(eq(audioTracksTable.id, id));
     return true;
   }
 

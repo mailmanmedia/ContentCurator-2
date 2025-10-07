@@ -3924,6 +3924,142 @@ Return ONLY a JSON object with this structure:
     }
   });
 
+  // =============== Text Overlay Routes ===============
+
+  // Get text overlays for a project
+  app.get("/api/video-projects/:id/text-overlays", async (req, res) => {
+    try {
+      const overlays = await storage.getTextOverlays(req.params.id);
+      res.json(overlays);
+    } catch (error: any) {
+      console.error('Error fetching text overlays:', error);
+      res.status(500).json({ error: "Failed to fetch text overlays" });
+    }
+  });
+
+  // Create a text overlay
+  app.post("/api/video-projects/:id/text-overlays", async (req, res) => {
+    try {
+      const overlay = await storage.createTextOverlay({
+        ...req.body,
+        projectId: req.params.id
+      });
+      res.status(201).json(overlay);
+    } catch (error: any) {
+      console.error('Error creating text overlay:', error);
+      res.status(400).json({ error: error.message || "Failed to create text overlay" });
+    }
+  });
+
+  // Update a text overlay
+  app.patch("/api/video-projects/:projectId/text-overlays/:overlayId", async (req, res) => {
+    try {
+      const overlay = await storage.updateTextOverlay(req.params.overlayId, req.body);
+      res.json(overlay);
+    } catch (error: any) {
+      console.error('Error updating text overlay:', error);
+      res.status(400).json({ error: error.message || "Failed to update text overlay" });
+    }
+  });
+
+  // Delete a text overlay
+  app.delete("/api/video-projects/:projectId/text-overlays/:overlayId", async (req, res) => {
+    try {
+      await storage.deleteTextOverlay(req.params.overlayId);
+      res.json({ success: true, message: "Text overlay deleted successfully" });
+    } catch (error: any) {
+      console.error('Error deleting text overlay:', error);
+      res.status(500).json({ error: "Failed to delete text overlay" });
+    }
+  });
+
+  // =============== Keyframe Routes ===============
+
+  // Get keyframes for a clip
+  app.get("/api/video-clips/:clipId/keyframes", async (req, res) => {
+    try {
+      const keyframes = await storage.getKeyframes(req.params.clipId);
+      res.json(keyframes);
+    } catch (error: any) {
+      console.error('Error fetching keyframes:', error);
+      res.status(500).json({ error: "Failed to fetch keyframes" });
+    }
+  });
+
+  // Create a keyframe
+  app.post("/api/video-clips/:clipId/keyframes", async (req, res) => {
+    try {
+      const keyframe = await storage.createKeyframe({
+        ...req.body,
+        clipId: req.params.clipId
+      });
+      res.status(201).json(keyframe);
+    } catch (error: any) {
+      console.error('Error creating keyframe:', error);
+      res.status(400).json({ error: error.message || "Failed to create keyframe" });
+    }
+  });
+
+  // Delete a keyframe
+  app.delete("/api/video-clips/:clipId/keyframes/:keyframeId", async (req, res) => {
+    try {
+      await storage.deleteKeyframe(req.params.keyframeId);
+      res.json({ success: true, message: "Keyframe deleted successfully" });
+    } catch (error: any) {
+      console.error('Error deleting keyframe:', error);
+      res.status(500).json({ error: "Failed to delete keyframe" });
+    }
+  });
+
+  // =============== Audio Track Routes ===============
+
+  // Get audio tracks for a project
+  app.get("/api/video-projects/:id/audio-tracks", async (req, res) => {
+    try {
+      const tracks = await storage.getAudioTracks(req.params.id);
+      res.json(tracks);
+    } catch (error: any) {
+      console.error('Error fetching audio tracks:', error);
+      res.status(500).json({ error: "Failed to fetch audio tracks" });
+    }
+  });
+
+  // Create an audio track
+  app.post("/api/video-projects/:id/audio-tracks", async (req, res) => {
+    try {
+      const track = await storage.createAudioTrack({
+        ...req.body,
+        projectId: req.params.id
+      });
+      res.status(201).json(track);
+    } catch (error: any) {
+      console.error('Error creating audio track:', error);
+      res.status(400).json({ error: error.message || "Failed to create audio track" });
+    }
+  });
+
+  // Update an audio track
+  app.patch("/api/video-projects/:projectId/audio-tracks/:trackId", async (req, res) => {
+    try {
+      const track = await storage.updateAudioTrack(req.params.trackId, req.body);
+      res.json(track);
+    } catch (error: any) {
+      console.error('Error updating audio track:', error);
+      res.status(400).json({ error: error.message || "Failed to update audio track" });
+    }
+  });
+
+  // Delete an audio track
+  app.delete("/api/video-projects/:projectId/audio-tracks/:trackId", async (req, res) => {
+    try {
+      await storage.deleteAudioTrack(req.params.trackId);
+      res.json({ success: true, message: "Audio track deleted successfully" });
+    } catch (error: any) {
+      console.error('Error deleting audio track:', error);
+      res.status(500).json({ error: "Failed to delete audio track" });
+    }
+  });
+
   // =============== Render Job Routes ===============
 
   // Start a render job
