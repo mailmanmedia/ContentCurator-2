@@ -76,6 +76,8 @@ export const frameworks = pgTable("frameworks", {
   isStarred: boolean("is_starred").notNull().default(false),
   totalDownloads: text("total_downloads").notNull().default('0'),
   currentVersionId: varchar("current_version_id"),
+  apiCapabilities: jsonb("api_capabilities").notNull().default('{"database": false, "perplexity": false, "claude": false, "openai": false, "football": false}'),
+  apiConfig: jsonb("api_config").notNull().default('{}'),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
