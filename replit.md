@@ -55,6 +55,12 @@ The system integrates 2025-26 season football data, including team rosters and C
 
 #### Team Matchup Studio
 Offers comprehensive team analysis for YouTube content, including performance statistics dashboards, interactive charts (Recharts with Liverpool FC palette), squad roster analysis, and AI-powered tactical analysis.
+- **Historical Head-to-Head Database (Oct 2025)**: Database-backed matchup data from 2020-present with intelligent update scheduling:
+  - **Hardcoded Historical Data**: Pre-loaded fixtures from 2020-2024 for Liverpool FC vs Premier League, Champions League, FA Cup, and League Cup opponents
+  - **Competition-Specific Update Cadence**: Different update strategies per competition (Premier League: daily during season, Champions League: match days, FA Cup/League Cup: event-based)
+  - **Database-First Approach**: Prioritizes local historical data over API calls to reduce rate limits and improve performance
+  - **Automatic Fallback**: Falls back to live API when database data is insufficient (< 5 matches)
+  - **Update Schedules Table**: Tracks next update times and competition-specific cadences for intelligent data freshness
 
 #### RSS Intelligence System (Oct 2025)
 A comprehensive RSS feed management and analysis platform for monitoring Liverpool FC news and media coverage. The system provides:
