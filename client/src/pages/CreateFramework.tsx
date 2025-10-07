@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ArrowLeft, Save, Plus, X } from "lucide-react";
+import { ArrowLeft, Save, Plus, X, Upload, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +40,9 @@ export default function CreateFramework() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newTag, setNewTag] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [aiProvider, setAiProvider] = useState<'openai' | 'claude'>('claude');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch framework categories
   const { data: categoriesData } = useQuery({
@@ -123,6 +126,43 @@ export default function CreateFramework() {
     }
   });
 
+  const uploadDocumentMutation = useMutation({
+    mutationFn: async ({ file, categoryId, provider }: { file: File; categoryId: string; provider: 'openai' | 'claude' }) => {
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('categoryId', categoryId);
+      formData.append('aiProvider', provider);
+
+      const response = await fetch('/api/frameworks/upload-document', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload document');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/frameworks'] });
+      toast({
+        title: "Framework Created from Document",
+        description: `${data.framework.name} has been created successfully using AI`,
+      });
+      setLocation(`/frameworks/${data.framework.id}`);
+    },
+    onError: (error) => {
+      console.error('Document upload failed:', error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to process document",
+        variant: "destructive"
+      });
+    }
+  });
+
   const onSubmit = (data: CreateFrameworkForm) => {
     console.log('Form submission attempted with data:', data);
     console.log('Form validation state:', form.formState.errors);
@@ -165,6 +205,62 @@ export default function CreateFramework() {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please upload a PDF or Word document (.pdf, .doc, .docx)",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      setUploadedFile(file);
+    }
+  };
+
+  const handleDocumentUpload = () => {
+    if (!uploadedFile) {
+      toast({
+        title: "No File Selected",
+        description: "Please select a PDF or Word document to upload",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const categoryId = form.getValues('categoryId');
+    if (!categoryId) {
+      toast({
+        title: "Category Required",
+        description: "Please select a category before uploading a document",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    uploadDocumentMutation.mutate({ 
+      file: uploadedFile, 
+      categoryId,
+      provider: aiProvider
+    });
+  };
+
+  const clearFile = () => {
+    setUploadedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -186,6 +282,121 @@ export default function CreateFramework() {
           <p className="text-muted-foreground">
             Build a new content template for Liverpool FC analysis
           </p>
+        </div>
+      </div>
+
+      {/* AI Document Upload Section */}
+      <Card className="mb-8 border-primary/20">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <CardTitle>AI-Powered Framework Creation</CardTitle>
+          </div>
+          <CardDescription>
+            Upload a PDF or Word document and let AI automatically create a framework from it
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Category (Required)</label>
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger data-testid="select-upload-category">
+                      <SelectValue placeholder="Select category first" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoriesData?.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">AI Provider</label>
+              <Select value={aiProvider} onValueChange={(v) => setAiProvider(v as 'openai' | 'claude')}>
+                <SelectTrigger data-testid="select-ai-provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="claude">Claude (Anthropic)</SelectItem>
+                  <SelectItem value="openai">OpenAI GPT-4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Document Upload</label>
+            <div className="flex gap-2">
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileSelect}
+                className="flex-1"
+                data-testid="input-document-upload"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                data-testid="button-browse-files"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Browse
+              </Button>
+            </div>
+          </div>
+
+          {uploadedFile && (
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <span className="flex-1 text-sm" data-testid="text-uploaded-filename">
+                {uploadedFile.name}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearFile}
+                data-testid="button-clear-file"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          <Button
+            type="button"
+            onClick={handleDocumentUpload}
+            disabled={!uploadedFile || uploadDocumentMutation.isPending || !form.getValues('categoryId')}
+            className="w-full"
+            data-testid="button-upload-document"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            {uploadDocumentMutation.isPending ? 'Processing...' : 'Create Framework from Document'}
+          </Button>
+
+          <p className="text-xs text-muted-foreground">
+            Supported formats: PDF, Word (.doc, .docx). The AI will analyze your document and automatically create a structured framework.
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="relative mb-8">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">Or create manually</span>
         </div>
       </div>
 
