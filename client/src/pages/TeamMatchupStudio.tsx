@@ -54,6 +54,7 @@ export default function TeamMatchupStudio() {
   const [selectedTeam1, setSelectedTeam1] = useState<number | null>(null);
   const [selectedTeam2, setSelectedTeam2] = useState<number | null>(null);
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('single');
+  const [selectedSeason, setSelectedSeason] = useState<number>(2025);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
 
   // Fetch competitions (rarely changes, long cache)
@@ -83,9 +84,9 @@ export default function TeamMatchupStudio() {
   const singleTeamQueries = useQueries({
     queries: [
       {
-        queryKey: ['/api/football/teams', selectedTeam1, 'statistics', selectedCompetition, 2025],
+        queryKey: ['/api/football/teams', selectedTeam1, 'statistics', selectedCompetition, selectedSeason],
         queryFn: async () => {
-          const response = await fetch(`/api/football/teams/${selectedTeam1}/statistics?leagueId=${selectedCompetition}&season=2025`);
+          const response = await fetch(`/api/football/teams/${selectedTeam1}/statistics?leagueId=${selectedCompetition}&season=${selectedSeason}`);
           if (!response.ok) throw new Error('Failed to fetch statistics');
           return response.json();
         },
@@ -93,9 +94,9 @@ export default function TeamMatchupStudio() {
         staleTime: 10 * 60 * 1000, // 10 minutes
       },
       {
-        queryKey: ['/api/football/teams', selectedTeam1, 'squad', 2025],
+        queryKey: ['/api/football/teams', selectedTeam1, 'squad', selectedSeason],
         queryFn: async () => {
-          const response = await fetch(`/api/football/teams/${selectedTeam1}/squad?season=2025`);
+          const response = await fetch(`/api/football/teams/${selectedTeam1}/squad?season=${selectedSeason}`);
           if (!response.ok) throw new Error('Failed to fetch squad');
           return response.json();
         },
@@ -267,6 +268,39 @@ export default function TeamMatchupStudio() {
       </CardContent>
     </Card>
   );
+
+  const renderSeasonSelection = () => {
+    const availableSeasons = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016];
+    
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-primary" />
+            Select Season
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Select value={selectedSeason.toString()} onValueChange={(value) => setSelectedSeason(parseInt(value))}>
+            <SelectTrigger data-testid="select-season">
+              <SelectValue placeholder="Choose a season..." />
+            </SelectTrigger>
+            <SelectContent>
+              {availableSeasons.map((season) => (
+                <SelectItem 
+                  key={season} 
+                  value={season.toString()}
+                  data-testid={`season-option-${season}`}
+                >
+                  {season}/{(season + 1).toString().slice(-2)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const renderAnalysisModeSelection = () => (
     <Card>
@@ -935,8 +969,9 @@ export default function TeamMatchupStudio() {
         </div>
 
         {/* Configuration Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {renderCompetitionSelection()}
+          {renderSeasonSelection()}
           {renderAnalysisModeSelection()}
           {renderTeamSelection()}
         </div>
