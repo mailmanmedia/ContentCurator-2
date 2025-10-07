@@ -7,12 +7,14 @@ import {
   footballLineups, 
   footballStatistics,
   teamMatchupAnalysis,
+  teamSeasonStatistics,
   type FootballCompetition,
   type FootballTeam,
   type FootballFixture,
   type FootballLineup,
   type FootballStatistics,
-  type TeamMatchupAnalysis
+  type TeamMatchupAnalysis,
+  type TeamSeasonStatistics
 } from "@shared/schema";
 import { eq, and, or, gte, lte, desc, inArray } from "drizzle-orm";
 import { smartFootballCache } from "./cacheService";
@@ -1529,7 +1531,51 @@ class FootballService {
 
           return response.response;
         } catch (error) {
-          console.error(`Failed to get team statistics:`, error);
+          console.error(`API failed for team statistics, checking database fallback:`, error);
+          
+          // Fallback to database statistics if API fails
+          try {
+            const dbStats = await db.select()
+              .from(teamSeasonStatistics)
+              .where(
+                and(
+                  eq(teamSeasonStatistics.teamId, teamId),
+                  eq(teamSeasonStatistics.leagueId, leagueId),
+                  eq(teamSeasonStatistics.season, season)
+                )
+              )
+              .limit(1);
+
+            if (dbStats.length > 0) {
+              const stats = dbStats[0];
+              console.log(`Using database statistics for team ${teamId}`);
+              
+              // Convert database format to API format
+              return {
+                form: stats.form || "N/A",
+                fixtures: {
+                  played: { total: stats.matchesPlayed },
+                  wins: { total: stats.wins },
+                  draws: { total: stats.draws },
+                  losses: { total: stats.losses }
+                },
+                goals: {
+                  for: { 
+                    total: { total: stats.goalsFor },
+                    average: { total: (stats.goalsFor / Math.max(stats.matchesPlayed, 1)).toFixed(1) }
+                  },
+                  against: { 
+                    total: { total: stats.goalsAgainst },
+                    average: { total: (stats.goalsAgainst / Math.max(stats.matchesPlayed, 1)).toFixed(1) }
+                  }
+                },
+                clean_sheet: { total: stats.cleanSheets }
+              };
+            }
+          } catch (dbError) {
+            console.error('Database fallback also failed:', dbError);
+          }
+          
           return null;
         }
       },
