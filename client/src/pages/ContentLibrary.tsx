@@ -43,7 +43,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 interface ContentItem {
   id: string;
   title: string;
-  type: 'report' | 'image' | 'framework' | 'rss_article' | 'rss_analysis' | 'presentation_set' | 'scene' | 'library_item' | 'ticker_playlist';
+  type: 'report' | 'image' | 'framework' | 'recording' | 'rss_article' | 'rss_analysis' | 'presentation_set' | 'scene' | 'library_item' | 'ticker_playlist';
   description?: string;
   thumbnail?: string;
   url?: string;
@@ -74,6 +74,12 @@ const contentTypeConfig = {
     icon: Settings,
     color: "bg-purple-500/10 text-purple-600 border-purple-200",
     description: "Content creation templates"
+  },
+  recording: {
+    label: "Recordings",
+    icon: Video,
+    color: "bg-violet-500/10 text-violet-600 border-violet-200",
+    description: "Broadcast recordings and video content"
   },
   rss_article: {
     label: "News Articles",
@@ -163,6 +169,11 @@ export default function ContentLibrary() {
   const { data: tickerPlaylistsData } = useQuery({
     queryKey: ['/api/ticker-playlists'],
     select: (response: any) => response.tickerPlaylists || []
+  });
+
+  const { data: recordingsData } = useQuery({
+    queryKey: ['/api/recordings'],
+    select: (response: any) => response.recordings || []
   });
 
   // Combine all content into unified format
@@ -257,6 +268,24 @@ export default function ContentLibrary() {
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       metadata: { mode: item.mode, speed: item.speed, isActive: item.isActive }
+    })),
+    ...(recordingsData || []).map((item: any) => ({
+      id: item.id,
+      title: item.filename,
+      type: 'recording' as const,
+      description: `${item.duration || 0}s · ${(item.size / 1024 / 1024).toFixed(1)}MB`,
+      thumbnail: item.thumbnailPath,
+      url: `/api/recordings/${item.id}/video`,
+      tags: item.resolution ? [item.resolution] : [],
+      createdAt: item.createdAt,
+      metadata: { 
+        duration: item.duration, 
+        size: item.size, 
+        resolution: item.resolution,
+        format: item.format,
+        codec: item.codec,
+        filepath: item.filepath
+      }
     }))
   ];
 
