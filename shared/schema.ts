@@ -379,6 +379,41 @@ export const teamSeasonStatistics = pgTable("team_season_statistics", {
   uniqueTeamSeasonLeague: unique("team_season_league_unique").on(table.teamId, table.leagueId, table.season),
 }));
 
+export const historicalHeadToHead = pgTable("historical_head_to_head", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  team1Id: integer("team1_id").notNull(),
+  team2Id: integer("team2_id").notNull(),
+  fixtureId: integer("fixture_id"),
+  date: timestamp("date").notNull(),
+  season: integer("season").notNull(),
+  competitionId: integer("competition_id").notNull(),
+  competitionName: text("competition_name").notNull(),
+  homeTeamId: integer("home_team_id").notNull(),
+  awayTeamId: integer("away_team_id").notNull(),
+  homeScore: integer("home_score").notNull(),
+  awayScore: integer("away_score").notNull(),
+  venue: text("venue"),
+  isHistorical: boolean("is_historical").notNull().default(false),
+  dataSource: text("data_source").notNull().default('api'),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
+}, (table) => ({
+  uniqueTeamMatchup: unique("unique_team_matchup").on(table.team1Id, table.team2Id, table.fixtureId),
+}));
+
+export const dataUpdateSchedule = pgTable("data_update_schedule", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  competitionId: integer("competition_id").notNull().unique(),
+  competitionName: text("competition_name").notNull(),
+  updateCadence: text("update_cadence").notNull(),
+  lastUpdateAt: timestamp("last_update_at"),
+  nextUpdateAt: timestamp("next_update_at"),
+  isActive: boolean("is_active").notNull().default(true),
+  scheduleConfig: jsonb("schedule_config").notNull().default('{}'),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 export const insertFootballCompetitionSchema = createInsertSchema(footballCompetitions);
 export const insertFootballTeamSchema = createInsertSchema(footballTeams);
 export const insertFootballPlayerSchema = createInsertSchema(footballPlayers);
@@ -394,6 +429,14 @@ export const insertTeamMatchupAnalysisSchema = createInsertSchema(teamMatchupAna
 });
 export const insertTeamSeasonStatisticsSchema = createInsertSchema(teamSeasonStatistics).omit({
   id: true,
+});
+export const insertHistoricalHeadToHeadSchema = createInsertSchema(historicalHeadToHead).omit({
+  id: true,
+  createdAt: true,
+});
+export const insertDataUpdateScheduleSchema = createInsertSchema(dataUpdateSchedule).omit({
+  id: true,
+  createdAt: true,
 });
 
 export type InsertFootballCompetition = z.infer<typeof insertFootballCompetitionSchema>;
@@ -412,6 +455,10 @@ export type InsertTeamMatchupAnalysis = z.infer<typeof insertTeamMatchupAnalysis
 export type TeamMatchupAnalysis = typeof teamMatchupAnalysis.$inferSelect;
 export type InsertTeamSeasonStatistics = z.infer<typeof insertTeamSeasonStatisticsSchema>;
 export type TeamSeasonStatistics = typeof teamSeasonStatistics.$inferSelect;
+export type InsertHistoricalHeadToHead = z.infer<typeof insertHistoricalHeadToHeadSchema>;
+export type HistoricalHeadToHead = typeof historicalHeadToHead.$inferSelect;
+export type InsertDataUpdateSchedule = z.infer<typeof insertDataUpdateScheduleSchema>;
+export type DataUpdateSchedule = typeof dataUpdateSchedule.$inferSelect;
 
 // Live Presentation System Schema
 export const libraryItems = pgTable("library_items", {
