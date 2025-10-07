@@ -104,9 +104,9 @@ async function pullVenues() {
 }
 
 async function pullHistoricalMatches() {
-  console.log('\n⚽ Pulling Liverpool historical matches (2022-2025)...');
+  console.log('\n⚽ Pulling Liverpool historical matches (2016-2025)...');
   const matches: any[] = [];
-  const seasons = [2022, 2023, 2024, 2025];
+  const seasons = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016];
   
   for (const season of seasons) {
     // Get Liverpool matches for this season
@@ -153,7 +153,7 @@ async function pullHistoricalMatches() {
 async function pullSeasonTables() {
   console.log('\n📊 Pulling historical season tables...');
   const tables: any = {};
-  const seasons = [2022, 2023, 2024];
+  const seasons = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016];
   
   for (const season of seasons) {
     const data = await fetchFromAPI<any>('/standings', {
