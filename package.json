@@ -51,6 +51,7 @@
     "@types/multer": "^2.0.0",
     "@types/pdf-parse": "^1.1.5",
     "@types/sharp": "^0.31.1",
+    "axios": "^1.12.2",
     "bull": "^4.16.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

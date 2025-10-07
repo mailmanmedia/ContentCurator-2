@@ -3,6 +3,7 @@ import { db } from '../db';
 import { teamSeasonStatistics, footballFixtures, footballPlayers, playerSeasonStatistics } from '@shared/schema';
 import { eq, and, gte, lte, or, desc, sql } from 'drizzle-orm';
 import { footballService } from './footballService';
+import { sportmonksService } from './sportmonksService';
 import { updateLiverpoolStatsWithAI } from './aiStatsService';
 import { populateLiverpoolPlayers } from './populateLiverpoolPlayers';
 
@@ -10,6 +11,24 @@ async function updateTeamStatistics(teamId: number, leagueId: number, season: nu
   try {
     console.log(`Fetching statistics for team ${teamId} in league ${leagueId}, season ${season}`);
     
+    // Try Sportmonks first if configured
+    if (sportmonksService.isConfigured() && teamId === 40) {
+      try {
+        console.log('🏆 Using Sportmonks API for Liverpool statistics...');
+        const seasonId = await sportmonksService.getCurrentSeasonId();
+        if (seasonId) {
+          const teamStats = await sportmonksService.getTeamStatistics(14, seasonId); // Liverpool team ID in Sportmonks
+          // Process Sportmonks data and update database
+          console.log('✓ Successfully fetched from Sportmonks');
+          // TODO: Parse and save Sportmonks team statistics
+          return;
+        }
+      } catch (sportmonksError) {
+        console.warn('⚠️ Sportmonks API failed, falling back to Football API:', sportmonksError);
+      }
+    }
+    
+    // Fallback to original Football API
     const apiStats = await footballService.getTeamStatistics(teamId, leagueId, season);
     
     if (!apiStats || !apiStats.statistics) {
@@ -86,10 +105,40 @@ async function updateTeamStatistics(teamId: number, leagueId: number, season: nu
 async function updateLiverpoolPlayerStats() {
   console.log('\n👥 Updating Liverpool player statistics...');
   
-  const liverpoolTeamId = 40;
   const currentSeason = new Date().getFullYear();
   
   try {
+    // Try Sportmonks first if configured
+    if (sportmonksService.isConfigured()) {
+      try {
+        console.log('🏆 Using Sportmonks API for player statistics...');
+        const seasonId = await sportmonksService.getCurrentSeasonId();
+        if (seasonId) {
+          const players = await sportmonksService.getLiverpoolSquad(seasonId);
+          
+          // Update each player's statistics
+          for (const player of players) {
+            const mappedPlayer = sportmonksService.mapPlayerToDatabase(player, currentSeason);
+            
+            await db.insert(playerSeasonStatistics).values(mappedPlayer)
+              .onConflictDoUpdate({
+                target: [playerSeasonStatistics.playerId, playerSeasonStatistics.season],
+                set: {
+                  ...mappedPlayer,
+                  lastUpdated: new Date()
+                }
+              });
+          }
+          
+          console.log(`✓ Updated ${players.length} Liverpool players from Sportmonks`);
+          return;
+        }
+      } catch (sportmonksError) {
+        console.warn('⚠️ Sportmonks API failed, falling back to Football API:', sportmonksError);
+      }
+    }
+    
+    // Fallback to original method
     const success = await populateLiverpoolPlayers(currentSeason);
     if (success) {
       console.log('✓ Liverpool player statistics updated successfully');
