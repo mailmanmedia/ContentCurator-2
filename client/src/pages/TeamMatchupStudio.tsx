@@ -125,6 +125,22 @@ export default function TeamMatchupStudio() {
     },
   });
 
+  // Initialize historical data mutation
+  const initializeHistoricalMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/football/initialize-historical', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error('Failed to initialize historical data');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      console.log('Historical data initialized:', data);
+      queryClient.invalidateQueries({ queryKey: ['/api/football/head-to-head'] });
+    },
+  });
+
   // AI Analysis mutation
   const aiAnalysisMutation = useMutation({
     mutationFn: async ({ teamId, teamName, statistics }: any) => {
@@ -169,6 +185,10 @@ export default function TeamMatchupStudio() {
     initializeDataMutation.mutate();
   };
 
+  const handleInitializeHistoricalData = () => {
+    initializeHistoricalMutation.mutate();
+  };
+
   const renderCompetitionSelection = () => (
     <Card>
       <CardHeader>
@@ -211,12 +231,36 @@ export default function TeamMatchupStudio() {
         {competitions.length === 0 && !competitionsLoading && (
           <div className="mt-4 p-4 border border-dashed rounded-lg text-center">
             <p className="text-muted-foreground mb-2">No competition data available</p>
+            <div className="flex gap-2 justify-center">
+              <Button 
+                onClick={handleInitializeData}
+                disabled={initializeDataMutation.isPending}
+                data-testid="button-initialize-data"
+              >
+                {initializeDataMutation.isPending ? 'Initializing...' : 'Load Competition Data'}
+              </Button>
+              <Button 
+                onClick={handleInitializeHistoricalData}
+                disabled={initializeHistoricalMutation.isPending}
+                variant="outline"
+                data-testid="button-initialize-historical"
+              >
+                {initializeHistoricalMutation.isPending ? 'Loading Historical...' : 'Load Historical Data (2020+)'}
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {competitions.length > 0 && (
+          <div className="mt-4 flex justify-end">
             <Button 
-              onClick={handleInitializeData}
-              disabled={initializeDataMutation.isPending}
-              data-testid="button-initialize-data"
+              onClick={handleInitializeHistoricalData}
+              disabled={initializeHistoricalMutation.isPending}
+              variant="ghost"
+              size="sm"
+              data-testid="button-refresh-historical"
             >
-              {initializeDataMutation.isPending ? 'Initializing...' : 'Load Competition Data'}
+              {initializeHistoricalMutation.isPending ? 'Updating...' : 'Update Historical Data'}
             </Button>
           </div>
         )}
