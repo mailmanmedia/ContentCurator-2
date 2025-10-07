@@ -2001,6 +2001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get head-to-head statistics between two teams
+  // Uses database-first approach with historical data (2020+) and falls back to API
   app.get("/api/football/head-to-head/:homeTeamId/:awayTeamId", async (req, res) => {
     try {
       const homeTeamId = parseInt(req.params.homeTeamId);
@@ -2010,11 +2011,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team IDs" });
       }
 
+      // First try to get data from database (includes historical data)
+      const { historicalDataService } = await import('./services/historicalDataService');
+      const dbFixtures = await historicalDataService.getHeadToHeadData(homeTeamId, awayTeamId, 30);
+      
+      // If we have sufficient data from database, use it
+      if (dbFixtures.length >= 5) {
+        console.log(`✓ Using database data for teams ${homeTeamId} vs ${awayTeamId} (${dbFixtures.length} matches)`);
+        return res.json({ fixtures: dbFixtures, source: 'database' });
+      }
+
+      // Otherwise fall back to API
+      console.log(`⚠ Insufficient database data, fetching from API for teams ${homeTeamId} vs ${awayTeamId}`);
       const fixtures = await storage.getFootballHeadToHead(homeTeamId, awayTeamId);
-      res.json({ fixtures });
+      res.json({ fixtures, source: 'api' });
     } catch (error) {
       console.error('Error fetching head-to-head stats:', error);
       res.status(500).json({ error: "Failed to fetch head-to-head statistics" });
+    }
+  });
+
+  // Initialize historical data and update schedules
+  app.post("/api/football/initialize-historical", async (req, res) => {
+    try {
+      const { historicalDataService } = await import('./services/historicalDataService');
+      
+      await historicalDataService.initializeHistoricalData();
+      await historicalDataService.initializeUpdateSchedules();
+      
+      const summary = historicalDataService.getUpdateStrategySummary();
+      
+      res.json({ 
+        success: true, 
+        message: "Historical data and update schedules initialized",
+        summary
+      });
+    } catch (error) {
+      console.error('Error initializing historical data:', error);
+      res.status(500).json({ error: "Failed to initialize historical data" });
+    }
+  });
+
+  // Get update schedule for a competition
+  app.get("/api/football/update-schedule/:competitionId", async (req, res) => {
+    try {
+      const competitionId = parseInt(req.params.competitionId);
+      if (isNaN(competitionId)) {
+        return res.status(400).json({ error: "Invalid competition ID" });
+      }
+
+      const { historicalDataService } = await import('./services/historicalDataService');
+      const schedule = await historicalDataService.getUpdateSchedule(competitionId);
+      
+      res.json({ schedule });
+    } catch (error) {
+      console.error('Error fetching update schedule:', error);
+      res.status(500).json({ error: "Failed to fetch update schedule" });
+    }
+  });
+
+  // Get all active update schedules
+  app.get("/api/football/update-schedules", async (req, res) => {
+    try {
+      const { historicalDataService } = await import('./services/historicalDataService');
+      const schedules = await historicalDataService.getActiveSchedules();
+      
+      res.json({ schedules });
+    } catch (error) {
+      console.error('Error fetching update schedules:', error);
+      res.status(500).json({ error: "Failed to fetch update schedules" });
     }
   });
 
