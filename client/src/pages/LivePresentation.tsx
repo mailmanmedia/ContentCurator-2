@@ -651,9 +651,8 @@ export default function LivePresentation() {
     select: (response: any) => response?.teams || [],
   });
 
-  const { data: broadcastRecordings = [], refetch: refetchRecordings } = useQuery({
+  const { data: broadcastRecordings = [], refetch: refetchRecordings } = useQuery<any[]>({
     queryKey: ['/api/recordings'],
-    select: (response: any) => response?.recordings || [],
   });
 
   const checkPositionConflict = (position: 'top' | 'bottom', excludeId?: string): boolean => {

@@ -171,9 +171,8 @@ export default function ContentLibrary() {
     select: (response: any) => response.tickerPlaylists || []
   });
 
-  const { data: recordingsData } = useQuery({
-    queryKey: ['/api/recordings'],
-    select: (response: any) => response.recordings || []
+  const { data: recordingsData } = useQuery<any[]>({
+    queryKey: ['/api/recordings']
   });
 
   // Combine all content into unified format
