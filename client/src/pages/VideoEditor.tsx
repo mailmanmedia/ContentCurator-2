@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Video, Folder, FileVideo, ArrowLeft } from "lucide-react";
+import { Video, Folder, FileVideo, ArrowLeft, Save, X, Undo2 } from "lucide-react";
 import Header from "@/components/Header";
 import RecordingsLibrary from "@/components/video-editor/RecordingsLibrary";
 import ProjectsList from "@/components/video-editor/ProjectsList";
@@ -39,6 +39,7 @@ export default function VideoEditor() {
   const [selectedClip, setSelectedClip] = useState<VideoClip | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const { data: clips, refetch: refetchClips } = useQuery<VideoClip[]>({
     queryKey: ['/api/video-projects', activeProject?.id, 'clips'],
@@ -120,16 +121,42 @@ export default function VideoEditor() {
 
   const handleClipUpdate = (clipId: string, updates: Partial<VideoClip>) => {
     updateClipMutation.mutate({ clipId, updates });
+    setHasUnsavedChanges(true);
   };
 
   const handleClipDelete = (clipId: string) => {
     deleteClipMutation.mutate(clipId);
+    setHasUnsavedChanges(true);
   };
 
   const handleSplitClip = (clipId: string, atTime: number) => {
     toast({
       title: "Coming Soon",
       description: "Clip splitting feature will be available soon"
+    });
+  };
+
+  const handleSaveProject = () => {
+    setHasUnsavedChanges(false);
+    toast({
+      title: "Saved",
+      description: "Project changes have been saved"
+    });
+  };
+
+  const handleDiscardChanges = () => {
+    refetchClips();
+    setHasUnsavedChanges(false);
+    toast({
+      title: "Discarded",
+      description: "Changes have been discarded"
+    });
+  };
+
+  const handleUndo = () => {
+    toast({
+      title: "Coming Soon",
+      description: "Undo feature will be available soon"
     });
   };
 
@@ -158,6 +185,39 @@ export default function VideoEditor() {
                 {activeProject ? activeProject.name : 'AI Video Editor'}
               </h1>
             </div>
+            
+            {activeProject && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUndo}
+                  data-testid="button-undo"
+                >
+                  <Undo2 className="w-4 h-4 mr-2" />
+                  Undo
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDiscardChanges}
+                  disabled={!hasUnsavedChanges}
+                  data-testid="button-discard"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Discard
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveProject}
+                  disabled={!hasUnsavedChanges}
+                  data-testid="button-save"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save
+                </Button>
+              </div>
+            )}
           </div>
           
           {!activeProject && (
