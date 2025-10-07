@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Video, Folder, ArrowLeft } from "lucide-react";
+import { Video, Folder, FileVideo, ArrowLeft } from "lucide-react";
 import Header from "@/components/Header";
 import RecordingsLibrary from "@/components/video-editor/RecordingsLibrary";
 import ProjectsList from "@/components/video-editor/ProjectsList";
@@ -42,15 +42,13 @@ export default function VideoEditor() {
     mutationFn: async () => {
       if (!selectedRecording) throw new Error('No recording selected');
       
-      return apiRequest<VideoProject>('/api/video-projects', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: projectName,
-          description: projectDescription,
-          recordingId: selectedRecording.id,
-          status: 'draft'
-        })
+      const res = await apiRequest('POST', '/api/video-projects', {
+        name: projectName,
+        description: projectDescription,
+        recordingId: selectedRecording.id,
+        status: 'draft'
       });
+      return await res.json() as VideoProject;
     },
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['/api/video-projects'] });
@@ -76,10 +74,8 @@ export default function VideoEditor() {
 
   const updateClipMutation = useMutation({
     mutationFn: async ({ clipId, updates }: { clipId: string; updates: Partial<VideoClip> }) => {
-      return apiRequest(`/api/video-projects/${activeProject?.id}/clips/${clipId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(updates)
-      });
+      const res = await apiRequest('PATCH', `/api/video-projects/${activeProject?.id}/clips/${clipId}`, updates);
+      return await res.json();
     },
     onSuccess: () => {
       refetchClips();
@@ -92,9 +88,7 @@ export default function VideoEditor() {
 
   const deleteClipMutation = useMutation({
     mutationFn: async (clipId: string) => {
-      return apiRequest(`/api/video-projects/${activeProject?.id}/clips/${clipId}`, {
-        method: 'DELETE'
-      });
+      await apiRequest('DELETE', `/api/video-projects/${activeProject?.id}/clips/${clipId}`);
     },
     onSuccess: () => {
       refetchClips();
@@ -225,7 +219,7 @@ export default function VideoEditor() {
                 Recordings
               </TabsTrigger>
               <TabsTrigger value="projects" data-testid="tab-projects">
-                <FolderVideo className="w-4 h-4 mr-2" />
+                <FileVideo className="w-4 h-4 mr-2" />
                 Projects
               </TabsTrigger>
             </TabsList>
