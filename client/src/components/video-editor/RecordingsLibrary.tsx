@@ -28,6 +28,21 @@ export default function RecordingsLibrary({ onCreateProject }: RecordingsLibrary
     return `${(mb / 1024).toFixed(2)} GB`;
   };
 
+  const formatRecordingLabel = (createdAt: Date | string) => {
+    const date = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
+    const dateStr = date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    return `${dateStr} at ${timeStr}`;
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
@@ -74,9 +89,12 @@ export default function RecordingsLibrary({ onCreateProject }: RecordingsLibrary
                 <Video className="w-12 h-12 text-muted-foreground" />
               )}
             </div>
-            <CardTitle className="text-base truncate" data-testid={`text-filename-${recording.id}`}>
-              {recording.filename}
+            <CardTitle className="text-base" data-testid={`text-recording-label-${recording.id}`}>
+              {formatRecordingLabel(recording.createdAt)}
             </CardTitle>
+            <p className="text-xs text-muted-foreground truncate mt-1" data-testid={`text-filename-${recording.id}`}>
+              {recording.filename}
+            </p>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
