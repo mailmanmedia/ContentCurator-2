@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -61,7 +62,13 @@ import {
   ChevronDown,
   Circle,
   Pause,
-  Download
+  Download,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  AlertCircle
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
@@ -94,6 +101,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+type SourceHealthStatus = 'connected' | 'disconnected' | 'error' | 'reconnecting';
+
 interface ActiveSource {
   id: string;
   name: string;
@@ -104,6 +113,9 @@ interface ActiveSource {
   resolution?: string;
   customWidth?: number;
   customHeight?: number;
+  healthStatus?: SourceHealthStatus;
+  lastError?: string;
+  reconnectAttempts?: number;
 }
 
 const RESOLUTION_PRESETS = {
@@ -332,7 +344,8 @@ function SortableActiveSource({
   sourceFitModes,
   globalFitMode,
   onFitModeChange,
-  onChangeResolution
+  onChangeResolution,
+  onRetry
 }: { 
   source: ActiveSource;
   onRemove: (id: string) => void;
@@ -340,6 +353,7 @@ function SortableActiveSource({
   globalFitMode: 'contain' | 'cover' | 'fill';
   onFitModeChange: (sourceId: string, fitMode: 'contain' | 'cover' | 'fill' | 'auto') => void;
   onChangeResolution?: (sourceId: string, resolution: string, customWidth?: number, customHeight?: number) => void;
+  onRetry?: (sourceId: string) => void;
 }) {
   const {
     attributes,
@@ -358,6 +372,43 @@ function SortableActiveSource({
   const hasCustomFitMode = sourceFitModes[source.id] !== undefined;
   const currentFitMode = sourceFitModes[source.id] || globalFitMode;
 
+  const healthStatus = source.healthStatus || 'connected';
+  const getHealthBadge = () => {
+    switch (healthStatus) {
+      case 'connected':
+        return {
+          icon: CheckCircle2,
+          variant: 'default' as const,
+          text: 'Connected',
+          className: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20'
+        };
+      case 'reconnecting':
+        return {
+          icon: RefreshCw,
+          variant: 'outline' as const,
+          text: `Reconnecting${source.reconnectAttempts ? ` (${source.reconnectAttempts})` : ''}`,
+          className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20 animate-pulse'
+        };
+      case 'error':
+        return {
+          icon: XCircle,
+          variant: 'destructive' as const,
+          text: 'Error',
+          className: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+        };
+      case 'disconnected':
+        return {
+          icon: WifiOff,
+          variant: 'outline' as const,
+          text: 'Disconnected',
+          className: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20'
+        };
+    }
+  };
+
+  const healthBadge = getHealthBadge();
+  const HealthIcon = healthBadge.icon;
+
   return (
     <div
       ref={setNodeRef}
@@ -370,6 +421,45 @@ function SortableActiveSource({
       </div>
       <Icon className="w-4 h-4 text-primary" />
       <span className="text-sm flex-1 truncate">{source.name}</span>
+      
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge 
+            variant={healthBadge.variant}
+            className={`gap-1.5 text-xs ${healthBadge.className}`}
+            data-testid={`badge-source-status-${source.id}`}
+          >
+            <HealthIcon className="w-3 h-3" />
+            {healthBadge.text}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent data-testid={`tooltip-source-status-${source.id}`}>
+          <div className="space-y-1">
+            <p className="font-semibold">{source.name}</p>
+            <p className="text-xs">Status: {healthStatus}</p>
+            {source.lastError && (
+              <p className="text-xs text-red-400">Error: {source.lastError}</p>
+            )}
+            {source.stream && (
+              <p className="text-xs text-green-400">
+                Stream active: {source.stream.active ? 'Yes' : 'No'}
+              </p>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+
+      {(healthStatus === 'error' || healthStatus === 'disconnected') && onRetry && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-6 w-6"
+          onClick={() => onRetry(source.id)}
+          data-testid={`button-retry-source-${source.id}`}
+        >
+          <RefreshCw className="w-3 h-3" />
+        </Button>
+      )}
       
       <Popover>
         <PopoverTrigger asChild>
@@ -456,6 +546,8 @@ function SortableActiveSource({
   );
 }
 
+type SSEConnectionStatus = 'connected' | 'disconnected' | 'error' | 'connecting';
+
 export default function LivePresentation() {
   const [activeSources, setActiveSources] = useState<ActiveSource[]>([]);
   const [overlays, setOverlays] = useState<OverlayConfig[]>([]);
@@ -463,6 +555,9 @@ export default function LivePresentation() {
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [cameraPermissionStatus, setCameraPermissionStatus] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
   const [needsPermission, setNeedsPermission] = useState(false);
+  const [sseStatus, setSSEStatus] = useState<SSEConnectionStatus>('disconnected');
+  const [sseError, setSSEError] = useState<string | null>(null);
+  const [sseReconnectAttempts, setSSEReconnectAttempts] = useState(0);
   const [isOverlayDialogOpen, setIsOverlayDialogOpen] = useState(false);
   const [overlayText, setOverlayText] = useState('');
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof TEMPLATE_PRESETS>('breaking-news');
@@ -781,6 +876,133 @@ export default function LivePresentation() {
     }
   }, [selectedPreset, editingOverlayId]);
 
+  // Monitor stream health
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveSources(prevSources => 
+        prevSources.map(source => {
+          if (source.stream) {
+            const isActive = source.stream.active;
+            const tracks = source.stream.getTracks();
+            const hasActiveTracks = tracks.some(track => track.readyState === 'live');
+            
+            if (!isActive || !hasActiveTracks) {
+              return {
+                ...source,
+                healthStatus: 'disconnected' as SourceHealthStatus,
+                lastError: 'Stream became inactive'
+              };
+            }
+            
+            return {
+              ...source,
+              healthStatus: 'connected' as SourceHealthStatus,
+              lastError: undefined
+            };
+          }
+          return source;
+        })
+      );
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Retry/reconnect source handler
+  const handleRetrySource = useCallback(async (sourceId: string) => {
+    const source = activeSources.find(s => s.id === sourceId);
+    if (!source) return;
+
+    // Update status to reconnecting
+    setActiveSources(prev => prev.map(s =>
+      s.id === sourceId
+        ? { ...s, healthStatus: 'reconnecting' as SourceHealthStatus, reconnectAttempts: (s.reconnectAttempts || 0) + 1 }
+        : s
+    ));
+
+    toast({
+      title: 'Reconnecting source',
+      description: `Attempting to reconnect ${source.name}...`
+    });
+
+    try {
+      if (source.type === 'camera' && source.deviceId) {
+        // Stop old stream if exists
+        if (source.stream) {
+          source.stream.getTracks().forEach(track => track.stop());
+        }
+
+        const settings = sourceSettings[source.deviceId] || { resolution: '1080p' };
+        let resolutionConstraints = undefined;
+        if (settings.resolution && settings.resolution !== 'custom' && RESOLUTION_PRESETS[settings.resolution as keyof typeof RESOLUTION_PRESETS]) {
+          const preset = RESOLUTION_PRESETS[settings.resolution as keyof typeof RESOLUTION_PRESETS];
+          resolutionConstraints = { width: preset.width, height: preset.height };
+        }
+
+        const newStream = await acquireStream(sourceId, source.deviceId, resolutionConstraints);
+
+        setActiveSources(prev => prev.map(s =>
+          s.id === sourceId
+            ? { 
+                ...s, 
+                stream: newStream, 
+                healthStatus: 'connected' as SourceHealthStatus,
+                lastError: undefined,
+                reconnectAttempts: 0
+              }
+            : s
+        ));
+
+        toast({
+          title: 'Source reconnected',
+          description: `${source.name} is now connected`
+        });
+      } else if (source.type === 'screen') {
+        // Stop old stream if exists
+        if (source.stream) {
+          source.stream.getTracks().forEach(track => track.stop());
+        }
+
+        const newStream = await acquireScreenShare(sourceId);
+
+        setActiveSources(prev => prev.map(s =>
+          s.id === sourceId
+            ? { 
+                ...s, 
+                stream: newStream, 
+                healthStatus: 'connected' as SourceHealthStatus,
+                lastError: undefined,
+                reconnectAttempts: 0
+              }
+            : s
+        ));
+
+        toast({
+          title: 'Screen share reconnected',
+          description: 'Screen sharing is active again'
+        });
+      }
+    } catch (err: any) {
+      console.error('Failed to retry source:', err);
+      
+      setActiveSources(prev => prev.map(s =>
+        s.id === sourceId
+          ? { 
+              ...s, 
+              healthStatus: 'error' as SourceHealthStatus,
+              lastError: err.message || 'Reconnection failed'
+            }
+          : s
+      ));
+
+      toast({
+        title: 'Reconnection failed',
+        description: err.message || 'Could not reconnect source. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  }, [activeSources, sourceSettings, acquireStream, acquireScreenShare, toast]);
+
   const handleSourceSelection = async (value: string) => {
     setSelectedValue('');
     
@@ -831,7 +1053,14 @@ export default function LivePresentation() {
   const handleAddCamera = async (deviceId: string) => {
     try {
       const camera = cameras.find(c => c.deviceId === deviceId);
-      if (!camera) return;
+      if (!camera) {
+        toast({ 
+          title: 'Camera not found', 
+          description: 'The selected camera is not available',
+          variant: 'destructive' 
+        });
+        return;
+      }
 
       const sourceId = `camera-${Date.now()}`;
       
@@ -858,15 +1087,28 @@ export default function LivePresentation() {
         resolution,
         customWidth: settings.customWidth,
         customHeight: settings.customHeight,
+        healthStatus: 'connected' as SourceHealthStatus,
       };
 
       setActiveSources(prev => [...prev, newSource]);
-      toast({ title: 'Camera added', description: camera.label });
-    } catch (err) {
+      toast({ 
+        title: 'Camera added', 
+        description: camera.label || 'Camera connected successfully'
+      });
+    } catch (err: any) {
       console.error('Failed to add camera:', err);
+      
+      const errorMessage = err.name === 'NotAllowedError' 
+        ? 'Camera access denied. Please allow camera permissions in your browser settings.'
+        : err.name === 'NotFoundError'
+        ? 'Camera not found. Please check your camera connection.'
+        : err.name === 'NotReadableError'
+        ? 'Camera is already in use by another application.'
+        : err.message || 'Failed to connect to camera';
+
       toast({ 
         title: 'Failed to add camera', 
-        description: 'Please check camera permissions',
+        description: errorMessage,
         variant: 'destructive' 
       });
     }
@@ -882,6 +1124,7 @@ export default function LivePresentation() {
         name: 'Screen Share',
         type: 'screen',
         stream,
+        healthStatus: 'connected' as SourceHealthStatus,
       };
 
       setActiveSources(prev => [...prev, newSource]);
@@ -1208,16 +1451,62 @@ export default function LivePresentation() {
   };
 
   const handleRemoveOverlay = (overlayId: string) => {
-    setOverlays(prev => prev.filter(o => o.id !== overlayId));
-    toast({ title: 'Overlay removed' });
+    try {
+      const overlay = overlays.find(o => o.id === overlayId);
+      if (!overlay) {
+        toast({ 
+          title: 'Overlay not found', 
+          description: 'The overlay may have already been removed',
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      setOverlays(prev => prev.filter(o => o.id !== overlayId));
+      toast({ 
+        title: 'Overlay removed', 
+        description: `Removed ${overlay.overlayType} overlay`
+      });
+    } catch (err: any) {
+      console.error('Failed to remove overlay:', err);
+      toast({ 
+        title: 'Failed to remove overlay', 
+        description: err.message || 'An error occurred',
+        variant: 'destructive' 
+      });
+    }
   };
 
   const handleToggleOverlayVisibility = (overlayId: string) => {
-    setOverlays(prev => prev.map(overlay =>
-      overlay.id === overlayId
-        ? { ...overlay, visible: !overlay.visible }
-        : overlay
-    ));
+    try {
+      const overlay = overlays.find(o => o.id === overlayId);
+      if (!overlay) {
+        toast({ 
+          title: 'Overlay not found', 
+          description: 'Cannot toggle visibility',
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      setOverlays(prev => prev.map(o =>
+        o.id === overlayId
+          ? { ...o, visible: !o.visible }
+          : o
+      ));
+
+      toast({ 
+        title: overlay.visible ? 'Overlay hidden' : 'Overlay shown',
+        description: `${overlay.overlayType} overlay is now ${overlay.visible ? 'hidden' : 'visible'}`
+      });
+    } catch (err: any) {
+      console.error('Failed to toggle overlay:', err);
+      toast({ 
+        title: 'Failed to toggle overlay', 
+        description: err.message || 'An error occurred',
+        variant: 'destructive' 
+      });
+    }
   };
 
   const handleEditOverlay = (overlay: OverlayConfig) => {
@@ -1309,19 +1598,56 @@ export default function LivePresentation() {
   };
 
   const handleStartBroadcast = () => {
-    setIsBroadcasting(true);
-    toast({
-      title: 'Broadcast Started',
-      description: 'Your program feed is now live!',
-    });
+    try {
+      // Check if we have any sources before broadcasting
+      if (activeSources.length === 0) {
+        toast({
+          title: 'Cannot start broadcast',
+          description: 'Add at least one video source before starting the broadcast',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Check if all sources are healthy
+      const unhealthySources = activeSources.filter(s => s.healthStatus !== 'connected');
+      if (unhealthySources.length > 0) {
+        toast({
+          title: 'Warning: Unhealthy sources detected',
+          description: `${unhealthySources.length} source(s) are not connected. Broadcasting anyway...`,
+        });
+      }
+
+      setIsBroadcasting(true);
+      toast({
+        title: 'Broadcast Started',
+        description: 'Your program feed is now live!',
+      });
+    } catch (err: any) {
+      console.error('Failed to start broadcast:', err);
+      toast({
+        title: 'Failed to start broadcast',
+        description: err.message || 'An error occurred while starting the broadcast',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleStopBroadcast = () => {
-    setIsBroadcasting(false);
-    toast({
-      title: 'Broadcast Stopped',
-      description: 'Program output has been stopped',
-    });
+    try {
+      setIsBroadcasting(false);
+      toast({
+        title: 'Broadcast Stopped',
+        description: 'Program output has been stopped',
+      });
+    } catch (err: any) {
+      console.error('Failed to stop broadcast:', err);
+      toast({
+        title: 'Failed to stop broadcast',
+        description: err.message || 'An error occurred while stopping the broadcast',
+        variant: 'destructive',
+      });
+    }
   };
 
   const sensors = useSensors(
@@ -1482,6 +1808,43 @@ export default function LivePresentation() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge 
+                    variant={sseStatus === 'connected' ? 'default' : 'destructive'}
+                    className={`gap-1.5 ${
+                      sseStatus === 'connected' 
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' 
+                        : sseStatus === 'connecting'
+                        ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20 animate-pulse'
+                        : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                    }`}
+                    data-testid="badge-sse-status"
+                  >
+                    {sseStatus === 'connected' && <Wifi className="w-3 h-3" />}
+                    {sseStatus === 'connecting' && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    {(sseStatus === 'disconnected' || sseStatus === 'error') && <WifiOff className="w-3 h-3" />}
+                    {sseStatus === 'connected' ? 'Live' : sseStatus === 'connecting' ? 'Connecting' : 'Offline'}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent data-testid="tooltip-sse-status">
+                  <div className="space-y-1">
+                    <p className="font-semibold">Live State Connection</p>
+                    <p className="text-xs">
+                      {sseStatus === 'connected' && 'Connected to live updates'}
+                      {sseStatus === 'connecting' && 'Connecting to server...'}
+                      {sseStatus === 'disconnected' && 'Not connected to live updates'}
+                      {sseStatus === 'error' && `Connection error${sseError ? `: ${sseError}` : ''}`}
+                    </p>
+                    {sseReconnectAttempts > 0 && (
+                      <p className="text-xs text-yellow-400">
+                        Reconnect attempts: {sseReconnectAttempts}
+                      </p>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+
               {isBroadcasting && (
                 <Badge 
                   variant="default" 
@@ -2133,6 +2496,7 @@ export default function LivePresentation() {
                             globalFitMode={globalFitMode}
                             onFitModeChange={handleSourceFitModeChange}
                             onChangeResolution={handleChangeResolution}
+                            onRetry={handleRetrySource}
                           />
                         ))}
                       </div>

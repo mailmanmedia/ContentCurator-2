@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Video, Monitor, Film, Radio, Wifi, Play, Square, FileDown, Save } from "lucide-react";
+import { Plus, Edit2, Trash2, Video, Monitor, Film, Radio, Wifi, Play, Square, FileDown, Save, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { SiYoutube } from "react-icons/si";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +48,8 @@ export default function VideoSourceManager() {
   const [isSaveTemplateDialogOpen, setIsSaveTemplateDialogOpen] = useState(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -221,22 +223,84 @@ export default function VideoSourceManager() {
       previewStream.getTracks().forEach(track => track.stop());
       setPreviewStream(null);
     }
+    setPreviewError(null);
+    setPreviewLoading(false);
+  };
+
+  const checkCameraPermission = async (): Promise<boolean> => {
+    if (!navigator.permissions || !navigator.permissions.query) {
+      return true;
+    }
+
+    try {
+      const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+      return permissionStatus.state !== 'denied';
+    } catch (error) {
+      return true;
+    }
   };
 
   const startCameraPreview = async () => {
-    if (!formData.deviceId) return;
+    if (!formData.deviceId) {
+      setPreviewError('Please select a camera device first');
+      return;
+    }
+    
+    setPreviewLoading(true);
+    setPreviewError(null);
     
     try {
+      const hasPermission = await checkCameraPermission();
+      
+      if (!hasPermission) {
+        setPreviewError('Camera access denied. Please allow camera permissions in your browser settings.');
+        setPreviewLoading(false);
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: formData.deviceId },
+        video: { deviceId: { exact: formData.deviceId } },
         audio: false,
       });
+      
       setPreviewStream(stream);
+      setPreviewLoading(false);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        try {
+          await videoRef.current.play();
+        } catch (playError: any) {
+          if (playError.name === 'NotAllowedError') {
+            setPreviewError('Autoplay blocked by browser. Click the preview to start.');
+          }
+        }
       }
-    } catch (error) {
-      toast({ title: 'Could not access camera', variant: 'destructive' });
+    } catch (error: any) {
+      setPreviewLoading(false);
+      
+      let errorMessage = 'Could not access camera';
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'Camera permission denied. Please allow camera access in your browser settings and try again.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'Camera not found. The selected camera may have been disconnected.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = 'Camera is already in use by another application. Please close other apps using the camera.';
+      } else if (error.name === 'OverconstrainedError') {
+        errorMessage = 'The selected camera does not support the required settings.';
+      } else if (error.name === 'TypeError') {
+        errorMessage = 'Invalid camera device. Please select a different camera.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setPreviewError(errorMessage);
+      toast({ 
+        title: 'Camera Error', 
+        description: errorMessage,
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -497,10 +561,25 @@ export default function VideoSourceManager() {
                         variant="outline"
                         size="sm"
                         onClick={previewStream ? stopPreview : startCameraPreview}
+                        disabled={previewLoading}
                         data-testid="button-preview-camera"
                       >
-                        {previewStream ? <Square className="w-3 h-3 mr-2" /> : <Play className="w-3 h-3 mr-2" />}
-                        {previewStream ? 'Stop' : 'Test'} Preview
+                        {previewLoading ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                            Initializing...
+                          </>
+                        ) : previewStream ? (
+                          <>
+                            <Square className="w-3 h-3 mr-2" />
+                            Stop Preview
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3 h-3 mr-2" />
+                            Test Preview
+                          </>
+                        )}
                       </Button>
                     </div>
                   )}
@@ -553,14 +632,46 @@ export default function VideoSourceManager() {
                 </div>
               )}
 
-              {previewStream && (
+              {(previewStream || previewLoading || previewError) && formData.sourceType === 'camera' && (
                 <div className="border rounded-md overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    muted
-                    className="w-full aspect-video bg-sidebar"
-                  />
+                  {previewLoading ? (
+                    <div className="w-full aspect-video bg-sidebar flex flex-col items-center justify-center gap-3" data-testid="preview-loading">
+                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Initializing camera...</p>
+                    </div>
+                  ) : previewError ? (
+                    <div className="w-full aspect-video bg-sidebar flex flex-col items-center justify-center gap-3 p-6" data-testid="preview-error">
+                      <AlertCircle className="w-10 h-10 text-destructive" />
+                      <div className="text-center space-y-2">
+                        <p className="text-sm font-medium text-destructive" data-testid="error-message">
+                          {previewError}
+                        </p>
+                        {previewError.includes('permission') && (
+                          <p className="text-xs text-muted-foreground max-w-sm" data-testid="error-help">
+                            Check your browser's address bar for camera permission prompts, or visit your browser settings to enable camera access for this site.
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={startCameraPreview}
+                        data-testid="button-retry-preview"
+                      >
+                        <RefreshCw className="w-3 h-3 mr-2" />
+                        Retry
+                      </Button>
+                    </div>
+                  ) : previewStream ? (
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full aspect-video bg-sidebar"
+                      data-testid="preview-video"
+                    />
+                  ) : null}
                 </div>
               )}
             </div>
