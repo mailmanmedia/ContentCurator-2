@@ -30,6 +30,7 @@ A professional broadcast control system for multi-camera live productions with r
 - **Output Controls**: Manages resolution (Full HD, 2K, 4K) and global/per-source fit modes.
 - **Responsive Output**: Dynamic grid layout calculation for active sources with proper aspect ratio rendering.
 - **Video Recording & Export**: Professional recording capabilities using MediaRecorder API with intelligent codec fallback, comprehensive controls (start/stop/pause/resume), real-time timer, and WebM export compatible with editing software.
+- **Unified Recording System**: All broadcast recordings are automatically saved to the PostgreSQL database and appear across three integrated locations: Live Presentation (Broadcast Recordings card with last 5 recordings), Content Library (Recordings filter), and Video Editor (Recordings Library). All features use the same `/api/recordings` endpoint for consistent access to recording metadata (filename, duration, size, resolution, format, creation date).
 
 #### AI-Powered Video Editing System
 A comprehensive video editing platform for transforming raw broadcast recordings into polished YouTube-ready content.
