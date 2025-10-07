@@ -22,6 +22,9 @@ import {
   type Template, type InsertTemplate,
   type LiveState, type InsertLiveState,
   type Recording, type InsertRecording,
+  type VideoProject, type InsertVideoProject,
+  type VideoClip, type InsertVideoClip,
+  type RenderJob, type InsertRenderJob,
   videoSources as videoSourcesTable,
   scenes as scenesTable,
   presentationSets as presentationSetsTable,
@@ -30,7 +33,10 @@ import {
   rssAnalysis as rssAnalysisTable,
   rssComparisons as rssComparisonsTable,
   liveStates as liveStatesTable,
-  recordings as recordingsTable
+  recordings as recordingsTable,
+  videoProjects as videoProjectsTable,
+  videoClips as videoClipsTable,
+  renderJobs as renderJobsTable
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
@@ -267,6 +273,28 @@ export interface IStorage {
   updateRecording(id: string, updates: Partial<import("@shared/schema").InsertRecording>): Promise<import("@shared/schema").Recording | undefined>;
   deleteRecording(id: string): Promise<boolean>;
 
+  // Video Project methods
+  getVideoProjects(): Promise<import("@shared/schema").VideoProject[]>;
+  getVideoProject(id: string): Promise<import("@shared/schema").VideoProject | undefined>;
+  createVideoProject(project: import("@shared/schema").InsertVideoProject): Promise<import("@shared/schema").VideoProject>;
+  updateVideoProject(id: string, updates: Partial<import("@shared/schema").InsertVideoProject>): Promise<import("@shared/schema").VideoProject | undefined>;
+  deleteVideoProject(id: string): Promise<boolean>;
+
+  // Video Clip methods
+  getVideoClips(projectId: string): Promise<import("@shared/schema").VideoClip[]>;
+  getVideoClip(id: string): Promise<import("@shared/schema").VideoClip | undefined>;
+  createVideoClip(clip: import("@shared/schema").InsertVideoClip): Promise<import("@shared/schema").VideoClip>;
+  updateVideoClip(id: string, updates: Partial<import("@shared/schema").InsertVideoClip>): Promise<import("@shared/schema").VideoClip | undefined>;
+  deleteVideoClip(id: string): Promise<boolean>;
+
+  // Render Job methods
+  getRenderJobs(): Promise<import("@shared/schema").RenderJob[]>;
+  getRenderJob(id: string): Promise<import("@shared/schema").RenderJob | undefined>;
+  getProjectRenderJobs(projectId: string): Promise<import("@shared/schema").RenderJob[]>;
+  createRenderJob(job: import("@shared/schema").InsertRenderJob): Promise<import("@shared/schema").RenderJob>;
+  updateRenderJob(id: string, updates: Partial<import("@shared/schema").InsertRenderJob>): Promise<import("@shared/schema").RenderJob | undefined>;
+  deleteRenderJob(id: string): Promise<boolean>;
+
   // Statistics methods
   getStatistics(): Promise<{
     totalContent: number;
@@ -279,6 +307,9 @@ export interface IStorage {
     tickerPlaylists: number;
     reports: number;
   }>;
+
+  // Default Overlay Templates
+  getDefaultOverlayTemplates(): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -2025,6 +2056,103 @@ export class MemStorage implements IStorage {
     return true;
   }
 
+  // Video Project methods
+  async getVideoProjects(): Promise<VideoProject[]> {
+    const results = await db.select().from(videoProjectsTable).orderBy(desc(videoProjectsTable.createdAt));
+    return results;
+  }
+
+  async getVideoProject(id: string): Promise<VideoProject | undefined> {
+    const results = await db.select().from(videoProjectsTable).where(eq(videoProjectsTable.id, id));
+    return results[0];
+  }
+
+  async createVideoProject(project: InsertVideoProject): Promise<VideoProject> {
+    const results = await db.insert(videoProjectsTable).values(project).returning();
+    return results[0];
+  }
+
+  async updateVideoProject(id: string, updates: Partial<InsertVideoProject>): Promise<VideoProject | undefined> {
+    const results = await db.update(videoProjectsTable)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(videoProjectsTable.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteVideoProject(id: string): Promise<boolean> {
+    await db.delete(videoClipsTable).where(eq(videoClipsTable.projectId, id));
+    await db.delete(videoProjectsTable).where(eq(videoProjectsTable.id, id));
+    return true;
+  }
+
+  // Video Clip methods
+  async getVideoClips(projectId: string): Promise<VideoClip[]> {
+    const results = await db.select().from(videoClipsTable)
+      .where(eq(videoClipsTable.projectId, projectId))
+      .orderBy(videoClipsTable.order);
+    return results;
+  }
+
+  async getVideoClip(id: string): Promise<VideoClip | undefined> {
+    const results = await db.select().from(videoClipsTable).where(eq(videoClipsTable.id, id));
+    return results[0];
+  }
+
+  async createVideoClip(clip: InsertVideoClip): Promise<VideoClip> {
+    const results = await db.insert(videoClipsTable).values(clip).returning();
+    return results[0];
+  }
+
+  async updateVideoClip(id: string, updates: Partial<InsertVideoClip>): Promise<VideoClip | undefined> {
+    const results = await db.update(videoClipsTable)
+      .set(updates)
+      .where(eq(videoClipsTable.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteVideoClip(id: string): Promise<boolean> {
+    await db.delete(videoClipsTable).where(eq(videoClipsTable.id, id));
+    return true;
+  }
+
+  // Render Job methods
+  async getRenderJobs(): Promise<RenderJob[]> {
+    const results = await db.select().from(renderJobsTable).orderBy(desc(renderJobsTable.createdAt));
+    return results;
+  }
+
+  async getRenderJob(id: string): Promise<RenderJob | undefined> {
+    const results = await db.select().from(renderJobsTable).where(eq(renderJobsTable.id, id));
+    return results[0];
+  }
+
+  async getProjectRenderJobs(projectId: string): Promise<RenderJob[]> {
+    const results = await db.select().from(renderJobsTable)
+      .where(eq(renderJobsTable.projectId, projectId))
+      .orderBy(desc(renderJobsTable.createdAt));
+    return results;
+  }
+
+  async createRenderJob(job: InsertRenderJob): Promise<RenderJob> {
+    const results = await db.insert(renderJobsTable).values(job).returning();
+    return results[0];
+  }
+
+  async updateRenderJob(id: string, updates: Partial<InsertRenderJob>): Promise<RenderJob | undefined> {
+    const results = await db.update(renderJobsTable)
+      .set(updates)
+      .where(eq(renderJobsTable.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteRenderJob(id: string): Promise<boolean> {
+    await db.delete(renderJobsTable).where(eq(renderJobsTable.id, id));
+    return true;
+  }
+
   // Statistics methods
   async getStatistics(): Promise<{
     totalContent: number;
@@ -2059,6 +2187,87 @@ export class MemStorage implements IStorage {
       presentationSets,
       tickerPlaylists,
       reports
+    };
+  }
+
+  async getDefaultOverlayTemplates(): Promise<any> {
+    const currentSeason = new Date().getFullYear();
+    
+    return {
+      playerStats: {
+        id: 'default-player-stats',
+        metricType: 'player-stats',
+        metricData: { 
+          playerId: 306,
+          season: currentSeason 
+        },
+        position: 'bottom',
+        width: 30,
+        height: 250,
+        x: 10,
+        y: 70,
+        opacity: 0.92,
+        visible: true,
+      },
+      h2hCard: {
+        id: 'default-h2h',
+        metricType: 'h2h-card',
+        metricData: { 
+          homeTeamId: 40,
+          awayTeamId: 47
+        },
+        position: 'bottom',
+        width: 35,
+        height: 180,
+        x: 50,
+        y: 75,
+        opacity: 0.92,
+        visible: true,
+      },
+      formGuide: {
+        id: 'default-form-guide',
+        metricType: 'form-guide',
+        metricData: { 
+          teamId: 40,
+          leagueId: 39
+        },
+        position: 'top',
+        width: 40,
+        height: 120,
+        x: 30,
+        y: 10,
+        opacity: 0.92,
+        visible: true,
+      },
+      leagueTable: {
+        id: 'default-league-table',
+        metricType: 'league-table',
+        metricData: {
+          leagueId: 39,
+          highlightTeamId: 40
+        },
+        position: 'bottom',
+        width: 30,
+        height: 300,
+        x: 65,
+        y: 65,
+        opacity: 0.92,
+        visible: true,
+      },
+      rssSentiment: {
+        id: 'default-rss-sentiment',
+        metricType: 'rss-sentiment',
+        metricData: {
+          teamName: 'Liverpool'
+        },
+        position: 'top',
+        width: 35,
+        height: 100,
+        x: 60,
+        y: 5,
+        opacity: 0.92,
+        visible: true,
+      }
     };
   }
 }

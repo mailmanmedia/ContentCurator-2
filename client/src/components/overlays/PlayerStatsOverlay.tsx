@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Activity, Target, TrendingUp } from "lucide-react";
 
 interface PlayerStatsOverlayProps {
-  playerId: number;
+  playerId?: number;
   width: number;
   height: number;
   opacity?: number;
@@ -15,16 +15,16 @@ export default function PlayerStatsOverlay({
   height,
   opacity = 0.92,
 }: PlayerStatsOverlayProps) {
-  const { data: playerData, isLoading } = useQuery({
-    queryKey: ['/api/analytics/player-metrics', playerId],
+  const { data: topScorersData, isLoading: isLoadingScorers } = useQuery({
+    queryKey: ['/api/football/players/liverpool/top-scorers'],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/player-metrics/${playerId}`);
-      if (!res.ok) throw new Error('Failed to fetch player metrics');
+      const res = await fetch('/api/football/players/liverpool/top-scorers?limit=5');
+      if (!res.ok) throw new Error('Failed to fetch Liverpool top scorers');
       return res.json();
     },
   });
 
-  if (isLoading || !playerData) {
+  if (isLoadingScorers || !topScorersData) {
     return (
       <div
         style={{
@@ -39,12 +39,46 @@ export default function PlayerStatsOverlay({
           fontSize: '16px',
         }}
       >
-        Loading...
+        Loading player stats...
       </div>
     );
   }
 
-  const { player, metrics, stats } = playerData;
+  const selectedPlayer = playerId 
+    ? topScorersData.players?.find((p: any) => p.id === playerId) 
+    : topScorersData.players?.[0];
+
+  if (!selectedPlayer) {
+    return (
+      <div
+        style={{
+          width: `${width}%`,
+          height: `${height}px`,
+          backgroundColor: `rgba(246, 235, 97, ${opacity})`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#002147',
+          fontFamily: 'League Spartan, sans-serif',
+          fontSize: '14px',
+          padding: '16px',
+          textAlign: 'center',
+        }}
+      >
+        No player statistics available. Please populate the database with Liverpool player data.
+      </div>
+    );
+  }
+
+  const goalsPer90 = selectedPlayer.minutes > 0 
+    ? (selectedPlayer.goals / (selectedPlayer.minutes / 90)).toFixed(2) 
+    : '0.00';
+  
+  const assistsPer90 = selectedPlayer.minutes > 0 
+    ? (selectedPlayer.assists / (selectedPlayer.minutes / 90)).toFixed(2) 
+    : '0.00';
+
+  const goalsAndAssists = selectedPlayer.goals + selectedPlayer.assists;
 
   return (
     <motion.div
@@ -66,10 +100,10 @@ export default function PlayerStatsOverlay({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-        {player.photo && (
+        {selectedPlayer.photo && (
           <img
-            src={player.photo}
-            alt={player.name}
+            src={selectedPlayer.photo}
+            alt={selectedPlayer.name}
             style={{
               width: '60px',
               height: '60px',
@@ -80,9 +114,9 @@ export default function PlayerStatsOverlay({
           />
         )}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '20px', fontWeight: 'bold' }}>{player.name}</div>
+          <div style={{ fontSize: '20px', fontWeight: 'bold' }}>{selectedPlayer.name}</div>
           <div style={{ fontSize: '12px', color: '#C8102E', marginTop: '2px' }}>
-            #{player.number} • {player.position.join(', ')}
+            Liverpool FC • {topScorersData.season} Season
           </div>
         </div>
       </div>
@@ -106,10 +140,10 @@ export default function PlayerStatsOverlay({
         >
           <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
             <Target size={12} style={{ display: 'inline', marginRight: '4px' }} />
-            GOALS/90
+            GOALS
           </div>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#C8102E' }}>
-            {metrics.goalsPer90?.value?.toFixed(2) || '0.00'}
+            {selectedPlayer.goals}
           </div>
         </motion.div>
 
@@ -126,10 +160,10 @@ export default function PlayerStatsOverlay({
         >
           <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
             <Activity size={12} style={{ display: 'inline', marginRight: '4px' }} />
-            ASSISTS/90
+            ASSISTS
           </div>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#C8102E' }}>
-            {metrics.assistsPer90?.value?.toFixed(2) || '0.00'}
+            {selectedPlayer.assists}
           </div>
         </motion.div>
       </div>
@@ -142,27 +176,34 @@ export default function PlayerStatsOverlay({
         gap: '6px',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-          <span style={{ color: '#666' }}>Creativity Index</span>
+          <span style={{ color: '#666' }}>Goals per 90</span>
           <span style={{ fontWeight: 'bold', color: '#002147' }}>
-            {metrics.creativityIndex?.value?.toFixed(1) || '0.0'}
+            {goalsPer90}
           </span>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-          <span style={{ color: '#666' }}>Involvement Score</span>
+          <span style={{ color: '#666' }}>Assists per 90</span>
           <span style={{ fontWeight: 'bold', color: '#002147' }}>
-            {metrics.involvementScore?.value?.toFixed(1) || '0.0'}%
+            {assistsPer90}
           </span>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-          <span style={{ color: '#666' }}>Impact Rating</span>
+          <span style={{ color: '#666' }}>Appearances</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <TrendingUp size={12} color="#00FF87" />
             <span style={{ fontWeight: 'bold', color: '#00FF87' }}>
-              {metrics.impactRating?.value?.toFixed(1) || '0.0'}
+              {selectedPlayer.appearances}
             </span>
           </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+          <span style={{ color: '#666' }}>Goal Contributions</span>
+          <span style={{ fontWeight: 'bold', color: '#C8102E' }}>
+            {goalsAndAssists}
+          </span>
         </div>
       </div>
     </motion.div>

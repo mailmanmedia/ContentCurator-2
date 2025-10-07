@@ -414,6 +414,24 @@ export const dataUpdateSchedule = pgTable("data_update_schedule", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+export const playerSeasonStatistics = pgTable("player_season_statistics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: integer("player_id").notNull(),
+  teamId: integer("team_id").notNull(),
+  leagueId: integer("league_id").notNull(),
+  season: integer("season").notNull(),
+  goals: integer("goals").notNull().default(0),
+  assists: integer("assists").notNull().default(0),
+  appearances: integer("appearances").notNull().default(0),
+  minutes: integer("minutes").notNull().default(0),
+  yellowCards: integer("yellow_cards").notNull().default(0),
+  redCards: integer("red_cards").notNull().default(0),
+  rating: text("rating"),
+  lastUpdated: timestamp("last_updated").notNull().default(sql`now()`),
+}, (table) => ({
+  uniquePlayerSeasonLeague: unique("player_season_league_unique").on(table.playerId, table.teamId, table.leagueId, table.season),
+}));
+
 export const insertFootballCompetitionSchema = createInsertSchema(footballCompetitions);
 export const insertFootballTeamSchema = createInsertSchema(footballTeams);
 export const insertFootballPlayerSchema = createInsertSchema(footballPlayers);
@@ -438,6 +456,9 @@ export const insertDataUpdateScheduleSchema = createInsertSchema(dataUpdateSched
   id: true,
   createdAt: true,
 });
+export const insertPlayerSeasonStatisticsSchema = createInsertSchema(playerSeasonStatistics).omit({
+  id: true,
+});
 
 export type InsertFootballCompetition = z.infer<typeof insertFootballCompetitionSchema>;
 export type FootballCompetition = typeof footballCompetitions.$inferSelect;
@@ -459,6 +480,8 @@ export type InsertHistoricalHeadToHead = z.infer<typeof insertHistoricalHeadToHe
 export type HistoricalHeadToHead = typeof historicalHeadToHead.$inferSelect;
 export type InsertDataUpdateSchedule = z.infer<typeof insertDataUpdateScheduleSchema>;
 export type DataUpdateSchedule = typeof dataUpdateSchedule.$inferSelect;
+export type InsertPlayerSeasonStatistics = z.infer<typeof insertPlayerSeasonStatisticsSchema>;
+export type PlayerSeasonStatistics = typeof playerSeasonStatistics.$inferSelect;
 
 // Live Presentation System Schema
 export const libraryItems = pgTable("library_items", {

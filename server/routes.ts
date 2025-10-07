@@ -36,8 +36,11 @@ import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplat
 import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
 import { db } from "./db";
-import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams } from "@shared/schema";
+import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics } from "@shared/schema";
 import { desc, eq, and } from "drizzle-orm";
+import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
+import { addRenderJob } from "./video/renderQueue";
+import { insertVideoProjectSchema, insertVideoClipSchema } from "@shared/schema";
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -2139,6 +2142,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Liverpool top scorers with season statistics
+  app.get("/api/football/players/liverpool/top-scorers", async (req, res) => {
+    try {
+      const season = parseInt(req.query.season as string) || new Date().getFullYear();
+      const leagueId = parseInt(req.query.leagueId as string) || 39; // Premier League
+      const limit = parseInt(req.query.limit as string) || 5;
+      
+      const topScorers = await db
+        .select({
+          id: footballPlayers.id,
+          name: footballPlayers.name,
+          photo: footballPlayers.photo,
+          goals: playerSeasonStatistics.goals,
+          assists: playerSeasonStatistics.assists,
+          appearances: playerSeasonStatistics.appearances,
+          minutes: playerSeasonStatistics.minutes,
+          rating: playerSeasonStatistics.rating,
+        })
+        .from(playerSeasonStatistics)
+        .innerJoin(footballPlayers, eq(playerSeasonStatistics.playerId, footballPlayers.id))
+        .where(
+          and(
+            eq(playerSeasonStatistics.teamId, 40), // Liverpool
+            eq(playerSeasonStatistics.leagueId, leagueId),
+            eq(playerSeasonStatistics.season, season)
+          )
+        )
+        .orderBy(desc(playerSeasonStatistics.goals))
+        .limit(limit);
+
+      if (topScorers.length === 0) {
+        return res.json({ 
+          players: [],
+          season,
+          message: "No player statistics available for this season. Please populate the database first."
+        });
+      }
+
+      res.json({ 
+        players: topScorers,
+        season,
+        teamId: 40,
+        teamName: "Liverpool FC"
+      });
+    } catch (error) {
+      console.error('Error fetching Liverpool top scorers:', error);
+      res.status(500).json({ error: "Failed to fetch Liverpool top scorers" });
+    }
+  });
+
+  // Get default overlay templates
+  app.get("/api/overlays/default-templates", async (req, res) => {
+    try {
+      const templates = await storage.getDefaultOverlayTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching default overlay templates:', error);
+      res.status(500).json({ error: "Failed to fetch default overlay templates" });
+    }
+  });
+
+  // Seed historical Liverpool players (2020-2025)
+  app.post("/api/football/players/seed-historical", async (req, res) => {
+    try {
+      const { seedHistoricalPlayers } = await import('./football/seedHistoricalPlayers');
+      const success = await seedHistoricalPlayers();
+      res.json({ 
+        success, 
+        message: success ? "Historical players seeded successfully" : "Failed to seed historical players" 
+      });
+    } catch (error) {
+      console.error('Error seeding historical players:', error);
+      res.status(500).json({ error: "Failed to seed historical players" });
+    }
+  });
+
+  // Populate Liverpool players from Football API
+  app.post("/api/football/players/populate-liverpool", async (req, res) => {
+    try {
+      const season = parseInt(req.body.season) || new Date().getFullYear();
+      const { populateLiverpoolPlayers } = await import('./football/populateLiverpoolPlayers');
+      const success = await populateLiverpoolPlayers(season);
+      res.json({ 
+        success, 
+        season,
+        message: success ? `Liverpool players populated for ${season}` : "Failed to populate Liverpool players" 
+      });
+    } catch (error) {
+      console.error('Error populating Liverpool players:', error);
+      res.status(500).json({ error: "Failed to populate Liverpool players" });
+    }
+  });
+
   // Test endpoint to manually trigger AI stats update
   app.post("/api/test-ai-stats", async (req, res) => {
     console.log("[TEST] AI stats update triggered via API");
@@ -3650,6 +3746,294 @@ Return ONLY a JSON object with this structure:
     } catch (error: any) {
       console.error('Error serving video:', error);
       res.status(500).json({ error: "Failed to serve video" });
+    }
+  });
+
+  // =============== Video Project Routes ===============
+  
+  // Create a new video project
+  app.post("/api/video-projects", async (req, res) => {
+    try {
+      const validatedData = insertVideoProjectSchema.parse(req.body);
+      const project = await storage.createVideoProject(validatedData);
+      res.status(201).json(project);
+    } catch (error: any) {
+      console.error('Error creating video project:', error);
+      res.status(400).json({ error: error.message || "Failed to create video project" });
+    }
+  });
+
+  // Get all video projects
+  app.get("/api/video-projects", async (req, res) => {
+    try {
+      const projects = await storage.getVideoProjects();
+      res.json(projects);
+    } catch (error: any) {
+      console.error('Error fetching video projects:', error);
+      res.status(500).json({ error: "Failed to fetch video projects" });
+    }
+  });
+
+  // Get a single video project
+  app.get("/api/video-projects/:id", async (req, res) => {
+    try {
+      const project = await storage.getVideoProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ error: "Video project not found" });
+      }
+      res.json(project);
+    } catch (error: any) {
+      console.error('Error fetching video project:', error);
+      res.status(500).json({ error: "Failed to fetch video project" });
+    }
+  });
+
+  // Delete a video project
+  app.delete("/api/video-projects/:id", async (req, res) => {
+    try {
+      const project = await storage.getVideoProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ error: "Video project not found" });
+      }
+
+      await storage.deleteVideoProject(req.params.id);
+      res.json({ success: true, message: "Video project deleted successfully" });
+    } catch (error: any) {
+      console.error('Error deleting video project:', error);
+      res.status(500).json({ error: "Failed to delete video project" });
+    }
+  });
+
+  // Analyze video for auto-cutting
+  app.post("/api/video-projects/:id/analyze", async (req, res) => {
+    try {
+      const project = await storage.getVideoProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ error: "Video project not found" });
+      }
+
+      const recording = await storage.getRecording(project.recordingId);
+      if (!recording) {
+        return res.status(404).json({ error: "Recording not found" });
+      }
+
+      // Run auto-cut analysis
+      const cutPoints = await analyzeCutPoints(recording.filepath);
+      const segments = await optimizePacing(cutPoints, recording.duration || 0);
+
+      // Create clips from segments
+      const clips = [];
+      for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        const clip = await storage.createVideoClip({
+          projectId: req.params.id,
+          sourceRecordingId: recording.id,
+          startTime: Math.floor(segment.startTime * 1000),
+          endTime: Math.floor(segment.endTime * 1000),
+          duration: Math.floor(segment.duration * 1000),
+          order: i,
+          trimStart: 0,
+          trimEnd: 0,
+          effects: {},
+          metadata: { type: segment.type }
+        });
+        clips.push(clip);
+      }
+
+      // Update project duration
+      const totalDuration = segments.reduce((sum, seg) => sum + seg.duration, 0);
+      await storage.updateVideoProject(req.params.id, {
+        duration: Math.floor(totalDuration),
+        aiSettings: { autoAnalyzed: true, cutPoints: cutPoints.length, segments: segments.length }
+      });
+
+      res.json({ clips, cutPoints: cutPoints.length, segments: segments.length });
+    } catch (error: any) {
+      console.error('Error analyzing video:', error);
+      res.status(500).json({ error: "Failed to analyze video" });
+    }
+  });
+
+  // =============== Video Clip Routes ===============
+
+  // Get clips for a project
+  app.get("/api/video-projects/:id/clips", async (req, res) => {
+    try {
+      const clips = await storage.getVideoClips(req.params.id);
+      res.json(clips);
+    } catch (error: any) {
+      console.error('Error fetching clips:', error);
+      res.status(500).json({ error: "Failed to fetch clips" });
+    }
+  });
+
+  // Add or update clips
+  app.post("/api/video-projects/:id/clips", async (req, res) => {
+    try {
+      const { clips } = req.body;
+      if (!Array.isArray(clips)) {
+        return res.status(400).json({ error: "Clips must be an array" });
+      }
+
+      const createdClips = [];
+      for (const clipData of clips) {
+        const validatedClip = insertVideoClipSchema.parse({
+          ...clipData,
+          projectId: req.params.id
+        });
+        const clip = await storage.createVideoClip(validatedClip);
+        createdClips.push(clip);
+      }
+
+      res.status(201).json({ clips: createdClips });
+    } catch (error: any) {
+      console.error('Error creating clips:', error);
+      res.status(400).json({ error: error.message || "Failed to create clips" });
+    }
+  });
+
+  // Update a clip
+  app.patch("/api/video-projects/:projectId/clips/:clipId", async (req, res) => {
+    try {
+      const clip = await storage.getVideoClip(req.params.clipId);
+      if (!clip) {
+        return res.status(404).json({ error: "Clip not found" });
+      }
+
+      const updatedClip = await storage.updateVideoClip(req.params.clipId, req.body);
+      res.json(updatedClip);
+    } catch (error: any) {
+      console.error('Error updating clip:', error);
+      res.status(400).json({ error: error.message || "Failed to update clip" });
+    }
+  });
+
+  // Delete a clip
+  app.delete("/api/video-projects/:projectId/clips/:clipId", async (req, res) => {
+    try {
+      const clip = await storage.getVideoClip(req.params.clipId);
+      if (!clip) {
+        return res.status(404).json({ error: "Clip not found" });
+      }
+
+      await storage.deleteVideoClip(req.params.clipId);
+      res.json({ success: true, message: "Clip deleted successfully" });
+    } catch (error: any) {
+      console.error('Error deleting clip:', error);
+      res.status(500).json({ error: "Failed to delete clip" });
+    }
+  });
+
+  // =============== Render Job Routes ===============
+
+  // Start a render job
+  app.post("/api/video-projects/:id/render", async (req, res) => {
+    try {
+      const project = await storage.getVideoProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ error: "Video project not found" });
+      }
+
+      const clips = await storage.getVideoClips(req.params.id);
+      if (clips.length === 0) {
+        return res.status(400).json({ error: "Project has no clips to render" });
+      }
+
+      const settings = req.body.settings || {
+        format: 'mp4',
+        resolution: { width: 1920, height: 1080 },
+        bitrate: '8M',
+        fps: 30
+      };
+
+      const jobId = await addRenderJob(req.params.id, clips, settings);
+      
+      await storage.updateVideoProject(req.params.id, { status: 'processing' });
+      
+      res.status(201).json({ renderJobId: jobId });
+    } catch (error: any) {
+      console.error('Error starting render:', error);
+      res.status(500).json({ error: "Failed to start render" });
+    }
+  });
+
+  // Get all render jobs
+  app.get("/api/render-jobs", async (req, res) => {
+    try {
+      const jobs = await storage.getRenderJobs();
+      res.json(jobs);
+    } catch (error: any) {
+      console.error('Error fetching render jobs:', error);
+      res.status(500).json({ error: "Failed to fetch render jobs" });
+    }
+  });
+
+  // Get render job status
+  app.get("/api/render-jobs/:id/status", async (req, res) => {
+    try {
+      const job = await storage.getRenderJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Render job not found" });
+      }
+
+      res.json({
+        id: job.id,
+        status: job.status,
+        progress: job.progress,
+        processingSteps: job.processingSteps,
+        errorMessage: job.errorMessage
+      });
+    } catch (error: any) {
+      console.error('Error fetching render job status:', error);
+      res.status(500).json({ error: "Failed to fetch render job status" });
+    }
+  });
+
+  // Download rendered video
+  app.get("/api/render-jobs/:id/download", async (req, res) => {
+    try {
+      const job = await storage.getRenderJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Render job not found" });
+      }
+
+      if (job.status !== 'completed' || !job.outputPath) {
+        return res.status(400).json({ error: "Render not completed yet" });
+      }
+
+      const project = await storage.getVideoProject(job.projectId);
+      const filename = `${project?.name || 'video'}_${job.id}.${job.outputPath.endsWith('.webm') ? 'webm' : 'mp4'}`;
+      
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.sendFile(path.resolve(job.outputPath));
+    } catch (error: any) {
+      console.error('Error downloading render:', error);
+      res.status(500).json({ error: "Failed to download render" });
+    }
+  });
+
+  // Delete a render job
+  app.delete("/api/render-jobs/:id", async (req, res) => {
+    try {
+      const job = await storage.getRenderJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Render job not found" });
+      }
+
+      // Delete output file if it exists
+      if (job.outputPath) {
+        try {
+          await fs.unlink(job.outputPath);
+        } catch (error) {
+          console.error('Error deleting render file:', error);
+        }
+      }
+
+      await storage.deleteRenderJob(req.params.id);
+      res.json({ success: true, message: "Render job deleted successfully" });
+    } catch (error: any) {
+      console.error('Error deleting render job:', error);
+      res.status(500).json({ error: "Failed to delete render job" });
     }
   });
 

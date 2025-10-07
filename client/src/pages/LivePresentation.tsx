@@ -1268,6 +1268,46 @@ export default function LivePresentation() {
     setIsOverlayDialogOpen(true);
   };
 
+  const handleLoadDefaultOverlays = async () => {
+    try {
+      const response = await fetch('/api/overlays/default-templates');
+      if (!response.ok) throw new Error('Failed to fetch default templates');
+      
+      const templates = await response.json();
+      const newOverlays: OverlayConfig[] = Object.values(templates).map((template: any) => ({
+        ...template,
+        text: template.metricType || '',
+        animationType: 'static' as const,
+        templateStyle: 'corner' as const,
+        backgroundColor: '#F6EB61',
+        textColor: '#002147',
+        fontSize: 18,
+        fontFamily: 'League Spartan',
+        scrollSpeed: 50,
+        scrollDirection: 'left' as const,
+        isBold: true,
+        isItalic: false,
+        overlayType: 'metric' as const,
+        zIndex: 100,
+        category: 'metrics',
+      }));
+      
+      setOverlays(prev => [...prev, ...newOverlays]);
+      
+      toast({
+        title: 'Default Overlays Loaded',
+        description: `Added ${newOverlays.length} Liverpool FC metric overlays`,
+      });
+    } catch (error) {
+      console.error('Error loading default overlays:', error);
+      toast({
+        title: 'Failed to load default overlays',
+        description: 'Please try again',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleStartBroadcast = () => {
     setIsBroadcasting(true);
     toast({
@@ -1863,6 +1903,16 @@ export default function LivePresentation() {
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Browse Overlay Templates
+                </Button>
+
+                <Button
+                  onClick={handleLoadDefaultOverlays}
+                  className="w-full mt-2"
+                  variant="default"
+                  data-testid="button-load-default-overlays"
+                >
+                  <Trophy className="w-4 h-4 mr-2" />
+                  Load Liverpool FC Overlays
                 </Button>
               </CardContent>
             </Card>

@@ -1,9 +1,10 @@
 import cron from 'node-cron';
 import { db } from '../db';
-import { teamSeasonStatistics, footballFixtures } from '@shared/schema';
+import { teamSeasonStatistics, footballFixtures, footballPlayers, playerSeasonStatistics } from '@shared/schema';
 import { eq, and, gte, lte, or, desc, sql } from 'drizzle-orm';
 import { footballService } from './footballService';
 import { updateLiverpoolStatsWithAI } from './aiStatsService';
+import { populateLiverpoolPlayers } from './populateLiverpoolPlayers';
 
 async function updateTeamStatistics(teamId: number, leagueId: number, season: number) {
   try {
@@ -82,6 +83,24 @@ async function updateTeamStatistics(teamId: number, leagueId: number, season: nu
   }
 }
 
+async function updateLiverpoolPlayerStats() {
+  console.log('\n👥 Updating Liverpool player statistics...');
+  
+  const liverpoolTeamId = 40;
+  const currentSeason = new Date().getFullYear();
+  
+  try {
+    const success = await populateLiverpoolPlayers(currentSeason);
+    if (success) {
+      console.log('✓ Liverpool player statistics updated successfully');
+    } else {
+      console.log('⚠️  Failed to update Liverpool player statistics');
+    }
+  } catch (error) {
+    console.error('❌ Error updating Liverpool player statistics:', error);
+  }
+}
+
 async function updateLiverpoolStats() {
   console.log('\n⚽ Updating Liverpool statistics...');
   
@@ -93,6 +112,8 @@ async function updateLiverpoolStats() {
   for (const leagueId of targetLeagues) {
     await updateTeamStatistics(liverpoolTeamId, leagueId, currentSeason);
   }
+  
+  await updateLiverpoolPlayerStats();
 }
 
 const scheduledFixtures = new Set<number>();

@@ -1,7 +1,7 @@
 # Mailman Media - The Production Post
 
 ## Overview
-The Production Post is Mailman Media's content creation platform designed for in-depth Liverpool FC YouTube channel analysis and visual content generation. It provides AI-powered tools and branded templates to produce YouTube-ready assets such as thumbnails, infographics, statistical charts, and analytical dashboards. The platform combines data-driven insights with professional visual design to support soccer analytics, transfer analysis, and story visualization, aiming to revolutionize sports content creation with data-rich, visually appealing narratives for a global audience.
+The Production Post is Mailman Media's content creation platform for in-depth Liverpool FC YouTube channel analysis and visual content generation. It provides AI-powered tools and branded templates to produce YouTube-ready assets like thumbnails, infographics, statistical charts, and analytical dashboards. The platform combines data-driven insights with professional visual design to revolutionize sports content creation with data-rich, visually appealing narratives for a global audience, focusing on soccer analytics, transfer analysis, and story visualization.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,7 +9,7 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend
-The application is a React-based Single Page Application (SPA) using TypeScript and Vite. It leverages `shadcn/ui` components (built on Radix UI) with a dark-first, Liverpool FC-inspired color palette, styled using Tailwind CSS and Google Fonts. React Query manages server state. Key UI components include `VisualAssistant`, `LivePresentation`, `PromptStudio`, `TemplateCard`, and `DataChart`, with global navigation handled by `Header` and `ContentTabs`.
+The application is a React-based Single Page Application (SPA) using TypeScript and Vite. It utilizes `shadcn/ui` components (built on Radix UI) with a dark-first, Liverpool FC-inspired color palette, styled using Tailwind CSS and Google Fonts. React Query manages server state.
 
 ### Backend
 An Express.js server, written in TypeScript, provides RESTful API endpoints with middleware for logging, JSON parsing, and error handling.
@@ -20,26 +20,25 @@ Drizzle ORM is used with a PostgreSQL database (Neon Database), featuring a sche
 ### System Design Choices
 
 #### Live Presentation System
-A professional broadcast control system for multi-camera live productions, featuring real-time scene composition, graphics overlays, and a program/preview workflow. It utilizes Server-Sent Events (SSE) for state synchronization and canvas-based rendering. Key features include:
-- **Content Upload System**: Supports images, HTML artifacts, code snippets, and external links with smart category management, tag deduplication, and automatic cache invalidation.
-- **Branded Banner/Lower Third Template System**: Professional news-show style graphics with template management UI, CRUD operations, categories (lower-third, banner, full-screen, ticker), brand variants (e.g., Mailman Monday), and customizable styling based on Liverpool FC colors.
-- **RSS Ticker Control Panel**: Comprehensive RSS feed management with ticker settings (speed, colors, font size, mode), live preview, source management, and persistence via API.
-- **Dropdown-Based Source Selection**: Streamlined camera and screen share source selection with Mailman Media branding, dynamic source creation, drag-and-drop reordering, and individual source controls.
-- **Professional Overlay System (Oct 2025)**: Advanced broadcast-quality overlay layer system supporting three overlay types: text, image, and RSS feed tickers. Features include:
-  - **Text Overlays**: Dynamic font size control (12-72px), bold/italic styling, font family selection (League Spartan, Libre Franklin, JetBrains Mono, Arial, Georgia), scroll speed (1-100), directional scrolling (left/right/up/down), Liverpool FC template presets (Breaking News, Live Updates, Match Info).
-  - **Image Overlays**: File upload with base64 conversion, library image picker with grid display, auto-sizing with aspect ratio preservation, image caching for performance, support for both uploaded and library images.
-  - **RSS Feed Tickers**: Multi-source RSS headline display, configurable article limit (1-20), optional source name display, formatted ticker with bullet separators ("SOURCE: Headline • SOURCE: Headline"), integration with RSS Intelligence filtering.
-  - **Position Conflict Detection**: Prevents multiple overlays in same position with warning alerts, position badges (Top/Bottom) in Active Overlays panel, disabled button state when conflicts exist, allows editing existing overlays.
-  - **VideoCompositor Rendering**: Type-safe rendering for all overlay types, image auto-sizing with contain mode, RSS ticker with cached queries and formatRssTicker optimization, seamless scrolling animations.
-- **iOS Camera Detection & Text Customization (Oct 2025)**: Enhanced overlay system with comprehensive controls and iOS device support via `getUserMedia()` permission flow before device enumeration, enabling iPad Pro, iPhone, and Continuity Camera detection.
-- **Output Dimension Controls**: Manages resolution (Full HD, 2K, 4K), global fit modes (Contain, Cover, Fill), and per-source fit mode overrides, with canvas dimensions updating based on selected resolution.
-- **Responsive Output System**: Dynamic grid layout calculation in `VideoCompositor` that auto-adapts based on active source count (e.g., 1 source = full canvas, 2 sources = 2x1, 3-4 sources = 2x2), with proper aspect ratio rendering.
-- **Video Recording & Export System (Oct 2025)**: Professional recording capabilities for capturing live broadcasts with full editing compatibility:
-  - **MediaRecorder Integration**: Canvas stream capture at 30fps using MediaRecorder API with intelligent codec fallback (VP9 → VP8 → H264 → WebM), 5 Mbps bitrate for high-quality output.
-  - **Recording Controls**: Complete recording workflow with start/stop/pause/resume controls, Liverpool FC-branded UI with animated recording indicator, real-time duration timer (MM:SS format), and state-based button visibility.
-  - **Export Functionality**: Download recordings as WebM files compatible with professional editing software (Filmora, Premiere Pro, Final Cut, etc.), filename pattern: `broadcast-recording-{timestamp}.webm`, captures at user-selected output resolution.
-  - **Timer Management**: Monotonic duration tracking with proper pause/resume bookkeeping, reset functionality for new recordings, prevents timing artifacts and negative values.
-  - **User Experience**: Browser compatibility detection, confirmation dialogs for destructive actions, toast notifications for all recording events, comprehensive error handling, clear visual indicators for recording states.
+A professional broadcast control system for multi-camera live productions with real-time scene composition, graphics overlays, and a program/preview workflow. It uses Server-Sent Events (SSE) for state synchronization and canvas-based rendering. Key features include:
+- **Content Management**: Supports various media types (images, HTML, code snippets) with smart categorization and caching.
+- **Branded Graphics**: Professional news-show style banners and lower thirds with customizable templates based on Liverpool FC branding.
+- **RSS Ticker**: Comprehensive RSS feed management with customizable ticker settings, live preview, and source persistence.
+- **Source Selection**: Streamlined camera and screen share source selection with dynamic creation and reordering.
+- **Professional Overlay System**: Advanced broadcast-quality overlay layer system supporting text, image, and RSS feed tickers with dynamic controls (font size, scrolling, positioning, presets) and conflict detection.
+- **iOS Camera Support**: Enhanced overlay system with iOS device integration via `getUserMedia()`.
+- **Output Controls**: Manages resolution (Full HD, 2K, 4K) and global/per-source fit modes.
+- **Responsive Output**: Dynamic grid layout calculation for active sources with proper aspect ratio rendering.
+- **Video Recording & Export**: Professional recording capabilities using MediaRecorder API with intelligent codec fallback, comprehensive controls (start/stop/pause/resume), real-time timer, and WebM export compatible with editing software.
+
+#### AI-Powered Video Editing System
+A comprehensive video editing platform for transforming raw broadcast recordings into polished YouTube-ready content.
+- **Core Infrastructure**: FFmpeg for video processing (scene/silence detection, metadata, thumbnails), Redis-backed Bull Queue for async background rendering, and PostgreSQL for metadata storage.
+- **Video Analysis Engine**: FFmpeg-based scene and silence detection, metadata extraction, and thumbnail generation.
+- **Automated Editing**: Auto-cut system combining scene/silence detection with pacing rules, engagement-based pacing optimizer, and pre-configured intro/outro templates with Liverpool FC branding.
+- **Timeline Editor UI**: Visual timeline with playback controls, clip visualization, trim controls, drag-and-drop reordering, split operations, and synchronized video preview.
+- **Professional Enhancement Tools**: Color grading system with LUT library and manual adjustments, and audio enhancement pipeline (noise reduction, dynamic compression, EQ, loudness normalization).
+- **Render Queue & Export**: Background rendering via Bull Queue with real-time progress tracking, quality presets (YouTube 1080p, Shorts, Twitter), MP4/WebM export, and direct download management.
 
 #### Navigation System
 A global header provides consistent, responsive navigation.
@@ -48,61 +47,46 @@ A global header provides consistent, responsive navigation.
 The homepage displays live database counts for various content types fetched from a dedicated API endpoint.
 
 #### Football Data Integration
-The system integrates 2025-26 season football data, including team rosters and Champions League participants. It prioritizes database-first fetching for fixtures to mitigate API rate limits.
-- **Liverpool FC Official Calendar Integration**: Fetches live fixture data from Liverpool FC's official iCalendar feed, parses over 600 fixtures, includes 10-minute caching, and provides robust error handling.
-- **Team Badge System**: Integrates 100+ team badges with robust name normalization and a multi-tier lookup strategy (static mapping → database fallback → graceful degradation) covering various leagues and competitions.
-- **Automatic Statistics Update System**: A production-ready cron scheduler updates Liverpool FC statistics daily and post-match, utilizing a `teamSeasonStatistics` database table for idempotent upserts and Drizzle ORM's `onConflictDoUpdate` for atomic updates.
+Integrates 2025-26 season football data, including team rosters and Champions League participants, prioritizing database-first fetching for fixtures.
+- **Liverpool FC Official Calendar**: Fetches and parses live fixture data from the official iCalendar feed with caching and error handling.
+- **Team Badge System**: Integrates 100+ team badges with robust name normalization and a multi-tier lookup strategy.
+- **Automatic Statistics Update**: Production-ready cron scheduler for daily and post-match updates of Liverpool FC statistics using `teamSeasonStatistics` table and Drizzle ORM's `onConflictDoUpdate`.
 
 #### Team Matchup Studio
-Offers comprehensive team analysis for YouTube content, including performance statistics dashboards, interactive charts (Recharts with Liverpool FC palette), squad roster analysis, and AI-powered tactical analysis.
-- **Historical Head-to-Head Database (Oct 2025)**: Database-backed matchup data from 2020-present with intelligent update scheduling:
-  - **Hardcoded Historical Data**: Pre-loaded fixtures from 2020-2024 for Liverpool FC vs Premier League, Champions League, FA Cup, and League Cup opponents
-  - **Competition-Specific Update Cadence**: Different update strategies per competition (Premier League: daily during season, Champions League: match days, FA Cup/League Cup: event-based)
-  - **Database-First Approach**: Prioritizes local historical data over API calls to reduce rate limits and improve performance
-  - **Automatic Fallback**: Falls back to live API when database data is insufficient (< 5 matches)
-  - **Update Schedules Table**: Tracks next update times and competition-specific cadences for intelligent data freshness
+Offers comprehensive team analysis for YouTube content, including performance statistics dashboards, interactive charts, squad roster analysis, and AI-powered tactical analysis.
+- **Historical Head-to-Head Database**: Database-backed matchup data from 2020-present with intelligent, competition-specific update scheduling and a database-first approach with API fallback.
 
-#### RSS Intelligence System (Oct 2025)
-A comprehensive RSS feed management and analysis platform for monitoring Liverpool FC news and media coverage. The system provides:
-- **Database Schema**: PostgreSQL tables for `rssSources`, `rssArticles`, `rssAnalysis`, and `rssComparisons` with full Drizzle ORM integration.
-- **Feed Management**: CRUD operations for RSS sources with category support (official, fan_site, media, podcast), update frequency configuration, and active/inactive status controls.
-- **Automated Fetching**: RssService class handles feed parsing using `rss-parser`, duplicate detection via content hashing and GUIDs, sentiment analysis, and error tracking with retry logic.
-- **Advanced Filtering (Oct 2025)**: Enhanced RSS Intelligence page with comprehensive filtering controls:
-  - **Keyword Filter**: Search articles by title, description, or keywords with case-insensitive matching
-  - **Source Filter**: Multi-select dropdown to filter by specific RSS sources
-  - **Date Range Filter**: Start and end date pickers using shadcn Calendar component for temporal filtering
-  - **Filter Status**: Visual badges showing active filters with individual remove buttons and clear all functionality
-  - **Enhanced Display**: Articles show source names, formatted published dates (using date-fns), keyword badges, and external links
-- **Dashboard Analytics**: Real-time statistics showing total sources, active sources, total articles, articles this week, and source health metrics.
-- **Live Presentation Integration**: RSS ticker overlays display scrolling headlines with configurable source selection, article limits, and optional source name display.
+#### RSS Intelligence System
+A comprehensive RSS feed management and analysis platform for monitoring Liverpool FC news and media coverage.
+- **Database Schema**: PostgreSQL tables for `rssSources`, `rssArticles`, `rssAnalysis`, and `rssComparisons`.
+- **Feed Management**: CRUD operations for RSS sources with category support, update frequency, and status controls.
+- **Automated Fetching**: Handles feed parsing, duplicate detection, sentiment analysis, and error tracking with retry logic.
+- **Advanced Filtering**: Comprehensive filtering controls by keyword, source, and date range, with visual badges for active filters.
+- **Dashboard Analytics**: Real-time statistics on sources and articles, plus source health metrics.
+- **Live Presentation Integration**: Provides RSS ticker overlays with configurable source selection and article limits.
 
-#### Advanced Visual Presentation System (Claude Artifact Pattern)
-Generates broadcast-quality visual content following Claude's artifact creation pattern, featuring a 5-tab navigation, metric cards with glassmorphism effects, progress bars, and a CSS Grid-based football pitch visualization. Styling adheres strictly to Liverpool FC brand colors using pure Tailwind CSS, with a robust security architecture.
+#### Advanced Visual Presentation System
+Generates broadcast-quality visual content following Claude's artifact creation pattern, featuring 5-tab navigation, metric cards with glassmorphism effects, progress bars, and a CSS Grid-based football pitch visualization, all adhering to Liverpool FC brand colors using pure Tailwind CSS.
 
 #### Creative Visual Enhancement System
-Integrated animation and visual effects for engaging user experiences while maintaining broadcast standards. All animations use GPU-accelerated CSS transforms. Key effects include shimmer for loading, pulse glows, broadcast pulse for "ON AIR" badges, 3D card transforms on hover, spring animations, slide animations, and stagger delays. Enhancements are applied across components like the Homepage, Live Presentation, and Team Matchup Studio, with a focus on performance and accessibility.
+Integrated animation and visual effects using GPU-accelerated CSS transforms for engaging user experiences while maintaining broadcast standards. Effects include shimmer, pulse glows, broadcast pulse, 3D card transforms, spring animations, slide animations, and stagger delays, focused on performance and accessibility.
 
-#### AI-Powered Framework System (Oct 2025)
-A comprehensive framework management system for creating and executing analytical content templates with integrated AI capabilities. The system provides:
-- **Document-to-Framework Adaptation**: Upload PDF or Word documents and automatically convert them to structured frameworks using AI (Claude or OpenAI), extracting sections, metrics, and analytical queries from document content.
-- **API Capabilities Configuration**: Frameworks can be configured with access to multiple APIs:
-  - **Database Access**: Query the PostgreSQL database for real-time data analysis
-  - **Perplexity API**: Access web search and real-time information
-  - **Claude API (Anthropic)**: Advanced reasoning and content generation
-  - **OpenAI API**: GPT-4 powered analysis and insights
-  - **Football APIs**: Access fixture data, team statistics, and match information
-- **Framework Executor Service**: Runtime execution engine that provides secure API access during framework execution, with proper error handling and context management.
-- **Document Parsing**: Supports PDF (via pdf-parse) and Word documents (.doc, .docx via officeparser) with text extraction and AI-powered structural analysis.
-- **Storage Architecture**: All document processing and AI adaptation occurs on Replit, with frameworks stored in the database including their API configurations and execution metadata.
-- **Version Management**: Complete version control system for frameworks with changelog tracking, download counts, and source file management.
-- **UI Integration**: CreateFramework page features AI-powered document upload with provider selection (Claude/OpenAI), category assignment, and real-time processing status.
+#### AI-Powered Framework System
+A comprehensive framework management system for creating and executing analytical content templates with integrated AI capabilities.
+- **Document-to-Framework Adaptation**: AI (Claude or OpenAI) converts uploaded PDF/Word documents into structured frameworks, extracting sections, metrics, and analytical queries.
+- **API Capabilities Configuration**: Frameworks can access multiple APIs: PostgreSQL database, Perplexity API, Claude API, OpenAI API, and Football APIs.
+- **Framework Executor Service**: Runtime execution engine provides secure API access during framework execution.
+- **Document Parsing**: Supports PDF and Word document parsing for text extraction and AI structural analysis.
+- **Storage Architecture**: Document processing and AI adaptation occur on Replit; frameworks are stored in the database with API configurations and metadata.
+- **Version Management**: Complete version control system for frameworks with changelog tracking and download counts.
+- **UI Integration**: Features AI-powered document upload with provider selection, category assignment, and real-time processing status.
 
 ## External Dependencies
 
 ### AI Integration
-- **OpenAI GPT-4**: For content suggestions, creative generation, and AI-powered tactical analysis.
-- **Claude (Anthropic)**: For advanced reasoning, document analysis, and framework adaptation.
-- **Perplexity API**: For real-time web search and current information retrieval.
+- **OpenAI GPT-4**: Content suggestions, creative generation, AI-powered tactical analysis.
+- **Claude (Anthropic)**: Advanced reasoning, document analysis, framework adaptation.
+- **Perplexity API**: Real-time web search and current information retrieval.
 
 ### Database and Storage
 - **Neon Database**: Serverless PostgreSQL provider.
@@ -126,4 +110,10 @@ A comprehensive framework management system for creating and executing analytica
 - **date-fns**: Date manipulation.
 - **class-variance-authority**: Dynamic styling system.
 - **pdf-parse**: PDF document text extraction.
-- **officeparser**: Word document (.doc, .docx) text extraction.
+- **officeparser**: Word document text extraction.
+
+### Video Processing & Job Queue
+- **FFmpeg**: Video and audio processing, scene detection, color grading, audio enhancement.
+- **fluent-ffmpeg**: Node.js wrapper for FFmpeg.
+- **Bull**: Redis-based job queue for background rendering and async tasks.
+- **ioredis**: Redis client for Bull Queue integration.
