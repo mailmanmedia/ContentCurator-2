@@ -122,29 +122,27 @@ async function updateLiverpoolPlayerStats() {
             
             await db.insert(playerSeasonStatistics).values({
               playerId: mappedPlayer.playerId,
-              playerName: mappedPlayer.playerName,
-              season: mappedPlayer.season,
               teamId: 40, // Liverpool team ID
               leagueId: 39, // Premier League
-              position: mappedPlayer.position,
+              season: mappedPlayer.season,
               appearances: mappedPlayer.appearances,
               goals: mappedPlayer.goals,
               assists: mappedPlayer.assists,
               yellowCards: mappedPlayer.yellowCards,
               redCards: mappedPlayer.redCards,
-              minutesPlayed: mappedPlayer.minutesPlayed,
+              minutes: mappedPlayer.minutes,
+              rating: mappedPlayer.rating,
               lastUpdated: mappedPlayer.lastUpdated
             }).onConflictDoUpdate({
-              target: [playerSeasonStatistics.playerId, playerSeasonStatistics.season],
+              target: [playerSeasonStatistics.playerId, playerSeasonStatistics.teamId, playerSeasonStatistics.leagueId, playerSeasonStatistics.season],
               set: {
-                playerName: mappedPlayer.playerName,
-                position: mappedPlayer.position,
                 appearances: mappedPlayer.appearances,
                 goals: mappedPlayer.goals,
                 assists: mappedPlayer.assists,
                 yellowCards: mappedPlayer.yellowCards,
                 redCards: mappedPlayer.redCards,
-                minutesPlayed: mappedPlayer.minutesPlayed,
+                minutes: mappedPlayer.minutes,
+                rating: mappedPlayer.rating,
                 lastUpdated: new Date()
               }
             });

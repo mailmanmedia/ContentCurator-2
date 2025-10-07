@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Home, Menu, Folder, Rss, Users, Archive, Radio, Palette, Settings, Layers, BarChart } from "lucide-react";
+import { Home, Menu, Folder, Rss, Users, Archive, Radio, Palette, Settings, Layers, BarChart, Film, Database } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import mailmanLogo from "@assets/mailman-logo.png";
@@ -140,6 +140,26 @@ export default function Header() {
               <BarChart className="w-5 h-5" />
             </Button>
           </Link>
+          <Link href="/video-editor">
+            <Button 
+              variant="ghost"
+              size="icon" 
+              className={`text-[#1B365D] ${location === "/video-editor" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+              data-testid="button-video-editor"
+            >
+              <Film className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link href="/database-status">
+            <Button 
+              variant="ghost"
+              size="icon" 
+              className={`text-[#1B365D] ${location === "/database-status" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+              data-testid="button-database-status"
+            >
+              <Database className="w-5 h-5" />
+            </Button>
+          </Link>
           
           <div className="ml-2 pl-2 border-l-2 border-[#1B365D]/20">
             <Badge className="bg-[#C8102E] text-white border-0 font-league-spartan font-semibold uppercase text-xs">
@@ -274,6 +294,28 @@ export default function Header() {
               >
                 <BarChart className="w-5 h-5 mr-3" />
                 Analytics Dashboard
+              </Button>
+            </Link>
+            <Link href="/video-editor">
+              <Button 
+                variant="ghost"
+                className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/video-editor" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+                data-testid="button-video-editor-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Film className="w-5 h-5 mr-3" />
+                Video Editor
+              </Button>
+            </Link>
+            <Link href="/database-status">
+              <Button 
+                variant="ghost"
+                className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/database-status" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+                data-testid="button-database-status-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Database className="w-5 h-5 mr-3" />
+                Database Status
               </Button>
             </Link>
             

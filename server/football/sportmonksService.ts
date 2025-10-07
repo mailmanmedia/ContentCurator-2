@@ -301,14 +301,23 @@ export class SportmonksService {
   // Get current season ID for Premier League
   async getCurrentSeasonId(): Promise<number | null> {
     try {
-      const response = await this.makeRequest<any[]>(
-        '/leagues/8/seasons',
+      const response = await this.makeRequest<any>(
+        '/seasons',
         {
-          'filter[active]': 'true'
+          include: 'league',
+          'filters': 'seasonLeagues:8'
         }
       );
 
       const seasons = Array.isArray(response.data) ? response.data : [];
+      
+      // Find the current/active season
+      const currentSeason = seasons.find((s: any) => s.is_current === true);
+      if (currentSeason) {
+        return currentSeason.id;
+      }
+
+      // If no current season found, return the most recent one
       if (seasons.length > 0) {
         return seasons[0].id;
       }
@@ -343,15 +352,14 @@ export class SportmonksService {
   mapPlayerToDatabase(player: SportmonksPlayer, season: number) {
     return {
       playerId: player.id,
-      playerName: player.display_name || player.common_name,
       season,
-      position: this.mapPositionId(player.position_id),
       appearances: this.extractPlayerStat(player, 'APPEARANCES'),
       goals: this.extractPlayerStat(player, 'GOALS'),
       assists: this.extractPlayerStat(player, 'ASSISTS'),
       yellowCards: this.extractPlayerStat(player, 'YELLOWCARDS'),
       redCards: this.extractPlayerStat(player, 'REDCARDS'),
-      minutesPlayed: this.extractPlayerStat(player, 'MINUTES'),
+      minutes: this.extractPlayerStat(player, 'MINUTES'),
+      rating: null as string | null,
       lastUpdated: new Date()
     };
   }
