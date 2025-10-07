@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Search,
   Filter,
@@ -29,11 +31,14 @@ import {
   Grid3X3,
   List,
   SortAsc,
-  Archive
+  Archive,
+  ExternalLink
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import Header from "@/components/Header";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
 interface ContentItem {
   id: string;
@@ -115,6 +120,9 @@ export default function ContentLibrary() {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showStarredOnly, setShowStarredOnly] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
+  const { toast } = useToast();
 
   // Fetch all content types
   const { data: reportsData } = useQuery({
@@ -297,24 +305,74 @@ export default function ContentLibrary() {
     new Date(item.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   ).length;
 
+  const starMutation = useMutation({
+    mutationFn: async ({ type, id, isStarred }: { type: string; id: string; isStarred: boolean }) => {
+      let endpoint = '';
+      switch (type) {
+        case 'image':
+          endpoint = `/api/images/${id}`;
+          break;
+        case 'framework':
+          endpoint = `/api/frameworks/${id}`;
+          break;
+        case 'library_item':
+          endpoint = `/api/library-items/${id}`;
+          break;
+        default:
+          throw new Error(`Starring not supported for type: ${type}`);
+      }
+      return apiRequest('PUT', endpoint, { isStarred: !isStarred });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/images'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/frameworks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/library-items'] });
+      toast({
+        title: "Success",
+        description: variables.isStarred ? "Removed from starred" : "Added to starred"
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update starred status",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleViewContent = (item: ContentItem) => {
-    console.log("View content:", item);
-    // TODO: Implement content viewing based on type
+    setSelectedContent(item);
+    setViewDialogOpen(true);
   };
 
   const handleEditContent = (item: ContentItem) => {
-    console.log("Edit content:", item);
-    // TODO: Implement content editing based on type
+    toast({
+      title: "Coming Soon",
+      description: "Content editing will be available in a future update"
+    });
   };
 
   const handleDeleteContent = (item: ContentItem) => {
-    console.log("Delete content:", item);
-    // TODO: Implement content deletion
+    toast({
+      title: "Coming Soon",
+      description: "Content deletion will be available in a future update"
+    });
   };
 
   const handleStarContent = (item: ContentItem) => {
-    console.log("Star content:", item);
-    // TODO: Implement starring/unstarring
+    if (['image', 'framework', 'library_item'].includes(item.type)) {
+      starMutation.mutate({
+        type: item.type,
+        id: item.id,
+        isStarred: item.isStarred || false
+      });
+    } else {
+      toast({
+        title: "Not Supported",
+        description: `Starring is not yet supported for ${contentTypeConfig[item.type].label}`
+      });
+    }
   };
 
   return (
@@ -541,6 +599,7 @@ export default function ContentLibrary() {
                             variant="outline" 
                             onClick={() => handleViewContent(item)}
                             className="flex-1"
+                            data-testid={`button-view-${item.id}`}
                           >
                             <Eye className="w-3 h-3 mr-1" />
                             View
@@ -549,13 +608,19 @@ export default function ContentLibrary() {
                             size="sm" 
                             variant="outline"
                             onClick={() => handleEditContent(item)}
+                            data-testid={`button-edit-${item.id}`}
                           >
                             <Edit className="w-3 h-3" />
                           </Button>
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => handleStarContent(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStarContent(item);
+                            }}
+                            disabled={starMutation.isPending}
+                            data-testid={`button-star-${item.id}`}
                           >
                             <Star className={`w-3 h-3 ${item.isStarred ? 'fill-current text-yellow-500' : ''}`} />
                           </Button>
@@ -589,13 +654,32 @@ export default function ContentLibrary() {
                                 {item.isStarred && <Star className="w-4 h-4 text-yellow-500 fill-current" />}
                               </div>
                               <div className="flex gap-1">
-                                <Button size="sm" variant="ghost" onClick={() => handleViewContent(item)}>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={() => handleViewContent(item)}
+                                  data-testid={`button-view-list-${item.id}`}
+                                >
                                   <Eye className="w-3 h-3" />
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleEditContent(item)}>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={() => handleEditContent(item)}
+                                  data-testid={`button-edit-list-${item.id}`}
+                                >
                                   <Edit className="w-3 h-3" />
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleStarContent(item)}>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStarContent(item);
+                                  }}
+                                  disabled={starMutation.isPending}
+                                  data-testid={`button-star-list-${item.id}`}
+                                >
                                   <Star className={`w-3 h-3 ${item.isStarred ? 'fill-current text-yellow-500' : ''}`} />
                                 </Button>
                               </div>
@@ -658,6 +742,124 @@ export default function ContentLibrary() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* View Content Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh]" data-testid="dialog-view-content">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedContent && (
+                <>
+                  {(() => {
+                    const TypeIcon = contentTypeConfig[selectedContent.type].icon;
+                    return <TypeIcon className="w-5 h-5" />;
+                  })()}
+                  {selectedContent.title}
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContent && contentTypeConfig[selectedContent.type].label}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[60vh] pr-4">
+            {selectedContent && (
+              <div className="space-y-4">
+                {selectedContent.thumbnail && (
+                  <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                    <img 
+                      src={selectedContent.thumbnail} 
+                      alt={selectedContent.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                
+                {selectedContent.description && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Description</h4>
+                    <p className="text-sm text-muted-foreground">{selectedContent.description}</p>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold mb-2">Created</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(selectedContent.createdAt), "PPpp")}
+                    </p>
+                  </div>
+                  
+                  {selectedContent.updatedAt && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Updated</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(selectedContent.updatedAt), "PPpp")}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {selectedContent.category && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Category</h4>
+                      <Badge variant="secondary">{selectedContent.category}</Badge>
+                    </div>
+                  )}
+                  
+                  {selectedContent.status && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Status</h4>
+                      <Badge variant="outline">{selectedContent.status}</Badge>
+                    </div>
+                  )}
+                </div>
+                
+                {selectedContent.tags.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedContent.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {selectedContent.url && (
+                  <div>
+                    <h4 className="font-semibold mb-2">URL</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a href={selectedContent.url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Open Link
+                      </a>
+                    </Button>
+                  </div>
+                )}
+                
+                {selectedContent.metadata && Object.keys(selectedContent.metadata).length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Additional Details</h4>
+                    <div className="text-xs bg-muted p-3 rounded-lg font-mono">
+                      <pre className="whitespace-pre-wrap">
+                        {JSON.stringify(selectedContent.metadata, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
