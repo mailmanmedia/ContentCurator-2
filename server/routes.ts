@@ -4037,6 +4037,97 @@ Return ONLY a JSON object with this structure:
     }
   });
 
+  // =============== Database Status Route ===============
+  
+  // Get database status and data availability
+  app.get("/api/database-status", async (req, res) => {
+    try {
+      // Get player season statistics using raw SQL
+      const playerSeasonsResult = await db.execute(
+        `SELECT 
+          season,
+          COUNT(*) as player_count,
+          SUM(goals) as total_goals,
+          SUM(assists) as total_assists,
+          MIN(last_updated) as earliest_update,
+          MAX(last_updated) as latest_update
+        FROM player_season_statistics
+        GROUP BY season
+        ORDER BY season DESC`
+      );
+
+      // Get other table stats
+      const rssArticles = await storage.getRssArticles({});
+      const players = await db.select().from(footballPlayers);
+      const teamStats = await db.select().from(teamSeasonStatistics);
+      const recordings = await storage.getRecordings();
+      const videoProjects = await storage.getVideoProjects();
+
+      // Get historical head to head data
+      const h2hResult = await db.execute(
+        `SELECT COUNT(*) as count, MIN(date) as earliest, MAX(date) as latest FROM historical_head_to_head`
+      );
+
+      const h2hData = h2hResult.rows[0] || { count: 0, earliest: null, latest: null };
+
+      const tables = [
+        {
+          tableName: 'RSS Articles',
+          recordCount: rssArticles.length,
+          earliestDate: rssArticles.length > 0 ? new Date(Math.min(...rssArticles.filter(a => a.publishedAt).map(a => new Date(a.publishedAt).getTime()))).toISOString() : null,
+          latestDate: rssArticles.length > 0 ? new Date(Math.max(...rssArticles.filter(a => a.publishedAt).map(a => new Date(a.publishedAt).getTime()))).toISOString() : null
+        },
+        {
+          tableName: 'Football Players',
+          recordCount: players.length,
+          earliestDate: null,
+          latestDate: null
+        },
+        {
+          tableName: 'Team Season Statistics',
+          recordCount: teamStats.length,
+          earliestDate: null,
+          latestDate: null
+        },
+        {
+          tableName: 'Historical Head-to-Head',
+          recordCount: Number(h2hData.count) || 0,
+          earliestDate: h2hData.earliest ? new Date(h2hData.earliest).toISOString() : null,
+          latestDate: h2hData.latest ? new Date(h2hData.latest).toISOString() : null
+        },
+        {
+          tableName: 'Video Projects',
+          recordCount: videoProjects.length,
+          earliestDate: null,
+          latestDate: null
+        },
+        {
+          tableName: 'Recordings',
+          recordCount: recordings.length,
+          earliestDate: recordings.length > 0 ? new Date(Math.min(...recordings.map(r => new Date(r.createdAt).getTime()))).toISOString() : null,
+          latestDate: recordings.length > 0 ? new Date(Math.max(...recordings.map(r => new Date(r.createdAt).getTime()))).toISOString() : null
+        }
+      ];
+
+      res.json({
+        tables,
+        playerSeasons: playerSeasonsResult.rows.map((s: any) => ({
+          season: Number(s.season),
+          playerCount: Number(s.player_count) || 0,
+          totalGoals: Number(s.total_goals) || 0,
+          totalAssists: Number(s.total_assists) || 0,
+          earliestUpdate: s.earliest_update ? new Date(s.earliest_update).toISOString() : new Date().toISOString(),
+          latestUpdate: s.latest_update ? new Date(s.latest_update).toISOString() : new Date().toISOString()
+        })),
+        lastApiUpdate: null,
+        dataSource: 'historical' as const
+      });
+    } catch (error: any) {
+      console.error('Error fetching database status:', error);
+      res.status(500).json({ error: "Failed to fetch database status" });
+    }
+  });
+
   registerAnalyticsRoutes(app, storage);
 
   const httpServer = createServer(app);

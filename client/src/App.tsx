@@ -17,6 +17,7 @@ import Templates from "@/pages/Templates";
 import OverlayTemplateBuilder from "@/pages/OverlayTemplateBuilder";
 import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
 import VideoEditor from "@/pages/VideoEditor";
+import DatabaseStatus from "@/pages/DatabaseStatus";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/overlay-templates" component={OverlayTemplateBuilder} />
       <Route path="/analytics" component={AnalyticsDashboard} />
       <Route path="/video-editor" component={VideoEditor} />
+      <Route path="/database-status" component={DatabaseStatus} />
       <Route component={NotFound} />
     </Switch>
   );
