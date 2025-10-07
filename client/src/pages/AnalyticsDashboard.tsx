@@ -428,7 +428,7 @@ export default function AnalyticsDashboard() {
                     {dashboardData?.overview?.points ?? 0} points from {dashboardData?.overview?.played ?? 0} matches
                   </p>
                   <div className="mt-2 flex items-center gap-1">
-                    {dashboardData?.overview?.form?.split('').map((result, i) => (
+                    {(dashboardData?.overview?.form?.split('') || []).map((result, i) => (
                       <Badge
                         key={i}
                         className={
@@ -548,7 +548,7 @@ export default function AnalyticsDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {dashboardData?.topPlayers.map((player, i) => (
+                    {(dashboardData?.topPlayers || []).map((player, i) => (
                       <div
                         key={i}
                         className="flex items-center justify-between p-3 rounded-lg bg-card hover-elevate"
@@ -903,7 +903,7 @@ export default function AnalyticsDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {comparativeData?.leagueStandings.map((team) => (
+                    {(comparativeData?.leagueStandings || []).map((team) => (
                       <div
                         key={team.position}
                         className={`flex items-center justify-between p-3 rounded-lg ${
@@ -922,7 +922,7 @@ export default function AnalyticsDashboard() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex gap-1">
-                            {team.form.split('').map((result, i) => (
+                            {(team.form?.split('') || []).map((result, i) => (
                               <div
                                 key={i}
                                 className={`w-2 h-2 rounded-full ${
