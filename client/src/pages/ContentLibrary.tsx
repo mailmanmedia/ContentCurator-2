@@ -130,49 +130,58 @@ export default function ContentLibrary() {
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
   const { toast } = useToast();
 
-  // Fetch all content types
+  // Fetch content types conditionally based on filter
   const { data: reportsData } = useQuery({
     queryKey: ['/api/reports'],
-    select: (response: any) => response.reports || []
+    select: (response: any) => response.reports || [],
+    enabled: selectedType === 'all' || selectedType === 'report'
   });
 
   const { data: imagesData } = useQuery({
     queryKey: ['/api/images'],
-    select: (response: any) => response.images || []
+    select: (response: any) => response.images || [],
+    enabled: selectedType === 'all' || selectedType === 'image'
   });
 
   const { data: frameworksData } = useQuery({
     queryKey: ['/api/frameworks'],
-    select: (response: any) => response.frameworks || []
+    select: (response: any) => response.frameworks || [],
+    enabled: selectedType === 'all' || selectedType === 'framework'
   });
 
   const { data: rssArticlesData } = useQuery({
     queryKey: ['/api/rss-articles'],
-    select: (response: any) => response.articles || []
+    select: (response: any) => response.articles || [],
+    enabled: selectedType === 'all' || selectedType === 'rss_article'
   });
 
   const { data: presentationSetsData } = useQuery({
     queryKey: ['/api/presentation-sets'],
-    select: (response: any) => response.presentationSets || []
+    select: (response: any) => response.presentationSets || [],
+    enabled: selectedType === 'all' || selectedType === 'presentation_set'
   });
 
   const { data: scenesData } = useQuery({
     queryKey: ['/api/scenes'],
-    select: (response: any) => response.scenes || []
+    select: (response: any) => response.scenes || [],
+    enabled: selectedType === 'all' || selectedType === 'scene'
   });
 
   const { data: libraryItemsData } = useQuery({
     queryKey: ['/api/library-items'],
-    select: (response: any) => response.libraryItems || []
+    select: (response: any) => response.libraryItems || [],
+    enabled: selectedType === 'all' || selectedType === 'library_item'
   });
 
   const { data: tickerPlaylistsData } = useQuery({
     queryKey: ['/api/ticker-playlists'],
-    select: (response: any) => response.tickerPlaylists || []
+    select: (response: any) => response.tickerPlaylists || [],
+    enabled: selectedType === 'all' || selectedType === 'ticker_playlist'
   });
 
   const { data: recordingsData } = useQuery<any[]>({
-    queryKey: ['/api/recordings']
+    queryKey: ['/api/recordings'],
+    enabled: selectedType === 'all' || selectedType === 'recording'
   });
 
   // Combine all content into unified format

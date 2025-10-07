@@ -829,8 +829,30 @@ export default function LivePresentation() {
     }
   }, [liveStateData]);
 
+  const lastSavedStateRef = useRef<string>('');
+
   useEffect(() => {
+    const currentState = JSON.stringify({
+      activeSources,
+      overlays,
+      outputResolution,
+      globalFitMode,
+      sourceFitModes,
+      sourceSettings,
+      isBroadcasting,
+    });
+
+    if (currentState === lastSavedStateRef.current) {
+      return;
+    }
+
     const timeoutId = setTimeout(() => {
+      if (currentState === lastSavedStateRef.current) {
+        return;
+      }
+
+      lastSavedStateRef.current = currentState;
+      
       apiRequest('PATCH', '/api/live-state', {
         activeSources: JSON.stringify(activeSources),
         overlays: JSON.stringify(overlays),
@@ -840,7 +862,7 @@ export default function LivePresentation() {
         sourceSettings: JSON.stringify(sourceSettings),
         isBroadcasting,
       }).catch(err => console.error('Failed to save live state:', err));
-    }, 1000);
+    }, 3000);
 
     return () => clearTimeout(timeoutId);
   }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes, sourceSettings, isBroadcasting]);
