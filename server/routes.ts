@@ -3653,7 +3653,7 @@ Return ONLY a JSON object with this structure:
     }
   });
 
-  registerAnalyticsRoutes(app);
+  registerAnalyticsRoutes(app, storage);
 
   const httpServer = createServer(app);
 

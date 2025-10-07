@@ -12,6 +12,7 @@ import type {
   FixtureInfo
 } from "../analytics/analyticsEngine";
 import { analyticsCache, CACHE_TTL } from "../analytics/analyticsCache";
+import type { IStorage } from "../storage";
 import fs from "fs";
 import path from "path";
 
@@ -149,7 +150,7 @@ function getH2HRecord(h2hData: any, opponentId: number): HeadToHeadRecord | null
   };
 }
 
-export function registerAnalyticsRoutes(app: Express) {
+export function registerAnalyticsRoutes(app: Express, storage: IStorage) {
   app.get("/api/analytics/team-metrics", async (req: Request, res: Response) => {
     try {
       const metrics = await analyticsCache.get("team-metrics", () => {
@@ -477,16 +478,16 @@ export function registerAnalyticsRoutes(app: Express) {
             };
           });
 
+          const recentForm = ppgTrajectory
+            .slice(-5)
+            .reduce((sum: number, m: any) => sum + m.points, 0) / 5;
+
           const titleRaceIndex = analyticsEngine.calculateTitleRaceIndex(
             liverpoolStanding?.played || 7,
             liverpoolStanding?.points || 16,
             (leagueTable.standings[0]?.points || 19) -
               (liverpoolStanding?.points || 16),
-            parseFloat(
-              ppgTrajectory
-                .slice(-5)
-                .reduce((sum: number, m: any) => sum + m.points, 0) / 5
-            )
+            recentForm
           );
 
           const top4Probability = analyticsEngine.calculateTop4Probability(
@@ -785,39 +786,97 @@ export function registerAnalyticsRoutes(app: Express) {
     "/api/analytics/rss-metrics",
     async (req: Request, res: Response) => {
       try {
-        const metrics = await analyticsCache.get("rss-metrics", () => {
-          const mockArticles: ArticleSentiment[] = [
-            { sentiment: 0.75, sourceCredibility: 0.9, ageInHours: 12 },
-            { sentiment: 0.65, sourceCredibility: 0.85, ageInHours: 18 },
-            { sentiment: 0.55, sourceCredibility: 0.8, ageInHours: 24 },
-            { sentiment: -0.2, sourceCredibility: 0.7, ageInHours: 36 },
-            { sentiment: 0.8, sourceCredibility: 0.95, ageInHours: 6 },
-            { sentiment: 0.45, sourceCredibility: 0.75, ageInHours: 48 },
-          ];
-
-          const sentimentScore =
-            analyticsEngine.calculateSentimentAggregationScore(mockArticles);
-
-          const topicTrending = analyticsEngine.calculateTopicTrendingScore(
-            15,
-            10,
-            6
+        const metrics = await analyticsCache.get("rss-metrics", async () => {
+          // Fetch real RSS articles from database
+          const recentArticles = await storage.getRecentRssArticles(100);
+          const rssSources = await storage.getRssSources();
+          
+          // Create source credibility map (using verified status as proxy since credibility field doesn't exist yet)
+          const sourceCredibilityMap = new Map(
+            rssSources.map(source => [source.id, source.isVerified ? 0.9 : 0.7])
           );
 
-          const coverageIntensity =
-            analyticsEngine.calculateCoverageIntensityIndex(28, 18);
+          // Convert text sentiment to numeric (-1 to 1)
+          const sentimentToNumber = (sentiment: string | null): number => {
+            if (!sentiment) return 0;
+            const s = sentiment.toLowerCase();
+            if (s === 'positive') return 0.7;
+            if (s === 'negative') return -0.7;
+            return 0; // neutral
+          };
+
+          // Convert to ArticleSentiment format with real data
+          const articleSentiments: ArticleSentiment[] = recentArticles
+            .filter(article => article.sentiment !== null && article.publishedAt)
+            .map(article => {
+              const publishedAt = article.publishedAt ? new Date(article.publishedAt) : new Date();
+              const ageInHours = (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60);
+              
+              return {
+                sentiment: sentimentToNumber(article.sentiment),
+                sourceCredibility: sourceCredibilityMap.get(article.sourceId) ?? 0.7,
+                ageInHours: Math.max(0, ageInHours)
+              };
+            });
+
+          // Calculate metrics from real data
+          const sentimentScore = articleSentiments.length > 0
+            ? analyticsEngine.calculateSentimentAggregationScore(articleSentiments)
+            : { value: 0, interpretation: "No data available" };
+
+          // Calculate trending topics from article count
+          const last24Hours = recentArticles.filter(a => {
+            const publishedAt = a.publishedAt ? new Date(a.publishedAt) : new Date(0);
+            const hoursAgo = (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60);
+            return hoursAgo <= 24;
+          }).length;
+
+          const last7Days = recentArticles.filter(a => {
+            const publishedAt = a.publishedAt ? new Date(a.publishedAt) : new Date(0);
+            const hoursAgo = (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60);
+            return hoursAgo <= 168;
+          }).length;
+
+          const topicTrending = analyticsEngine.calculateTopicTrendingScore(
+            last24Hours,
+            Math.floor(last7Days / 7),
+            articleSentiments.length
+          );
+
+          // Calculate coverage intensity from active sources
+          const activeSources = rssSources.filter(s => s.isActive);
+          const recentSourceArticles = new Set(
+            recentArticles
+              .filter(a => {
+                const publishedAt = a.publishedAt ? new Date(a.publishedAt) : new Date(0);
+                const hoursAgo = (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60);
+                return hoursAgo <= 24;
+              })
+              .map(a => a.sourceId)
+          );
+
+          const coverageIntensity = analyticsEngine.calculateCoverageIntensityIndex(
+            last24Hours,
+            activeSources.length
+          );
+
+          // Calculate source diversity
+          const sourcesByCategory = rssSources.reduce((acc, source) => {
+            acc[source.category] = (acc[source.category] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
 
           const sourceDiversity = analyticsEngine.calculateSourceDiversityIndex(
-            8,
-            3,
-            3,
-            2
+            activeSources.length,
+            sourcesByCategory.official || 0,
+            sourcesByCategory.fan_site || 0,
+            sourcesByCategory.media || 0
           );
 
           return {
             sentiment: {
               aggregatedScore: sentimentScore,
-              sampleSize: mockArticles.length,
+              sampleSize: articleSentiments.length,
             },
             trending: {
               topicScore: topicTrending,
@@ -826,7 +885,7 @@ export function registerAnalyticsRoutes(app: Express) {
               intensity: coverageIntensity,
               diversity: sourceDiversity,
             },
-            recentArticles: mockArticles.length,
+            recentArticles: recentArticles.length,
           };
         }, { ttl: CACHE_TTL.RSS_SENTIMENT, backgroundRefresh: true });
 
