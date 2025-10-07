@@ -41,8 +41,15 @@ export default function ExportPanel({ projectId }: ExportPanelProps) {
     mutationFn: async () => {
       const presets: Record<string, any> = {
         youtube_1080p: { width: 1920, height: 1080, bitrate: '8M' },
+        youtube_4k: { width: 3840, height: 2160, bitrate: '40M' },
         shorts: { width: 1080, height: 1920, bitrate: '6M' },
+        instagram_feed: { width: 1080, height: 1080, bitrate: '5M' },
+        instagram_story: { width: 1080, height: 1920, bitrate: '5M' },
+        instagram_reels: { width: 1080, height: 1920, bitrate: '6M' },
+        tiktok: { width: 1080, height: 1920, bitrate: '6M' },
         twitter: { width: 1280, height: 720, bitrate: '4M' },
+        facebook: { width: 1280, height: 720, bitrate: '4M' },
+        linkedin: { width: 1920, height: 1080, bitrate: '5M' },
         custom: { 
           width: parseInt(customWidth), 
           height: parseInt(customHeight), 
@@ -120,9 +127,16 @@ export default function ExportPanel({ projectId }: ExportPanelProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="youtube_1080p">YouTube 1080p (1920×1080, 8Mbps)</SelectItem>
-                <SelectItem value="shorts">Shorts (1080×1920, 6Mbps)</SelectItem>
-                <SelectItem value="twitter">Twitter (1280×720, 4Mbps)</SelectItem>
+                <SelectItem value="youtube_1080p">YouTube 1080p (1920×1080)</SelectItem>
+                <SelectItem value="youtube_4k">YouTube 4K (3840×2160)</SelectItem>
+                <SelectItem value="shorts">YouTube Shorts (1080×1920)</SelectItem>
+                <SelectItem value="instagram_feed">Instagram Feed (1080×1080)</SelectItem>
+                <SelectItem value="instagram_story">Instagram Story (1080×1920)</SelectItem>
+                <SelectItem value="instagram_reels">Instagram Reels (1080×1920)</SelectItem>
+                <SelectItem value="tiktok">TikTok (1080×1920)</SelectItem>
+                <SelectItem value="twitter">Twitter/X (1280×720)</SelectItem>
+                <SelectItem value="facebook">Facebook (1280×720)</SelectItem>
+                <SelectItem value="linkedin">LinkedIn (1920×1080)</SelectItem>
                 <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
             </Select>

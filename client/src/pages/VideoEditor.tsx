@@ -16,6 +16,13 @@ import ClipProperties from "@/components/video-editor/ClipProperties";
 import AutoEditPanel from "@/components/video-editor/AutoEditPanel";
 import EnhancementPanel from "@/components/video-editor/EnhancementPanel";
 import ExportPanel from "@/components/video-editor/ExportPanel";
+import TextOverlayManager from "@/components/video-editor/TextOverlayManager";
+import TransitionsPanel from "@/components/video-editor/TransitionsPanel";
+import SpeedControlPanel from "@/components/video-editor/SpeedControlPanel";
+import EffectsPanel from "@/components/video-editor/EffectsPanel";
+import KeyframeEditor from "@/components/video-editor/KeyframeEditor";
+import AdvancedColorGrading from "@/components/video-editor/AdvancedColorGrading";
+import AudioMixerPanel from "@/components/video-editor/AudioMixerPanel";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Recording, VideoProject, VideoClip } from "@shared/schema";
@@ -181,28 +188,59 @@ export default function VideoEditor() {
             </div>
 
             <div className="space-y-6">
-              <Tabs defaultValue="properties">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="properties">Clip</TabsTrigger>
-                  <TabsTrigger value="auto">Auto</TabsTrigger>
-                  <TabsTrigger value="enhance">Enhance</TabsTrigger>
+              <Tabs defaultValue="clip">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="clip">Clip</TabsTrigger>
+                  <TabsTrigger value="effects">Effects</TabsTrigger>
                   <TabsTrigger value="export">Export</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="properties" className="mt-4">
+                <TabsContent value="clip" className="mt-4 space-y-4">
                   <ClipProperties
                     clip={selectedClip}
                     onUpdate={(updates) => selectedClip && handleClipUpdate(selectedClip.id, updates)}
                     onDelete={() => selectedClip && handleClipDelete(selectedClip.id)}
                   />
+                  
+                  <TransitionsPanel
+                    clip={selectedClip}
+                    onUpdate={(updates) => selectedClip && handleClipUpdate(selectedClip.id, updates)}
+                  />
+                  
+                  <SpeedControlPanel
+                    clip={selectedClip}
+                    onUpdate={(updates) => selectedClip && handleClipUpdate(selectedClip.id, updates)}
+                  />
+                  
+                  <KeyframeEditor
+                    clipId={selectedClip?.id || null}
+                    clipDuration={selectedClip?.duration || 0}
+                    currentTime={currentTime}
+                  />
                 </TabsContent>
                 
-                <TabsContent value="auto" className="mt-4">
+                <TabsContent value="effects" className="mt-4 space-y-4">
                   <AutoEditPanel projectId={activeProject.id} />
-                </TabsContent>
-                
-                <TabsContent value="enhance" className="mt-4">
+                  
+                  <TextOverlayManager
+                    projectId={activeProject.id}
+                    currentTime={currentTime}
+                    duration={activeProject.duration || 0}
+                  />
+                  
+                  <EffectsPanel
+                    clip={selectedClip}
+                    onUpdate={(updates) => selectedClip && handleClipUpdate(selectedClip.id, updates)}
+                  />
+                  
+                  <AdvancedColorGrading
+                    clip={selectedClip}
+                    onUpdate={(updates) => selectedClip && handleClipUpdate(selectedClip.id, updates)}
+                  />
+                  
                   <EnhancementPanel />
+                  
+                  <AudioMixerPanel projectId={activeProject.id} />
                 </TabsContent>
                 
                 <TabsContent value="export" className="mt-4">
