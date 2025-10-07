@@ -120,14 +120,34 @@ async function updateLiverpoolPlayerStats() {
           for (const player of players) {
             const mappedPlayer = sportmonksService.mapPlayerToDatabase(player, currentSeason);
             
-            await db.insert(playerSeasonStatistics).values(mappedPlayer)
-              .onConflictDoUpdate({
-                target: [playerSeasonStatistics.playerId, playerSeasonStatistics.season],
-                set: {
-                  ...mappedPlayer,
-                  lastUpdated: new Date()
-                }
-              });
+            await db.insert(playerSeasonStatistics).values({
+              playerId: mappedPlayer.playerId,
+              playerName: mappedPlayer.playerName,
+              season: mappedPlayer.season,
+              teamId: 40, // Liverpool team ID
+              leagueId: 39, // Premier League
+              position: mappedPlayer.position,
+              appearances: mappedPlayer.appearances,
+              goals: mappedPlayer.goals,
+              assists: mappedPlayer.assists,
+              yellowCards: mappedPlayer.yellowCards,
+              redCards: mappedPlayer.redCards,
+              minutesPlayed: mappedPlayer.minutesPlayed,
+              lastUpdated: mappedPlayer.lastUpdated
+            }).onConflictDoUpdate({
+              target: [playerSeasonStatistics.playerId, playerSeasonStatistics.season],
+              set: {
+                playerName: mappedPlayer.playerName,
+                position: mappedPlayer.position,
+                appearances: mappedPlayer.appearances,
+                goals: mappedPlayer.goals,
+                assists: mappedPlayer.assists,
+                yellowCards: mappedPlayer.yellowCards,
+                redCards: mappedPlayer.redCards,
+                minutesPlayed: mappedPlayer.minutesPlayed,
+                lastUpdated: new Date()
+              }
+            });
           }
           
           console.log(`✓ Updated ${players.length} Liverpool players from Sportmonks`);
