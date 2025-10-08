@@ -240,10 +240,12 @@ export default function VideoEditor() {
               <TimelineEditor
                 clips={clips || []}
                 currentTime={currentTime}
+                selectedClipId={selectedClip?.id}
                 onTimeChange={setCurrentTime}
                 onClipUpdate={handleClipUpdate}
                 onClipDelete={handleClipDelete}
                 onSplitClip={handleSplitClip}
+                onClipSelect={setSelectedClip}
               />
             </div>
 
