@@ -2425,6 +2425,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get team data by ID (name, badge, etc.)
+  app.get("/api/football/team/:teamId", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+      
+      // Try to get team from database
+      const team = await db.select()
+        .from(footballTeams)
+        .where(eq(footballTeams.id, teamId))
+        .limit(1);
+      
+      if (team.length > 0) {
+        return res.json({
+          id: team[0].id,
+          name: team[0].name,
+          badge: team[0].logo,
+          code: team[0].code,
+          country: team[0].country,
+        });
+      }
+      
+      // If not in database, return basic info
+      res.json({
+        id: teamId,
+        name: `Team ${teamId}`,
+        badge: null,
+      });
+    } catch (error) {
+      console.error('Error fetching team data:', error);
+      res.status(500).json({ error: "Failed to fetch team data" });
+    }
+  });
+
   // Get Liverpool's upcoming fixtures from official iCal feed
   app.get("/api/football/liverpool/upcoming", async (req, res) => {
     try {
