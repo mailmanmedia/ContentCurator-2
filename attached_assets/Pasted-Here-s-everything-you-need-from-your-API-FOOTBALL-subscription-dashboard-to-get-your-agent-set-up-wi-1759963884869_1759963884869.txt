@@ -1,0 +1,83 @@
+Here’s everything you need from your API-FOOTBALL subscription dashboard to get your agent set up with real, up-to-date football data:
+
+***
+
+**1. API KEY:**  
+- Your API Key is:  
+  **cd999dc24a326d5634d066dfb71f3c66**
+
+**2. Current Plan Details:**  
+- Plan: **Pro Plan**
+- Daily Request Limit: **7,500 requests/day** (reset at 00:00 UTC)
+- Status: **Active**  
+- Subscription End: **2025-11-08T20:13:00+00:00**
+- Per Minute Rate Limit: **300 requests/min**
+
+**3. Base API Endpoint**  
+- Use: **https://v3.football.api-sports.io/**
+- All requests require the `x-apisports-key` header (or `x-rapidapi-key` if using RapidAPI)
+
+**4. Example API Request**  
+- **List all available leagues (Premier League, FA Cup, Carabao Cup, Champions League, Europa League, etc.):**
+  ```
+  GET https://v3.football.api-sports.io/leagues
+  Headers:
+    x-apisports-key: cd999dc24a326d5634d066dfb71f3c66
+  ```
+- **List teams in a league:**
+  ```
+  GET https://v3.football.api-sports.io/teams?league={LEAGUE_ID}&season={SEASON}
+  ```
+- **Get standings for a league/season:**
+  ```
+  GET https://v3.football.api-sports.io/standings?league={LEAGUE_ID}&season={SEASON}
+  ```
+- **Fixtures, head-to-head, stats, etc.:**
+  - See: [Official Documentation](https://www.api-football.com/documentation-v3)
+
+**5. Key Endpoints for Use Cases:**  
+- **Leagues:** `/leagues`
+- **Teams:** `/teams`
+- **Standings (League Table):** `/standings`
+- **Fixtures:** `/fixtures`
+- **Live Scores:** `/fixtures?live=all`
+- **Head-to-Head:** `/fixtures/headtohead?h2h={TEAMID1}-{TEAMID2}`
+- **Team Stats:** `/teams/statistics?league={LEAGUE_ID}&season={SEASON}&team={TEAM_ID}`
+
+**6. League and Team IDs:**  
+- League/cup IDs for all competitions are shown here: [Dashboard League/IDs](https://dashboard.api-football.com/soccer/ids)
+- EPL is typically `39`, but confirm on the dashboard for all cups.
+
+**7. Usage Monitoring & Quotas:**  
+- Track usage in your dashboard ([Requests page](https://dashboard.api-football.com/soccer/requests))
+- Quota resets daily; unused requests do not roll over.
+
+**8. Documentation and Sample Scripts:**  
+- Official docs: [API-Football Documentation](https://www.api-football.com/documentation-v3)
+- Code samples in Python, Node, JS, PHP, etc. available in docs (copy-paste ready for integration and testing).
+
+**9. Permissions/Allowed Domains & IPs:**  
+- No restrictions by default; any domain or IP can call the API with your key unless you configure extra security.
+
+***
+
+**Agent/Developer Setup Steps:**
+1. Use the API key above for authentication.
+2. Reference the latest documentation for endpoints, parameters, and sample responses.
+3. Make sure the agent pulls the correct data for overlays using league/team IDs from the dashboard, and incorporates daily updates.
+4. Monitor quota, ensure requests stay below daily and per-minute limits.
+5. Use `/leagues`, `/teams`, `/standings`, `/fixtures`, etc. for up-to-date overlays.
+
+If you require example API requests, want quick sample scripts in a specific language, or need to clarify an endpoint, let me know! This setup covers all authentication, plan limits, endpoint access, and integration details for your agent.
+
+[1](https://dashboard.api-football.com/soccer/requests)
+[2](https://dashboard.api-football.com/register)
+[3](https://api-football-v1.p.rapidapi.com/v3/)
+[4](https://v3.football.api-sports.io/)
+[5](https://dashboard.api-football.com/)
+[6](https://rapidapi.com/api-sports/api/api-football/pricing)
+[7](https://dashboard.api-football.com/soccer/ids)
+[8](https://www.api-football.com/documentation-v3)
+[9](https://www.api-football.com/terms)
+[10](https://www.api-football.com/documentation-v3#section/Authentication/API-SPORTS-Account)
+[11](https://www.api-football.com/news/post/how-ratelimit-works)
