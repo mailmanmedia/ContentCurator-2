@@ -1,0 +1,76 @@
+Based on the comprehensive file and agent history review, here’s targeted feedback and a technical assessment of your current **API and database integration**:
+
+***
+
+### **Key Observations**
+
+- **APIs Have Been Added—But Overlay Integration Not Completed:**  
+  New endpoints (e.g., `/api/football/fbref/table`, `/api/football/team/:teamName/enriched`) are available, but overlay components are still referencing old or hardcoded data endpoints. There’s a disconnect between backend API development and actual frontend consumption.[1]
+
+- **No Clear Database Usage in Overlay Flow:**  
+  Based on file structure and code snippets, overlays appear to work purely with live API fetches—there’s no sign of persistent, normalized database reads/writes for user overlay config, overlay templates, or historical match data caching.
+
+- **Hardcoded or Poorly Abstracted Data Paths:**  
+  Many components use direct fetch calls or hardcoded data arrays (e.g., team info, match results) rather than a single, reusable hook/context. This leads to maintenance risk and duplication.
+
+- **Lack of Error/Loading Handling for API Calls:**  
+  useQuery hooks shown in files do not provide robust error, loading, or fallback handling. If the backend API or data structure changes/fails, overlays either crash or show nothing (rather than gracefully degrade or show cached data).
+
+- **No Strong Typing/Validation for API or DB Results:**  
+  There’s little evidence of strong schema enforcement (TypeScript, zod, etc.) on API responses. This increases the risk of silent UI problems whenever live data shape changes slightly.
+
+- **No Offline or Fallback Logic:**  
+  The architecture does not currently account for caching or fallback (local storage, IndexedDB, etc.)—if the backend API is down or slow, overlays are empty/unusable.
+
+***
+
+### **Recommended Action Plan for Robust API and Database Usage**
+
+1. **Abstract All API Calls via Centralized Hooks/Services:**
+    - Create a set of fetcher functions or React hooks (e.g., `useTeamData`, `usePlayerStats`) that are the **only** place API calls are made.
+    - Have overlays consume data only from these hooks/services.
+
+2. **Wire All Overlays to Use Real, Live API Endpoints:**
+    - Go through each overlay—replace any hardcoded data, mock fetch, or direct endpoint with the centralized hook.
+    - Ensure props for overlays are always shaped by the latest live API data structure.
+
+3. **Enforce Strong Typing and Validation on API Responses:**
+    - Define TypeScript interfaces/schemas for every API response.
+    - Use runtime schema validation (e.g., with zod or yup) for all API fetches, so mis-shaped responses trigger errors early, not at rendering.
+
+4. **Implement Robust Error and Loading UI States:**
+    - Every overlay that renders remote data must have:
+        - A loading spinner or skeleton state
+        - A clear error/fallback message or UI (e.g., “Data temporarily unavailable, try again soon.”)
+        - Optionally: show last good cached data
+
+5. **(If Needed) Add Database Layer for Persistent Overlay Data:**
+    - If overlays are meant to store user-specific configs or past presentations, create a backend database schema for storing these.
+    - Expose REST or GraphQL endpoints for CRUD operations.
+    - Have overlay config panels read/write to this database via secure, authenticated API.
+
+6. **Test Data Path End-to-End:**
+    - Manually break one endpoint (simulate error): overlay should show fallback, not crash
+    - Validate data freshness: does a new match/event update overlays instantly?
+    - Run schema checks: do overlays fail gracefully if data contracts change?
+
+***
+
+### **Summary Table**
+
+| Issue/Concern                 | Current Status                 | Recommended Improvement             |
+|-------------------------------|-------------------------------|-------------------------------------|
+| API utilization               | Partial, not uniform          | Refactor overlays to use hooks      |
+| Database usage                | Not evident                   | Add for persistent config/history   |
+| Error/loading UI states       | Not implemented               | Add with spinner & fallback         |
+| Typing/schema validation      | Weak/incomplete               | Add TS + runtime schema checks      |
+| Data abstraction/reusability  | Low (hardcoded calls)         | Centralize all fetch logic          |
+| Fallback/offline support      | No                            | Add basic browser caching/localStorage as needed |
+
+***
+
+**Conclusion:**  
+Your backend work (API endpoints) is solid, but the frontend overlays are not yet truly wired to take advantage of these APIs, and there’s a missing link in terms of abstraction, error handling, and persistent overlay state. Unify data access, enforce strong types and caching, and ensure overlays gracefully handle all upstream failures for a production-grade experience.[1]
+
+[1](https://replit.com/@jsmithinthesith/ContentCurator#client/src/components/VideoCompositor.tsx)
+[2](https://replit.com/@jsmithinthesith/ContentCurator)

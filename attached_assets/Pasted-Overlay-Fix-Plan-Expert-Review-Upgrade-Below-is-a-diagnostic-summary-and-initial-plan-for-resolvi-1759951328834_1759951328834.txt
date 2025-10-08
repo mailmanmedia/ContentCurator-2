@@ -1,0 +1,48 @@
+Overlay Fix Plan – Expert Review Upgrade
+
+Below is a diagnostic summary and initial plan for resolving overlay display issues in the ContentCurator app. Your task: generate an improved, fully robust implementation and validation plan, addressing all below points and incorporating best practices for reliability, testability, and developer handoff.
+
+Original Plan’s Strengths:
+
+Pinpoints missing/broken renderMetricOverlay function and incomplete overlay imports in VideoCompositor.tsx
+
+Addresses outdated data hooks and prop interface mismatches from context/provider
+
+Lists concrete, ordered file/code changes and basic validation steps
+
+Areas Needing Improvement:
+
+No explicit overlay error/fallback display handling (what if API/data fails, wrong props shape, etc.)
+
+Lacks detailed test plan (unit/integration tests, error/fallback scenarios, “test overlay mode”)
+
+TypeScript/prop validation is not enforced or documented
+
+State management refresh/propagation after config changes isn’t addressed
+
+Does not propose data source abstraction to support dual/backup backends
+
+No developer documentation or prop structure handoff for future-proofing
+
+YOUR JOB:
+
+Write a revised, technically complete implementation plan that:
+
+Explicitly covers graceful error handling and UI fallback mechanisms in overlays
+
+Specifies targeted unit and integration test cases, including “test overlay” scenarios
+
+Recommends enforcing (and testing) strict TypeScript (or runtime) prop types
+
+Details how to validate that overlay/config state updates always trigger component re-renders (test reactivity)
+
+Outlines how to abstract data-fetching logic so overlays can cleanly switch/extend to multiple sources
+
+Includes final documentation/handoff steps (README/code comments) for overlay prop structures and rendering design
+
+Format your plan in ordered, easy-to-follow steps, with section headings for each technical area and bullet points for actions
+
+Make the plan as actionable and unambiguous as possible—no vague suggestions
+
+End your response with a step-by-step verification and quality checklist.
+
