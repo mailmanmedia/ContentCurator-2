@@ -3523,26 +3523,40 @@ export default function LivePresentation() {
               onClick={handleGridClick}
               data-testid="grid-preview"
             >
-              {editingPositionOverlayId && (() => {
-                const editOverlay = overlays.find(o => o.id === editingPositionOverlayId);
-                if (!editOverlay) return null;
+              {/* Show all active overlays */}
+              {overlays.map(overlay => {
+                const isEditing = overlay.id === editingPositionOverlayId;
+                const x = isEditing ? overlayX : overlay.x;
+                const y = isEditing ? overlayY : overlay.y;
                 
                 return (
                   <div
-                    className="absolute bg-primary/30 border-2 border-primary rounded pointer-events-none"
+                    key={overlay.id}
+                    className={`absolute rounded pointer-events-none ${
+                      isEditing 
+                        ? 'bg-primary/30 border-2 border-primary z-10' 
+                        : 'bg-white/10 border border-white/30'
+                    }`}
                     style={{
-                      left: `${(overlayX / outputResolution.width) * 100}%`,
-                      top: `${(overlayY / outputResolution.height) * 100}%`,
-                      width: `${editOverlay.width || 20}%`,
-                      height: `${(editOverlay.height / outputResolution.height) * 100}%`,
+                      left: `${(x / outputResolution.width) * 100}%`,
+                      top: `${(y / outputResolution.height) * 100}%`,
+                      width: `${overlay.width || 20}%`,
+                      height: `${(overlay.height / outputResolution.height) * 100}%`,
                     }}
                   >
-                    <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
-                      ({snapToGrid(overlayX)}, {snapToGrid(overlayY)}) - {editOverlay.width}% × {editOverlay.height}px
-                    </div>
+                    {isEditing && (
+                      <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
+                        ({snapToGrid(x)}, {snapToGrid(y)}) - {overlay.width}% × {overlay.height}px
+                      </div>
+                    )}
+                    {!isEditing && (
+                      <div className="absolute top-1 left-1 text-[10px] text-white/60 font-mono bg-black/50 px-0.5 rounded">
+                        {overlay.type === 'text' && overlay.overlayText ? overlay.overlayText.substring(0, 15) + '...' : overlay.type}
+                      </div>
+                    )}
                   </div>
                 );
-              })()}
+              })}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
