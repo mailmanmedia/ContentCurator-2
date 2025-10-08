@@ -4,7 +4,6 @@ import { teamSeasonStatistics, footballFixtures, footballPlayers, playerSeasonSt
 import { eq, and, gte, lte, or, desc, sql, inArray } from 'drizzle-orm';
 import { footballService } from './footballService';
 import { sportmonksService } from './sportmonksService';
-import { updateLiverpoolStatsWithAI, updateTeamStatsWithAI } from './aiStatsService';
 import { populateLiverpoolPlayers } from './populateLiverpoolPlayers';
 
 export async function updateTeamStatistics(teamId: number, leagueId: number, season: number) {
@@ -33,16 +32,6 @@ export async function updateTeamStatistics(teamId: number, leagueId: number, sea
     
     if (!apiStats || !apiStats.statistics) {
       console.log(`No API statistics available for team ${teamId}`);
-      
-      if (teamId === 40 && leagueId === 39) {
-        console.log('🤖 Attempting to fetch Liverpool stats using AI...');
-        const aiSuccess = await updateLiverpoolStatsWithAI();
-        if (aiSuccess) {
-          console.log('✓ AI successfully updated Liverpool statistics');
-          return;
-        }
-      }
-      
       return;
     }
 
@@ -146,37 +135,9 @@ export async function updateAllPremierLeagueStats(): Promise<{ success: boolean;
         )
         .limit(1);
       
-      // If no stats exist, use AI fallback
       if (verifyStats.length === 0) {
-        console.log(`🤖 No API data for ${teamName}, using AI fallback...`);
-        try {
-          const aiSuccess = await updateTeamStatsWithAI(teamId, teamName, leagueId, leagueName, currentSeason);
-          
-          // Verify AI stats were saved
-          const verifyAiStats = await db
-            .select()
-            .from(teamSeasonStatistics)
-            .where(
-              and(
-                eq(teamSeasonStatistics.teamId, teamId),
-                eq(teamSeasonStatistics.leagueId, leagueId),
-                eq(teamSeasonStatistics.season, currentSeason)
-              )
-            )
-            .limit(1);
-          
-          if (verifyAiStats.length > 0) {
-            console.log(`✓ AI successfully updated ${teamName} statistics`);
-            teamsUpdated++;
-          } else {
-            console.error(`❌ AI failed to save ${teamName} statistics`);
-            errors++;
-          }
-        } catch (aiError) {
-          const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown error';
-          console.error(`❌ AI fallback failed for ${teamName}: ${errorMessage}`);
-          errors++;
-        }
+        console.log(`⚠️ No stats available for ${teamName} from any source`);
+        errors++;
       } else {
         console.log(`✓ ${teamName} stats verified in database`);
         teamsUpdated++;
