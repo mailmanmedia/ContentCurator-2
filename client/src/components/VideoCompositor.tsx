@@ -68,6 +68,7 @@ interface OverlayConfig {
   category: string;
   borderWidth?: number;
   borderColor?: string;
+  colorPalette?: 'classic' | 'navy' | 'cream' | 'dark';
 }
 
 interface VideoCompositorProps {
@@ -980,6 +981,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               opacity={opacity}
               layout={metricData?.layout || 'horizontal'}
               teamId={metricData?.teamId || 40}
+              colorPalette={overlay.colorPalette || 'classic'}
             />
           </div>
         );

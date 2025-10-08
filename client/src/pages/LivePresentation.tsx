@@ -186,6 +186,7 @@ interface OverlayConfig {
   category: string;
   borderWidth?: number;
   borderColor?: string;
+  colorPalette?: 'classic' | 'navy' | 'cream' | 'dark';
 }
 
 const sourceTypeIcons = {
@@ -604,6 +605,7 @@ export default function LivePresentation() {
   const [gridScale, setGridScale] = useState(1);
   const [overlayHeight, setOverlayHeight] = useState(70);
   const [overlayAnimationType, setOverlayAnimationType] = useState<'scroll' | 'fade' | 'static'>('scroll');
+  const [overlayColorPalette, setOverlayColorPalette] = useState<'classic' | 'navy' | 'cream' | 'dark'>('classic');
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare, isScreenShareSupported } = useCameraStreams();
@@ -1363,6 +1365,7 @@ export default function LivePresentation() {
               category: defaultCategory,
               borderWidth: overlayBorderWidth,
               borderColor: overlayBorderColor,
+              colorPalette: overlayColorPalette,
             }
           : overlay
       ));
@@ -1398,6 +1401,7 @@ export default function LivePresentation() {
         category: defaultCategory,
         borderWidth: overlayBorderWidth,
         borderColor: overlayBorderColor,
+        colorPalette: overlayColorPalette,
       };
 
       if (overlayType === 'rss') {
@@ -2858,27 +2862,50 @@ export default function LivePresentation() {
                             <p className="text-sm text-muted-foreground">Loading teams...</p>
                           </div>
                         ) : teamsData && Array.isArray(teamsData) && teamsData.length > 0 ? (
-                          <div>
-                            <Label htmlFor="team">Team</Label>
-                            <Select 
-                              value={overlayTeamId ? String(overlayTeamId) : undefined} 
-                              onValueChange={(v) => setOverlayTeamId(parseInt(v))}
-                            >
-                              <SelectTrigger id="team" data-testid="select-team">
-                                <SelectValue placeholder="Select team" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {teamsData.map((team: any) => (
-                                  <SelectItem key={team.teamId} value={String(team.teamId)}>
-                                    {team.teamName}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              The team whose form guide will be displayed
-                            </p>
-                          </div>
+                          <>
+                            <div>
+                              <Label htmlFor="team">Team</Label>
+                              <Select 
+                                value={overlayTeamId ? String(overlayTeamId) : undefined} 
+                                onValueChange={(v) => setOverlayTeamId(parseInt(v))}
+                              >
+                                <SelectTrigger id="team" data-testid="select-team">
+                                  <SelectValue placeholder="Select team" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {teamsData.map((team: any) => (
+                                    <SelectItem key={team.teamId} value={String(team.teamId)}>
+                                      {team.teamName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                The team whose form guide will be displayed
+                              </p>
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="color-palette">Color Palette</Label>
+                              <Select 
+                                value={overlayColorPalette} 
+                                onValueChange={(v) => setOverlayColorPalette(v as 'classic' | 'navy' | 'cream' | 'dark')}
+                              >
+                                <SelectTrigger id="color-palette" data-testid="select-color-palette">
+                                  <SelectValue placeholder="Select color palette" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="classic">Classic LFC</SelectItem>
+                                  <SelectItem value="navy">Navy Professional</SelectItem>
+                                  <SelectItem value="cream">Cream Elegant</SelectItem>
+                                  <SelectItem value="dark">Dark Mode</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Mailman Media branded color scheme
+                              </p>
+                            </div>
+                          </>
                         ) : (
                           <Alert data-testid="alert-no-teams">
                             <AlertTriangle className="h-4 w-4" />
