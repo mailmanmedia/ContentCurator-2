@@ -7,19 +7,23 @@ import type { VideoClip } from "@shared/schema";
 interface TimelineEditorProps {
   clips: VideoClip[];
   currentTime: number;
+  selectedClipId?: string | null;
   onTimeChange: (time: number) => void;
   onClipUpdate: (clipId: string, updates: Partial<VideoClip>) => void;
   onClipDelete: (clipId: string) => void;
   onSplitClip: (clipId: string, atTime: number) => void;
+  onClipSelect: (clip: VideoClip | null) => void;
 }
 
 export default function TimelineEditor({
   clips,
   currentTime,
+  selectedClipId,
   onTimeChange,
   onClipUpdate,
   onClipDelete,
-  onSplitClip
+  onSplitClip,
+  onClipSelect
 }: TimelineEditorProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [draggedClipId, setDraggedClipId] = useState<string | null>(null);
@@ -109,16 +113,22 @@ export default function TimelineEditor({
               .reduce((sum, c) => sum + c.duration, 0);
             const widthPercent = (clip.duration / totalDuration) * 100;
             const leftPercent = (startPos / totalDuration) * 100;
+            const isSelected = selectedClipId === clip.id;
 
             return (
               <div
                 key={clip.id}
-                className="absolute top-2 bottom-2 bg-primary/20 border border-primary rounded cursor-move hover-elevate"
+                className={`absolute top-2 bottom-2 rounded cursor-pointer hover-elevate overflow-hidden ${
+                  isSelected 
+                    ? 'bg-primary/40 border-2 border-primary' 
+                    : 'bg-primary/20 border border-primary'
+                }`}
                 style={{
                   left: `${leftPercent}%`,
                   width: `${widthPercent}%`
                 }}
                 draggable
+                onClick={() => onClipSelect(clip)}
                 onDragStart={() => handleClipDragStart(clip.id)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => handleClipDrop(clip.id)}
@@ -135,38 +145,51 @@ export default function TimelineEditor({
         <div className="space-y-2">
           <h4 className="text-sm font-semibold">Clips</h4>
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {clips.map((clip) => (
-              <div 
-                key={clip.id}
-                className="flex items-center justify-between p-2 bg-muted rounded"
-                data-testid={`clip-row-${clip.id}`}
-              >
-                <div className="flex-1">
-                  <div className="text-sm font-medium">Clip {clip.order + 1}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Duration: {formatTime(clip.duration)}
+            {clips.map((clip) => {
+              const isSelected = selectedClipId === clip.id;
+              
+              return (
+                <div 
+                  key={clip.id}
+                  className={`flex items-center justify-between p-2 rounded cursor-pointer hover-elevate ${
+                    isSelected ? 'bg-primary/20 border-2 border-primary' : 'bg-muted border border-transparent'
+                  }`}
+                  onClick={() => onClipSelect(clip)}
+                  data-testid={`clip-row-${clip.id}`}
+                >
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">Clip {clip.order + 1}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Duration: {formatTime(clip.duration)}
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button 
+                      size="icon" 
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSplitClip(clip.id, clip.startTime + clip.duration / 2);
+                      }}
+                      data-testid={`button-split-${clip.id}`}
+                    >
+                      <Scissors className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      size="icon" 
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClipDelete(clip.id);
+                      }}
+                      data-testid={`button-delete-clip-${clip.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button 
-                    size="icon" 
-                    variant="ghost"
-                    onClick={() => onSplitClip(clip.id, clip.startTime + clip.duration / 2)}
-                    data-testid={`button-split-${clip.id}`}
-                  >
-                    <Scissors className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost"
-                    onClick={() => onClipDelete(clip.id)}
-                    data-testid={`button-delete-clip-${clip.id}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </CardContent>
