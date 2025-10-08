@@ -8,8 +8,13 @@ interface LeagueTableOverlayProps {
   height: number;
   opacity?: number;
   highlightTeamId?: number;
+  // Legacy props - kept for backwards compatibility
   maxTeams?: number;
   showFullTable?: boolean;
+  // New filtering props
+  leagueId?: number;
+  season?: number;
+  teamCount?: 5 | 10 | 20 | 'full';
 }
 
 interface TeamStanding {
@@ -33,22 +38,35 @@ export default function LeagueTableOverlay({
   height,
   opacity = 0.92,
   highlightTeamId = 40, // Liverpool by default
-  maxTeams = 10,
-  showFullTable = false,
+  maxTeams,
+  showFullTable,
+  leagueId = 39, // Premier League by default
+  season = new Date().getFullYear(),
+  teamCount = 10,
 }: LeagueTableOverlayProps) {
   const queryClient = useQueryClient();
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   
+  // Determine effective team count - prioritize new props but support legacy
+  let effectiveTeamCount: number | 'full';
+  if (showFullTable !== undefined) {
+    effectiveTeamCount = showFullTable ? 'full' : (maxTeams || 10);
+  } else if (maxTeams !== undefined) {
+    effectiveTeamCount = maxTeams;
+  } else {
+    effectiveTeamCount = teamCount;
+  }
+
   const { data: tableData, isLoading, refetch } = useQuery({
-    queryKey: ['/api/football/standings/39/2024'], // Premier League 2024
+    queryKey: ['/api/football/standings', leagueId, season],
     queryFn: async () => {
-      const res = await fetch('/api/football/standings/39/2024');
+      const res = await fetch(`/api/football/standings/${leagueId}/${season}`);
       if (!res.ok) throw new Error('Failed to fetch league table');
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes
-    refetchInterval: 24 * 60 * 60 * 1000, // Auto-refresh daily
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 24 * 60 * 60 * 1000,
   });
 
   // Update timestamp when data changes
@@ -119,8 +137,14 @@ export default function LeagueTableOverlay({
   }
 
   const standings: TeamStanding[] = tableData.standings || [];
-  const displayTeams = showFullTable ? standings : standings.slice(0, maxTeams);
+  
+  // Apply team count filtering
+  const displayTeams = effectiveTeamCount === 'full' 
+    ? standings 
+    : standings.slice(0, effectiveTeamCount);
+  
   const currentMatchday = tableData.matchday || 0;
+  const leagueName = tableData.leagueName || 'LEAGUE TABLE';
 
   return (
     <motion.div
@@ -149,11 +173,11 @@ export default function LeagueTableOverlay({
         marginBottom: '12px',
       }}>
         <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#F6EB61' }}>
-          PREMIER LEAGUE TABLE
+          {leagueName.toUpperCase()}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '11px', color: '#CCCCCC' }}>
-            Matchday {currentMatchday}
+            {season} • MD {currentMatchday}
           </span>
           <motion.button
             whileHover={{ scale: 1.1 }}

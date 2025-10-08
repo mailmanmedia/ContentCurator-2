@@ -39,8 +39,8 @@ import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplat
 import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
 import { db } from "./db";
-import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics } from "@shared/schema";
-import { desc, eq, and } from "drizzle-orm";
+import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead } from "@shared/schema";
+import { desc, eq, and, gte, lte, or, inArray } from "drizzle-orm";
 import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
 import { addRenderJob } from "./video/renderQueue";
 import { insertVideoProjectSchema, insertVideoClipSchema } from "@shared/schema";
@@ -2003,6 +2003,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get active competitions with available data
+  app.get("/api/football/competitions/active", async (req, res) => {
+    try {
+      const competitionsFromFixtures = await db
+        .selectDistinct({
+          id: footballFixtures.leagueId,
+          season: footballFixtures.season,
+        })
+        .from(footballFixtures);
+      
+      const uniqueCompetitionIds = [...new Set(competitionsFromFixtures.map(c => c.id))];
+      
+      if (uniqueCompetitionIds.length === 0) {
+        return res.json({
+          competitions: [
+            { id: 39, name: 'Premier League', type: 'league' },
+            { id: 2, name: 'UEFA Champions League', type: 'cup' },
+            { id: 45, name: 'FA Cup', type: 'cup' }
+          ]
+        });
+      }
+      
+      const competitions = await db
+        .select({
+          id: footballCompetitions.id,
+          name: footballCompetitions.name,
+          type: footballCompetitions.type,
+        })
+        .from(footballCompetitions)
+        .where(inArray(footballCompetitions.id, uniqueCompetitionIds));
+      
+      const minCompetitions = [
+        { id: 39, name: 'Premier League', type: 'league' },
+        { id: 2, name: 'UEFA Champions League', type: 'cup' },
+        { id: 45, name: 'FA Cup', type: 'cup' }
+      ];
+      
+      const competitionMap = new Map(competitions.map(c => [c.id, c]));
+      minCompetitions.forEach(minComp => {
+        if (!competitionMap.has(minComp.id)) {
+          competitions.push(minComp);
+        }
+      });
+      
+      return res.json({ competitions });
+    } catch (error) {
+      console.error('Error fetching active competitions:', error);
+      return res.status(500).json({ error: "Failed to fetch active competitions" });
+    }
+  });
+
   // Get teams by competition
   app.get("/api/football/competitions/:competitionId/teams", async (req, res) => {
     try {
@@ -2016,6 +2067,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching teams:', error);
       res.status(500).json({ error: "Failed to fetch teams" });
+    }
+  });
+
+  // Get league standings for a specific league and season
+  app.get("/api/football/standings/:leagueId/:season", async (req, res) => {
+    try {
+      const leagueId = parseInt(req.params.leagueId);
+      const season = parseInt(req.params.season);
+      
+      if (isNaN(leagueId) || isNaN(season)) {
+        return res.status(400).json({ error: "Invalid league ID or season" });
+      }
+
+      const standingsData = await footballService.getStandings(leagueId, season);
+      
+      if (!standingsData) {
+        return res.status(404).json({ error: "No standings data available for this league and season" });
+      }
+
+      return res.json(standingsData);
+    } catch (error) {
+      console.error('Error fetching league standings:', error);
+      return res.status(500).json({ error: "Failed to fetch league standings" });
     }
   });
 
@@ -2543,12 +2617,13 @@ Return ONLY a JSON object with this structure:
     try {
       const teamId = parseInt(req.params.teamId);
       const leagueId = parseInt(req.params.leagueId);
+      const seasonYear = req.query.seasonYear ? parseInt(req.query.seasonYear as string) : undefined;
       
       if (isNaN(teamId) || isNaN(leagueId)) {
         return res.status(400).json({ error: "Invalid team ID or league ID" });
       }
 
-      const currentSeason = new Date().getFullYear();
+      const currentSeason = seasonYear || new Date().getFullYear();
       
       const stats = await db
         .select()
@@ -2703,6 +2778,162 @@ Return ONLY a JSON object with this structure:
     }
   });
 
+  // === FIXTURES AND H2H ENDPOINTS ===
+  
+  // Get fixture results with optional filtering
+  app.get("/api/fixtures/results", async (req, res) => {
+    try {
+      const competitionId = req.query.competitionId ? parseInt(req.query.competitionId as string) : undefined;
+      const seasonYear = req.query.seasonYear ? parseInt(req.query.seasonYear as string) : undefined;
+      const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom as string) : undefined;
+      const dateTo = req.query.dateTo ? new Date(req.query.dateTo as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      
+      // Build where conditions dynamically
+      const conditions = [];
+      
+      if (competitionId !== undefined && !isNaN(competitionId)) {
+        conditions.push(eq(footballFixtures.leagueId, competitionId));
+      }
+      
+      if (seasonYear !== undefined && !isNaN(seasonYear)) {
+        conditions.push(eq(footballFixtures.season, seasonYear));
+      }
+      
+      if (dateFrom && !isNaN(dateFrom.getTime())) {
+        conditions.push(gte(footballFixtures.date, dateFrom));
+      }
+      
+      if (dateTo && !isNaN(dateTo.getTime())) {
+        conditions.push(lte(footballFixtures.date, dateTo));
+      }
+      
+      // Query fixtures with filters
+      const query = db
+        .select({
+          id: footballFixtures.id,
+          date: footballFixtures.date,
+          homeTeamId: footballFixtures.homeTeamId,
+          awayTeamId: footballFixtures.awayTeamId,
+          leagueId: footballFixtures.leagueId,
+          season: footballFixtures.season,
+          round: footballFixtures.round,
+          goals: footballFixtures.goals,
+          score: footballFixtures.score,
+          status: footballFixtures.status,
+          venue: footballFixtures.venue,
+        })
+        .from(footballFixtures);
+      
+      if (conditions.length > 0) {
+        query.where(and(...conditions));
+      }
+      
+      const fixtures = await query
+        .orderBy(desc(footballFixtures.date))
+        .limit(Math.min(limit, 100)); // Cap at 100 for performance
+      
+      return res.json({ results: fixtures });
+    } catch (error) {
+      console.error('Error fetching fixture results:', error);
+      return res.status(500).json({ error: "Failed to fetch fixture results" });
+    }
+  });
+  
+  // Get head-to-head fixtures with optional filtering
+  app.get("/api/fixtures/h2h", async (req, res) => {
+    try {
+      const team1 = req.query.team1 ? parseInt(req.query.team1 as string) : undefined;
+      const team2 = req.query.team2 ? parseInt(req.query.team2 as string) : undefined;
+      const competitionId = req.query.competitionId ? parseInt(req.query.competitionId as string) : undefined;
+      const homeOnly = req.query.homeOnly === 'true';
+      const seasonFrom = req.query.seasonFrom ? parseInt(req.query.seasonFrom as string) : undefined;
+      const seasonTo = req.query.seasonTo ? parseInt(req.query.seasonTo as string) : undefined;
+      const venueFilter = req.query.venueFilter as string || 'all'; // 'home', 'away', 'all'
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      
+      if (!team1 || !team2 || isNaN(team1) || isNaN(team2)) {
+        return res.status(400).json({ error: "Both team1 and team2 parameters are required" });
+      }
+      
+      // Build where conditions
+      const conditions = [];
+      
+      // Team matchup condition - check both directions
+      conditions.push(
+        or(
+          and(
+            eq(historicalHeadToHead.team1Id, team1),
+            eq(historicalHeadToHead.team2Id, team2)
+          ),
+          and(
+            eq(historicalHeadToHead.team1Id, team2),
+            eq(historicalHeadToHead.team2Id, team1)
+          )
+        )
+      );
+      
+      // Competition filter
+      if (competitionId !== undefined && !isNaN(competitionId)) {
+        conditions.push(eq(historicalHeadToHead.competitionId, competitionId));
+      }
+      
+      // Season range filters
+      if (seasonFrom !== undefined && !isNaN(seasonFrom)) {
+        conditions.push(gte(historicalHeadToHead.season, seasonFrom));
+      }
+      
+      if (seasonTo !== undefined && !isNaN(seasonTo)) {
+        conditions.push(lte(historicalHeadToHead.season, seasonTo));
+      }
+      
+      // Venue filter (home only for team1)
+      if (homeOnly || venueFilter === 'home') {
+        conditions.push(eq(historicalHeadToHead.homeTeamId, team1));
+      } else if (venueFilter === 'away') {
+        conditions.push(eq(historicalHeadToHead.awayTeamId, team1));
+      }
+      
+      // Query h2h data
+      const h2hMatches = await db
+        .select()
+        .from(historicalHeadToHead)
+        .where(and(...conditions))
+        .orderBy(desc(historicalHeadToHead.date))
+        .limit(Math.min(limit, 50)); // Cap at 50 for performance
+      
+      // Calculate statistics from the matches
+      let homeWins = 0;
+      let awayWins = 0;
+      let draws = 0;
+      
+      h2hMatches.forEach(match => {
+        if (match.homeScore > match.awayScore) {
+          if (match.homeTeamId === team1) homeWins++;
+          else awayWins++;
+        } else if (match.awayScore > match.homeScore) {
+          if (match.awayTeamId === team1) awayWins++;
+          else homeWins++;
+        } else {
+          draws++;
+        }
+      });
+      
+      return res.json({ 
+        results: h2hMatches,
+        statistics: {
+          homeWins,
+          awayWins,
+          draws,
+          totalMatches: h2hMatches.length
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching h2h fixtures:', error);
+      return res.status(500).json({ error: "Failed to fetch head-to-head fixtures" });
+    }
+  });
+  
   // === LIVE PRESENTATION SYSTEM ROUTES ===
 
   // Library Items routes

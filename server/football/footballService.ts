@@ -1810,6 +1810,137 @@ class FootballService {
     );
   }
 
+  async getStandings(leagueId: number, season: number): Promise<any> {
+    const cacheCategory = leagueId === 39 ? 'liverpool' : 'general';
+    
+    return await smartFootballCache.get(
+      `standings_${leagueId}_${season}`,
+      async () => {
+        try {
+          const response = await this.fetchFromAPI('/standings', {
+            league: leagueId,
+            season: season
+          });
+
+          if (!response.response || response.response.length === 0) {
+            return null;
+          }
+
+          const standingsData = response.response[0] as any;
+          const standings = standingsData.league?.standings?.[0];
+          
+          if (!standings || !Array.isArray(standings)) {
+            return null;
+          }
+
+          return {
+            standings: standings.map((team: any) => ({
+              position: team.rank,
+              teamId: team.team.id,
+              teamName: team.team.name,
+              logo: team.team.logo,
+              matchesPlayed: team.all.played,
+              wins: team.all.win,
+              draws: team.all.draw,
+              losses: team.all.lose,
+              goalsFor: team.all.goals.for,
+              goalsAgainst: team.all.goals.against,
+              goalDifference: team.goalsDiff,
+              points: team.points,
+              form: team.form || undefined
+            })),
+            matchday: standings[0]?.all?.played || 0,
+            league: {
+              id: standingsData.league.id as number,
+              name: standingsData.league.name as string
+            }
+          };
+        } catch (error) {
+          console.error(`API failed for standings, checking database fallback:`, error);
+          
+          // Fallback to database statistics if API fails
+          try {
+            const dbStats = await db.select()
+              .from(teamSeasonStatistics)
+              .where(
+                and(
+                  eq(teamSeasonStatistics.leagueId, leagueId),
+                  eq(teamSeasonStatistics.season, season)
+                )
+              )
+              .orderBy(desc(teamSeasonStatistics.matchesPlayed));
+
+            if (dbStats.length > 0) {
+              console.log(`Using database statistics for league ${leagueId} season ${season}`);
+              
+              // Calculate points and sort by points, then goal difference
+              const standingsWithPoints = dbStats.map(stat => {
+                const goalDifference = stat.goalsFor - stat.goalsAgainst;
+                const points = (stat.wins * 3) + stat.draws;
+                
+                return {
+                  ...stat,
+                  goalDifference,
+                  points
+                };
+              }).sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                return b.goalDifference - a.goalDifference;
+              });
+
+              // Get team details
+              const teamIds = standingsWithPoints.map(s => s.teamId);
+              const teams = await db.select()
+                .from(footballTeams)
+                .where(inArray(footballTeams.id, teamIds));
+              
+              const teamMap = new Map(teams.map(t => [t.id, t]));
+
+              // Get league details
+              const leagues = await db.select()
+                .from(footballCompetitions)
+                .where(eq(footballCompetitions.id, leagueId))
+                .limit(1);
+
+              const league = leagues[0] || { id: leagueId, name: 'League' };
+
+              return {
+                standings: standingsWithPoints.map((stat, index) => {
+                  const team = teamMap.get(stat.teamId);
+                  return {
+                    position: index + 1,
+                    teamId: stat.teamId,
+                    teamName: team?.name || `Team ${stat.teamId}`,
+                    logo: team?.logo,
+                    matchesPlayed: stat.matchesPlayed,
+                    wins: stat.wins,
+                    draws: stat.draws,
+                    losses: stat.losses,
+                    goalsFor: stat.goalsFor,
+                    goalsAgainst: stat.goalsAgainst,
+                    goalDifference: stat.goalDifference,
+                    points: stat.points,
+                    form: stat.form || undefined
+                  };
+                }),
+                matchday: standingsWithPoints[0]?.matchesPlayed || 0,
+                league: {
+                  id: league.id,
+                  name: league.name
+                }
+              };
+            }
+          } catch (dbError) {
+            console.error('Database fallback also failed:', dbError);
+          }
+          
+          return null;
+        }
+      },
+      cacheCategory
+    );
+  }
+
   async initializeData(): Promise<void> {
     console.log('Initializing football data...');
     

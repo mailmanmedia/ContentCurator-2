@@ -9,6 +9,13 @@ interface H2HMatchCardOverlayProps {
   width: number;
   height: number;
   opacity?: number;
+  // New filtering props
+  competitionFilter?: number;
+  seasonRange?: {
+    from: number;
+    to: number;
+  };
+  venueFilter?: 'all' | 'home' | 'away';
 }
 
 interface H2HResult {
@@ -20,36 +27,62 @@ interface H2HResult {
   competition: string;
 }
 
+interface H2HData {
+  results?: H2HResult[];
+  statistics?: {
+    homeWins: number;
+    awayWins: number;
+    draws: number;
+    totalMatches: number;
+  };
+}
+
 export default function H2HMatchCardOverlay({
   homeTeamId,
   awayTeamId,
   width,
   height,
   opacity = 0.95,
+  competitionFilter,
+  seasonRange,
+  venueFilter = 'all',
 }: H2HMatchCardOverlayProps) {
   const queryClient = useQueryClient();
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch real H2H match results - show actual scores
-  const { data: h2hData, isLoading, refetch } = useQuery({
-    queryKey: ['/api/fixtures/h2h', homeTeamId, awayTeamId],
+  // Build query params for filtering
+  const buildQueryParams = () => {
+    const params = new URLSearchParams();
+    params.append('team1', homeTeamId.toString());
+    params.append('team2', awayTeamId.toString());
+    params.append('limit', '10');
+    if (competitionFilter) params.append('competitionId', competitionFilter.toString());
+    if (seasonRange?.from) params.append('seasonFrom', seasonRange.from.toString());
+    if (seasonRange?.to) params.append('seasonTo', seasonRange.to.toString());
+    if (venueFilter !== 'all') params.append('venueFilter', venueFilter);
+    return params.toString();
+  };
+
+  // Fetch real H2H match results with filters
+  const { data: h2hData, isLoading, refetch } = useQuery<H2HData>({
+    queryKey: ['/api/fixtures/h2h', homeTeamId, awayTeamId, competitionFilter, seasonRange, venueFilter],
     queryFn: async () => {
-      // Try to get real H2H results first
-      const h2hRes = await fetch(`/api/fixtures/h2h?team1=${homeTeamId}&team2=${awayTeamId}&limit=10`);
+      const queryParams = buildQueryParams();
+      const h2hRes = await fetch(`/api/fixtures/h2h?${queryParams}`);
       if (h2hRes.ok) {
         const data = await h2hRes.json();
         setLastUpdated(new Date());
         return data;
       }
       
-      // Fallback to prediction/cached data
+      // Fallback to cached data if API fails
       const res = await fetch(`/api/cached-stats/matchup/${homeTeamId}/${awayTeamId}`);
       if (!res.ok) throw new Error('Failed to fetch H2H data');
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 24 * 60 * 60 * 1000, // Daily auto-refresh
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 24 * 60 * 60 * 1000,
   });
 
   // Manual refresh handler
@@ -84,23 +117,15 @@ export default function H2HMatchCardOverlay({
     
     results?.forEach((match) => {
       if (match.homeScore > match.awayScore) {
-        if (match.homeTeam.includes('Liverpool') || match.homeTeam.includes(homeTeamId.toString())) {
-          homeWins++;
-        } else {
-          awayWins++;
-        }
+        homeWins++;
       } else if (match.awayScore > match.homeScore) {
-        if (match.awayTeam.includes('Liverpool') || match.awayTeam.includes(awayTeamId.toString())) {
-          homeWins++;
-        } else {
-          awayWins++;
-        }
+        awayWins++;
       } else {
         draws++;
       }
     });
     
-    return { homeWins, awayWins, draws };
+    return { homeWins, awayWins, draws, totalMatches: results?.length || 0 };
   };
 
   if (isLoading || !h2hData) {
@@ -123,8 +148,14 @@ export default function H2HMatchCardOverlay({
     );
   }
 
-  const { fixture, prediction: pred, context } = prediction;
-  const { matchOutcome } = pred;
+  // Extract stats - use provided statistics or calculate from results
+  const stats = h2hData.statistics || (h2hData.results ? calculateStats(h2hData.results) : { homeWins: 0, awayWins: 0, draws: 0, totalMatches: 0 });
+  const { homeWins, awayWins, draws, totalMatches } = stats;
+
+  // Calculate percentages
+  const homeWinPct = totalMatches > 0 ? Math.round((homeWins / totalMatches) * 100) : 0;
+  const awayWinPct = totalMatches > 0 ? Math.round((awayWins / totalMatches) * 100) : 0;
+  const drawPct = totalMatches > 0 ? Math.round((draws / totalMatches) * 100) : 0;
 
   return (
     <motion.div
@@ -145,24 +176,58 @@ export default function H2HMatchCardOverlay({
         border: '2px solid #C8102E',
       }}
     >
-      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#F6EB61', marginBottom: '8px' }}>
-        HEAD-TO-HEAD PREDICTION
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '8px'
+      }}>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#F6EB61' }}>
+          HEAD-TO-HEAD
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          style={{
+            background: 'transparent',
+            border: '1px solid #F6EB6140',
+            borderRadius: '4px',
+            cursor: isRefreshing ? 'not-allowed' : 'pointer',
+            padding: '3px 6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: '#F6EB61',
+            opacity: isRefreshing ? 0.5 : 1,
+            fontSize: '11px',
+          }}
+          title="Refresh data"
+        >
+          <motion.div
+            animate={{ rotate: isRefreshing ? 360 : 0 }}
+            transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: 'linear' }}
+          >
+            <RefreshCw size={11} />
+          </motion.div>
+        </motion.button>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <div style={{ textAlign: 'center', flex: 1 }}>
-          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{fixture.homeTeam.name}</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Home Team</div>
           <div style={{ fontSize: '12px', color: '#F6EB61', marginTop: '4px' }}>
-            {context.liverpoolForm}
+            #{homeTeamId}
           </div>
         </div>
         <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#F6EB61', padding: '0 16px' }}>
           VS
         </div>
         <div style={{ textAlign: 'center', flex: 1 }}>
-          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{fixture.awayTeam.name}</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Away Team</div>
           <div style={{ fontSize: '12px', color: '#F6EB61', marginTop: '4px' }}>
-            {context.opponentForm}
+            #{awayTeamId}
           </div>
         </div>
       </div>
@@ -171,42 +236,50 @@ export default function H2HMatchCardOverlay({
         <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '8px' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00FF87' }}>
-              {Math.round(matchOutcome.winProbability * 100)}%
+              {homeWinPct}%
             </div>
-            <div style={{ fontSize: '11px', color: '#CCCCCC' }}>WIN</div>
+            <div style={{ fontSize: '11px', color: '#CCCCCC' }}>HOME WIN</div>
+            <div style={{ fontSize: '10px', color: '#888888' }}>({homeWins})</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#F6EB61' }}>
-              {Math.round(matchOutcome.drawProbability * 100)}%
+              {drawPct}%
             </div>
             <div style={{ fontSize: '11px', color: '#CCCCCC' }}>DRAW</div>
+            <div style={{ fontSize: '10px', color: '#888888' }}>({draws})</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#FF4444' }}>
-              {Math.round(matchOutcome.lossProbability * 100)}%
+              {awayWinPct}%
             </div>
-            <div style={{ fontSize: '11px', color: '#CCCCCC' }}>LOSS</div>
+            <div style={{ fontSize: '11px', color: '#CCCCCC' }}>AWAY WIN</div>
+            <div style={{ fontSize: '10px', color: '#888888' }}>({awayWins})</div>
           </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px' }}>
-          <div>
-            H2H: {context.h2hRecord.wins}W-{context.h2hRecord.draws}D-{context.h2hRecord.losses}L
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Trophy size={12} color="#F6EB61" />
+            <span>H2H: {homeWins}W-{draws}D-{awayWins}L</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {pred.momentumDifference > 0 ? (
-              <>
-                <TrendingUp size={12} color="#00FF87" />
-                <span style={{ color: '#00FF87' }}>Momentum</span>
-              </>
-            ) : (
-              <>
-                <TrendingDown size={12} color="#FF4444" />
-                <span style={{ color: '#FF4444' }}>Momentum</span>
-              </>
-            )}
+            <Clock size={12} />
+            <span>{formatTimestamp(lastUpdated)}</span>
           </div>
         </div>
+
+        {totalMatches > 0 && (
+          <div style={{
+            marginTop: '8px',
+            fontSize: '10px',
+            color: '#CCCCCC',
+            textAlign: 'center'
+          }}>
+            Based on {totalMatches} match{totalMatches !== 1 ? 'es' : ''}
+            {competitionFilter && ' (Filtered)'}
+            {venueFilter !== 'all' && ` (${venueFilter} only)`}
+          </div>
+        )}
       </div>
     </motion.div>
   );
