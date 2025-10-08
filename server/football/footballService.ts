@@ -186,10 +186,9 @@ export interface APIStatistics {
 }
 
 class FootballService {
-  private readonly baseUrl = 'https://api-football-v1.p.rapidapi.com/v3';
+  private readonly baseUrl = 'https://v3.football.api-sports.io';
   private readonly headers = {
-    'X-RapidAPI-Key': process.env.RAPIDAPI_KEY!,
-    'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com'
+    'x-apisports-key': process.env.API_FOOTBALL_KEY!
   };
 
   // Target competitions we want to track
