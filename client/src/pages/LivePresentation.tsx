@@ -2994,6 +2994,49 @@ export default function LivePresentation() {
               </p>
             </div>
 
+            {(overlayType === 'text' || overlayType === 'rss') && (
+              <div>
+                <Label htmlFor="ticker-color-palette">Color Palette</Label>
+                <Select 
+                  value={overlayColorPalette} 
+                  onValueChange={(v) => setOverlayColorPalette(v as 'classic' | 'navy' | 'cream' | 'dark')}
+                >
+                  <SelectTrigger id="ticker-color-palette" data-testid="select-ticker-color-palette">
+                    <SelectValue placeholder="Select color palette" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="classic">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#C8102E' }} />
+                        Classic LFC
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="navy">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#002147' }} />
+                        Navy Professional
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="cream">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F5F1E9' }} />
+                        Cream Elegant
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="dark">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#0A0A0A' }} />
+                        Dark Mode
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Mailman Media branded color scheme
+                </p>
+              </div>
+            )}
+
             <div>
               <Label>Position</Label>
               <RadioGroup value={overlayPosition} onValueChange={(v) => setOverlayPosition(v as 'top' | 'bottom')}>
@@ -3578,7 +3621,7 @@ export default function LivePresentation() {
                     )}
                     {!isEditing && (
                       <div className="absolute top-1 left-1 text-[10px] text-white/60 font-mono bg-black/50 px-0.5 rounded">
-                        {overlay.type === 'text' && overlay.overlayText ? overlay.overlayText.substring(0, 15) + '...' : overlay.type}
+                        {overlay.overlayType === 'text' && overlay.text ? overlay.text.substring(0, 15) + '...' : overlay.overlayType}
                       </div>
                     )}
                   </div>

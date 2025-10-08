@@ -7,6 +7,26 @@ import PlayerStatsOverlay from "./overlays/PlayerStatsOverlay";
 import LeaguePositionOverlay from "./overlays/LeaguePositionOverlay";
 import RssSentimentOverlay from "./overlays/RssSentimentOverlay";
 
+// Mailman Media Color Palettes for Tickers
+const COLOR_PALETTES = {
+  "classic": {
+    background: '#C8102E',
+    text: '#FFFFFF',
+  },
+  "navy": {
+    background: '#002147',
+    text: '#F5F1E9',
+  },
+  "cream": {
+    background: '#F5F1E9',
+    text: '#002147',
+  },
+  "dark": {
+    background: '#0A0A0A',
+    text: '#FFFFFF',
+  }
+} as const;
+
 interface RssArticlesResponse {
   articles: RssArticle[];
 }
@@ -165,15 +185,23 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
       return 'No recent headlines available';
     }
 
-    // Format: "SOURCE: Headline • SOURCE: Headline • ..."
+    // Format: "SOURCE: Headline - Description • SOURCE: Headline - Description • ..."
     const tickerItems = filteredArticles.map(article => {
       const sourceName = sourceNameMap.get(article.sourceId) || article.sourceId;
       const headline = article.title;
+      // Include first 80 chars of description as "important detail"
+      const description = article.description 
+        ? (article.description.length > 80 ? article.description.substring(0, 77) + '...' : article.description)
+        : '';
       
       if (overlay.rssShowSource) {
-        return `${sourceName.toUpperCase()}: ${headline}`;
+        return description 
+          ? `${sourceName.toUpperCase()}: ${headline} - ${description}`
+          : `${sourceName.toUpperCase()}: ${headline}`;
       } else {
-        return headline;
+        return description 
+          ? `${headline} - ${description}`
+          : headline;
       }
     });
 
@@ -611,17 +639,25 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           );
         } else if (overlay.overlayType === 'rss') {
           // RSS Ticker Overlay
+          // Use color palette if set, otherwise use overlay colors
+          const bgColor = overlay.colorPalette && COLOR_PALETTES[overlay.colorPalette]
+            ? COLOR_PALETTES[overlay.colorPalette].background
+            : overlay.backgroundColor;
+          const textColor = overlay.colorPalette && COLOR_PALETTES[overlay.colorPalette]
+            ? COLOR_PALETTES[overlay.colorPalette].text
+            : overlay.textColor;
+          
           if (!rssArticles || rssArticles.length === 0) {
             // Show loading or no data message
-            ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.95);
+            ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
             ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
             
             // Add accent stripe
             const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
-            ctx.fillStyle = hexToRgba(overlay.textColor, 0.3);
+            ctx.fillStyle = hexToRgba(textColor, 0.3);
             ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
             
-            ctx.fillStyle = overlay.textColor;
+            ctx.fillStyle = textColor;
             ctx.font = `bold ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -650,15 +686,15 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           
           if (!tickerText || tickerText === 'No RSS sources selected' || tickerText === 'No recent headlines available') {
             // Show message
-            ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.95);
+            ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
             ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
             
             // Add accent stripe
             const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
-            ctx.fillStyle = hexToRgba(overlay.textColor, 0.3);
+            ctx.fillStyle = hexToRgba(textColor, 0.3);
             ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
             
-            ctx.fillStyle = overlay.textColor;
+            ctx.fillStyle = textColor;
             ctx.font = `bold ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -682,19 +718,19 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           }
 
           // Render background
-          ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.95);
+          ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
           ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
           
           // Add accent stripe at top for visual polish
           const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
-          ctx.fillStyle = hexToRgba(overlay.textColor, 0.3);
+          ctx.fillStyle = hexToRgba(textColor, 0.3);
           ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
 
           // Render scrolling ticker text
           const fontWeight = overlay.isBold ? 'bold' : 'normal';
           const fontStyle = overlay.isItalic ? 'italic' : 'normal';
           ctx.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
-          ctx.fillStyle = overlay.textColor;
+          ctx.fillStyle = textColor;
           ctx.textBaseline = 'middle';
 
           // Add text shadow for better visibility
@@ -815,15 +851,23 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           ctx.shadowOffsetY = 0;
         } else if (overlay.overlayType === 'text') {
           // Text Overlay
-          ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.95);
+          // Use color palette if set, otherwise use overlay colors
+          const bgColor = overlay.colorPalette && COLOR_PALETTES[overlay.colorPalette]
+            ? COLOR_PALETTES[overlay.colorPalette].background
+            : overlay.backgroundColor;
+          const textColor = overlay.colorPalette && COLOR_PALETTES[overlay.colorPalette]
+            ? COLOR_PALETTES[overlay.colorPalette].text
+            : overlay.textColor;
+          
+          ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
           ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
           
           // Add accent stripe at top for visual polish
           const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
-          ctx.fillStyle = hexToRgba(overlay.textColor, 0.3);
+          ctx.fillStyle = hexToRgba(textColor, 0.3);
           ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
 
-          ctx.fillStyle = overlay.textColor;
+          ctx.fillStyle = textColor;
           const fontWeight = overlay.isBold ? 'bold' : 'normal';
           const fontStyle = overlay.isItalic ? 'italic' : 'normal';
           ctx.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
