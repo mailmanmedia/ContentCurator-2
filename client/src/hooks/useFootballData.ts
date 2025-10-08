@@ -132,7 +132,7 @@ export function usePlayerStats(teamId?: number) {
  *   
  *   return (
  *     <div>
- *       <h2>{data.data.name}</h2>
+ *       <h2>{data.data.team}</h2>
  *       <p>Position: {data.data.position}</p>
  *       <p>Form: {data.data.form?.join(', ')}</p>
  *       <p>Source: {data.source}</p>

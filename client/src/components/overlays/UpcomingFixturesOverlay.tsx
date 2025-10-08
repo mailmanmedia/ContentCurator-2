@@ -1,7 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Calendar, Clock, MapPin, RefreshCw } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Calendar, Clock, MapPin } from "lucide-react";
+import { useFixtures } from "@/hooks/useFootballData";
+import {
+  OverlayLoadingSkeleton,
+  OverlayErrorState,
+  OverlayEmptyState,
+  OverlaySourceBadge,
+} from "./OverlayStates";
 import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
 
 interface UpcomingFixturesOverlayProps {
@@ -9,7 +14,6 @@ interface UpcomingFixturesOverlayProps {
   height: number;
   opacity?: number;
   fixtureCount?: 3 | 5 | 7;
-  competitionFilter?: string[];
   showCountdown?: boolean;
   showOpponentForm?: boolean;
   colorPalette?: ColorPaletteKey;
@@ -18,31 +22,12 @@ interface UpcomingFixturesOverlayProps {
 interface Fixture {
   id: number | string;
   date: string;
-  timestamp: number;
-  homeTeam: {
-    id: number;
-    name: string;
-    logo: string;
-  };
-  awayTeam: {
-    id: number;
-    name: string;
-    logo: string;
-  };
-  league: {
-    id: number;
-    name: string;
-    logo?: string;
-  };
-  venue: {
-    name: string;
-    city: string;
-  };
-  isLiverpool: boolean;
-}
-
-interface FixturesData {
-  fixtures: Fixture[];
+  timestamp?: number;
+  homeTeam: string;
+  awayTeam: string;
+  league?: string;
+  venue?: string;
+  isHome?: boolean;
 }
 
 export default function UpcomingFixturesOverlay({
@@ -50,49 +35,51 @@ export default function UpcomingFixturesOverlay({
   height,
   opacity = 0.9,
   fixtureCount = 5,
-  competitionFilter,
   showCountdown = true,
   showOpponentForm = true,
   colorPalette = 'classic',
 }: UpcomingFixturesOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data, isLoading, error, refetch } = useFixtures();
 
-  const { data: fixturesData, isLoading, refetch } = useQuery<FixturesData>({
-    queryKey: ['/api/football/liverpool/upcoming'],
-    queryFn: async () => {
-      const res = await fetch('/api/football/liverpool/upcoming');
-      if (!res.ok) throw new Error('Failed to fetch fixtures');
-      const data = await res.json();
-      setLastUpdated(new Date());
-      return data;
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 30 * 60 * 1000,
-  });
+  if (isLoading) {
+    return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;
+  }
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-      setLastUpdated(new Date());
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  if (error) {
+    return (
+      <OverlayErrorState
+        error={error}
+        onRetry={refetch}
+        width={`${width}%`}
+        height={`${height}px`}
+        source="Fixtures data"
+      />
+    );
+  }
 
-  const formatTimestamp = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return date.toLocaleDateString();
-  };
+  if (!data?.data) {
+    return (
+      <OverlayEmptyState
+        message="No fixtures data available"
+        width={`${width}%`}
+        height={`${height}px`}
+      />
+    );
+  }
+
+  const fixturesData = data.data;
+  const fixtures = (fixturesData.fixtures || []).slice(0, fixtureCount);
+
+  if (fixtures.length === 0) {
+    return (
+      <OverlayEmptyState
+        message="No upcoming fixtures found"
+        width={`${width}%`}
+        height={`${height}px`}
+      />
+    );
+  }
 
   const formatFixtureDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -124,46 +111,13 @@ export default function UpcomingFixturesOverlay({
   };
 
   const getVenue = (fixture: Fixture) => {
-    return fixture.homeTeam.name === 'Liverpool' ? 'H' : 'A';
+    return fixture.isHome || fixture.homeTeam?.toLowerCase().includes('liverpool') ? 'H' : 'A';
   };
 
   const getOpponent = (fixture: Fixture) => {
-    return fixture.homeTeam.name === 'Liverpool' ? fixture.awayTeam : fixture.homeTeam;
+    const isHome = fixture.isHome || fixture.homeTeam?.toLowerCase().includes('liverpool');
+    return isHome ? fixture.awayTeam : fixture.homeTeam;
   };
-
-  if (isLoading || !fixturesData) {
-    return (
-      <div
-        style={{
-          width: `${width}%`,
-          height: `${height}px`,
-          backgroundColor: palette.background,
-          opacity,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: palette.text,
-          fontFamily: 'League Spartan, sans-serif',
-          fontSize: '14px',
-          border: `3px solid ${palette.border}`,
-          borderRadius: '8px',
-          boxSizing: 'border-box',
-        }}
-      >
-        Loading fixtures...
-      </div>
-    );
-  }
-
-  let filteredFixtures = fixturesData.fixtures || [];
-  
-  if (competitionFilter && competitionFilter.length > 0) {
-    filteredFixtures = filteredFixtures.filter(f => 
-      competitionFilter.includes(f.league.name)
-    );
-  }
-  
-  const fixtures = filteredFixtures.slice(0, fixtureCount);
 
   return (
     <motion.div
@@ -184,7 +138,9 @@ export default function UpcomingFixturesOverlay({
         border: `3px solid ${palette.border}`,
         boxSizing: 'border-box',
         overflow: 'hidden',
+        position: 'relative',
       }}
+      data-testid="overlay-upcoming-fixtures"
     >
       <div style={{
         display: 'flex',
@@ -195,34 +151,6 @@ export default function UpcomingFixturesOverlay({
         <div style={{ fontSize: '18px', fontWeight: 'bold', color: palette.accent, letterSpacing: '0.5px' }}>
           UPCOMING FIXTURES
         </div>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          style={{
-            background: 'transparent',
-            border: `1px solid ${palette.accent}40`,
-            borderRadius: '4px',
-            cursor: isRefreshing ? 'not-allowed' : 'pointer',
-            padding: '4px 8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            color: palette.accent,
-            opacity: isRefreshing ? 0.5 : 1,
-            fontSize: '11px',
-          }}
-          title="Refresh fixtures"
-          data-testid="button-refresh-fixtures"
-        >
-          <motion.div
-            animate={{ rotate: isRefreshing ? 360 : 0 }}
-            transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: 'linear' }}
-          >
-            <RefreshCw size={12} />
-          </motion.div>
-        </motion.button>
       </div>
 
       <div style={{
@@ -238,7 +166,7 @@ export default function UpcomingFixturesOverlay({
           
           return (
             <motion.div
-              key={fixture.id}
+              key={fixture.id || index}
               initial={{ x: -50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: index * 0.1, duration: 0.3 }}
@@ -264,7 +192,7 @@ export default function UpcomingFixturesOverlay({
                   color: palette.text,
                   flex: 1,
                 }}>
-                  vs {opponent.name}
+                  vs {opponent}
                 </div>
                 <div
                   style={{
@@ -309,52 +237,54 @@ export default function UpcomingFixturesOverlay({
                 </div>
               )}
 
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '10px',
-                color: palette.text,
-                opacity: 0.7,
-                borderTop: `1px solid ${palette.border}20`,
-                paddingTop: '6px',
-              }}>
+              {fixture.league && (
                 <div style={{
-                  backgroundColor: `${palette.accent}20`,
-                  padding: '2px 6px',
-                  borderRadius: '3px',
-                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '10px',
+                  color: palette.text,
+                  opacity: 0.7,
+                  borderTop: `1px solid ${palette.border}20`,
+                  paddingTop: '6px',
                 }}>
-                  {fixture.league.name}
-                </div>
-                {showOpponentForm && (
                   <div style={{
-                    display: 'flex',
-                    gap: '2px',
-                    marginLeft: 'auto',
+                    backgroundColor: `${palette.accent}20`,
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    fontWeight: 'bold',
                   }}>
-                    {['W', 'D', 'L', 'W', 'W'].map((result, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          width: '14px',
-                          height: '14px',
-                          borderRadius: '50%',
-                          backgroundColor: result === 'W' ? '#00FF87' : result === 'D' ? '#F6EB61' : '#FF4444',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '8px',
-                          fontWeight: 'bold',
-                          color: '#000',
-                        }}
-                      >
-                        {result}
-                      </div>
-                    ))}
+                    {fixture.league}
                   </div>
-                )}
-              </div>
+                  {showOpponentForm && (
+                    <div style={{
+                      display: 'flex',
+                      gap: '2px',
+                      marginLeft: 'auto',
+                    }}>
+                      {['W', 'D', 'L', 'W', 'W'].map((result, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            width: '14px',
+                            height: '14px',
+                            borderRadius: '50%',
+                            backgroundColor: result === 'W' ? '#00FF87' : result === 'D' ? '#F6EB61' : '#FF4444',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '8px',
+                            fontWeight: 'bold',
+                            color: '#000',
+                          }}
+                        >
+                          {result}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           );
         })}
@@ -366,17 +296,16 @@ export default function UpcomingFixturesOverlay({
         marginTop: '8px',
         fontSize: '10px',
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
         color: palette.text,
         opacity: 0.7,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Clock size={10} />
-          <span>Updated: {formatTimestamp(lastUpdated)}</span>
-        </div>
         <span>Next {fixtures.length} matches</span>
       </div>
+
+      {/* Source Badge */}
+      <OverlaySourceBadge source={data.source as any} timestamp={data.timestamp} />
     </motion.div>
   );
 }

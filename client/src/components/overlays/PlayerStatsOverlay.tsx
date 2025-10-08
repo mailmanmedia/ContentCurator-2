@@ -1,7 +1,12 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Activity, Target, TrendingUp, RefreshCw, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Activity, Target, TrendingUp } from "lucide-react";
+import { useTopScorers } from "@/hooks/useFootballData";
+import {
+  OverlayLoadingSkeleton,
+  OverlayErrorState,
+  OverlayEmptyState,
+  OverlaySourceBadge,
+} from "./OverlayStates";
 
 interface PlayerStatsOverlayProps {
   playerId?: number;
@@ -10,72 +15,71 @@ interface PlayerStatsOverlayProps {
   opacity?: number;
 }
 
+interface Player {
+  id?: number;
+  name: string;
+  photo?: string;
+  goals: number;
+  assists: number;
+  appearances?: number;
+  minutes?: number;
+  rating?: string;
+}
+
 export default function PlayerStatsOverlay({
   playerId,
   width,
   height,
   opacity = 0.92,
 }: PlayerStatsOverlayProps) {
-  const { data: topScorersData, isLoading: isLoadingScorers } = useQuery({
-    queryKey: ['/api/football/players/liverpool/top-scorers'],
-    queryFn: async () => {
-      const res = await fetch('/api/football/players/liverpool/top-scorers?limit=5');
-      if (!res.ok) throw new Error('Failed to fetch Liverpool top scorers');
-      return res.json();
-    },
-  });
+  const { data, isLoading, error, refetch } = useTopScorers();
 
-  if (isLoadingScorers || !topScorersData) {
+  if (isLoading) {
+    return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;
+  }
+
+  if (error) {
     return (
-      <div
-        style={{
-          width: `${width}%`,
-          height: `${height}px`,
-          backgroundColor: `rgba(246, 235, 97, ${opacity})`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#002147',
-          fontFamily: 'League Spartan, sans-serif',
-          fontSize: '16px',
-        }}
-      >
-        Loading player stats...
-      </div>
+      <OverlayErrorState
+        error={error}
+        onRetry={refetch}
+        width={`${width}%`}
+        height={`${height}px`}
+        source="Player statistics"
+      />
     );
   }
 
+  if (!data?.data || data.data.length === 0) {
+    return (
+      <OverlayEmptyState
+        message="No player statistics available"
+        width={`${width}%`}
+        height={`${height}px`}
+      />
+    );
+  }
+
+  const players: Player[] = data.data;
   const selectedPlayer = playerId 
-    ? topScorersData.players?.find((p: any) => p.id === playerId) 
-    : topScorersData.players?.[0];
+    ? players.find((p: Player) => p.id === playerId) 
+    : players[0];
 
   if (!selectedPlayer) {
     return (
-      <div
-        style={{
-          width: `${width}%`,
-          height: `${height}px`,
-          backgroundColor: `rgba(246, 235, 97, ${opacity})`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#002147',
-          fontFamily: 'League Spartan, sans-serif',
-          fontSize: '14px',
-          padding: '16px',
-          textAlign: 'center',
-        }}
-      >
-        No player statistics available. Please populate the database with Liverpool player data.
-      </div>
+      <OverlayEmptyState
+        message="Player not found"
+        width={`${width}%`}
+        height={`${height}px`}
+      />
     );
   }
 
-  const goalsPer90 = selectedPlayer.minutes > 0 
+  const goalsPer90 = selectedPlayer.minutes && selectedPlayer.minutes > 0 
     ? (selectedPlayer.goals / (selectedPlayer.minutes / 90)).toFixed(2) 
     : '0.00';
   
-  const assistsPer90 = selectedPlayer.minutes > 0 
+  const assistsPer90 = selectedPlayer.minutes && selectedPlayer.minutes > 0 
     ? (selectedPlayer.assists / (selectedPlayer.minutes / 90)).toFixed(2) 
     : '0.00';
 
@@ -98,7 +102,9 @@ export default function PlayerStatsOverlay({
         justifyContent: 'space-between',
         borderRadius: '8px',
         border: '3px solid #C8102E',
+        position: 'relative',
       }}
+      data-testid="overlay-player-stats"
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
         {selectedPlayer.photo && (
@@ -112,12 +118,15 @@ export default function PlayerStatsOverlay({
               border: '2px solid #C8102E',
               objectFit: 'cover',
             }}
+            data-testid="player-photo"
           />
         )}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '20px', fontWeight: 'bold' }}>{selectedPlayer.name}</div>
+          <div style={{ fontSize: '20px', fontWeight: 'bold' }} data-testid="player-name">
+            {selectedPlayer.name}
+          </div>
           <div style={{ fontSize: '12px', color: '#C8102E', marginTop: '2px' }}>
-            Liverpool FC • {topScorersData.season} Season
+            Liverpool FC • 2024 Season
           </div>
         </div>
       </div>
@@ -138,9 +147,10 @@ export default function PlayerStatsOverlay({
             borderRadius: '6px',
             textAlign: 'center',
           }}
+          data-testid="stat-goals"
         >
           <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-            <Target size={12} style={{ display: 'inline', marginRight: '4px' }} />
+            <Target size={14} style={{ display: 'inline', marginRight: '4px' }} />
             GOALS
           </div>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#C8102E' }}>
@@ -158,55 +168,84 @@ export default function PlayerStatsOverlay({
             borderRadius: '6px',
             textAlign: 'center',
           }}
+          data-testid="stat-assists"
         >
           <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-            <Activity size={12} style={{ display: 'inline', marginRight: '4px' }} />
+            <Activity size={14} style={{ display: 'inline', marginRight: '4px' }} />
             ASSISTS
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#C8102E' }}>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#002147' }}>
             {selectedPlayer.assists}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          style={{
+            backgroundColor: 'rgba(0, 33, 71, 0.1)',
+            padding: '8px',
+            borderRadius: '6px',
+            textAlign: 'center',
+          }}
+          data-testid="stat-g+a"
+        >
+          <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
+            G+A
+          </div>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00D977' }}>
+            {goalsAndAssists}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          style={{
+            backgroundColor: 'rgba(0, 33, 71, 0.1)',
+            padding: '8px',
+            borderRadius: '6px',
+            textAlign: 'center',
+          }}
+          data-testid="stat-apps"
+        >
+          <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
+            APPEARANCES
+          </div>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#002147' }}>
+            {selectedPlayer.appearances || 0}
           </div>
         </motion.div>
       </div>
 
       <div style={{
-        borderTop: '2px solid rgba(0, 33, 71, 0.2)',
-        paddingTop: '12px',
+        backgroundColor: 'rgba(0, 33, 71, 0.05)',
+        padding: '10px',
+        borderRadius: '6px',
         display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
+        justifyContent: 'space-around',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-          <span style={{ color: '#666' }}>Goals per 90</span>
-          <span style={{ fontWeight: 'bold', color: '#002147' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '10px', color: '#666', marginBottom: '3px' }}>GOALS/90</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#C8102E' }}>
+            <TrendingUp size={12} style={{ display: 'inline', marginRight: '3px' }} />
             {goalsPer90}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-          <span style={{ color: '#666' }}>Assists per 90</span>
-          <span style={{ fontWeight: 'bold', color: '#002147' }}>
-            {assistsPer90}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-          <span style={{ color: '#666' }}>Appearances</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <TrendingUp size={12} color="#00FF87" />
-            <span style={{ fontWeight: 'bold', color: '#00FF87' }}>
-              {selectedPlayer.appearances}
-            </span>
           </div>
         </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-          <span style={{ color: '#666' }}>Goal Contributions</span>
-          <span style={{ fontWeight: 'bold', color: '#C8102E' }}>
-            {goalsAndAssists}
-          </span>
+        <div style={{ width: '1px', backgroundColor: 'rgba(0, 33, 71, 0.2)' }} />
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '10px', color: '#666', marginBottom: '3px' }}>ASSISTS/90</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#002147' }}>
+            <TrendingUp size={12} style={{ display: 'inline', marginRight: '3px' }} />
+            {assistsPer90}
+          </div>
         </div>
       </div>
+
+      {/* Source Badge */}
+      <OverlaySourceBadge source={data.source as any} timestamp={data.timestamp} />
     </motion.div>
   );
 }

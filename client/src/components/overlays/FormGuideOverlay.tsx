@@ -1,7 +1,11 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { RefreshCw, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useTeamData } from "@/hooks/useFootballData";
+import {
+  OverlayLoadingSkeleton,
+  OverlayErrorState,
+  OverlayEmptyState,
+  OverlaySourceBadge,
+} from "./OverlayStates";
 
 // Mailman Media Color Palettes
 export const COLOR_PALETTES = {
@@ -46,25 +50,12 @@ interface FormGuideOverlayProps {
   height: number;
   opacity?: number;
   layout?: 'horizontal' | 'vertical';
-  teamId?: number;
+  teamName?: string;
   colorPalette?: ColorPaletteKey;
   titleSize?: number;
   circleSize?: number;
   labelSize?: number;
-  // New filtering props
-  competitionId?: number;
   matchLimit?: 3 | 5 | 10;
-  seasonFilter?: number;
-  showCompetitionBadges?: boolean;
-}
-
-interface MatchResult {
-  result: string;
-  competition?: {
-    id: number;
-    name: string;
-    logo?: string;
-  };
 }
 
 export default function FormGuideOverlay({
@@ -72,122 +63,54 @@ export default function FormGuideOverlay({
   height,
   opacity = 0.9,
   layout = 'horizontal',
-  teamId = 40,
+  teamName = 'Liverpool',
   colorPalette = 'classic',
   titleSize = 20,
   circleSize = 60,
   labelSize = 14,
-  competitionId,
   matchLimit = 5,
-  seasonFilter,
-  showCompetitionBadges = true,
 }: FormGuideOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
-  const queryClient = useQueryClient();
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Build query params for filtering
-  const buildQueryParams = () => {
-    const params = new URLSearchParams();
-    params.append('teamId', teamId.toString());
-    params.append('limit', matchLimit.toString());
-    if (competitionId) params.append('competitionId', competitionId.toString());
-    if (seasonFilter) params.append('seasonYear', seasonFilter.toString());
-    return params.toString();
-  };
+  const { data, isLoading, error, refetch } = useTeamData(teamName);
 
-  // Fetch real match results with filtering
-  const { data: matchResults, isLoading: isLoadingMatches } = useQuery({
-    queryKey: ['/api/fixtures/results', teamId, competitionId, matchLimit, seasonFilter],
-    queryFn: async () => {
-      const queryParams = buildQueryParams();
-      const res = await fetch(`/api/fixtures/results?${queryParams}`);
-      if (!res.ok) {
-        // Fallback to cached stats
-        const fallback = await fetch(`/api/cached-stats/team/${teamId}/39`);
-        if (!fallback.ok) throw new Error('Failed to fetch match results');
-        return fallback.json();
-      }
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 24 * 60 * 60 * 1000,
-  });
+  if (isLoading) {
+    return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;
+  }
 
-  const { data: metrics, isLoading, refetch } = useQuery({
-    queryKey: ['/api/cached-stats/team', teamId, 39],
-    queryFn: async () => {
-      const res = await fetch(`/api/cached-stats/team/${teamId}/39`);
-      if (!res.ok) throw new Error('Failed to fetch team stats');
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 24 * 60 * 60 * 1000,
-  });
-
-  // Update timestamp when data changes
-  useEffect(() => {
-    if (metrics || matchResults) {
-      setLastUpdated(new Date());
-    }
-  }, [metrics, matchResults]);
-
-  // Manual refresh handler
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-      setLastUpdated(new Date());
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  // Format timestamp
-  const formatTimestamp = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return date.toLocaleDateString();
-  };
-
-  if (isLoading || !metrics) {
+  if (error) {
     return (
-      <div
-        style={{
-          width: `${width}%`,
-          height: `${height}px`,
-          backgroundColor: palette.background,
-          opacity,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: palette.text,
-          fontFamily: 'League Spartan, sans-serif',
-          fontSize: '14px',
-          border: `3px solid ${palette.border}`,
-          borderRadius: '8px',
-          boxSizing: 'border-box',
-        }}
-      >
-        Loading...
-      </div>
+      <OverlayErrorState
+        error={error}
+        onRetry={refetch}
+        width={`${width}%`}
+        height={`${height}px`}
+        source="Team form data"
+      />
     );
   }
 
-  // Use match results if available, otherwise fall back to form string
-  let formArray: (string | MatchResult)[] = [];
-  if (matchResults?.results && Array.isArray(matchResults.results)) {
-    formArray = matchResults.results.slice(0, matchLimit);
-  } else {
-    const formString = metrics.statistics?.form || '';
-    formArray = formString.split('').slice(0, matchLimit).map((r: string) => ({ result: r }));
+  if (!data?.data) {
+    return (
+      <OverlayEmptyState
+        message="No team form data available"
+        width={`${width}%`}
+        height={`${height}px`}
+      />
+    );
+  }
+
+  const teamData = data.data;
+  const formString = teamData.form?.join('') || '';
+  const formArray = formString.split('').slice(0, matchLimit);
+
+  if (formArray.length === 0) {
+    return (
+      <OverlayEmptyState
+        message="No recent matches available"
+        width={`${width}%`}
+        height={`${height}px`}
+      />
+    );
   }
 
   const getResultColor = (result: string) => {
@@ -201,14 +124,6 @@ export default function FormGuideOverlay({
       case 'L': return 'LOSS';
       default: return result;
     }
-  };
-
-  const getResultChar = (item: string | MatchResult): string => {
-    return typeof item === 'string' ? item : item.result;
-  };
-
-  const getCompetition = (item: string | MatchResult) => {
-    return typeof item === 'object' && item.competition ? item.competition : null;
   };
 
   return (
@@ -230,7 +145,9 @@ export default function FormGuideOverlay({
         borderRadius: '8px',
         border: `3px solid ${palette.border}`,
         boxSizing: 'border-box',
+        position: 'relative',
       }}
+      data-testid="overlay-form-guide"
     >
       <div style={{ fontSize: `${titleSize}px`, fontWeight: 'bold', color: palette.accent, marginBottom: '10px', letterSpacing: '0.5px' }}>
         RECENT FORM
@@ -244,67 +161,48 @@ export default function FormGuideOverlay({
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {formArray.map((item, index: number) => {
-          const result = getResultChar(item);
-          const competition = getCompetition(item);
-          
-          return (
-            <motion.div
-              key={index}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: index * 0.1, duration: 0.3 }}
+        {formArray.map((result: string, index: number) => (
+          <motion.div
+            key={index}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: index * 0.1, duration: 0.3 }}
+            style={{
+              display: 'flex',
+              flexDirection: layout === 'horizontal' ? 'column' : 'row',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            data-testid={`form-result-${index}`}
+          >
+            <div
               style={{
+                width: `${circleSize}px`,
+                height: `${circleSize}px`,
+                borderRadius: '50%',
+                backgroundColor: getResultColor(result),
                 display: 'flex',
-                flexDirection: layout === 'horizontal' ? 'column' : 'row',
                 alignItems: 'center',
-                gap: '6px',
+                justifyContent: 'center',
+                fontSize: `${circleSize * 0.4}px`,
+                fontWeight: 'bold',
+                color: '#000000',
+                border: '2px solid rgba(0,0,0,0.1)',
               }}
             >
-              <div
-                style={{
-                  width: `${circleSize}px`,
-                  height: `${circleSize}px`,
-                  borderRadius: '50%',
-                  backgroundColor: getResultColor(result),
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: `${circleSize * 0.4}px`,
-                  fontWeight: 'bold',
-                  color: '#000000',
-                  border: '2px solid rgba(0,0,0,0.1)',
-                }}
-              >
-                {result}
-              </div>
-              <div style={{
-                fontSize: `${labelSize}px`,
-                color: palette.text,
-                opacity: 0.8,
-                textAlign: 'center',
-                fontWeight: 500,
-              }}>
-                {getResultText(result)}
-              </div>
-              {showCompetitionBadges && competition && (
-                <div style={{
-                  fontSize: `${labelSize - 2}px`,
-                  color: palette.accent,
-                  opacity: 0.7,
-                  textAlign: 'center',
-                  fontWeight: 400,
-                  maxWidth: `${circleSize + 20}px`,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>
-                  {competition.name}
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
+              {result}
+            </div>
+            <div style={{
+              fontSize: `${labelSize}px`,
+              color: palette.text,
+              opacity: 0.8,
+              textAlign: 'center',
+              fontWeight: 500,
+            }}>
+              {getResultText(result)}
+            </div>
+          </motion.div>
+        ))}
       </div>
 
       <div style={{
@@ -312,60 +210,19 @@ export default function FormGuideOverlay({
         paddingTop: '10px',
         fontSize: '11px',
         display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
+        justifyContent: 'space-between',
+        fontWeight: 500,
       }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: palette.text, opacity: 0.7 }}>
-            <Clock size={12} />
-            <span>Updated: {formatTimestamp(lastUpdated)}</span>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            style={{
-              background: 'transparent',
-              border: `1px solid ${palette.accent}40`,
-              borderRadius: '4px',
-              cursor: isRefreshing ? 'not-allowed' : 'pointer',
-              padding: '3px 6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: palette.accent,
-              opacity: isRefreshing ? 0.5 : 1,
-              fontSize: '11px',
-            }}
-            title="Refresh data"
-          >
-            <motion.div
-              animate={{ rotate: isRefreshing ? 360 : 0 }}
-              transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: 'linear' }}
-            >
-              <RefreshCw size={11} />
-            </motion.div>
-            Refresh
-          </motion.button>
-        </div>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontWeight: 500,
-        }}>
-          <span>Last {matchLimit} Matches</span>
-          <span style={{ color: palette.accent, fontWeight: 'bold' }}>
-            {formArray.filter((item) => getResultChar(item) === 'W').length}W-
-            {formArray.filter((item) => getResultChar(item) === 'D').length}D-
-            {formArray.filter((item) => getResultChar(item) === 'L').length}L
-          </span>
-        </div>
+        <span>Last {formArray.length} Matches</span>
+        <span style={{ color: palette.accent, fontWeight: 'bold' }}>
+          {formArray.filter((r) => r === 'W').length}W-
+          {formArray.filter((r) => r === 'D').length}D-
+          {formArray.filter((r) => r === 'L').length}L
+        </span>
       </div>
+
+      {/* Source Badge */}
+      <OverlaySourceBadge source={data.source as any} timestamp={data.timestamp} />
     </motion.div>
   );
 }

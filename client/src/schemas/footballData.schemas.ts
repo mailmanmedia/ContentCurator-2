@@ -51,13 +51,15 @@ export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
  * TeamData Schema
  * 
  * Validates enriched team data with optional standing and form information
+ * Note: API returns "team" field (not "name")
  */
 export const TeamDataSchema = z.object({
-  name: z.string().min(1),
+  team: z.string().min(1),
   fbref: TeamStandingSchema.optional(),
   position: z.number().int().positive().optional(),
   form: z.array(z.string()).optional(),
   stats: TeamStandingSchema.optional(),
+  sources: z.array(z.string()).optional(),
 }).passthrough(); // Allow additional fields
 
 export type TeamData = z.infer<typeof TeamDataSchema>;
@@ -115,10 +117,11 @@ export type H2HMatch = z.infer<typeof H2HMatchSchema>;
  * H2HData Schema
  * 
  * Validates head-to-head data containing match history
+ * API returns 'fixtures' array
  */
 export const H2HDataSchema = z.object({
-  matches: z.array(H2HMatchSchema),
-}).passthrough(); // Allow additional fields like statistics
+  fixtures: z.array(H2HMatchSchema),
+}).passthrough();
 
 export type H2HData = z.infer<typeof H2HDataSchema>;
 

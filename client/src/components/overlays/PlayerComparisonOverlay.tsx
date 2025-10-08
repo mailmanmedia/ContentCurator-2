@@ -1,7 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { TrendingUp } from "lucide-react";
+import { useTopScorers } from "@/hooks/useFootballData";
+import {
+  OverlayLoadingSkeleton,
+  OverlayErrorState,
+  OverlayEmptyState,
+  OverlaySourceBadge,
+} from "./OverlayStates";
 import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
 
 interface PlayerComparisonOverlayProps {
@@ -12,27 +17,18 @@ interface PlayerComparisonOverlayProps {
   opacity?: number;
   statCategories?: string[];
   viewMode?: 'sideBySide' | 'radar' | 'bars';
-  season?: number;
-  competition?: number;
   colorPalette?: ColorPaletteKey;
 }
 
 interface Player {
-  id: number;
+  id?: number;
   name: string;
   photo?: string;
   goals: number;
   assists: number;
-  appearances: number;
-  minutes: number;
+  appearances?: number;
+  minutes?: number;
   rating?: string;
-}
-
-interface PlayersData {
-  players: Player[];
-  season: number;
-  teamId: number;
-  teamName: string;
 }
 
 export default function PlayerComparisonOverlay({
@@ -43,97 +39,48 @@ export default function PlayerComparisonOverlay({
   opacity = 0.9,
   statCategories = ['goals', 'assists', 'appearances'],
   viewMode = 'sideBySide',
-  season,
-  competition,
   colorPalette = 'classic',
 }: PlayerComparisonOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data, isLoading, error, refetch } = useTopScorers();
 
-  const { data: playersData, isLoading, refetch } = useQuery<PlayersData>({
-    queryKey: ['/api/football/players/liverpool/top-scorers'],
-    queryFn: async () => {
-      const res = await fetch('/api/football/players/liverpool/top-scorers');
-      if (!res.ok) throw new Error('Failed to fetch player data');
-      const data = await res.json();
-      setLastUpdated(new Date());
-      return data;
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 24 * 60 * 60 * 1000,
-  });
+  if (isLoading) {
+    return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;
+  }
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-      setLastUpdated(new Date());
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const formatTimestamp = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return date.toLocaleDateString();
-  };
-
-  if (isLoading || !playersData) {
+  if (error) {
     return (
-      <div
-        style={{
-          width: `${width}%`,
-          height: `${height}px`,
-          backgroundColor: palette.background,
-          opacity,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: palette.text,
-          fontFamily: 'League Spartan, sans-serif',
-          fontSize: '14px',
-          border: `3px solid ${palette.border}`,
-          borderRadius: '8px',
-          boxSizing: 'border-box',
-        }}
-      >
-        Loading player data...
-      </div>
+      <OverlayErrorState
+        error={error}
+        onRetry={refetch}
+        width={`${width}%`}
+        height={`${height}px`}
+        source="Player comparison data"
+      />
     );
   }
 
-  const player1 = playersData.players.find(p => p.id === player1Id);
-  const player2 = playersData.players.find(p => p.id === player2Id);
+  if (!data?.data || data.data.length === 0) {
+    return (
+      <OverlayEmptyState
+        message="No player data available for comparison"
+        width={`${width}%`}
+        height={`${height}px`}
+      />
+    );
+  }
+
+  const players: Player[] = data.data;
+  const player1 = players.find(p => p.id === player1Id);
+  const player2 = players.find(p => p.id === player2Id);
 
   if (!player1 || !player2) {
     return (
-      <div
-        style={{
-          width: `${width}%`,
-          height: `${height}px`,
-          backgroundColor: palette.background,
-          opacity,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: palette.text,
-          fontFamily: 'League Spartan, sans-serif',
-          fontSize: '14px',
-          border: `3px solid ${palette.border}`,
-          borderRadius: '8px',
-          boxSizing: 'border-box',
-        }}
-      >
-        Player data not found (IDs: {player1Id}, {player2Id})
-      </div>
+      <OverlayEmptyState
+        message={`Player${!player1 && !player2 ? 's' : ''} not found (ID${!player1 && !player2 ? 's' : ''}: ${!player1 ? player1Id : ''}${!player1 && !player2 ? ', ' : ''}${!player2 ? player2Id : ''})`}
+        width={`${width}%`}
+        height={`${height}px`}
+      />
     );
   }
 
@@ -141,10 +88,10 @@ export default function PlayerComparisonOverlay({
     switch (stat) {
       case 'goals': return player.goals;
       case 'assists': return player.assists;
-      case 'appearances': return player.appearances;
-      case 'minutes': return player.minutes;
-      case 'goalsPerGame': return player.appearances > 0 ? Number((player.goals / player.appearances).toFixed(2)) : 0;
-      case 'assistsPerGame': return player.appearances > 0 ? Number((player.assists / player.appearances).toFixed(2)) : 0;
+      case 'appearances': return player.appearances || 0;
+      case 'minutes': return player.minutes || 0;
+      case 'goalsPerGame': return player.appearances && player.appearances > 0 ? Number((player.goals / player.appearances).toFixed(2)) : 0;
+      case 'assistsPerGame': return player.appearances && player.appearances > 0 ? Number((player.assists / player.appearances).toFixed(2)) : 0;
       default: return 0;
     }
   };
@@ -178,7 +125,7 @@ export default function PlayerComparisonOverlay({
     }}>
       {[player1, player2].map((player, idx) => (
         <motion.div
-          key={player.id}
+          key={player.id || idx}
           initial={{ x: idx === 0 ? -50 : 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.4 }}
@@ -485,45 +432,18 @@ export default function PlayerComparisonOverlay({
         border: `3px solid ${palette.border}`,
         boxSizing: 'border-box',
         overflow: 'hidden',
+        position: 'relative',
       }}
+      data-testid="overlay-player-comparison"
     >
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '12px'
+        fontSize: '16px',
+        fontWeight: 'bold',
+        color: palette.accent,
+        letterSpacing: '0.5px',
+        marginBottom: '8px',
       }}>
-        <div style={{ fontSize: '16px', fontWeight: 'bold', color: palette.accent, letterSpacing: '0.5px' }}>
-          PLAYER COMPARISON
-        </div>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          style={{
-            background: 'transparent',
-            border: `1px solid ${palette.accent}40`,
-            borderRadius: '4px',
-            cursor: isRefreshing ? 'not-allowed' : 'pointer',
-            padding: '4px 8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            color: palette.accent,
-            opacity: isRefreshing ? 0.5 : 1,
-            fontSize: '11px',
-          }}
-          title="Refresh data"
-          data-testid="button-refresh-comparison"
-        >
-          <motion.div
-            animate={{ rotate: isRefreshing ? 360 : 0 }}
-            transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: 'linear' }}
-          >
-            <RefreshCw size={12} />
-          </motion.div>
-        </motion.button>
+        PLAYER COMPARISON
       </div>
 
       <div style={{
@@ -551,23 +471,8 @@ export default function PlayerComparisonOverlay({
         </motion.div>
       </AnimatePresence>
 
-      <div style={{
-        borderTop: `1px solid ${palette.accent}40`,
-        paddingTop: '8px',
-        marginTop: '8px',
-        fontSize: '10px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        color: palette.text,
-        opacity: 0.7,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Clock size={10} />
-          <span>Updated: {formatTimestamp(lastUpdated)}</span>
-        </div>
-        <span>Season {playersData.season}</span>
-      </div>
+      {/* Source Badge */}
+      <OverlaySourceBadge source={data.source as any} timestamp={data.timestamp} />
     </motion.div>
   );
 }

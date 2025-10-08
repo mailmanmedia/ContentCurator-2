@@ -9,12 +9,22 @@ interface LeaguePositionOverlayProps {
   opacity?: number;
 }
 
+interface ComparativeMetrics {
+  standings?: {
+    liverpoolPosition?: number;
+    liverpoolPoints?: number;
+    pointsFromLeader?: number;
+    pointsFromTop4?: number;
+    top6Standings?: Array<{ position: number; name: string; points: number }>;
+  };
+}
+
 export default function LeaguePositionOverlay({
   width,
   height,
   opacity = 0.88,
 }: LeaguePositionOverlayProps) {
-  const { data: comparative, isLoading } = useQuery({
+  const { data: comparative, isLoading } = useQuery<ComparativeMetrics>({
     queryKey: ['/api/analytics/comparative-metrics'],
   });
 

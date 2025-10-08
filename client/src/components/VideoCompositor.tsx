@@ -9,6 +9,7 @@ import RssSentimentOverlay from "./overlays/RssSentimentOverlay";
 import RssTickerEnhancedOverlay from "./overlays/RssTickerEnhancedOverlay";
 import UpcomingFixturesOverlay from "./overlays/UpcomingFixturesOverlay";
 import PlayerComparisonOverlay from "./overlays/PlayerComparisonOverlay";
+import OverlayErrorBoundary from "./overlays/OverlayErrorBoundary";
 
 // Mailman Media Color Palettes for Tickers
 const COLOR_PALETTES = {
@@ -1139,10 +1140,10 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
       pointerEvents: 'none',
     };
 
-    switch (metricType) {
-      case 'h2h-card':
-        return (
-          <div key={overlay.id} style={style}>
+    const overlayComponent = (() => {
+      switch (metricType) {
+        case 'h2h-card':
+          return (
             <H2HMatchCardOverlay
               homeTeamId={metricData?.homeTeamId || 40}
               awayTeamId={metricData?.awayTeamId || 47}
@@ -1153,11 +1154,9 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               height={height}
               opacity={opacity}
             />
-          </div>
-        );
-      case 'form-guide':
-        return (
-          <div key={overlay.id} style={style}>
+          );
+        case 'form-guide':
+          return (
             <FormGuideOverlay
               width={100}
               height={height}
@@ -1173,32 +1172,26 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               circleSize={overlay.formCircleSize}
               labelSize={overlay.formLabelSize}
             />
-          </div>
-        );
-      case 'player-stats':
-        return (
-          <div key={overlay.id} style={style}>
+          );
+        case 'player-stats':
+          return (
             <PlayerStatsOverlay
               playerId={metricData?.playerId || 1}
               width={100}
               height={height}
               opacity={opacity}
             />
-          </div>
-        );
-      case 'league-table':
-        return (
-          <div key={overlay.id} style={style}>
+          );
+        case 'league-table':
+          return (
             <LeaguePositionOverlay
               width={100}
               height={height}
               opacity={opacity}
             />
-          </div>
-        );
-      case 'rss-sentiment':
-        return (
-          <div key={overlay.id} style={style}>
+          );
+        case 'rss-sentiment':
+          return (
             <RssSentimentOverlay
               width={overlay.width}
               height={overlay.height}
@@ -1208,11 +1201,9 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               showSentimentBreakdown={metricData?.showSentimentBreakdown}
               minSentiment={metricData?.minSentiment}
             />
-          </div>
-        );
-      case 'rss-ticker-enhanced':
-        return (
-          <div key={overlay.id} style={style}>
+          );
+        case 'rss-ticker-enhanced':
+          return (
             <RssTickerEnhancedOverlay
               width={overlay.width}
               height={overlay.height}
@@ -1225,11 +1216,9 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               showCredibility={metricData?.showCredibility}
               sentimentFilter={metricData?.sentimentFilter}
             />
-          </div>
-        );
-      case 'upcoming-fixtures':
-        return (
-          <div key={overlay.id} style={style}>
+          );
+        case 'upcoming-fixtures':
+          return (
             <UpcomingFixturesOverlay
               width={overlay.width}
               height={overlay.height}
@@ -1240,11 +1229,9 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               showOpponentForm={metricData?.showOpponentForm}
               colorPalette={overlay.colorPalette}
             />
-          </div>
-        );
-      case 'player-comparison':
-        return (
-          <div key={overlay.id} style={style}>
+          );
+        case 'player-comparison':
+          return (
             <PlayerComparisonOverlay
               player1Id={metricData?.player1Id}
               player2Id={metricData?.player2Id}
@@ -1257,11 +1244,17 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               competition={metricData?.competition}
               colorPalette={overlay.colorPalette}
             />
-          </div>
-        );
-      default:
-        return null;
-    }
+          );
+        default:
+          return null;
+      }
+    })();
+
+    return (
+      <OverlayErrorBoundary key={overlay.id} overlayId={overlay.id}>
+        <div style={style}>{overlayComponent}</div>
+      </OverlayErrorBoundary>
+    );
   };
 
   const metricOverlays = overlays.filter(o => 

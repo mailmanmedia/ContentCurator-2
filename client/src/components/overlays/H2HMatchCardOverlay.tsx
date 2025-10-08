@@ -1,7 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useH2HData } from "@/hooks/useFootballData";
+import {
+  OverlayLoadingSkeleton,
+  OverlayErrorState,
+  OverlayEmptyState,
+  OverlaySourceBadge,
+} from "./OverlayStates";
 
 interface H2HMatchCardOverlayProps {
   homeTeamId: number;
@@ -9,38 +13,16 @@ interface H2HMatchCardOverlayProps {
   width: number;
   height: number;
   opacity?: number;
-  competitionFilter?: number;
-  seasonRange?: {
-    from: number;
-    to: number;
-  };
-  venueFilter?: 'all' | 'home' | 'away';
   colorPalette?: 'classic' | 'navy' | 'cream' | 'dark';
 }
 
-interface H2HResult {
+interface H2HMatch {
   date: string;
   homeTeam: string;
   awayTeam: string;
   homeScore: number;
   awayScore: number;
-  competition: string;
-}
-
-interface H2HData {
-  results?: H2HResult[];
-  statistics?: {
-    homeWins: number;
-    awayWins: number;
-    draws: number;
-    totalMatches: number;
-  };
-}
-
-interface TeamData {
-  id: number;
-  name: string;
-  badge?: string;
+  competition?: string;
 }
 
 export default function H2HMatchCardOverlay({
@@ -49,19 +31,16 @@ export default function H2HMatchCardOverlay({
   width,
   height,
   opacity = 0.95,
-  competitionFilter,
-  seasonRange,
-  venueFilter = 'all',
   colorPalette = 'classic',
 }: H2HMatchCardOverlayProps) {
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data, isLoading, error, refetch } = useH2HData(homeTeamId, awayTeamId);
 
   // Color palette configurations
   const palettes = {
     classic: {
-      primary: '#C8102E',      // LFC Red
-      secondary: '#0891A8',     // Teal
-      accent: '#E8D9C5',        // Cream
+      primary: '#C8102E',
+      secondary: '#0891A8',
+      accent: '#E8D9C5',
       text: '#FFFFFF',
       statBg: '#0891A8',
       valueBg: '#E8D9C5',
@@ -102,123 +81,69 @@ export default function H2HMatchCardOverlay({
 
   const colors = palettes[colorPalette];
 
-  // Build query params for filtering
-  const buildQueryParams = () => {
-    const params = new URLSearchParams();
-    params.append('team1', homeTeamId.toString());
-    params.append('team2', awayTeamId.toString());
-    params.append('limit', '20');
-    if (competitionFilter) params.append('competitionId', competitionFilter.toString());
-    if (seasonRange?.from) params.append('seasonFrom', seasonRange.from.toString());
-    if (seasonRange?.to) params.append('seasonTo', seasonRange.to.toString());
-    if (venueFilter !== 'all') params.append('venueFilter', venueFilter);
-    return params.toString();
-  };
+  if (isLoading) {
+    return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;
+  }
 
-  // Fetch H2H data
-  const { data: h2hData, isLoading, refetch } = useQuery<H2HData>({
-    queryKey: ['/api/fixtures/h2h', homeTeamId, awayTeamId, competitionFilter, seasonRange, venueFilter],
-    queryFn: async () => {
-      const queryParams = buildQueryParams();
-      const res = await fetch(`/api/fixtures/h2h?${queryParams}`);
-      if (!res.ok) throw new Error('Failed to fetch H2H data');
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch team data for badges and names
-  const { data: homeTeam } = useQuery<TeamData>({
-    queryKey: ['/api/football/team', homeTeamId],
-    queryFn: async () => {
-      const res = await fetch(`/api/football/team/${homeTeamId}`);
-      if (!res.ok) return { id: homeTeamId, name: `Team ${homeTeamId}` };
-      return res.json();
-    },
-  });
-
-  const { data: awayTeam } = useQuery<TeamData>({
-    queryKey: ['/api/football/team', awayTeamId],
-    queryFn: async () => {
-      const res = await fetch(`/api/football/team/${awayTeamId}`);
-      if (!res.ok) return { id: awayTeamId, name: `Team ${awayTeamId}` };
-      return res.json();
-    },
-  });
-
-  // Calculate stats from results
-  const calculateStats = (results: H2HResult[]) => {
-    let homeWins = 0;
-    let awayWins = 0;
-    let draws = 0;
-    let homeGoals = 0;
-    let awayGoals = 0;
-    
-    results?.forEach((match) => {
-      homeGoals += match.homeScore;
-      awayGoals += match.awayScore;
-      if (match.homeScore > match.awayScore) {
-        homeWins++;
-      } else if (match.awayScore > match.homeScore) {
-        awayWins++;
-      } else {
-        draws++;
-      }
-    });
-    
-    return { 
-      homeWins, 
-      awayWins, 
-      draws, 
-      totalMatches: results?.length || 0,
-      avgHomeGoals: results?.length ? (homeGoals / results.length).toFixed(1) : '0.0',
-      avgAwayGoals: results?.length ? (awayGoals / results.length).toFixed(1) : '0.0',
-    };
-  };
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  if (isLoading || !h2hData) {
+  if (error) {
     return (
-      <div
-        style={{
-          width: `${width}%`,
-          height: `${height}px`,
-          backgroundColor: colors.background,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: colors.text,
-          fontFamily: 'League Spartan, sans-serif',
-          fontSize: '16px',
-        }}
-      >
-        Loading...
-      </div>
+      <OverlayErrorState
+        error={error}
+        onRetry={refetch}
+        width={`${width}%`}
+        height={`${height}px`}
+        source="Head-to-head data"
+      />
     );
   }
 
-  const calculatedStats = h2hData.results ? calculateStats(h2hData.results) : { 
-    homeWins: 0, 
-    awayWins: 0, 
-    draws: 0, 
-    totalMatches: 0,
-    avgHomeGoals: '0.0',
-    avgAwayGoals: '0.0'
-  };
-  
-  const stats = h2hData.statistics || calculatedStats;
-  const { homeWins, awayWins, draws, totalMatches } = stats;
-  
+  if (!data?.data) {
+    return (
+      <OverlayEmptyState
+        message="No head-to-head data available"
+        width={`${width}%`}
+        height={`${height}px`}
+      />
+    );
+  }
+
+  const h2hData = data.data;
+  const matches: H2HMatch[] = h2hData.fixtures || [];
+
+  if (matches.length === 0) {
+    return (
+      <OverlayEmptyState
+        message="No previous matches found between these teams"
+        width={`${width}%`}
+        height={`${height}px`}
+      />
+    );
+  }
+
+  // Calculate statistics
+  let homeWins = 0;
+  let awayWins = 0;
+  let draws = 0;
+  let homeGoals = 0;
+  let awayGoals = 0;
+
+  matches.forEach((match) => {
+    homeGoals += match.homeScore;
+    awayGoals += match.awayScore;
+    if (match.homeScore > match.awayScore) {
+      homeWins++;
+    } else if (match.awayScore > match.homeScore) {
+      awayWins++;
+    } else {
+      draws++;
+    }
+  });
+
+  const totalMatches = matches.length;
   const homeWinPct = totalMatches > 0 ? Math.round((homeWins / totalMatches) * 100) : 0;
   const awayWinPct = totalMatches > 0 ? Math.round((awayWins / totalMatches) * 100) : 0;
+  const avgHomeGoals = totalMatches > 0 ? (homeGoals / totalMatches).toFixed(1) : '0.0';
+  const avgAwayGoals = totalMatches > 0 ? (awayGoals / totalMatches).toFixed(1) : '0.0';
 
   // Halftone dot pattern
   const HalftoneDots = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => {
@@ -330,6 +255,7 @@ export default function H2HMatchCardOverlay({
         position: 'relative',
         overflow: 'hidden',
       }}
+      data-testid="overlay-h2h"
     >
       {/* Halftone decorative dots */}
       <HalftoneDots position="tl" />
@@ -337,46 +263,16 @@ export default function H2HMatchCardOverlay({
       <HalftoneDots position="bl" />
       <HalftoneDots position="br" />
 
-      {/* Title with refresh button */}
+      {/* Title */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        fontSize: '32px',
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        letterSpacing: '1px',
+        color: colors.text,
         marginBottom: '20px',
       }}>
-        <div style={{
-          fontSize: '32px',
-          fontWeight: 'bold',
-          textTransform: 'uppercase',
-          letterSpacing: '1px',
-          color: colors.text,
-        }}>
-          TEAMS HEAD 2 HEAD
-        </div>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          style={{
-            background: 'transparent',
-            border: `2px solid ${colors.text}40`,
-            borderRadius: '6px',
-            cursor: isRefreshing ? 'not-allowed' : 'pointer',
-            padding: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            color: colors.text,
-            opacity: isRefreshing ? 0.5 : 1,
-          }}
-        >
-          <motion.div
-            animate={{ rotate: isRefreshing ? 360 : 0 }}
-            transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: 'linear' }}
-          >
-            <RefreshCw size={18} />
-          </motion.div>
-        </motion.button>
+        TEAMS HEAD 2 HEAD
       </div>
 
       {/* Team badges and VS */}
@@ -406,14 +302,10 @@ export default function H2HMatchCardOverlay({
             fontWeight: 'bold',
             color: colors.valueText,
           }}>
-            {homeTeam?.badge ? (
-              <img src={homeTeam.badge} alt={homeTeam.name} style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
-            ) : (
-              homeTeam?.name?.substring(0, 2).toUpperCase() || 'H'
-            )}
+            {h2hData.homeTeam?.team?.substring(0, 2).toUpperCase() || 'H'}
           </div>
           <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>
-            {homeTeam?.name || `Team ${homeTeamId}`}
+            {h2hData.homeTeam?.team || `Team ${homeTeamId}`}
           </div>
         </div>
 
@@ -450,14 +342,10 @@ export default function H2HMatchCardOverlay({
             fontWeight: 'bold',
             color: colors.valueText,
           }}>
-            {awayTeam?.badge ? (
-              <img src={awayTeam.badge} alt={awayTeam.name} style={{ width: '80px', height: '80px', objectFit: 'contain' }} />
-            ) : (
-              awayTeam?.name?.substring(0, 2).toUpperCase() || 'A'
-            )}
+            {h2hData.awayTeam?.team?.substring(0, 2).toUpperCase() || 'A'}
           </div>
           <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>
-            {awayTeam?.name || `Team ${awayTeamId}`}
+            {h2hData.awayTeam?.team || `Team ${awayTeamId}`}
           </div>
         </div>
       </div>
@@ -467,7 +355,7 @@ export default function H2HMatchCardOverlay({
         <StatBar label="Head 2 Head Wins" leftValue={homeWins} rightValue={awayWins} />
         <StatBar label="Win Percentage" leftValue={`${homeWinPct}%`} rightValue={`${awayWinPct}%`} />
         <StatBar label="Total Matches" leftValue={totalMatches} rightValue={totalMatches} />
-        <StatBar label="Average Goals" leftValue={calculatedStats.avgHomeGoals} rightValue={calculatedStats.avgAwayGoals} />
+        <StatBar label="Average Goals" leftValue={avgHomeGoals} rightValue={avgAwayGoals} />
         <StatBar label="Draws" leftValue={draws} rightValue={draws} />
       </div>
 
@@ -482,10 +370,11 @@ export default function H2HMatchCardOverlay({
           textAlign: 'center',
         }}>
           Based on {totalMatches} match{totalMatches !== 1 ? 'es' : ''}
-          {competitionFilter && ' • Filtered by competition'}
-          {venueFilter !== 'all' && ` • ${venueFilter.toUpperCase()} only`}
         </div>
       )}
+
+      {/* Source Badge */}
+      <OverlaySourceBadge source={data.source as any} timestamp={data.timestamp} />
     </motion.div>
   );
 }

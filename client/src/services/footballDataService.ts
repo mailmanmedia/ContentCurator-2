@@ -44,7 +44,7 @@ export interface PlayerStats {
 }
 
 export interface TeamData {
-  name: string;
+  team: string;
   form?: string[];
   position?: number;
   [key: string]: any;
