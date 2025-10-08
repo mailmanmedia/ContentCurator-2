@@ -24,12 +24,13 @@ export function PiPProvider({ children }: { children: ReactNode }) {
     video.muted = true;
     video.playsInline = true;
     video.style.position = 'fixed';
-    video.style.bottom = '20px';
-    video.style.right = '20px';
-    video.style.width = '400px';
-    video.style.height = '225px';
-    video.style.zIndex = '9999';
-    video.style.display = 'none';
+    video.style.bottom = '-200px'; // Position off-screen
+    video.style.right = '-200px';
+    video.style.width = '1px'; // Tiny size
+    video.style.height = '1px';
+    video.style.opacity = '0'; // Invisible
+    video.style.zIndex = '-1'; // Behind everything
+    video.style.pointerEvents = 'none'; // No interaction
     videoRef.current = video;
     document.body.appendChild(video);
 
@@ -77,6 +78,9 @@ export function PiPProvider({ children }: { children: ReactNode }) {
       
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
+      
+      // Small delay to ensure stream is rendering
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Request PiP
       await videoRef.current.requestPictureInPicture();
