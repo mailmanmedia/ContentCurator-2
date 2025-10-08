@@ -32,8 +32,11 @@ export const getQueryFn: <T>(options: {
     // Build URL with query params support
     let url = queryKey[0] as string;
     
-    // If second element is an object, convert to query params
-    if (queryKey.length > 1 && typeof queryKey[1] === 'object' && queryKey[1] !== null) {
+    // If second element is a plain object (not array), convert to query params
+    if (queryKey.length > 1 && 
+        typeof queryKey[1] === 'object' && 
+        queryKey[1] !== null && 
+        !Array.isArray(queryKey[1])) {
       const params = queryKey[1] as Record<string, any>;
       const searchParams = new URLSearchParams();
       
