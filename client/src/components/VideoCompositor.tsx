@@ -6,6 +6,9 @@ import FormGuideOverlay from "./overlays/FormGuideOverlay";
 import PlayerStatsOverlay from "./overlays/PlayerStatsOverlay";
 import LeaguePositionOverlay from "./overlays/LeaguePositionOverlay";
 import RssSentimentOverlay from "./overlays/RssSentimentOverlay";
+import RssTickerEnhancedOverlay from "./overlays/RssTickerEnhancedOverlay";
+import UpcomingFixturesOverlay from "./overlays/UpcomingFixturesOverlay";
+import PlayerComparisonOverlay from "./overlays/PlayerComparisonOverlay";
 
 // Mailman Media Color Palettes for Tickers
 const COLOR_PALETTES = {
@@ -93,6 +96,27 @@ interface OverlayConfig {
   formTitleSize?: number;
   formCircleSize?: number;
   formLabelSize?: number;
+  
+  // Advanced Typography
+  fontWeight?: number;
+  letterSpacing?: number;
+  lineHeight?: number;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  textShadow?: string;
+  
+  // Advanced Background
+  backgroundType?: 'solid' | 'linear-gradient' | 'radial-gradient';
+  gradientAngle?: number;
+  gradientColor1?: string;
+  gradientColor2?: string;
+  
+  // Border Customization
+  borderRadius?: number;
+  borderStyle?: 'solid' | 'dashed' | 'dotted';
+  
+  // Shadow/Glow
+  boxShadow?: string;
+  glowEffect?: boolean;
 }
 
 interface VideoCompositorProps {
@@ -895,25 +919,88 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             ? COLOR_PALETTES[overlay.colorPalette].text
             : overlay.textColor;
           
-          ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
+          // Apply advanced background styling
+          if (overlay.backgroundType === 'linear-gradient') {
+            const angle = (overlay.gradientAngle || 90) * (Math.PI / 180);
+            const x0 = xPosition + overlayWidth / 2 - Math.cos(angle) * overlayWidth / 2;
+            const y0 = yPosition + scaledHeight / 2 - Math.sin(angle) * scaledHeight / 2;
+            const x1 = xPosition + overlayWidth / 2 + Math.cos(angle) * overlayWidth / 2;
+            const y1 = yPosition + scaledHeight / 2 + Math.sin(angle) * scaledHeight / 2;
+            
+            const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+            gradient.addColorStop(0, hexToRgba(overlay.gradientColor1 || bgColor, overlay.opacity || 0.95));
+            gradient.addColorStop(1, hexToRgba(overlay.gradientColor2 || bgColor, overlay.opacity || 0.95));
+            ctx.fillStyle = gradient;
+          } else if (overlay.backgroundType === 'radial-gradient') {
+            const gradient = ctx.createRadialGradient(
+              xPosition + overlayWidth / 2, yPosition + scaledHeight / 2, 0,
+              xPosition + overlayWidth / 2, yPosition + scaledHeight / 2, overlayWidth / 2
+            );
+            gradient.addColorStop(0, hexToRgba(overlay.gradientColor1 || bgColor, overlay.opacity || 0.95));
+            gradient.addColorStop(1, hexToRgba(overlay.gradientColor2 || bgColor, overlay.opacity || 0.95));
+            ctx.fillStyle = gradient;
+          } else {
+            ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
+          }
+          
+          // Apply border radius
+          if (overlay.borderRadius && overlay.borderRadius > 0) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(xPosition, yPosition, overlayWidth, scaledHeight, overlay.borderRadius);
+            ctx.clip();
+          }
+          
           ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
+          
+          // Apply box shadow/glow effect
+          if (overlay.glowEffect) {
+            ctx.shadowColor = textColor;
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
+          }
           
           // Add accent stripe at top for visual polish
           const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
           ctx.fillStyle = hexToRgba(textColor, 0.3);
           ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
 
+          // Apply advanced typography
           ctx.fillStyle = textColor;
-          const fontWeight = overlay.isBold ? 'bold' : 'normal';
+          const fontWeight = overlay.fontWeight || (overlay.isBold ? 700 : 400);
           const fontStyle = overlay.isItalic ? 'italic' : 'normal';
           ctx.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
           ctx.textBaseline = 'middle';
 
-          // Add text shadow for better visibility
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-          ctx.shadowBlur = 8;
-          ctx.shadowOffsetX = 2;
-          ctx.shadowOffsetY = 2;
+          // Add text shadow
+          if (overlay.textShadow) {
+            const parts = overlay.textShadow.split(' ');
+            if (parts.length >= 3) {
+              ctx.shadowOffsetX = parseFloat(parts[0]) || 2;
+              ctx.shadowOffsetY = parseFloat(parts[1]) || 2;
+              ctx.shadowBlur = parseFloat(parts[2]) || 8;
+              ctx.shadowColor = parts[3] || 'rgba(0, 0, 0, 0.7)';
+            }
+          } else {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+          }
+
+          // Apply text transform
+          let displayText = overlay.text;
+          if (overlay.textTransform === 'uppercase') {
+            displayText = displayText.toUpperCase();
+          } else if (overlay.textTransform === 'lowercase') {
+            displayText = displayText.toLowerCase();
+          } else if (overlay.textTransform === 'capitalize') {
+            displayText = displayText.split(' ').map(word => 
+              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
+          }
 
           if (overlay.animationType === 'scroll') {
             const scrollSpeed = overlay.scrollSpeed / 10;
@@ -929,9 +1016,11 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               if (overlay.borderWidth && overlay.borderWidth > 0) {
                 ctx.strokeStyle = overlay.borderColor || '#000000';
                 ctx.lineWidth = overlay.borderWidth;
-                ctx.strokeText(overlay.text, xPosition + overlayWidth / 2, scrollY + scaledHeight / 2);
+                ctx.setLineDash(overlay.borderStyle === 'dashed' ? [10, 5] : overlay.borderStyle === 'dotted' ? [2, 5] : []);
+                ctx.strokeText(displayText, xPosition + overlayWidth / 2, scrollY + scaledHeight / 2);
+                ctx.setLineDash([]);
               }
-              ctx.fillText(overlay.text, xPosition + overlayWidth / 2, scrollY + scaledHeight / 2);
+              ctx.fillText(displayText, xPosition + overlayWidth / 2, scrollY + scaledHeight / 2);
               
               const textHeight = scaledFontSize * 1.2;
               if (overlay.scrollDirection === 'up') {
@@ -957,11 +1046,13 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               if (overlay.borderWidth && overlay.borderWidth > 0) {
                 ctx.strokeStyle = overlay.borderColor || '#000000';
                 ctx.lineWidth = overlay.borderWidth;
-                ctx.strokeText(overlay.text, xPosition + scrollX, yPosition + scaledHeight / 2);
+                ctx.setLineDash(overlay.borderStyle === 'dashed' ? [10, 5] : overlay.borderStyle === 'dotted' ? [2, 5] : []);
+                ctx.strokeText(displayText, xPosition + scrollX, yPosition + scaledHeight / 2);
+                ctx.setLineDash([]);
               }
-              ctx.fillText(overlay.text, xPosition + scrollX, yPosition + scaledHeight / 2);
+              ctx.fillText(displayText, xPosition + scrollX, yPosition + scaledHeight / 2);
               
-              const textWidth = ctx.measureText(overlay.text).width;
+              const textWidth = ctx.measureText(displayText).width;
               if (overlay.scrollDirection === 'left') {
                 scrollX -= scrollSpeed;
                 if (scrollX < -textWidth - 50) {
@@ -988,9 +1079,11 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             if (overlay.borderWidth && overlay.borderWidth > 0) {
               ctx.strokeStyle = overlay.borderColor || '#000000';
               ctx.lineWidth = overlay.borderWidth;
-              ctx.strokeText(overlay.text, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
+              ctx.setLineDash(overlay.borderStyle === 'dashed' ? [10, 5] : overlay.borderStyle === 'dotted' ? [2, 5] : []);
+              ctx.strokeText(displayText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
+              ctx.setLineDash([]);
             }
-            ctx.fillText(overlay.text, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
+            ctx.fillText(displayText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
             ctx.globalAlpha = baseOpacity;
             
             fadeStates.current.set(overlay.id, fadeTime);
@@ -999,9 +1092,11 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             if (overlay.borderWidth && overlay.borderWidth > 0) {
               ctx.strokeStyle = overlay.borderColor || '#000000';
               ctx.lineWidth = overlay.borderWidth;
-              ctx.strokeText(overlay.text, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
+              ctx.setLineDash(overlay.borderStyle === 'dashed' ? [10, 5] : overlay.borderStyle === 'dotted' ? [2, 5] : []);
+              ctx.strokeText(displayText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
+              ctx.setLineDash([]);
             }
-            ctx.fillText(overlay.text, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
+            ctx.fillText(displayText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
           }
 
           // Reset shadow
@@ -1009,6 +1104,11 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           ctx.shadowBlur = 0;
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 0;
+          
+          // Restore canvas context if border radius was applied
+          if (overlay.borderRadius && overlay.borderRadius > 0) {
+            ctx.restore();
+          }
         }
         
         ctx.globalAlpha = 1;
@@ -1046,6 +1146,9 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             <H2HMatchCardOverlay
               homeTeamId={metricData?.homeTeamId || 40}
               awayTeamId={metricData?.awayTeamId || 47}
+              competitionFilter={metricData?.competitionFilter}
+              venueFilter={metricData?.venueFilter || 'all'}
+              seasonRange={metricData?.seasonFilter ? { from: metricData.seasonFilter, to: metricData.seasonFilter } : undefined}
               width={100}
               height={height}
               opacity={opacity}
@@ -1061,6 +1164,10 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               opacity={opacity}
               layout={metricData?.layout || 'horizontal'}
               teamId={metricData?.teamId || 40}
+              competitionId={metricData?.competitionId}
+              seasonFilter={metricData?.seasonFilter}
+              matchLimit={metricData?.matchLimit || 5}
+              showCompetitionBadges={metricData?.showCompetitionBadges || false}
               colorPalette={overlay.colorPalette || 'classic'}
               titleSize={overlay.formTitleSize}
               circleSize={overlay.formCircleSize}
@@ -1093,9 +1200,62 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         return (
           <div key={overlay.id} style={style}>
             <RssSentimentOverlay
-              width={100}
-              height={height}
-              opacity={opacity}
+              width={overlay.width}
+              height={overlay.height}
+              opacity={overlay.opacity}
+              timeframe={metricData?.timeframe || '24h'}
+              showTrendingTopics={metricData?.showTrendingTopics}
+              showSentimentBreakdown={metricData?.showSentimentBreakdown}
+              minSentiment={metricData?.minSentiment}
+            />
+          </div>
+        );
+      case 'rss-ticker-enhanced':
+        return (
+          <div key={overlay.id} style={style}>
+            <RssTickerEnhancedOverlay
+              width={overlay.width}
+              height={overlay.height}
+              opacity={overlay.opacity}
+              rssSourceIds={metricData?.rssSourceIds || []}
+              maxArticles={metricData?.maxArticles}
+              showSentiment={metricData?.showSentiment}
+              showTopics={metricData?.showTopics}
+              showKeywords={metricData?.showKeywords}
+              showCredibility={metricData?.showCredibility}
+              sentimentFilter={metricData?.sentimentFilter}
+            />
+          </div>
+        );
+      case 'upcoming-fixtures':
+        return (
+          <div key={overlay.id} style={style}>
+            <UpcomingFixturesOverlay
+              width={overlay.width}
+              height={overlay.height}
+              opacity={overlay.opacity}
+              fixtureCount={metricData?.fixtureCount}
+              competitionFilter={metricData?.competitionFilter}
+              showCountdown={metricData?.showCountdown}
+              showOpponentForm={metricData?.showOpponentForm}
+              colorPalette={overlay.colorPalette}
+            />
+          </div>
+        );
+      case 'player-comparison':
+        return (
+          <div key={overlay.id} style={style}>
+            <PlayerComparisonOverlay
+              player1Id={metricData?.player1Id}
+              player2Id={metricData?.player2Id}
+              width={overlay.width}
+              height={overlay.height}
+              opacity={overlay.opacity}
+              viewMode={metricData?.viewMode}
+              statCategories={metricData?.statCategories}
+              season={metricData?.season}
+              competition={metricData?.competition}
+              colorPalette={overlay.colorPalette}
             />
           </div>
         );
@@ -1107,7 +1267,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   const metricOverlays = overlays.filter(o => 
     o.visible && 
     o.overlayType === 'metric' && 
-    ['h2h-card', 'form-guide', 'player-stats', 'league-table', 'rss-sentiment'].includes(o.metricType || '')
+    ['h2h-card', 'form-guide', 'player-stats', 'league-table', 'rss-sentiment', 'rss-ticker-enhanced', 'upcoming-fixtures', 'player-comparison'].includes(o.metricType || '')
   );
 
   return (

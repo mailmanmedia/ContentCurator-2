@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { db } from "../db";
-import { rssAnalyses, rssArticles } from "@shared/schema";
+import { rssAnalysis, rssArticles } from "@shared/schema";
 import { eq, and, gte, desc } from "drizzle-orm";
 import { z } from "zod";
 
@@ -43,18 +43,18 @@ class SentimentAnalysisService {
 
     // Check database for recent analysis
     const dbAnalysis = await db.select()
-      .from(rssAnalyses)
+      .from(rssAnalysis)
       .where(
         and(
-          eq(rssAnalyses.articleId, articleId),
-          gte(rssAnalyses.createdAt, new Date(Date.now() - this.cacheExpiry))
+          eq(rssAnalysis.articleId, articleId.toString()),
+          gte(rssAnalysis.createdAt, new Date(Date.now() - this.cacheExpiry))
         )
       )
-      .orderBy(desc(rssAnalyses.createdAt))
+      .orderBy(desc(rssAnalysis.createdAt))
       .limit(1);
 
-    if (dbAnalysis.length > 0 && dbAnalysis[0].sentiment) {
-      const sentiment = dbAnalysis[0].sentiment as z.infer<typeof sentimentSchema>;
+    if (dbAnalysis.length > 0 && dbAnalysis[0].resultJson) {
+      const sentiment = dbAnalysis[0].resultJson as z.infer<typeof sentimentSchema>;
       this.cache.set(cacheKey, {
         articleId,
         sentiment,
@@ -106,10 +106,10 @@ class SentimentAnalysisService {
       const sentiment = sentimentSchema.parse(JSON.parse(result));
 
       // Save to database
-      await db.insert(rssAnalyses).values({
-        articleId,
+      await db.insert(rssAnalysis).values({
+        articleId: articleId.toString(),
         analysisType: 'sentiment',
-        sentiment: sentiment as any,
+        resultJson: sentiment as any,
         createdAt: new Date()
       }).onConflictDoNothing();
 
@@ -180,15 +180,15 @@ class SentimentAnalysisService {
     };
   }
 
-  async analyzeBatchSentiments(articles: Array<{ id: number; title: string; content?: string }>): Promise<Map<number, z.infer<typeof sentimentSchema>>> {
-    const results = new Map<number, z.infer<typeof sentimentSchema>>();
+  async analyzeBatchSentiments(articles: Array<{ id: string; title: string; content?: string }>): Promise<Map<string, z.infer<typeof sentimentSchema>>> {
+    const results = new Map<string, z.infer<typeof sentimentSchema>>();
     
     // Process in batches of 5 to avoid rate limits
     const batchSize = 5;
     for (let i = 0; i < articles.length; i += batchSize) {
       const batch = articles.slice(i, i + batchSize);
       const promises = batch.map(article => 
-        this.analyzeSentiment(article.id, article.title, article.content)
+        this.analyzeSentiment(parseInt(article.id), article.title, article.content)
       );
       
       const batchResults = await Promise.all(promises);
@@ -238,7 +238,7 @@ class SentimentAnalysisService {
     
     // Analyze sentiments for articles without analysis
     const sentiments = await this.analyzeBatchSentiments(
-      articles.map(a => ({ id: a.id, title: a.title, content: a.content || undefined }))
+      articles.map(a => ({ id: a.id.toString(), title: a.title, content: a.content || undefined }))
     );
     
     // Calculate aggregates

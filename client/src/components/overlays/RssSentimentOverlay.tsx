@@ -1,24 +1,39 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingUp, Activity, Radio, Users, RefreshCw, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { TrendingUp, Activity, PieChart, Hash, Tag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface RssSentimentOverlayProps {
   width: number;
   height: number;
   opacity?: number;
+  timeframe?: '24h' | '7d' | '30d';
+  showTrendingTopics?: boolean;
+  showSentimentBreakdown?: boolean;
+  minSentiment?: number;
 }
 
 export default function RssSentimentOverlay({
   width,
   height,
   opacity = 0.9,
+  timeframe = '24h',
+  showTrendingTopics = true,
+  showSentimentBreakdown = true,
+  minSentiment,
 }: RssSentimentOverlayProps) {
-  const { data: rssMetrics, isLoading } = useQuery({
-    queryKey: ['/api/analytics/rss-metrics'],
+  const { data: sentimentSummary, isLoading } = useQuery<{
+    averageSentiment: number;
+    totalArticles: number;
+    trendingTopics: Array<{ topic: string; count: number; sentiment: number }>;
+    topKeywords: Array<{ keyword: string; frequency: number }>;
+    sentimentBreakdown: { positive: number; neutral: number; negative: number };
+  }>({
+    queryKey: ['/api/rss/sentiment-summary', { timeframe }],
+    refetchInterval: 60000,
   });
 
-  if (isLoading || !rssMetrics) {
+  if (isLoading || !sentimentSummary) {
     return (
       <div
         style={{
@@ -32,20 +47,23 @@ export default function RssSentimentOverlay({
           fontFamily: 'League Spartan, sans-serif',
           fontSize: '14px',
         }}
+        data-testid="overlay-sentiment-loading"
       >
-        Loading...
+        Loading sentiment data...
       </div>
     );
   }
 
-  const { sentiment, trending, coverage } = rssMetrics;
-  const sentimentValue = sentiment?.aggregatedScore?.value || 0;
-  const trendingScore = trending?.topicScore?.value || 0;
-  const intensityValue = coverage?.intensity?.value || 0;
-  const diversityValue = coverage?.diversity?.value || 0;
+  const {
+    averageSentiment,
+    totalArticles,
+    trendingTopics,
+    topKeywords,
+    sentimentBreakdown
+  } = sentimentSummary;
 
   const getSentimentColor = (value: number) => {
-    if (value > 0.5) return '#00FF87';
+    if (value > 0.3) return '#00FF87';
     if (value > 0) return '#F6EB61';
     if (value > -0.3) return '#FF9500';
     return '#FF4444';
@@ -53,12 +71,24 @@ export default function RssSentimentOverlay({
 
   const getSentimentLabel = (value: number) => {
     if (value > 0.5) return 'Very Positive';
-    if (value > 0) return 'Positive';
+    if (value > 0.3) return 'Positive';
     if (value > -0.3) return 'Neutral';
-    return 'Negative';
+    if (value > -0.5) return 'Negative';
+    return 'Very Negative';
   };
 
-  const sentimentColor = getSentimentColor(sentimentValue);
+  const sentimentColor = getSentimentColor(averageSentiment);
+  const total = sentimentBreakdown.positive + sentimentBreakdown.neutral + sentimentBreakdown.negative;
+  
+  const positivePercent = total > 0 ? (sentimentBreakdown.positive / total) * 100 : 0;
+  const neutralPercent = total > 0 ? (sentimentBreakdown.neutral / total) * 100 : 0;
+  const negativePercent = total > 0 ? (sentimentBreakdown.negative / total) * 100 : 0;
+
+  const timeframeLabels: Record<string, string> = {
+    '24h': 'Last 24 Hours',
+    '7d': 'Last 7 Days',
+    '30d': 'Last 30 Days'
+  };
 
   return (
     <motion.div
@@ -77,10 +107,17 @@ export default function RssSentimentOverlay({
         justifyContent: 'space-between',
         borderRadius: '8px',
         border: '2px solid #C8102E',
+        overflow: 'hidden',
       }}
+      data-testid="overlay-sentiment-summary"
     >
-      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#F6EB61', marginBottom: '12px' }}>
-        RSS SENTIMENT ANALYSIS
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#F6EB61' }}>
+          RSS SENTIMENT ANALYSIS
+        </div>
+        <div style={{ fontSize: '10px', color: '#CCCCCC' }}>
+          {timeframeLabels[timeframe]}
+        </div>
       </div>
 
       <motion.div
@@ -96,6 +133,7 @@ export default function RssSentimentOverlay({
           backgroundColor: 'rgba(246, 235, 97, 0.1)',
           borderRadius: '8px',
         }}
+        data-testid="sentiment-average-display"
       >
         <div
           style={{
@@ -111,103 +149,158 @@ export default function RssSentimentOverlay({
             color: '#000000',
           }}
         >
-          {sentimentValue > 0 ? '+' : ''}{(sentimentValue * 100).toFixed(0)}
+          {averageSentiment > 0 ? '+' : ''}{(averageSentiment * 100).toFixed(0)}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: sentimentColor }}>
-            {getSentimentLabel(sentimentValue)}
+            {getSentimentLabel(averageSentiment)}
           </div>
           <div style={{ fontSize: '11px', color: '#CCCCCC', marginTop: '2px' }}>
-            Overall Media Sentiment
+            {totalArticles} articles analyzed
           </div>
         </div>
       </motion.div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '8px',
-        marginBottom: '12px',
-      }}>
+      {showSentimentBreakdown && (
         <motion.div
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          style={{
-            backgroundColor: 'rgba(200, 16, 46, 0.2)',
-            padding: '10px',
-            borderRadius: '6px',
-          }}
+          style={{ marginBottom: '12px' }}
+          data-testid="sentiment-breakdown"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-            <TrendingUp size={14} color="#F6EB61" />
-            <span style={{ fontSize: '10px', color: '#CCCCCC' }}>TRENDING</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <PieChart size={14} color="#F6EB61" />
+            <span style={{ fontSize: '11px', color: '#F6EB61', fontWeight: 'bold' }}>SENTIMENT BREAKDOWN</span>
           </div>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#F6EB61' }}>
-            {(trendingScore * 100).toFixed(0)}%
-          </div>
-          <div style={{ fontSize: '9px', color: '#CCCCCC' }}>
-            Topic Heat
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ x: 20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          style={{
-            backgroundColor: 'rgba(200, 16, 46, 0.2)',
-            padding: '10px',
+          
+          <div style={{
+            height: '24px',
+            display: 'flex',
             borderRadius: '6px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-            <Radio size={14} color="#F6EB61" />
-            <span style={{ fontSize: '10px', color: '#CCCCCC' }}>COVERAGE</span>
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#F6EB61' }}>
-            {(intensityValue * 100).toFixed(0)}%
-          </div>
-          <div style={{ fontSize: '9px', color: '#CCCCCC' }}>
-            Intensity
-          </div>
-        </motion.div>
-      </div>
-
-      <div style={{
-        borderTop: '1px solid rgba(246, 235, 97, 0.3)',
-        paddingTop: '10px',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Users size={12} color="#CCCCCC" />
-            <span style={{ color: '#CCCCCC' }}>Source Diversity</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {[...Array(5)].map((_, i) => (
+            overflow: 'hidden',
+            marginBottom: '6px',
+          }}>
+            {positivePercent > 0 && (
               <div
-                key={i}
                 style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: i < Math.round(diversityValue * 5) ? '#00FF87' : 'rgba(255, 255, 255, 0.2)',
+                  width: `${positivePercent}%`,
+                  backgroundColor: '#00FF87',
+                  transition: 'width 0.5s ease',
                 }}
               />
+            )}
+            {neutralPercent > 0 && (
+              <div
+                style={{
+                  width: `${neutralPercent}%`,
+                  backgroundColor: '#F6EB61',
+                  transition: 'width 0.5s ease',
+                }}
+              />
+            )}
+            {negativePercent > 0 && (
+              <div
+                style={{
+                  width: `${negativePercent}%`,
+                  backgroundColor: '#FF4444',
+                  transition: 'width 0.5s ease',
+                }}
+              />
+            )}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#CCCCCC' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#00FF87' }} />
+              Positive: {sentimentBreakdown.positive}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#F6EB61' }} />
+              Neutral: {sentimentBreakdown.neutral}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#FF4444' }} />
+              Negative: {sentimentBreakdown.negative}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {showTrendingTopics && trendingTopics && trendingTopics.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          style={{ marginBottom: '12px' }}
+          data-testid="trending-topics"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <TrendingUp size={14} color="#F6EB61" />
+            <span style={{ fontSize: '11px', color: '#F6EB61', fontWeight: 'bold' }}>TRENDING TOPICS</span>
+          </div>
+          
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {trendingTopics.slice(0, 6).map((topic: { topic: string; count: number; sentiment: number }, index: number) => (
+              <motion.div
+                key={topic.topic}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.5 + index * 0.05 }}
+                data-testid={`topic-badge-${index}`}
+              >
+                <Badge
+                  variant="outline"
+                  style={{
+                    backgroundColor: 'rgba(200, 16, 46, 0.3)',
+                    borderColor: getSentimentColor(topic.sentiment),
+                    color: '#FFFFFF',
+                    fontSize: '9px',
+                    padding: '4px 8px',
+                  }}
+                >
+                  {topic.topic} ({topic.count})
+                </Badge>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
+      )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', marginTop: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Activity size={12} color="#CCCCCC" />
-            <span style={{ color: '#CCCCCC' }}>Recent Articles</span>
+      {topKeywords && topKeywords.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          style={{
+            borderTop: '1px solid rgba(246, 235, 97, 0.3)',
+            paddingTop: '10px',
+          }}
+          data-testid="top-keywords"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <Hash size={14} color="#CCCCCC" />
+            <span style={{ fontSize: '10px', color: '#CCCCCC' }}>Top Keywords</span>
           </div>
-          <span style={{ fontWeight: 'bold', color: '#F6EB61' }}>
-            {rssMetrics.recentArticles || 0}
-          </span>
-        </div>
-      </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {topKeywords.slice(0, 8).map((keyword: { keyword: string; frequency: number }, index: number) => (
+              <span
+                key={keyword.keyword}
+                style={{
+                  fontSize: '9px',
+                  color: '#CCCCCC',
+                  padding: '2px 6px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '4px',
+                }}
+                data-testid={`keyword-${index}`}
+              >
+                {keyword.keyword}
+              </span>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

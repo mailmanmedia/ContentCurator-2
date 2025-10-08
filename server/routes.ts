@@ -1581,7 +1581,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // RSS Articles Management
   app.get("/api/rss-articles", async (req, res) => {
     try {
-      const { source, sources, search, limit, start_date, end_date } = req.query;
+      const { 
+        source, 
+        sources, 
+        search, 
+        limit, 
+        start_date, 
+        end_date,
+        includeSentiment,
+        includeTopics,
+        categoryFilter,
+        minSentiment
+      } = req.query;
       let articles;
 
       if (search) {
@@ -1595,7 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         articles = allArticles.flat()
           .sort((a, b) => {
             const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-            const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+            const dateB = b.publishedAt ? new Date(a.publishedAt).getTime() : 0;
             return dateB - dateA; // Most recent first
           })
           .slice(0, limit ? parseInt(limit as string) : 100);
@@ -1611,7 +1622,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
         articles = await storage.getRecentRssArticles(articleLimit);
       }
 
-      res.json({ articles });
+      // Apply category filter if provided
+      if (categoryFilter) {
+        const filterCategories = (categoryFilter as string).toLowerCase().split(',').map(c => c.trim());
+        articles = articles.filter(article => {
+          const articleCategories = (article.categories || []).map(c => c.toLowerCase());
+          return filterCategories.some(filterCat => 
+            articleCategories.some(artCat => artCat.includes(filterCat))
+          );
+        });
+      }
+
+      // Apply sentiment filter if provided
+      if (minSentiment !== undefined) {
+        const minSentimentValue = parseFloat(minSentiment as string);
+        articles = articles.filter(article => {
+          // If sentiment data exists in rawDataJson
+          const sentimentData = (article.rawDataJson as any)?.sentiment;
+          if (sentimentData && typeof sentimentData.score === 'number') {
+            return sentimentData.score >= minSentimentValue;
+          }
+          return false;
+        });
+      }
+
+      // Enrich articles with sentiment data if requested
+      if (includeSentiment === 'true') {
+        const { sentimentAnalysisService } = await import('./rss/sentimentAnalysisService');
+        
+        // Get sentiment data for articles
+        const articlesWithSentiment = await Promise.all(
+          articles.map(async (article) => {
+            // Check if sentiment exists in rawDataJson
+            let sentimentData = (article.rawDataJson as any)?.sentiment;
+            
+            // If not, analyze it
+            if (!sentimentData) {
+              sentimentData = await sentimentAnalysisService.analyzeSentiment(
+                parseInt(article.id),
+                article.title,
+                article.content || undefined
+              );
+              
+              // Update rawDataJson with sentiment
+              if (sentimentData) {
+                await storage.updateRssArticle(article.id, {
+                  rawDataJson: {
+                    ...article.rawDataJson,
+                    sentiment: sentimentData
+                  } as any
+                });
+              }
+            }
+            
+            return {
+              ...article,
+              sentiment: sentimentData || null,
+              topics: includeTopics === 'true' ? article.topics : null,
+              category: article.categories?.[0] || null
+            };
+          })
+        );
+        
+        res.json({ articles: articlesWithSentiment });
+      } else {
+        // Return articles with optional topics
+        const enrichedArticles = articles.map(article => ({
+          ...article,
+          topics: includeTopics === 'true' ? article.topics : null,
+          category: article.categories?.[0] || null
+        }));
+        
+        res.json({ articles: enrichedArticles });
+      }
     } catch (error) {
       console.error('Error fetching RSS articles:', error);
       res.status(500).json({ error: "Failed to fetch RSS articles" });
@@ -1876,6 +1959,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting RSS comparison:', error);
       res.status(500).json({ error: "Failed to delete RSS comparison" });
+    }
+  });
+
+  // RSS Sentiment Summary Endpoint
+  app.get("/api/rss/sentiment-summary", async (req, res) => {
+    try {
+      const { timeframe = '24h' } = req.query;
+      
+      // Calculate time range
+      const timeframeMap: Record<string, number> = {
+        '24h': 24 * 60 * 60 * 1000,
+        '7d': 7 * 24 * 60 * 60 * 1000,
+        '30d': 30 * 24 * 60 * 60 * 1000
+      };
+      
+      const timeRangeMs = timeframeMap[timeframe as string] || timeframeMap['24h'];
+      const since = new Date(Date.now() - timeRangeMs);
+      
+      // Get articles in timeframe
+      const articles = await storage.getRssArticlesByDateRange(since, new Date());
+      
+      if (articles.length === 0) {
+        return res.json({
+          averageSentiment: 0,
+          totalArticles: 0,
+          trendingTopics: [],
+          topKeywords: [],
+          sentimentBreakdown: { positive: 0, neutral: 0, negative: 0 }
+        });
+      }
+      
+      // Import sentiment analysis service
+      const { sentimentAnalysisService } = await import('./rss/sentimentAnalysisService');
+      
+      // Analyze sentiment for all articles
+      let totalSentiment = 0;
+      let sentimentCount = 0;
+      const sentimentBreakdown = { positive: 0, neutral: 0, negative: 0 };
+      const topicCounts: Record<string, { count: number; totalSentiment: number }> = {};
+      const keywordCounts: Record<string, number> = {};
+      
+      for (const article of articles) {
+        // Get or analyze sentiment
+        let sentimentData = (article.rawDataJson as any)?.sentiment;
+        
+        if (!sentimentData) {
+          sentimentData = await sentimentAnalysisService.analyzeSentiment(
+            parseInt(article.id),
+            article.title,
+            article.content || undefined
+          );
+          
+          // Update article with sentiment
+          if (sentimentData) {
+            await storage.updateRssArticle(article.id, {
+              rawDataJson: {
+                ...article.rawDataJson,
+                sentiment: sentimentData
+              } as any
+            });
+          }
+        }
+        
+        if (sentimentData && typeof sentimentData.score === 'number') {
+          totalSentiment += sentimentData.score;
+          sentimentCount++;
+          
+          // Categorize sentiment
+          if (sentimentData.score > 0.3) {
+            sentimentBreakdown.positive++;
+          } else if (sentimentData.score < -0.3) {
+            sentimentBreakdown.negative++;
+          } else {
+            sentimentBreakdown.neutral++;
+          }
+          
+          // Collect keywords
+          if (sentimentData.keywords && Array.isArray(sentimentData.keywords)) {
+            sentimentData.keywords.forEach((keyword: string) => {
+              keywordCounts[keyword] = (keywordCounts[keyword] || 0) + 1;
+            });
+          }
+        }
+        
+        // Collect topics
+        if (article.topics && Array.isArray(article.topics)) {
+          article.topics.forEach(topic => {
+            if (!topicCounts[topic]) {
+              topicCounts[topic] = { count: 0, totalSentiment: 0 };
+            }
+            topicCounts[topic].count++;
+            topicCounts[topic].totalSentiment += sentimentData?.score || 0;
+          });
+        }
+      }
+      
+      // Calculate average sentiment
+      const averageSentiment = sentimentCount > 0 ? totalSentiment / sentimentCount : 0;
+      
+      // Get top keywords
+      const topKeywords = Object.entries(keywordCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([keyword, frequency]) => ({ keyword, frequency }));
+      
+      // Get trending topics with sentiment
+      const trendingTopics = Object.entries(topicCounts)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 10)
+        .map(([topic, data]) => ({
+          topic,
+          count: data.count,
+          sentiment: data.count > 0 ? data.totalSentiment / data.count : 0
+        }));
+      
+      res.json({
+        averageSentiment,
+        totalArticles: articles.length,
+        trendingTopics,
+        topKeywords,
+        sentimentBreakdown
+      });
+    } catch (error) {
+      console.error('Error fetching sentiment summary:', error);
+      res.status(500).json({ error: "Failed to fetch sentiment summary" });
     }
   });
 

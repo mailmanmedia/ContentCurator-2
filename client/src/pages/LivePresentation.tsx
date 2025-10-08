@@ -79,6 +79,9 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import VideoCompositor, { type VideoCompositorRef } from "@/components/VideoCompositor";
 import { useCameraStreams, ScreenShareError, ScreenShareErrorType } from "@/contexts/CameraStreamContext";
+import UpcomingFixturesOverlay from "@/components/overlays/UpcomingFixturesOverlay";
+import PlayerComparisonOverlay from "@/components/overlays/PlayerComparisonOverlay";
+import RssTickerEnhancedOverlay from "@/components/overlays/RssTickerEnhancedOverlay";
 import { usePiP } from "@/contexts/PictureInPictureContext";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { useQuery } from "@tanstack/react-query";
@@ -193,6 +196,27 @@ interface OverlayConfig {
   formTitleSize?: number;
   formCircleSize?: number;
   formLabelSize?: number;
+  
+  // Advanced Typography
+  fontWeight?: number;
+  letterSpacing?: number;
+  lineHeight?: number;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  textShadow?: string;
+  
+  // Advanced Background
+  backgroundType?: 'solid' | 'linear-gradient' | 'radial-gradient';
+  gradientAngle?: number;
+  gradientColor1?: string;
+  gradientColor2?: string;
+  
+  // Border Customization
+  borderRadius?: number;
+  borderStyle?: 'solid' | 'dashed' | 'dotted';
+  
+  // Shadow/Glow
+  boxShadow?: string;
+  glowEffect?: boolean;
 }
 
 const sourceTypeIcons = {
@@ -616,6 +640,46 @@ export default function LivePresentation() {
   const [formCircleSize, setFormCircleSize] = useState(60);
   const [formLabelSize, setFormLabelSize] = useState(14);
   
+  // Advanced overlay filter state variables
+  const [overlayCompetitionId, setOverlayCompetitionId] = useState<number | null>(null);
+  const [overlaySeasonFilter, setOverlaySeasonFilter] = useState<number | null>(null);
+  const [overlayMatchLimit, setOverlayMatchLimit] = useState<3 | 5 | 10 | 20>(5);
+  const [overlayVenueFilter, setOverlayVenueFilter] = useState<'all' | 'home' | 'away'>('all');
+  const [overlayTeamCount, setOverlayTeamCount] = useState<5 | 10 | 20 | 'full'>(10);
+  const [overlayShowCompBadges, setOverlayShowCompBadges] = useState(false);
+  
+  // Advanced styling state variables
+  const [overlayFontWeight, setOverlayFontWeight] = useState(400);
+  const [overlayLetterSpacing, setOverlayLetterSpacing] = useState(0);
+  const [overlayLineHeight, setOverlayLineHeight] = useState(1.5);
+  const [overlayTextTransform, setOverlayTextTransform] = useState<'none' | 'uppercase' | 'lowercase' | 'capitalize'>('none');
+  const [overlayTextShadow, setOverlayTextShadow] = useState('');
+  const [overlayBackgroundType, setOverlayBackgroundType] = useState<'solid' | 'linear-gradient' | 'radial-gradient'>('solid');
+  const [overlayGradientAngle, setOverlayGradientAngle] = useState(90);
+  const [overlayGradientColor1, setOverlayGradientColor1] = useState('#C8102E');
+  const [overlayGradientColor2, setOverlayGradientColor2] = useState('#002147');
+  const [overlayBorderRadius, setOverlayBorderRadius] = useState(8);
+  const [overlayBorderStyle, setOverlayBorderStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
+  const [overlayBoxShadow, setOverlayBoxShadow] = useState('');
+  const [overlayGlowEffect, setOverlayGlowEffect] = useState(false);
+  
+  // New overlay state variables for upcoming-fixtures and player-comparison
+  const [overlayFixtureCount, setOverlayFixtureCount] = useState<3 | 5 | 7>(5);
+  const [overlayShowCountdown, setOverlayShowCountdown] = useState(true);
+  const [overlayShowOpponentForm, setOverlayShowOpponentForm] = useState(true);
+  const [overlayPlayer1Id, setOverlayPlayer1Id] = useState<number | null>(null);
+  const [overlayPlayer2Id, setOverlayPlayer2Id] = useState<number | null>(null);
+  const [overlayViewMode, setOverlayViewMode] = useState<'sideBySide' | 'radar' | 'bars'>('sideBySide');
+  const [overlayStatCategories, setOverlayStatCategories] = useState<string[]>(['goals', 'assists', 'shots']);
+  
+  // RSS Ticker Enhanced state variables
+  const [overlayShowSentiment, setOverlayShowSentiment] = useState(true);
+  const [overlayShowTopics, setOverlayShowTopics] = useState(true);
+  const [overlayShowKeywords, setOverlayShowKeywords] = useState(false);
+  const [overlayShowCredibility, setOverlayShowCredibility] = useState(true);
+  const [overlaySentimentMin, setOverlaySentimentMin] = useState(-1);
+  const [overlaySentimentMax, setOverlaySentimentMax] = useState(1);
+  
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare, isScreenShareSupported } = useCameraStreams();
   const { isPiPActive, startPiP, stopPiP, restorePiP, updateCanvasStream } = usePiP();
@@ -662,6 +726,12 @@ export default function LivePresentation() {
     enabled: overlayType === 'metric' && isOverlayDialogOpen,
     select: (response: any) => response?.teams || [],
   });
+
+  const { data: competitionsData } = useQuery<{ competitions: any[] }>({
+    queryKey: ['/api/football/competitions/active'],
+    enabled: overlayType === 'metric' && isOverlayDialogOpen,
+  });
+  const competitions = competitionsData?.competitions || [];
 
   const { data: broadcastRecordings = [], refetch: refetchRecordings } = useQuery<any[]>({
     queryKey: ['/api/recordings'],
@@ -1535,10 +1605,52 @@ export default function LivePresentation() {
         metricDataToSave = {
           homeTeamId: overlayHomeTeamId,
           awayTeamId: overlayAwayTeamId,
+          competitionFilter: overlayCompetitionId,
+          venueFilter: overlayVenueFilter,
+          seasonFilter: overlaySeasonFilter,
         };
       } else if (overlayMetricType === 'form-guide') {
         metricDataToSave = {
           teamId: overlayTeamId,
+          competitionId: overlayCompetitionId,
+          seasonFilter: overlaySeasonFilter,
+          matchLimit: overlayMatchLimit,
+          showCompetitionBadges: overlayShowCompBadges,
+        };
+      } else if (overlayMetricType === 'league-table') {
+        metricDataToSave = {
+          leagueId: overlayCompetitionId || 39,
+          season: overlaySeasonFilter || new Date().getFullYear(),
+          teamCount: overlayTeamCount,
+        };
+      } else if (overlayMetricType === 'upcoming-fixtures') {
+        metricDataToSave = {
+          fixtureCount: overlayFixtureCount,
+          showCountdown: overlayShowCountdown,
+          showOpponentForm: overlayShowOpponentForm,
+          competitionFilter: overlayCompetitionId ? [overlayCompetitionId] : undefined,
+        };
+      } else if (overlayMetricType === 'player-comparison') {
+        metricDataToSave = {
+          player1Id: overlayPlayer1Id,
+          player2Id: overlayPlayer2Id,
+          viewMode: overlayViewMode,
+          statCategories: overlayStatCategories,
+          season: overlaySeasonFilter,
+          competition: overlayCompetitionId,
+        };
+      } else if (overlayMetricType === 'rss-ticker-enhanced') {
+        metricDataToSave = {
+          rssSourceIds: selectedRssSourceIds,
+          maxArticles: rssMaxArticles,
+          showSentiment: overlayShowSentiment,
+          showTopics: overlayShowTopics,
+          showKeywords: overlayShowKeywords,
+          showCredibility: overlayShowCredibility,
+          sentimentFilter: {
+            min: overlaySentimentMin,
+            max: overlaySentimentMax
+          }
         };
       }
     }
@@ -1581,6 +1693,19 @@ export default function LivePresentation() {
               formTitleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formTitleSize : undefined,
               formCircleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formCircleSize : undefined,
               formLabelSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formLabelSize : undefined,
+              fontWeight: overlayFontWeight,
+              letterSpacing: overlayLetterSpacing,
+              lineHeight: overlayLineHeight,
+              textTransform: overlayTextTransform,
+              textShadow: overlayTextShadow || undefined,
+              backgroundType: overlayBackgroundType,
+              gradientAngle: overlayGradientAngle,
+              gradientColor1: overlayGradientColor1,
+              gradientColor2: overlayGradientColor2,
+              borderRadius: overlayBorderRadius,
+              borderStyle: overlayBorderStyle,
+              boxShadow: overlayBoxShadow || undefined,
+              glowEffect: overlayGlowEffect,
             }
           : overlay
       ));
@@ -1620,6 +1745,19 @@ export default function LivePresentation() {
         formTitleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formTitleSize : undefined,
         formCircleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formCircleSize : undefined,
         formLabelSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formLabelSize : undefined,
+        fontWeight: overlayFontWeight,
+        letterSpacing: overlayLetterSpacing,
+        lineHeight: overlayLineHeight,
+        textTransform: overlayTextTransform,
+        textShadow: overlayTextShadow || undefined,
+        backgroundType: overlayBackgroundType,
+        gradientAngle: overlayGradientAngle,
+        gradientColor1: overlayGradientColor1,
+        gradientColor2: overlayGradientColor2,
+        borderRadius: overlayBorderRadius,
+        borderStyle: overlayBorderStyle,
+        boxShadow: overlayBoxShadow || undefined,
+        glowEffect: overlayGlowEffect,
       };
 
       if (overlayType === 'rss') {
@@ -1781,6 +1919,20 @@ export default function LivePresentation() {
     setOverlayHeight(overlay.height || 70);
     setOverlayAnimationType(overlay.animationType || 'scroll');
     
+    setOverlayFontWeight(overlay.fontWeight || 400);
+    setOverlayLetterSpacing(overlay.letterSpacing || 0);
+    setOverlayLineHeight(overlay.lineHeight || 1.5);
+    setOverlayTextTransform(overlay.textTransform || 'none');
+    setOverlayTextShadow(overlay.textShadow || '');
+    setOverlayBackgroundType(overlay.backgroundType || 'solid');
+    setOverlayGradientAngle(overlay.gradientAngle || 90);
+    setOverlayGradientColor1(overlay.gradientColor1 || '#C8102E');
+    setOverlayGradientColor2(overlay.gradientColor2 || '#002147');
+    setOverlayBorderRadius(overlay.borderRadius || 8);
+    setOverlayBorderStyle(overlay.borderStyle || 'solid');
+    setOverlayBoxShadow(overlay.boxShadow || '');
+    setOverlayGlowEffect(overlay.glowEffect || false);
+    
     if (overlay.overlayType === 'rss') {
       setSelectedRssSourceIds(overlay.rssSourceIds || []);
       setRssMaxArticles(overlay.rssMaxArticles || 10);
@@ -1791,11 +1943,40 @@ export default function LivePresentation() {
       if (overlay.metricType === 'h2h-card') {
         setOverlayHomeTeamId(overlay.metricData.homeTeamId || null);
         setOverlayAwayTeamId(overlay.metricData.awayTeamId || null);
+        setOverlayCompetitionId(overlay.metricData.competitionFilter || null);
+        setOverlayVenueFilter(overlay.metricData.venueFilter || 'all');
+        setOverlaySeasonFilter(overlay.metricData.seasonFilter || null);
       } else if (overlay.metricType === 'form-guide') {
         setOverlayTeamId(overlay.metricData.teamId || null);
+        setOverlayCompetitionId(overlay.metricData.competitionId || null);
+        setOverlaySeasonFilter(overlay.metricData.seasonFilter || null);
+        setOverlayMatchLimit(overlay.metricData.matchLimit || 5);
+        setOverlayShowCompBadges(overlay.metricData.showCompetitionBadges || false);
         setFormTitleSize(overlay.formTitleSize || 20);
         setFormCircleSize(overlay.formCircleSize || 60);
         setFormLabelSize(overlay.formLabelSize || 14);
+      } else if (overlay.metricType === 'league-table') {
+        setOverlayCompetitionId(overlay.metricData.leagueId || null);
+        setOverlaySeasonFilter(overlay.metricData.season || null);
+        setOverlayTeamCount(overlay.metricData.teamCount || 10);
+      } else if (overlay.metricType === 'upcoming-fixtures') {
+        setOverlayFixtureCount(overlay.metricData.fixtureCount || 5);
+        setOverlayShowCountdown(overlay.metricData.showCountdown !== false);
+        setOverlayShowOpponentForm(overlay.metricData.showOpponentForm !== false);
+      } else if (overlay.metricType === 'player-comparison') {
+        setOverlayPlayer1Id(overlay.metricData.player1Id || null);
+        setOverlayPlayer2Id(overlay.metricData.player2Id || null);
+        setOverlayViewMode(overlay.metricData.viewMode || 'sideBySide');
+        setOverlayStatCategories(overlay.metricData.statCategories || ['goals', 'assists', 'shots']);
+      } else if (overlay.metricType === 'rss-ticker-enhanced') {
+        setSelectedRssSourceIds(overlay.metricData.rssSourceIds || []);
+        setRssMaxArticles(overlay.metricData.maxArticles || 10);
+        setOverlayShowSentiment(overlay.metricData.showSentiment !== false);
+        setOverlayShowTopics(overlay.metricData.showTopics !== false);
+        setOverlayShowKeywords(overlay.metricData.showKeywords || false);
+        setOverlayShowCredibility(overlay.metricData.showCredibility !== false);
+        setOverlaySentimentMin(overlay.metricData.sentimentFilter?.min || -1);
+        setOverlaySentimentMax(overlay.metricData.sentimentFilter?.max || 1);
       }
     }
     
@@ -3084,6 +3265,9 @@ export default function LivePresentation() {
                           <SelectItem value="form-guide">Form Guide</SelectItem>
                           <SelectItem value="league-table">League Table</SelectItem>
                           <SelectItem value="rss-sentiment">RSS Sentiment</SelectItem>
+                          <SelectItem value="rss-ticker-enhanced">RSS Ticker (Enhanced)</SelectItem>
+                          <SelectItem value="upcoming-fixtures">Upcoming Fixtures</SelectItem>
+                          <SelectItem value="player-comparison">Player Comparison</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -3273,7 +3457,296 @@ export default function LivePresentation() {
                         </AlertDescription>
                       </Alert>
                     )}
+
+                    {overlayMetricType === 'upcoming-fixtures' && (
+                      <div className="space-y-3">
+                        <div>
+                          <Label>Number of Fixtures</Label>
+                          <RadioGroup value={overlayFixtureCount.toString()} 
+                                      onValueChange={(v) => setOverlayFixtureCount(parseInt(v) as 3|5|7)}>
+                            <div className="flex gap-4">
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="3" id="fixtures-3" />
+                                <Label htmlFor="fixtures-3">3</Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="5" id="fixtures-5" />
+                                <Label htmlFor="fixtures-5">5</Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="7" id="fixtures-7" />
+                                <Label htmlFor="fixtures-7">7</Label>
+                              </div>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox checked={overlayShowCountdown} 
+                                   onCheckedChange={setOverlayShowCountdown} />
+                          <Label>Show Countdown Timer</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox checked={overlayShowOpponentForm} 
+                                   onCheckedChange={setOverlayShowOpponentForm} />
+                          <Label>Show Opponent Form</Label>
+                        </div>
+                      </div>
+                    )}
+
+                    {overlayMetricType === 'player-comparison' && (
+                      <div className="space-y-3">
+                        <div>
+                          <Label>Player 1 ID</Label>
+                          <Input type="number" value={overlayPlayer1Id || ''} 
+                                 onChange={(e) => setOverlayPlayer1Id(parseInt(e.target.value) || null)} 
+                                 placeholder="Enter player ID" />
+                        </div>
+                        <div>
+                          <Label>Player 2 ID</Label>
+                          <Input type="number" value={overlayPlayer2Id || ''} 
+                                 onChange={(e) => setOverlayPlayer2Id(parseInt(e.target.value) || null)} 
+                                 placeholder="Enter player ID" />
+                        </div>
+                        <div>
+                          <Label>View Mode</Label>
+                          <Select value={overlayViewMode} onValueChange={setOverlayViewMode}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sideBySide">Side by Side</SelectItem>
+                              <SelectItem value="radar">Radar Chart</SelectItem>
+                              <SelectItem value="bars">Comparison Bars</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+
+                    {overlayMetricType === 'rss-ticker-enhanced' && (
+                      <div className="space-y-3">
+                        <div>
+                          <Label>RSS Sources</Label>
+                          {isLoadingRssSources ? (
+                            <div className="text-center py-2">
+                              <p className="text-sm text-muted-foreground">Loading RSS sources...</p>
+                            </div>
+                          ) : rssSources && rssSources.length > 0 ? (
+                            <div className="space-y-2">
+                              {rssSources.map((source) => (
+                                <div key={source.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`rss-enhanced-${source.id}`}
+                                    checked={selectedRssSourceIds.includes(source.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedRssSourceIds([...selectedRssSourceIds, source.id]);
+                                      } else {
+                                        setSelectedRssSourceIds(selectedRssSourceIds.filter(id => id !== source.id));
+                                      }
+                                    }}
+                                  />
+                                  <Label htmlFor={`rss-enhanced-${source.id}`} className="font-normal cursor-pointer">
+                                    {source.name}
+                                  </Label>
+                                </div>
+                              ))}
+                              <div className="text-sm text-muted-foreground mt-2">
+                                {selectedRssSourceIds.length} source(s) selected
+                              </div>
+                            </div>
+                          ) : (
+                            <Alert data-testid="alert-no-rss-sources-enhanced">
+                              <AlertTriangle className="h-4 w-4" />
+                              <AlertDescription>
+                                No RSS sources available. Go to RSS Intelligence to add sources.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <Label>Max Articles</Label>
+                          <Input type="number" value={rssMaxArticles} 
+                                 onChange={(e) => setRssMaxArticles(parseInt(e.target.value) || 10)}
+                                 min={1} max={50} />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Display Options</Label>
+                          <div className="flex items-center gap-2">
+                            <Checkbox checked={overlayShowSentiment} 
+                                     onCheckedChange={(checked) => setOverlayShowSentiment(checked === true)} />
+                            <Label>Show Sentiment Colors</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox checked={overlayShowTopics} 
+                                     onCheckedChange={(checked) => setOverlayShowTopics(checked === true)} />
+                            <Label>Show Topics</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox checked={overlayShowKeywords} 
+                                     onCheckedChange={(checked) => setOverlayShowKeywords(checked === true)} />
+                            <Label>Show Keywords</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox checked={overlayShowCredibility} 
+                                     onCheckedChange={(checked) => setOverlayShowCredibility(checked === true)} />
+                            <Label>Show Source Tier</Label>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label>Sentiment Filter Range</Label>
+                          <div className="flex gap-2 items-center">
+                            <Input type="number" value={overlaySentimentMin} 
+                                   onChange={(e) => setOverlaySentimentMin(parseFloat(e.target.value) || -1)}
+                                   min={-1} max={1} step={0.1} className="w-20" />
+                            <span>to</span>
+                            <Input type="number" value={overlaySentimentMax} 
+                                   onChange={(e) => setOverlaySentimentMax(parseFloat(e.target.value) || 1)}
+                                   min={-1} max={1} step={0.1} className="w-20" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                </div>
+                
+                {/* Data Filters Section */}
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="font-semibold">Data Filters</h3>
+                  
+                  {/* Competition Selector */}
+                  <div>
+                    <Label>Competition</Label>
+                    <Select 
+                      value={overlayCompetitionId?.toString() || 'all'} 
+                      onValueChange={(v) => setOverlayCompetitionId(v === 'all' ? null : parseInt(v))}
+                    >
+                      <SelectTrigger data-testid="select-competition">
+                        <SelectValue placeholder="All Competitions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Competitions</SelectItem>
+                        {competitions.map((comp: any) => (
+                          <SelectItem key={comp.id} value={comp.id.toString()}>{comp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Season Selector */}
+                  <div>
+                    <Label>Season</Label>
+                    <Select 
+                      value={overlaySeasonFilter?.toString() || 'current'} 
+                      onValueChange={(v) => setOverlaySeasonFilter(v === 'current' ? null : parseInt(v))}
+                    >
+                      <SelectTrigger data-testid="select-season">
+                        <SelectValue placeholder="Current Season" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="current">Current Season</SelectItem>
+                        <SelectItem value="2025">2024/25</SelectItem>
+                        <SelectItem value="2024">2023/24</SelectItem>
+                        <SelectItem value="2023">2022/23</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Form Guide specific: Match Limit */}
+                  {overlayMetricType === 'form-guide' && (
+                    <div>
+                      <Label>Match Limit</Label>
+                      <RadioGroup 
+                        value={overlayMatchLimit.toString()} 
+                        onValueChange={(v) => setOverlayMatchLimit(parseInt(v) as 3|5|10|20)}
+                      >
+                        <div className="flex gap-4">
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="3" id="limit-3" />
+                            <Label htmlFor="limit-3">3</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="5" id="limit-5" />
+                            <Label htmlFor="limit-5">5</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="10" id="limit-10" />
+                            <Label htmlFor="limit-10">10</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="20" id="limit-20" />
+                            <Label htmlFor="limit-20">20</Label>
+                          </div>
+                        </div>
+                      </RadioGroup>
+                      <div className="mt-2">
+                        <Label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox 
+                            checked={overlayShowCompBadges} 
+                            onCheckedChange={(checked) => setOverlayShowCompBadges(checked === true)} 
+                          />
+                          Show Competition Badges
+                        </Label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* H2H specific: Venue Filter */}
+                  {overlayMetricType === 'h2h-card' && (
+                    <div>
+                      <Label>Venue Filter</Label>
+                      <RadioGroup 
+                        value={overlayVenueFilter} 
+                        onValueChange={(v) => setOverlayVenueFilter(v as 'all'|'home'|'away')}
+                      >
+                        <div className="flex gap-4">
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="all" id="venue-all" />
+                            <Label htmlFor="venue-all">All</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="home" id="venue-home" />
+                            <Label htmlFor="venue-home">Home</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="away" id="venue-away" />
+                            <Label htmlFor="venue-away">Away</Label>
+                          </div>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  )}
+
+                  {/* League Table specific: Team Count */}
+                  {overlayMetricType === 'league-table' && (
+                    <div>
+                      <Label>Teams to Display</Label>
+                      <RadioGroup 
+                        value={overlayTeamCount.toString()} 
+                        onValueChange={(v) => setOverlayTeamCount(v === 'full' ? 'full' : parseInt(v) as 5|10|20)}
+                      >
+                        <div className="flex gap-4">
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="5" id="count-5" />
+                            <Label htmlFor="count-5">Top 5</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="10" id="count-10" />
+                            <Label htmlFor="count-10">Top 10</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="20" id="count-20" />
+                            <Label htmlFor="count-20">Top 20</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="full" id="count-full" />
+                            <Label htmlFor="count-full">Full Table</Label>
+                          </div>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -3682,6 +4155,166 @@ export default function LivePresentation() {
                 </div>
               </RadioGroup>
             </div>
+
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between" data-testid="button-advanced-styling">
+                  Advanced Styling
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 mt-4">
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Typography</h4>
+                  
+                  <div>
+                    <Label>Font Weight: {overlayFontWeight}</Label>
+                    <Slider 
+                      value={[overlayFontWeight]} 
+                      onValueChange={(v) => setOverlayFontWeight(v[0])}
+                      min={300} 
+                      max={900} 
+                      step={100}
+                      data-testid="slider-font-weight"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Letter Spacing: {overlayLetterSpacing.toFixed(2)}em</Label>
+                    <Slider 
+                      value={[overlayLetterSpacing]} 
+                      onValueChange={(v) => setOverlayLetterSpacing(v[0])}
+                      min={-0.1} 
+                      max={0.2} 
+                      step={0.01}
+                      data-testid="slider-letter-spacing"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Line Height: {overlayLineHeight.toFixed(1)}</Label>
+                    <Slider 
+                      value={[overlayLineHeight]} 
+                      onValueChange={(v) => setOverlayLineHeight(v[0])}
+                      min={0.8} 
+                      max={2.0} 
+                      step={0.1}
+                      data-testid="slider-line-height"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Text Transform</Label>
+                    <Select value={overlayTextTransform} onValueChange={setOverlayTextTransform}>
+                      <SelectTrigger data-testid="select-text-transform">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="uppercase">UPPERCASE</SelectItem>
+                        <SelectItem value="lowercase">lowercase</SelectItem>
+                        <SelectItem value="capitalize">Capitalize</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Background</h4>
+                  
+                  <div>
+                    <Label>Background Type</Label>
+                    <Select value={overlayBackgroundType} onValueChange={setOverlayBackgroundType}>
+                      <SelectTrigger data-testid="select-background-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="solid">Solid Color</SelectItem>
+                        <SelectItem value="linear-gradient">Linear Gradient</SelectItem>
+                        <SelectItem value="radial-gradient">Radial Gradient</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {overlayBackgroundType !== 'solid' && (
+                    <>
+                      <div>
+                        <Label>Gradient Color 1</Label>
+                        <Input 
+                          type="color" 
+                          value={overlayGradientColor1} 
+                          onChange={(e) => setOverlayGradientColor1(e.target.value)}
+                          data-testid="input-gradient-color1"
+                        />
+                      </div>
+                      <div>
+                        <Label>Gradient Color 2</Label>
+                        <Input 
+                          type="color" 
+                          value={overlayGradientColor2} 
+                          onChange={(e) => setOverlayGradientColor2(e.target.value)}
+                          data-testid="input-gradient-color2"
+                        />
+                      </div>
+                      {overlayBackgroundType === 'linear-gradient' && (
+                        <div>
+                          <Label>Gradient Angle: {overlayGradientAngle}°</Label>
+                          <Slider 
+                            value={[overlayGradientAngle]} 
+                            onValueChange={(v) => setOverlayGradientAngle(v[0])}
+                            min={0} 
+                            max={360} 
+                            step={15}
+                            data-testid="slider-gradient-angle"
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Border & Effects</h4>
+                  
+                  <div>
+                    <Label>Border Radius: {overlayBorderRadius}px</Label>
+                    <Slider 
+                      value={[overlayBorderRadius]} 
+                      onValueChange={(v) => setOverlayBorderRadius(v[0])}
+                      min={0} 
+                      max={24} 
+                      step={2}
+                      data-testid="slider-border-radius"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Border Style</Label>
+                    <Select value={overlayBorderStyle} onValueChange={setOverlayBorderStyle}>
+                      <SelectTrigger data-testid="select-border-style">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="solid">Solid</SelectItem>
+                        <SelectItem value="dashed">Dashed</SelectItem>
+                        <SelectItem value="dotted">Dotted</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox 
+                        checked={overlayGlowEffect} 
+                        onCheckedChange={setOverlayGlowEffect}
+                        data-testid="checkbox-glow-effect"
+                      />
+                      Glow Effect
+                    </Label>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             <div className="p-4 bg-muted rounded-md">
               <p className="text-sm font-medium mb-2">Preview</p>
