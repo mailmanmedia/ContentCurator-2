@@ -1,13 +1,13 @@
 import cron from 'node-cron';
 import { db } from '../db';
-import { teamSeasonStatistics, footballFixtures, footballPlayers, playerSeasonStatistics } from '@shared/schema';
-import { eq, and, gte, lte, or, desc, sql } from 'drizzle-orm';
+import { teamSeasonStatistics, footballFixtures, footballPlayers, playerSeasonStatistics, footballTeams } from '@shared/schema';
+import { eq, and, gte, lte, or, desc, sql, inArray } from 'drizzle-orm';
 import { footballService } from './footballService';
 import { sportmonksService } from './sportmonksService';
-import { updateLiverpoolStatsWithAI } from './aiStatsService';
+import { updateLiverpoolStatsWithAI, updateTeamStatsWithAI } from './aiStatsService';
 import { populateLiverpoolPlayers } from './populateLiverpoolPlayers';
 
-async function updateTeamStatistics(teamId: number, leagueId: number, season: number) {
+export async function updateTeamStatistics(teamId: number, leagueId: number, season: number) {
   try {
     console.log(`Fetching statistics for team ${teamId} in league ${leagueId}, season ${season}`);
     
@@ -100,6 +100,104 @@ async function updateTeamStatistics(teamId: number, leagueId: number, season: nu
   } catch (error) {
     console.error(`Error updating statistics for team ${teamId}:`, error);
   }
+}
+
+export async function updateAllPremierLeagueStats(): Promise<{ success: boolean; teamsUpdated: number; errors: number }> {
+  console.log('\n⚽ Starting batch update for all Premier League teams...');
+  
+  // Premier League team IDs
+  const premierLeagueTeamIds = [33, 34, 35, 36, 38, 39, 40, 41, 42, 45, 46, 47, 48, 49, 50, 51, 52, 55, 66, 71];
+  const leagueId = 39; // Premier League
+  const leagueName = "Premier League";
+  const currentSeason = new Date().getFullYear();
+  
+  // Fetch team names from database
+  const teams = await db
+    .select({
+      id: footballTeams.id,
+      name: footballTeams.name
+    })
+    .from(footballTeams)
+    .where(inArray(footballTeams.id, premierLeagueTeamIds));
+  
+  const teamMap = new Map(teams.map(t => [t.id, t.name]));
+  
+  let teamsUpdated = 0;
+  let errors = 0;
+  
+  for (const teamId of premierLeagueTeamIds) {
+    try {
+      const teamName = teamMap.get(teamId) || `Team ${teamId}`;
+      console.log(`\n📊 Updating ${teamName} (${teamId})...`);
+      
+      // Try API first
+      await updateTeamStatistics(teamId, leagueId, currentSeason);
+      
+      // Verify stats were actually saved - re-query database
+      const verifyStats = await db
+        .select()
+        .from(teamSeasonStatistics)
+        .where(
+          and(
+            eq(teamSeasonStatistics.teamId, teamId),
+            eq(teamSeasonStatistics.leagueId, leagueId),
+            eq(teamSeasonStatistics.season, currentSeason)
+          )
+        )
+        .limit(1);
+      
+      // If no stats exist, use AI fallback
+      if (verifyStats.length === 0) {
+        console.log(`🤖 No API data for ${teamName}, using AI fallback...`);
+        try {
+          const aiSuccess = await updateTeamStatsWithAI(teamId, teamName, leagueId, leagueName, currentSeason);
+          
+          // Verify AI stats were saved
+          const verifyAiStats = await db
+            .select()
+            .from(teamSeasonStatistics)
+            .where(
+              and(
+                eq(teamSeasonStatistics.teamId, teamId),
+                eq(teamSeasonStatistics.leagueId, leagueId),
+                eq(teamSeasonStatistics.season, currentSeason)
+              )
+            )
+            .limit(1);
+          
+          if (verifyAiStats.length > 0) {
+            console.log(`✓ AI successfully updated ${teamName} statistics`);
+            teamsUpdated++;
+          } else {
+            console.error(`❌ AI failed to save ${teamName} statistics`);
+            errors++;
+          }
+        } catch (aiError) {
+          const errorMessage = aiError instanceof Error ? aiError.message : 'Unknown error';
+          console.error(`❌ AI fallback failed for ${teamName}: ${errorMessage}`);
+          errors++;
+        }
+      } else {
+        console.log(`✓ ${teamName} stats verified in database`);
+        teamsUpdated++;
+      }
+      
+      // Add small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`❌ Failed to update team ${teamId}: ${errorMessage}`);
+      errors++;
+    }
+  }
+  
+  console.log(`\n✅ Batch update complete: ${teamsUpdated} teams updated, ${errors} errors`);
+  
+  return {
+    success: teamsUpdated > 0,
+    teamsUpdated,
+    errors
+  };
 }
 
 async function updateLiverpoolPlayerStats() {

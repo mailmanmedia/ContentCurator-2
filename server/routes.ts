@@ -34,6 +34,7 @@ import { renderPresentation, wrapWithSecurityHeaders } from "./presentation/rend
 import { rssService } from "./rss/rssService";
 import { footballService } from "./football/footballService";
 import { iCalService } from "./football/iCalService";
+import { updateAllPremierLeagueStats } from "./football/statsScheduler";
 import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplates";
 import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
@@ -2651,6 +2652,54 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error fetching teams with cached stats:', error);
       res.status(500).json({ error: "Failed to fetch teams with cached statistics" });
+    }
+  });
+
+  // Admin endpoint to update all Premier League team statistics
+  app.post("/api/admin/update-all-team-stats", async (req, res) => {
+    try {
+      console.log('📊 Admin triggered batch update for all Premier League teams...');
+      
+      const result = await updateAllPremierLeagueStats();
+      
+      // Return 500 if any errors occurred
+      if (result.errors > 0 && result.teamsUpdated === 0) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to update any team statistics',
+          teamsUpdated: result.teamsUpdated,
+          errors: result.errors,
+          errorDetails: `All ${result.errors} teams failed to update`
+        });
+      }
+      
+      // Return 207 Multi-Status if partial success (some teams updated, some failed)
+      if (result.errors > 0 && result.teamsUpdated > 0) {
+        return res.status(207).json({
+          success: true,
+          message: `Partial success: ${result.teamsUpdated} teams updated, ${result.errors} failed`,
+          teamsUpdated: result.teamsUpdated,
+          errors: result.errors,
+          errorDetails: `${result.errors} teams failed to update`
+        });
+      }
+      
+      // Return 200 only if all teams updated successfully
+      res.status(200).json({
+        success: true,
+        message: `Successfully updated statistics for all ${result.teamsUpdated} teams`,
+        teamsUpdated: result.teamsUpdated,
+        errors: result.errors
+      });
+    } catch (error) {
+      console.error('Error in batch team stats update:', error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to update team statistics",
+        message: error instanceof Error ? error.message : 'Unknown error',
+        teamsUpdated: 0,
+        errors: 1
+      });
     }
   });
 

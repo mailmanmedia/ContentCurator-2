@@ -17,14 +17,16 @@ export async function fetchStatsWithAI(
   teamName: string,
   leagueName: string,
   season: number
-): Promise<AIStatsResponse | null> {
+): Promise<AIStatsResponse> {
+  const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
+  
+  if (!perplexityApiKey) {
+    const errorMsg = "PERPLEXITY_API_KEY not configured";
+    console.error(`[AI Stats] ${errorMsg} - cannot fetch stats for ${teamName}`);
+    throw new Error(errorMsg);
+  }
+
   try {
-    const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
-    
-    if (!perplexityApiKey) {
-      console.error("PERPLEXITY_API_KEY not found");
-      return null;
-    }
 
     const prompt = `What are ${teamName}'s current ${season}-${season + 1} ${leagueName} season statistics? 
 
@@ -65,17 +67,18 @@ Respond ONLY with a JSON object in this exact format (no markdown, no explanatio
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Perplexity API error: ${response.status}`);
-      console.error(`Perplexity error details: ${errorText}`);
-      return null;
+      const errorMsg = `Perplexity API error: ${response.status} - ${errorText}`;
+      console.error(`[AI Stats] ${errorMsg} for ${teamName}`);
+      throw new Error(errorMsg);
     }
 
     const data = await response.json();
     const content = data.choices[0]?.message?.content;
 
     if (!content) {
-      console.error("No content in Perplexity response");
-      return null;
+      const errorMsg = "No content in Perplexity response";
+      console.error(`[AI Stats] ${errorMsg} for ${teamName}`);
+      throw new Error(errorMsg);
     }
 
     let jsonContent = content.trim();
@@ -96,27 +99,24 @@ Respond ONLY with a JSON object in this exact format (no markdown, no explanatio
       cleanSheets: stats.cleanSheets || 0,
     };
   } catch (error) {
-    console.error("AI stats fetch error:", error);
-    return null;
+    console.error(`[AI Stats] Fetch error for ${teamName}:`, error);
+    throw error;
   }
 }
 
-export async function updateLiverpoolStatsWithAI(): Promise<boolean> {
+export async function updateTeamStatsWithAI(
+  teamId: number,
+  teamName: string,
+  leagueId: number,
+  leagueName: string,
+  season: number
+): Promise<boolean> {
   try {
-    const season = new Date().getFullYear();
-    const teamId = 40; // Liverpool
-    const leagueId = 39; // Premier League
+    console.log(`[AI Stats] Fetching ${teamName} stats for ${season} season...`);
 
-    console.log(`[AI Stats] Fetching Liverpool stats for ${season} season...`);
+    const aiStats = await fetchStatsWithAI(teamName, leagueName, season);
 
-    const aiStats = await fetchStatsWithAI("Liverpool", "Premier League", season);
-
-    if (!aiStats) {
-      console.log("[AI Stats] Failed to fetch stats from AI");
-      return false;
-    }
-
-    console.log(`[AI Stats] Received: W${aiStats.wins} D${aiStats.draws} L${aiStats.losses}, Form: ${aiStats.form}`);
+    console.log(`[AI Stats] ${teamName}: W${aiStats.wins} D${aiStats.draws} L${aiStats.losses}, Form: ${aiStats.form}`);
 
     await db
       .insert(teamSeasonStatistics)
@@ -153,10 +153,15 @@ export async function updateLiverpoolStatsWithAI(): Promise<boolean> {
         },
       });
 
-    console.log("[AI Stats] Successfully updated Liverpool statistics");
+    console.log(`[AI Stats] Successfully updated ${teamName} statistics`);
     return true;
   } catch (error) {
-    console.error("[AI Stats] Update error:", error);
-    return false;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[AI Stats] Failed to update ${teamName}:`, errorMessage);
+    throw error;
   }
+}
+
+export async function updateLiverpoolStatsWithAI(): Promise<boolean> {
+  return updateTeamStatsWithAI(40, "Liverpool", 39, "Premier League", new Date().getFullYear());
 }
