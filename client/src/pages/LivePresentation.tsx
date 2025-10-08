@@ -187,6 +187,10 @@ interface OverlayConfig {
   borderWidth?: number;
   borderColor?: string;
   colorPalette?: 'classic' | 'navy' | 'cream' | 'dark';
+  // Form Guide sizing
+  formTitleSize?: number;
+  formCircleSize?: number;
+  formLabelSize?: number;
 }
 
 const sourceTypeIcons = {
@@ -606,6 +610,9 @@ export default function LivePresentation() {
   const [overlayHeight, setOverlayHeight] = useState(70);
   const [overlayAnimationType, setOverlayAnimationType] = useState<'scroll' | 'fade' | 'static'>('scroll');
   const [overlayColorPalette, setOverlayColorPalette] = useState<'classic' | 'navy' | 'cream' | 'dark'>('classic');
+  const [formTitleSize, setFormTitleSize] = useState(20);
+  const [formCircleSize, setFormCircleSize] = useState(60);
+  const [formLabelSize, setFormLabelSize] = useState(14);
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare, isScreenShareSupported } = useCameraStreams();
@@ -1366,6 +1373,9 @@ export default function LivePresentation() {
               borderWidth: overlayBorderWidth,
               borderColor: overlayBorderColor,
               colorPalette: overlayColorPalette,
+              formTitleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formTitleSize : undefined,
+              formCircleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formCircleSize : undefined,
+              formLabelSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formLabelSize : undefined,
             }
           : overlay
       ));
@@ -1402,6 +1412,9 @@ export default function LivePresentation() {
         borderWidth: overlayBorderWidth,
         borderColor: overlayBorderColor,
         colorPalette: overlayColorPalette,
+        formTitleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formTitleSize : undefined,
+        formCircleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formCircleSize : undefined,
+        formLabelSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formLabelSize : undefined,
       };
 
       if (overlayType === 'rss') {
@@ -1575,7 +1588,14 @@ export default function LivePresentation() {
         setOverlayAwayTeamId(overlay.metricData.awayTeamId || null);
       } else if (overlay.metricType === 'form-guide') {
         setOverlayTeamId(overlay.metricData.teamId || null);
+        setFormTitleSize(overlay.formTitleSize || 20);
+        setFormCircleSize(overlay.formCircleSize || 60);
+        setFormLabelSize(overlay.formLabelSize || 14);
       }
+    }
+    
+    if (overlay.colorPalette) {
+      setOverlayColorPalette(overlay.colorPalette);
     }
     
     const presetKey = Object.entries(TEMPLATE_PRESETS).find(([_, preset]) => 
@@ -2903,6 +2923,54 @@ export default function LivePresentation() {
                               </Select>
                               <p className="text-xs text-muted-foreground mt-1">
                                 Mailman Media branded color scheme
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="form-title-size">Title Size: {formTitleSize}px</Label>
+                              <Slider
+                                id="form-title-size"
+                                min={12}
+                                max={36}
+                                step={1}
+                                value={[formTitleSize]}
+                                onValueChange={(vals) => setFormTitleSize(vals[0])}
+                                data-testid="slider-form-title-size"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Size of "RECENT FORM" title text
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="form-circle-size">Circle Size: {formCircleSize}px</Label>
+                              <Slider
+                                id="form-circle-size"
+                                min={30}
+                                max={100}
+                                step={5}
+                                value={[formCircleSize]}
+                                onValueChange={(vals) => setFormCircleSize(vals[0])}
+                                data-testid="slider-form-circle-size"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Size of W/L/D result circles
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="form-label-size">Label Size: {formLabelSize}px</Label>
+                              <Slider
+                                id="form-label-size"
+                                min={8}
+                                max={20}
+                                step={1}
+                                value={[formLabelSize]}
+                                onValueChange={(vals) => setFormLabelSize(vals[0])}
+                                data-testid="slider-form-label-size"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Size of WIN/LOSS/DRAW labels
                               </p>
                             </div>
                           </>

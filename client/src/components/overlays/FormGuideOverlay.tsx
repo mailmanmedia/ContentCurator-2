@@ -46,6 +46,9 @@ interface FormGuideOverlayProps {
   layout?: 'horizontal' | 'vertical';
   teamId?: number;
   colorPalette?: ColorPaletteKey;
+  titleSize?: number;
+  circleSize?: number;
+  labelSize?: number;
 }
 
 export default function FormGuideOverlay({
@@ -55,6 +58,9 @@ export default function FormGuideOverlay({
   layout = 'horizontal',
   teamId = 40,
   colorPalette = 'classic',
+  titleSize = 20,
+  circleSize = 60,
+  labelSize = 14,
 }: FormGuideOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
   
@@ -128,7 +134,7 @@ export default function FormGuideOverlay({
         boxSizing: 'border-box',
       }}
     >
-      <div style={{ fontSize: '14px', fontWeight: 'bold', color: palette.accent, marginBottom: '10px', letterSpacing: '0.5px' }}>
+      <div style={{ fontSize: `${titleSize}px`, fontWeight: 'bold', color: palette.accent, marginBottom: '10px', letterSpacing: '0.5px' }}>
         RECENT FORM
       </div>
 
@@ -155,14 +161,14 @@ export default function FormGuideOverlay({
           >
             <div
               style={{
-                width: layout === 'horizontal' ? '45px' : '35px',
-                height: layout === 'horizontal' ? '45px' : '35px',
+                width: `${circleSize}px`,
+                height: `${circleSize}px`,
                 borderRadius: '50%',
                 backgroundColor: getResultColor(result),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: layout === 'horizontal' ? '20px' : '16px',
+                fontSize: `${circleSize * 0.4}px`,
                 fontWeight: 'bold',
                 color: '#000000',
                 border: '2px solid rgba(0,0,0,0.1)',
@@ -171,7 +177,7 @@ export default function FormGuideOverlay({
               {result}
             </div>
             <div style={{
-              fontSize: '11px',
+              fontSize: `${labelSize}px`,
               color: palette.text,
               opacity: 0.8,
               textAlign: 'center',

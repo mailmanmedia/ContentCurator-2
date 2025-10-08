@@ -89,6 +89,10 @@ interface OverlayConfig {
   borderWidth?: number;
   borderColor?: string;
   colorPalette?: 'classic' | 'navy' | 'cream' | 'dark';
+  // Form Guide sizing
+  formTitleSize?: number;
+  formCircleSize?: number;
+  formLabelSize?: number;
 }
 
 interface VideoCompositorProps {
@@ -1039,6 +1043,9 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               layout={metricData?.layout || 'horizontal'}
               teamId={metricData?.teamId || 40}
               colorPalette={overlay.colorPalette || 'classic'}
+              titleSize={overlay.formTitleSize}
+              circleSize={overlay.formCircleSize}
+              labelSize={overlay.formLabelSize}
             />
           </div>
         );
