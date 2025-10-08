@@ -2487,6 +2487,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Premier League table from FBRef
+  app.get("/api/football/fbref/table", async (req, res) => {
+    try {
+      const { fbrefService } = await import('./football/fbrefService');
+      const table = await fbrefService.getPremierLeagueTable();
+      res.json({ table, source: 'fbref' });
+    } catch (error) {
+      console.error('Error fetching FBRef table:', error);
+      res.status(500).json({ error: "Failed to fetch FBRef table" });
+    }
+  });
+
+  // Get Liverpool player stats from FBRef
+  app.get("/api/football/fbref/liverpool/players", async (req, res) => {
+    try {
+      const { fbrefService } = await import('./football/fbrefService');
+      const players = await fbrefService.getLiverpoolPlayerStats();
+      res.json({ players, source: 'fbref' });
+    } catch (error) {
+      console.error('Error fetching Liverpool player stats from FBRef:', error);
+      res.status(500).json({ error: "Failed to fetch Liverpool player stats" });
+    }
+  });
+
+  // Get enriched team data (combined from multiple sources)
+  app.get("/api/football/team/:teamName/enriched", async (req, res) => {
+    try {
+      const teamName = req.params.teamName;
+      const { fbrefService } = await import('./football/fbrefService');
+      const { theFishyService } = await import('./football/theFishyService');
+      
+      const [fbrefData, fishyForm] = await Promise.all([
+        fbrefService.getEnrichedTeamData(teamName),
+        theFishyService.getTeamForm(teamName),
+      ]);
+      
+      res.json({
+        team: teamName,
+        fbref: fbrefData.fbref,
+        position: fbrefData.position,
+        form: fishyForm,
+        sources: ['fbref', 'thefishy'],
+      });
+    } catch (error) {
+      console.error('Error fetching enriched team data:', error);
+      res.status(500).json({ error: "Failed to fetch enriched team data" });
+    }
+  });
+
   // Get Liverpool's upcoming fixtures from official iCal feed
   app.get("/api/football/liverpool/upcoming", async (req, res) => {
     try {
