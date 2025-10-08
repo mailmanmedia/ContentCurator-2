@@ -1275,7 +1275,14 @@ class FootballService {
     return await smartFootballCache.get(
       `teams_competition_${competitionId}`,
       async () => {
-        // First, try to get teams from database via fixtures
+        // For Premier League, FA Cup, and League Cup: ALWAYS use static fallback
+        // This ensures all 20 teams are available regardless of database state
+        if (competitionId === 39 || competitionId === 45 || competitionId === 48) {
+          console.log(`Using guaranteed complete static data for competition ${competitionId}`);
+          return this.getStaticTeamsForCompetition(competitionId);
+        }
+
+        // For other competitions (Champions League, etc.), try database first
         const teamIds = await db.selectDistinct({ teamId: footballFixtures.homeTeamId })
           .from(footballFixtures)
           .where(eq(footballFixtures.leagueId, competitionId))
