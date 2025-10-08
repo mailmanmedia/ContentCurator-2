@@ -2709,47 +2709,95 @@ export default function LivePresentation() {
             {overlayType === 'rss' && (
               <>
                 <div>
-                  <Label>Select RSS Sources</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Select RSS Sources</Label>
+                    {rssSources && rssSources.length > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        {selectedRssSourceIds.length} of {rssSources.length} selected
+                      </Badge>
+                    )}
+                  </div>
                   {isLoadingRssSources ? (
                     <div className="text-center py-4">
                       <p className="text-sm text-muted-foreground">Loading RSS sources...</p>
                     </div>
                   ) : rssSources && rssSources.length > 0 ? (
-                    <div className="space-y-2 max-h-[200px] overflow-y-auto p-3 border rounded-md" data-testid="checklist-rss-sources">
-                      {rssSources.map((source) => (
-                        <div key={source.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`rss-source-${source.id}`}
-                            checked={selectedRssSourceIds.includes(source.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedRssSourceIds(prev => [...prev, source.id]);
-                              } else {
-                                setSelectedRssSourceIds(prev => prev.filter(id => id !== source.id));
-                              }
-                            }}
-                            data-testid={`checkbox-rss-source-${source.id}`}
-                          />
-                          <Label
-                            htmlFor={`rss-source-${source.id}`}
-                            className="flex items-center gap-2 font-normal cursor-pointer flex-1"
-                          >
-                            <span className="flex-1">{source.name}</span>
-                            <Badge 
-                              variant={source.isActive ? "default" : "secondary"}
-                              className={source.isActive ? "bg-green-500 text-white" : ""}
-                            >
-                              {source.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </Label>
-                        </div>
-                      ))}
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto p-3 border rounded-md" data-testid="checklist-rss-sources">
+                      {['official', 'media', 'fan_site', 'podcast'].map((category) => {
+                        const categorySources = rssSources.filter(s => s.category === category);
+                        if (categorySources.length === 0) return null;
+                        
+                        const categoryLabel = category === 'fan_site' ? 'Fan Sites' : 
+                                            category.charAt(0).toUpperCase() + category.slice(1);
+                        const allCategorySelected = categorySources.every(s => selectedRssSourceIds.includes(s.id));
+                        const someCategorySelected = categorySources.some(s => selectedRssSourceIds.includes(s.id));
+                        
+                        return (
+                          <div key={category} className="space-y-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Checkbox
+                                id={`category-${category}`}
+                                checked={allCategorySelected}
+                                ref={(el) => {
+                                  if (el) {
+                                    (el as any).indeterminate = someCategorySelected && !allCategorySelected;
+                                  }
+                                }}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedRssSourceIds(prev => {
+                                      const newIds = categorySources.map(s => s.id).filter(id => !prev.includes(id));
+                                      return [...prev, ...newIds];
+                                    });
+                                  } else {
+                                    setSelectedRssSourceIds(prev => 
+                                      prev.filter(id => !categorySources.some(s => s.id === id))
+                                    );
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`category-${category}`} className="font-semibold text-xs uppercase text-muted-foreground cursor-pointer">
+                                {categoryLabel} ({categorySources.length})
+                              </Label>
+                            </div>
+                            <div className="ml-6 space-y-1">
+                              {categorySources.map((source) => (
+                                <div key={source.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`rss-source-${source.id}`}
+                                    checked={selectedRssSourceIds.includes(source.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedRssSourceIds(prev => [...prev, source.id]);
+                                      } else {
+                                        setSelectedRssSourceIds(prev => prev.filter(id => id !== source.id));
+                                      }
+                                    }}
+                                    data-testid={`checkbox-rss-source-${source.id}`}
+                                  />
+                                  <Label
+                                    htmlFor={`rss-source-${source.id}`}
+                                    className="flex items-center gap-2 font-normal cursor-pointer flex-1 text-sm"
+                                  >
+                                    <span className="flex-1">{source.name}</span>
+                                    {source.isActive && (
+                                      <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                                        Active
+                                      </Badge>
+                                    )}
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <Alert data-testid="alert-no-rss-sources">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
-                        No RSS sources available. Please add RSS sources first.
+                        No RSS sources available. Go to RSS Intelligence to add sources.
                       </AlertDescription>
                     </Alert>
                   )}
