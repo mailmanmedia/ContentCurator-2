@@ -553,10 +553,12 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             ctx.fillText(`Draws: ${metricData.draws || 0}`, xPosition + overlayWidth / 2, yPosition + 90);
             ctx.fillText(`Losses: ${metricData.losses || 0}`, xPosition + overlayWidth / 2, yPosition + 120);
           } else if (metricType === 'form-guide' && metricData) {
-            ctx.font = `bold ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
+            const titleSize = overlay.formTitleSize || scaledFontSize;
+            const circleSize = overlay.formCircleSize || (scaledFontSize + 4);
+            ctx.font = `bold ${titleSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.fillText('RECENT FORM', xPosition + overlayWidth / 2, yPosition + 25);
             const form = metricData.form || 'WWDLL';
-            ctx.font = `bold ${scaledFontSize + 4}px "${overlay.fontFamily}", sans-serif`;
+            ctx.font = `bold ${circleSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.fillText(form, xPosition + overlayWidth / 2, yPosition + 70);
           } else if (metricType === 'player-stats' && metricData) {
             ctx.font = `bold ${scaledFontSize + 2}px "${overlay.fontFamily}", sans-serif`;
