@@ -33,6 +33,33 @@ Preferred communication style: Simple, everyday language.
 - **API Call Volume**: Estimated 60% overall reduction
 - **User Experience**: Improved responsiveness, especially on ContentLibrary and LivePresentation pages
 
+## Recent Bug Fixes & Data Improvements (October 8, 2025)
+
+### Metric Overlay System Enhancements
+1. **Full Premier League Team Statistics Coverage**
+   - Expanded team_season_statistics table from 1 team (Liverpool only) to 18 Premier League teams
+   - Batch statistics update function with AI fallback for all teams when API fails
+   - Enhanced /api/cached-stats/teams endpoint to return all 18 teams for metric overlay dropdowns
+   - Enabled proper team selection across all metric overlay types (H2H, Form Guide, etc.)
+
+2. **Data Freshness Visibility**
+   - Added "Last Updated" timestamp display to Team Matchup Studio
+   - Shows data age using formatDistanceToNow for user transparency
+   - API endpoints always include lastUpdated timestamp in both API success and DB fallback paths
+   - All statistics verified current with 2025 season data (updated Oct 8, 2025)
+
+3. **Form Guide Overlay Rendering Fix**
+   - Fixed VideoCompositor canvas rendering to respect custom formTitleSize and formCircleSize properties
+   - Previous bug: canvas used hardcoded scaledFontSize ignoring editor settings
+   - Title and circle sizes now properly apply from overlay editor controls
+   - Enhanced visual customization for broadcast-quality overlays
+
+### Technical Implementation
+- **Server**: statsScheduler.ts, aiStatsService.ts, footballService.ts, routes.ts
+- **Client**: TeamMatchupStudio.tsx, VideoCompositor.tsx, LivePresentation.tsx
+- **Database**: team_season_statistics table with comprehensive Premier League coverage
+- **API Endpoints**: /api/cached-stats/teams, /api/team-statistics/:id, /api/batch-update-stats
+
 ## System Architecture
 
 ### Frontend
