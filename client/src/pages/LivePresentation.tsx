@@ -79,6 +79,7 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import VideoCompositor, { type VideoCompositorRef } from "@/components/VideoCompositor";
 import { useCameraStreams, ScreenShareError, ScreenShareErrorType } from "@/contexts/CameraStreamContext";
+import { usePiP } from "@/contexts/PictureInPictureContext";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -614,16 +615,14 @@ export default function LivePresentation() {
   const [formTitleSize, setFormTitleSize] = useState(20);
   const [formCircleSize, setFormCircleSize] = useState(60);
   const [formLabelSize, setFormLabelSize] = useState(14);
-  const [isPiPActive, setIsPiPActive] = useState(false);
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare, isScreenShareSupported } = useCameraStreams();
+  const { isPiPActive, startPiP, stopPiP } = usePiP();
   
   const compositorRef = useRef<VideoCompositorRef>(null);
   const canvasRef = compositorRef.current?.canvasRef || { current: null };
   const gridPreviewRef = useRef<HTMLDivElement>(null);
-  const pipVideoRef = useRef<HTMLVideoElement>(null);
-  const pipStreamRef = useRef<MediaStream | null>(null);
   
   const {
     isRecording,
@@ -676,61 +675,19 @@ export default function LivePresentation() {
   };
 
   const togglePictureInPicture = async () => {
-    try {
-      if (!canvasRef.current || !pipVideoRef.current) {
-        toast({
-          title: 'PiP Not Available',
-          description: 'Broadcast canvas not ready',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Check if PiP is supported
-      if (!document.pictureInPictureEnabled) {
-        toast({
-          title: 'PiP Not Supported',
-          description: 'Picture-in-Picture is not supported in your browser',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (isPiPActive) {
-        // Exit PiP
-        if (document.pictureInPictureElement) {
-          await document.exitPictureInPicture();
-        }
-        if (pipStreamRef.current) {
-          pipStreamRef.current.getTracks().forEach(track => track.stop());
-          pipStreamRef.current = null;
-        }
-        setIsPiPActive(false);
-      } else {
-        // Enter PiP - capture canvas stream
-        const stream = canvasRef.current.captureStream(30); // 30 fps
-        pipStreamRef.current = stream;
-        
-        pipVideoRef.current.srcObject = stream;
-        await pipVideoRef.current.play();
-        
-        // Request PiP
-        await pipVideoRef.current.requestPictureInPicture();
-        setIsPiPActive(true);
-        
-        toast({
-          title: 'Picture-in-Picture Active',
-          description: 'Broadcast is now floating. You can navigate to other pages.',
-        });
-      }
-    } catch (error) {
-      console.error('PiP error:', error);
+    if (!canvasRef.current) {
       toast({
-        title: 'PiP Error',
-        description: error instanceof Error ? error.message : 'Failed to toggle Picture-in-Picture',
+        title: 'PiP Not Available',
+        description: 'Broadcast canvas not ready',
         variant: 'destructive',
       });
-      setIsPiPActive(false);
+      return;
+    }
+
+    if (isPiPActive) {
+      await stopPiP();
+    } else {
+      await startPiP(canvasRef.current);
     }
   };
 
@@ -900,37 +857,6 @@ export default function LivePresentation() {
       if (state.isBroadcasting !== undefined) setIsBroadcasting(state.isBroadcasting);
     }
   }, [liveStateData]);
-
-  // Handle PiP events
-  useEffect(() => {
-    const handleLeavePiP = () => {
-      setIsPiPActive(false);
-      if (pipStreamRef.current) {
-        pipStreamRef.current.getTracks().forEach(track => track.stop());
-        pipStreamRef.current = null;
-      }
-    };
-
-    const video = pipVideoRef.current;
-    if (video) {
-      video.addEventListener('leavepictureinpicture', handleLeavePiP);
-      return () => {
-        video.removeEventListener('leavepictureinpicture', handleLeavePiP);
-      };
-    }
-  }, []);
-
-  // Cleanup PiP on unmount
-  useEffect(() => {
-    return () => {
-      if (isPiPActive && document.pictureInPictureElement) {
-        document.exitPictureInPicture().catch(console.error);
-      }
-      if (pipStreamRef.current) {
-        pipStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [isPiPActive]);
 
   const lastSavedStateRef = useRef<string>('');
 
@@ -3937,13 +3863,6 @@ export default function LivePresentation() {
         </DialogContent>
       </Dialog>
 
-      {/* Hidden video element for Picture-in-Picture */}
-      <video
-        ref={pipVideoRef}
-        style={{ display: 'none' }}
-        muted
-        playsInline
-      />
     </div>
   );
 }
