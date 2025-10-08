@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
 import { CameraStreamProvider } from "@/contexts/CameraStreamContext";
+import { PiPProvider } from "@/contexts/PictureInPictureContext";
 import VisualAssistant from "@/components/VisualAssistant";
 import FrameworkDirectory from "@/pages/FrameworkDirectory";
 import CreateFramework from "@/pages/CreateFramework";
@@ -52,10 +53,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <CameraStreamProvider>
-          <Toaster />
-          <Router />
-        </CameraStreamProvider>
+        <PiPProvider>
+          <CameraStreamProvider>
+            <Toaster />
+            <Router />
+          </CameraStreamProvider>
+        </PiPProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
