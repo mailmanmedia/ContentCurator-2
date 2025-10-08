@@ -68,7 +68,8 @@ import {
   RefreshCw,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Maximize2
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
@@ -613,6 +614,7 @@ export default function LivePresentation() {
   const [formTitleSize, setFormTitleSize] = useState(20);
   const [formCircleSize, setFormCircleSize] = useState(60);
   const [formLabelSize, setFormLabelSize] = useState(14);
+  const [isPiPActive, setIsPiPActive] = useState(false);
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare, isScreenShareSupported } = useCameraStreams();
@@ -620,6 +622,8 @@ export default function LivePresentation() {
   const compositorRef = useRef<VideoCompositorRef>(null);
   const canvasRef = compositorRef.current?.canvasRef || { current: null };
   const gridPreviewRef = useRef<HTMLDivElement>(null);
+  const pipVideoRef = useRef<HTMLVideoElement>(null);
+  const pipStreamRef = useRef<MediaStream | null>(null);
   
   const {
     isRecording,
@@ -669,6 +673,65 @@ export default function LivePresentation() {
       overlay.position === position && 
       overlay.id !== excludeId
     );
+  };
+
+  const togglePictureInPicture = async () => {
+    try {
+      if (!canvasRef.current || !pipVideoRef.current) {
+        toast({
+          title: 'PiP Not Available',
+          description: 'Broadcast canvas not ready',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Check if PiP is supported
+      if (!document.pictureInPictureEnabled) {
+        toast({
+          title: 'PiP Not Supported',
+          description: 'Picture-in-Picture is not supported in your browser',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (isPiPActive) {
+        // Exit PiP
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        }
+        if (pipStreamRef.current) {
+          pipStreamRef.current.getTracks().forEach(track => track.stop());
+          pipStreamRef.current = null;
+        }
+        setIsPiPActive(false);
+      } else {
+        // Enter PiP - capture canvas stream
+        const stream = canvasRef.current.captureStream(30); // 30 fps
+        pipStreamRef.current = stream;
+        
+        pipVideoRef.current.srcObject = stream;
+        await pipVideoRef.current.play();
+        
+        // Request PiP
+        await pipVideoRef.current.requestPictureInPicture();
+        setIsPiPActive(true);
+        
+        toast({
+          title: 'Picture-in-Picture Active',
+          description: 'Broadcast is now floating. You can navigate to other pages.',
+        });
+      }
+    } catch (error) {
+      console.error('PiP error:', error);
+      toast({
+        title: 'PiP Error',
+        description: error instanceof Error ? error.message : 'Failed to toggle Picture-in-Picture',
+        variant: 'destructive',
+      });
+      setIsPiPActive(false);
+    }
   };
 
   const getDefaultCoordinatesAndCategory = (position: 'top' | 'bottom', overlayType: string, metricType?: string): { x: number; y: number; category: string } => {
@@ -837,6 +900,37 @@ export default function LivePresentation() {
       if (state.isBroadcasting !== undefined) setIsBroadcasting(state.isBroadcasting);
     }
   }, [liveStateData]);
+
+  // Handle PiP events
+  useEffect(() => {
+    const handleLeavePiP = () => {
+      setIsPiPActive(false);
+      if (pipStreamRef.current) {
+        pipStreamRef.current.getTracks().forEach(track => track.stop());
+        pipStreamRef.current = null;
+      }
+    };
+
+    const video = pipVideoRef.current;
+    if (video) {
+      video.addEventListener('leavepictureinpicture', handleLeavePiP);
+      return () => {
+        video.removeEventListener('leavepictureinpicture', handleLeavePiP);
+      };
+    }
+  }, []);
+
+  // Cleanup PiP on unmount
+  useEffect(() => {
+    return () => {
+      if (isPiPActive && document.pictureInPictureElement) {
+        document.exitPictureInPicture().catch(console.error);
+      }
+      if (pipStreamRef.current) {
+        pipStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isPiPActive]);
 
   const lastSavedStateRef = useRef<string>('');
 
@@ -2171,6 +2265,16 @@ export default function LivePresentation() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button
+                      onClick={togglePictureInPicture}
+                      disabled={activeSources.length === 0}
+                      variant={isPiPActive ? "default" : "outline"}
+                      size="sm"
+                      data-testid="button-toggle-pip"
+                    >
+                      <Maximize2 className="w-4 h-4 mr-2" />
+                      {isPiPActive ? 'Exit PiP' : 'Picture-in-Picture'}
+                    </Button>
                     {!isBroadcasting ? (
                       <Button
                         onClick={handleStartBroadcast}
@@ -3832,6 +3936,14 @@ export default function LivePresentation() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden video element for Picture-in-Picture */}
+      <video
+        ref={pipVideoRef}
+        style={{ display: 'none' }}
+        muted
+        playsInline
+      />
     </div>
   );
 }
