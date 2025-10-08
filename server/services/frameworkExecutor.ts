@@ -176,14 +176,13 @@ export async function executeFrameworkFootballQuery(
 
   try {
     const queryParams = new URLSearchParams(params || {});
-    const url = `https://api-football-v1.p.rapidapi.com/v3/${endpoint}${
+    const url = `https://v3.football.api-sports.io/${endpoint}${
       queryParams.toString() ? '?' + queryParams.toString() : ''
     }`;
 
     const response = await fetch(url, {
       headers: {
-        'X-RapidAPI-Key': process.env.RAPIDAPI_KEY || '',
-        'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com',
+        'x-apisports-key': process.env.API_FOOTBALL_KEY || '',
       },
     });
 

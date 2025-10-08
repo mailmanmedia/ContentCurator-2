@@ -16,8 +16,7 @@ if (!API_KEY) {
 }
 
 const headers = {
-  'x-rapidapi-key': API_KEY,
-  'x-rapidapi-host': 'v3.football.api-sports.io'
+  'x-apisports-key': API_KEY
 };
 
 let requestCount = 0;
