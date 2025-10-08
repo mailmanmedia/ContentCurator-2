@@ -1606,7 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         articles = allArticles.flat()
           .sort((a, b) => {
             const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-            const dateB = b.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+            const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
             return dateB - dateA; // Most recent first
           })
           .slice(0, limit ? parseInt(limit as string) : 100);
@@ -1668,7 +1668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (sentimentData) {
                 await storage.updateRssArticle(article.id, {
                   rawDataJson: {
-                    ...article.rawDataJson,
+                    ...(article.rawDataJson || {}),
                     sentiment: sentimentData
                   } as any
                 });
@@ -2015,7 +2015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (sentimentData) {
             await storage.updateRssArticle(article.id, {
               rawDataJson: {
-                ...article.rawDataJson,
+                ...(article.rawDataJson || {}),
                 sentiment: sentimentData
               } as any
             });
@@ -2221,7 +2221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(footballFixtures);
       
-      const uniqueCompetitionIds = [...new Set(competitionsFromFixtures.map(c => c.id))];
+      const uniqueCompetitionIds = Array.from(new Set(competitionsFromFixtures.map(c => c.id)));
       
       if (uniqueCompetitionIds.length === 0) {
         return res.json({
@@ -2459,6 +2459,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching team data:', error);
       res.status(500).json({ error: "Failed to fetch team data" });
+    }
+  });
+
+  // Get Premier League table from The Fishy
+  app.get("/api/football/premier-league/table", async (req, res) => {
+    try {
+      const { theFishyService } = await import('./football/theFishyService');
+      const table = await theFishyService.getPremierLeagueTable();
+      res.json({ table });
+    } catch (error) {
+      console.error('Error fetching Premier League table:', error);
+      res.status(500).json({ error: "Failed to fetch Premier League table" });
+    }
+  });
+
+  // Get team form from The Fishy
+  app.get("/api/football/team/:teamName/form", async (req, res) => {
+    try {
+      const teamName = req.params.teamName;
+      const { theFishyService } = await import('./football/theFishyService');
+      const form = await theFishyService.getTeamForm(teamName);
+      res.json({ form, team: teamName });
+    } catch (error) {
+      console.error('Error fetching team form:', error);
+      res.status(500).json({ error: "Failed to fetch team form" });
     }
   });
 
