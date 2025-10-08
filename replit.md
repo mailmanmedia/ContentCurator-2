@@ -46,7 +46,7 @@ Integrates 2025-26 season football data from multiple live sources, prioritizing
 - **FBRef Integration**: Comprehensive statistics from fbref.com including detailed player stats (goals, assists, minutes, cards), team statistics, and advanced analytics.
 - **Multi-Source Data Enrichment**: Combined endpoints merge data from The Fishy and FBRef for most accurate and complete football statistics.
 - **Team Matchup Studio**: Comprehensive team analysis from a historical Head-to-Head database (2020-present).
-- **Centralized Data Management**: All overlay components use centralized React hooks (`useFootballData.ts`) with automatic fallback between multiple data sources (The Fishy, FBRef, cache). Features consistent error/loading/empty states and source badges showing data origin and timestamps across all overlays.
+- **Centralized Data Management**: Production-ready data integration layer with centralized `footballDataService.ts` providing multi-source fallback (The Fishy → FBRef → localStorage cache). All overlay components use unified React hooks (`useFootballData.ts`) with runtime Zod validation, automatic error recovery, and consistent UI states. Features React error boundaries, loading/error/empty state components, source attribution badges showing data origin and freshness timestamps, and localStorage caching for offline resilience.
 
 #### RSS Intelligence System
 A comprehensive RSS feed management and analysis platform for monitoring Liverpool FC news and media coverage. Features a PostgreSQL database schema, automated fetching with sentiment analysis, advanced filtering, and dashboard analytics. Integrated with Live Presentation for RSS ticker overlays.
