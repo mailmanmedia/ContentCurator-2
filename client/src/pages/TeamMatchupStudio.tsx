@@ -12,6 +12,7 @@ import { ChartContainer } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { queryClient } from "@/lib/queryClient";
 import Header from "@/components/Header";
+import { formatDistanceToNow } from 'date-fns';
 
 interface Competition {
   id: number;
@@ -700,10 +701,18 @@ export default function TeamMatchupStudio() {
               {teamStatsData?.statistics && (
                 <div className="space-y-6">
                   <div>
-                    <h4 className="font-league-spartan font-bold text-lg uppercase text-accent mb-4 flex items-center gap-2">
-                      <Activity className="w-5 h-5" />
-                      Performance Metrics
-                    </h4>
+                    <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                      <h4 className="font-league-spartan font-bold text-lg uppercase text-accent flex items-center gap-2">
+                        <Activity className="w-5 h-5" />
+                        Performance Metrics
+                      </h4>
+                      {teamStatsData?.statistics?.lastUpdated && (
+                        <Badge variant="outline" className="text-xs" data-testid="badge-last-updated">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          Updated {formatDistanceToNow(new Date(teamStatsData.statistics.lastUpdated), { addSuffix: true })}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {renderStatCard("Form", teamStatsData.statistics.form || "N/A", TrendingUp)}
                       {renderStatCard("Goals", `${teamStatsData.statistics.goals?.for?.total?.total || 0} scored`, Target)}

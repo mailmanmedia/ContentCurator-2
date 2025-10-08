@@ -273,7 +273,7 @@ export class SmartFootballCache {
           // Add delay between requests to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 2000));
         } catch (error) {
-          console.warn(`Skipped precompute for Liverpool vs ${opponentId}: ${error.message}`);
+          console.warn(`Skipped precompute for Liverpool vs ${opponentId}:`, error);
           // Continue with next opponent instead of failing entire precompute
         }
       } else {

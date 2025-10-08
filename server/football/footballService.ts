@@ -1536,7 +1536,10 @@ class FootballService {
             season: season
           });
 
-          return response.response;
+          return {
+            ...response.response,
+            lastUpdated: new Date().toISOString()
+          };
         } catch (error) {
           console.error(`API failed for team statistics, checking database fallback:`, error);
           
@@ -1576,7 +1579,8 @@ class FootballService {
                     average: { total: (stats.goalsAgainst / Math.max(stats.matchesPlayed, 1)).toFixed(1) }
                   }
                 },
-                clean_sheet: { total: stats.cleanSheets }
+                clean_sheet: { total: stats.cleanSheets },
+                lastUpdated: stats.lastUpdated
               };
             }
           } catch (dbError) {
