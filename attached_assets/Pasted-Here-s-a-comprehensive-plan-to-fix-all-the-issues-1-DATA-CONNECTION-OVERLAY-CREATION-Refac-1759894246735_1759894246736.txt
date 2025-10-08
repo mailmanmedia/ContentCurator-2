@@ -1,0 +1,33 @@
+Here's a comprehensive plan to fix all the issues:
+
+## 1. DATA CONNECTION & OVERLAY CREATION
+- Refactor overlay creation logic to ensure all queries (RSS sources, video sources) load BEFORE overlays depend on that data
+- Add loading states and disable "Add Overlay" button until sources are available
+- Block overlay creation when data arrays are empty to prevent saving overlays with no sources
+- Add validation checks before saving overlays to database
+
+## 2. GLOBAL STATE MANAGEMENT (PiP & Overlays)
+- Move PiP state to global React Context at app root level so it persists across all navigation
+- Move overlay state management to app-level context to survive route changes
+- Change video elements from display:none to opacity:0 with 1px dimensions so PiP can capture frames
+- Ensure video stream initialization happens before PiP request (add proper delays)
+
+## 3. SOURCE CONNECTION & DATABASE SYNC
+- Fix selectors to guarantee selected sources (RSS/video) update both database AND UI state simultaneously
+- Add database transaction validation to ensure overlays.rssSourceIds is never empty when saved
+- Implement proper auto-selection with loading guards (wait for data before selecting)
+- Add useEffect dependencies to trigger re-selection when source data loads
+
+## 4. VIDEO EDITOR FIXES
+- Reconnect all toolbox components (effects, properties, transitions, speed, keyframes) to actual timeline editing state
+- Add onClick/onChange handlers for every toolbar control that dispatches actions to video state
+- Fix CSS overflow on clip cards: add overflow:hidden or contain:layout to parent containers
+- Ensure timeline state updates propagate to all editor panels
+
+## 5. ERROR HANDLING & UX
+- Add loading indicators for all data queries ("Loading sources...")
+- Display error messages when queries fail
+- Disable overlay creation buttons when dependencies are missing
+- Add toast notifications for successful saves vs failures
+
+I'm ready to walk through code refactoring step-by-step or debug specific components. Which issue should we tackle first?
