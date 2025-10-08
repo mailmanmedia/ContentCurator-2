@@ -1718,8 +1718,12 @@ export default function LivePresentation() {
     }
   };
 
-  const snapToGrid = (value: number, gridSize: number = 20): number => {
-    return Math.round(value / gridSize) * gridSize;
+  const snapToGrid = (value: number, gridSize: number = 20, min: number = 0, max?: number): number => {
+    const snapped = Math.round(value / gridSize) * gridSize;
+    if (max !== undefined) {
+      return Math.max(min, Math.min(snapped, max));
+    }
+    return Math.max(min, snapped);
   };
 
   const handleOpenPositionEditor = (overlayId: string) => {
@@ -1740,8 +1744,16 @@ export default function LivePresentation() {
     const rawX = (e.clientX - rect.left) * scaleX;
     const rawY = (e.clientY - rect.top) * scaleY;
     
-    const snappedX = snapToGrid(rawX);
-    const snappedY = snapToGrid(rawY);
+    // Get current overlay dimensions to calculate max boundaries
+    const editingOverlay = overlays.find(o => o.id === editingPositionOverlayId);
+    const overlayWidth = editingOverlay ? (editingOverlay.width / 100) * outputResolution.width : 0;
+    const overlayHeight = editingOverlay ? editingOverlay.height : 0;
+    
+    const maxX = outputResolution.width - overlayWidth;
+    const maxY = outputResolution.height - overlayHeight;
+    
+    const snappedX = snapToGrid(rawX, 20, 0, maxX);
+    const snappedY = snapToGrid(rawY, 20, 0, maxY);
     
     setOverlayX(snappedX);
     setOverlayY(snappedY);
@@ -1750,8 +1762,16 @@ export default function LivePresentation() {
   const handleUpdatePosition = () => {
     if (!editingPositionOverlayId) return;
     
-    const snappedX = snapToGrid(overlayX);
-    const snappedY = snapToGrid(overlayY);
+    // Get overlay dimensions to calculate max boundaries
+    const editingOverlay = overlays.find(o => o.id === editingPositionOverlayId);
+    const overlayWidth = editingOverlay ? (editingOverlay.width / 100) * outputResolution.width : 0;
+    const overlayHeight = editingOverlay ? editingOverlay.height : 0;
+    
+    const maxX = outputResolution.width - overlayWidth;
+    const maxY = outputResolution.height - overlayHeight;
+    
+    const snappedX = snapToGrid(overlayX, 20, 0, maxX);
+    const snappedY = snapToGrid(overlayY, 20, 0, maxY);
     
     setOverlays(prev => prev.map(overlay =>
       overlay.id === editingPositionOverlayId

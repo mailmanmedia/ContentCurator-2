@@ -1,12 +1,51 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 
+// Mailman Media Color Palettes
+export const COLOR_PALETTES = {
+  "classic": {
+    name: 'Classic LFC',
+    background: '#C8102E',
+    border: '#002147',
+    text: '#FFFFFF',
+    accent: '#F6EB61',
+    resultColors: { "W": '#00FF87', "D": '#F6EB61', "L": '#FF4444' }
+  },
+  "navy": {
+    name: 'Navy Professional',
+    background: '#002147',
+    border: '#C8102E',
+    text: '#F5F1E9',
+    accent: '#4CA9E0',
+    resultColors: { "W": '#00FF87', "D": '#4CA9E0', "L": '#FF4444' }
+  },
+  "cream": {
+    name: 'Cream Elegant',
+    background: '#F5F1E9',
+    border: '#002147',
+    text: '#002147',
+    accent: '#C8102E',
+    resultColors: { "W": '#00D977', "D": '#F6EB61', "L": '#FF4444' }
+  },
+  "dark": {
+    name: 'Dark Mode',
+    background: '#0A0A0A',
+    border: '#C8102E',
+    text: '#FFFFFF',
+    accent: '#F6EB61',
+    resultColors: { "W": '#00FF87', "D": '#F6EB61', "L": '#FF4444' }
+  }
+} as const;
+
+export type ColorPaletteKey = keyof typeof COLOR_PALETTES;
+
 interface FormGuideOverlayProps {
   width: number;
   height: number;
   opacity?: number;
   layout?: 'horizontal' | 'vertical';
   teamId?: number;
+  colorPalette?: ColorPaletteKey;
 }
 
 export default function FormGuideOverlay({
@@ -15,7 +54,10 @@ export default function FormGuideOverlay({
   opacity = 0.9,
   layout = 'horizontal',
   teamId = 40,
+  colorPalette = 'classic',
 }: FormGuideOverlayProps) {
+  const palette = COLOR_PALETTES[colorPalette];
+  
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['/api/cached-stats/team', teamId, 39],
     queryFn: async () => {
@@ -31,13 +73,17 @@ export default function FormGuideOverlay({
         style={{
           width: `${width}%`,
           height: `${height}px`,
-          backgroundColor: `rgba(200, 16, 46, ${opacity})`,
+          backgroundColor: palette.background,
+          opacity,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#FFFFFF',
+          color: palette.text,
           fontFamily: 'League Spartan, sans-serif',
           fontSize: '14px',
+          border: `3px solid ${palette.border}`,
+          borderRadius: '8px',
+          boxSizing: 'border-box',
         }}
       >
         Loading...
@@ -49,12 +95,7 @@ export default function FormGuideOverlay({
   const formArray = formString.split('').slice(0, 5);
 
   const getResultColor = (result: string) => {
-    switch (result) {
-      case 'W': return '#00FF87';
-      case 'D': return '#F6EB61';
-      case 'L': return '#FF4444';
-      default: return '#CCCCCC';
-    }
+    return palette.resultColors[result as 'W' | 'D' | 'L'] || '#CCCCCC';
   };
 
   const getResultText = (result: string) => {
@@ -74,25 +115,27 @@ export default function FormGuideOverlay({
       style={{
         width: `${width}%`,
         height: `${height}px`,
-        backgroundColor: `rgba(200, 16, 46, ${opacity})`,
-        color: '#FFFFFF',
+        backgroundColor: palette.background,
+        opacity,
+        color: palette.text,
         fontFamily: 'League Spartan, sans-serif',
-        padding: '12px',
+        padding: '14px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         borderRadius: '8px',
-        border: '2px solid #002147',
+        border: `3px solid ${palette.border}`,
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#F6EB61', marginBottom: '8px' }}>
+      <div style={{ fontSize: '14px', fontWeight: 'bold', color: palette.accent, marginBottom: '10px', letterSpacing: '0.5px' }}>
         RECENT FORM
       </div>
 
       <div style={{
         display: 'flex',
         flexDirection: layout === 'horizontal' ? 'row' : 'column',
-        gap: layout === 'horizontal' ? '8px' : '6px',
+        gap: layout === 'horizontal' ? '10px' : '8px',
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
@@ -107,29 +150,32 @@ export default function FormGuideOverlay({
               display: 'flex',
               flexDirection: layout === 'horizontal' ? 'column' : 'row',
               alignItems: 'center',
-              gap: '4px',
+              gap: '6px',
             }}
           >
             <div
               style={{
-                width: layout === 'horizontal' ? '40px' : '30px',
-                height: layout === 'horizontal' ? '40px' : '30px',
+                width: layout === 'horizontal' ? '45px' : '35px',
+                height: layout === 'horizontal' ? '45px' : '35px',
                 borderRadius: '50%',
                 backgroundColor: getResultColor(result),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: layout === 'horizontal' ? '18px' : '14px',
+                fontSize: layout === 'horizontal' ? '20px' : '16px',
                 fontWeight: 'bold',
                 color: '#000000',
+                border: '2px solid rgba(0,0,0,0.1)',
               }}
             >
               {result}
             </div>
             <div style={{
-              fontSize: '10px',
-              color: '#CCCCCC',
+              fontSize: '11px',
+              color: palette.text,
+              opacity: 0.8,
               textAlign: 'center',
+              fontWeight: 500,
             }}>
               {getResultText(result)}
             </div>
@@ -138,14 +184,15 @@ export default function FormGuideOverlay({
       </div>
 
       <div style={{
-        borderTop: '1px solid rgba(246, 235, 97, 0.3)',
-        paddingTop: '8px',
-        fontSize: '11px',
+        borderTop: `1px solid ${palette.accent}40`,
+        paddingTop: '10px',
+        fontSize: '12px',
         display: 'flex',
         justifyContent: 'space-between',
+        fontWeight: 500,
       }}>
         <span>Last 5 Matches</span>
-        <span style={{ color: '#F6EB61' }}>
+        <span style={{ color: palette.accent, fontWeight: 'bold' }}>
           {formArray.filter((r: string) => r === 'W').length}W-
           {formArray.filter((r: string) => r === 'D').length}D-
           {formArray.filter((r: string) => r === 'L').length}L
