@@ -653,7 +653,7 @@ export default function LivePresentation() {
 
   const { data: rssSources, isLoading: isLoadingRssSources } = useQuery({
     queryKey: ['/api/rss-sources'],
-    enabled: overlayType === 'rss' && isOverlayDialogOpen,
+    enabled: isOverlayDialogOpen, // Load RSS sources when dialog opens, regardless of type
     select: (response: any) => (response?.sources || []) as RssSource[],
   });
 
