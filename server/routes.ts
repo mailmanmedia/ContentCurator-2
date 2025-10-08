@@ -1580,11 +1580,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // RSS Articles Management
   app.get("/api/rss-articles", async (req, res) => {
     try {
-      const { source, search, limit, start_date, end_date } = req.query;
+      const { source, sources, search, limit, start_date, end_date } = req.query;
       let articles;
 
       if (search) {
         articles = await storage.searchRssArticles(search as string);
+      } else if (sources) {
+        // Handle multiple sources (comma-separated)
+        const sourceIds = (sources as string).split(',').map(s => s.trim());
+        const allArticles = await Promise.all(
+          sourceIds.map(id => storage.getRssArticlesBySource(id))
+        );
+        articles = allArticles.flat()
+          .sort((a, b) => {
+            const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+            const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+            return dateB - dateA; // Most recent first
+          })
+          .slice(0, limit ? parseInt(limit as string) : 100);
       } else if (source) {
         articles = await storage.getRssArticlesBySource(source as string);
       } else if (start_date && end_date) {

@@ -138,11 +138,24 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   }), []);
 
   // Fetch RSS articles when RSS overlay exists
-  const hasRssOverlay = overlays.some(o => o.overlayType === 'rss');
+  const rssOverlays = overlays.filter(o => o.overlayType === 'rss');
+  const hasRssOverlay = rssOverlays.length > 0;
+  
+  // Collect all unique source IDs from all RSS overlays
+  const allRssSourceIds = useMemo(() => {
+    const sourceIds = new Set<string>();
+    rssOverlays.forEach(overlay => {
+      overlay.rssSourceIds?.forEach(id => sourceIds.add(id));
+    });
+    return Array.from(sourceIds);
+  }, [rssOverlays]);
   
   const { data: rssArticlesData } = useQuery<RssArticlesResponse>({
-    queryKey: ['/api/rss-articles', { limit: 50 }],
-    enabled: hasRssOverlay,
+    queryKey: ['/api/rss-articles', { 
+      sources: allRssSourceIds.length > 0 ? allRssSourceIds.join(',') : undefined,
+      limit: 100 
+    }],
+    enabled: hasRssOverlay && allRssSourceIds.length > 0,
   });
 
   const { data: rssSourcesData } = useQuery<RssSourcesResponse>({
