@@ -2644,20 +2644,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint to manually trigger AI stats update
-  app.post("/api/test-ai-stats", async (req, res) => {
-    console.log("[TEST] AI stats update triggered via API");
-    try {
-      const { updateLiverpoolStatsWithAI } = await import('./football/aiStatsService');
-      console.log("[TEST] aiStatsService imported successfully");
-      const success = await updateLiverpoolStatsWithAI();
-      console.log("[TEST] AI stats update result:", success);
-      res.json({ success, message: success ? "AI stats updated successfully" : "AI stats update failed" });
-    } catch (error) {
-      console.error('[TEST] Error updating AI stats:', error);
-      res.status(500).json({ error: "Failed to update AI stats" });
-    }
-  });
 
   // Team statistics endpoint for match preview
   app.get("/api/team-stats/:teamId", async (req, res) => {
