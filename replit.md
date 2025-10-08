@@ -53,6 +53,8 @@ A professional broadcast control system for multi-camera live productions with r
 - **RSS Ticker**: Comprehensive RSS feed management with customizable ticker settings, live preview, and source persistence.
 - **Source Selection**: Streamlined camera and screen share source selection with dynamic creation and reordering.
 - **Professional Overlay System**: Advanced broadcast-quality overlay layer system supporting text, image, and RSS feed tickers with dynamic controls (font size, scrolling, positioning, presets) and conflict detection.
+- **Mailman Media Color Palettes**: Four branded color schemes (Classic LFC, Navy Professional, Cream Elegant, Dark Mode) for Form Guide and metric overlays with visual selector in overlay controls.
+- **Smart Positioning Grid**: Enhanced position editor showing all active overlays simultaneously with ghost previews, snap-to-grid with boundary constraints preventing overlays from moving outside broadcast canvas (1920×1080).
 - **iOS Camera Support**: Enhanced overlay system with iOS device integration via `getUserMedia()`.
 - **Output Controls**: Manages resolution (Full HD, 2K, 4K) and global/per-source fit modes.
 - **Responsive Output**: Dynamic grid layout calculation for active sources with proper aspect ratio rendering.
