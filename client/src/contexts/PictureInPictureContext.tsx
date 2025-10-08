@@ -1,21 +1,50 @@
 import { createContext, useContext, useRef, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
+// LocalStorage keys for persisting PiP state
+const PIP_STATE_KEY = 'pip_state';
+const PIP_CONFIG_KEY = 'pip_config';
+
+interface PiPState {
+  isActive: boolean;
+  lastActivated: number;
+  canvasConfig?: {
+    width: number;
+    height: number;
+  };
+}
+
 interface PiPContextType {
   isPiPActive: boolean;
   startPiP: (canvas: HTMLCanvasElement) => Promise<void>;
   stopPiP: () => Promise<void>;
   updateCanvasStream: (canvas: HTMLCanvasElement) => void;
+  restorePiP: (canvas: HTMLCanvasElement) => Promise<void>;
 }
 
 const PiPContext = createContext<PiPContextType | null>(null);
 
 export function PiPProvider({ children }: { children: ReactNode }) {
-  const [isPiPActive, setIsPiPActive] = useState(false);
+  const [isPiPActive, setIsPiPActive] = useState(() => {
+    // Initialize from localStorage
+    try {
+      const stored = localStorage.getItem(PIP_STATE_KEY);
+      if (stored) {
+        const state: PiPState = JSON.parse(stored);
+        // Check if PiP was active recently (within 5 minutes)
+        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+        return state.isActive && state.lastActivated > fiveMinutesAgo;
+      }
+    } catch (error) {
+      console.error('Error loading PiP state:', error);
+    }
+    return false;
+  });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const restorationAttempted = useRef(false);
   const { toast } = useToast();
 
   // Initialize video element
@@ -39,6 +68,33 @@ export function PiPProvider({ children }: { children: ReactNode }) {
         document.body.removeChild(videoRef.current);
       }
     };
+  }, []);
+
+  // Save PiP state to localStorage
+  const savePiPState = useCallback((isActive: boolean, canvas?: HTMLCanvasElement) => {
+    try {
+      const state: PiPState = {
+        isActive,
+        lastActivated: Date.now(),
+        canvasConfig: canvas ? {
+          width: canvas.width,
+          height: canvas.height
+        } : undefined
+      };
+      localStorage.setItem(PIP_STATE_KEY, JSON.stringify(state));
+      
+      // Also save config for restoration
+      if (isActive && canvas) {
+        const config = {
+          width: canvas.width,
+          height: canvas.height,
+          timestamp: Date.now()
+        };
+        localStorage.setItem(PIP_CONFIG_KEY, JSON.stringify(config));
+      }
+    } catch (error) {
+      console.error('Error saving PiP state:', error);
+    }
   }, []);
 
   const captureCanvasToStream = useCallback(() => {
@@ -86,6 +142,9 @@ export function PiPProvider({ children }: { children: ReactNode }) {
       await videoRef.current.requestPictureInPicture();
       setIsPiPActive(true);
       
+      // Save state for persistence
+      savePiPState(true, canvas);
+      
       toast({
         title: 'Picture-in-Picture Active',
         description: 'Broadcast is now floating. Navigate anywhere while it stays on screen.',
@@ -98,8 +157,9 @@ export function PiPProvider({ children }: { children: ReactNode }) {
         variant: 'destructive',
       });
       setIsPiPActive(false);
+      savePiPState(false);
     }
-  }, [toast]);
+  }, [toast, savePiPState]);
 
   const stopPiP = useCallback(async () => {
     try {
@@ -123,10 +183,14 @@ export function PiPProvider({ children }: { children: ReactNode }) {
 
       canvasRef.current = null;
       setIsPiPActive(false);
+      
+      // Clear localStorage state
+      savePiPState(false);
+      localStorage.removeItem(PIP_CONFIG_KEY);
     } catch (error) {
       console.error('Error stopping PiP:', error);
     }
-  }, []);
+  }, [savePiPState]);
 
   const updateCanvasStream = useCallback((canvas: HTMLCanvasElement) => {
     if (isPiPActive) {
@@ -135,10 +199,38 @@ export function PiPProvider({ children }: { children: ReactNode }) {
     }
   }, [isPiPActive, captureCanvasToStream]);
 
+  // Restore PiP if it was previously active
+  const restorePiP = useCallback(async (canvas: HTMLCanvasElement) => {
+    if (restorationAttempted.current) return;
+    restorationAttempted.current = true;
+
+    try {
+      const stored = localStorage.getItem(PIP_STATE_KEY);
+      if (!stored) return;
+
+      const state: PiPState = JSON.parse(stored);
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      
+      if (state.isActive && state.lastActivated > fiveMinutesAgo) {
+        console.log('Attempting to restore PiP session...');
+        await startPiP(canvas);
+        
+        toast({
+          title: 'PiP Restored',
+          description: 'Your floating broadcast has been restored.',
+        });
+      }
+    } catch (error) {
+      console.error('Error restoring PiP:', error);
+      savePiPState(false);
+    }
+  }, [startPiP, toast, savePiPState]);
+
   // Handle PiP events
   useEffect(() => {
     const handleLeavePiP = () => {
       setIsPiPActive(false);
+      savePiPState(false);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
@@ -153,7 +245,7 @@ export function PiPProvider({ children }: { children: ReactNode }) {
         video.removeEventListener('leavepictureinpicture', handleLeavePiP);
       };
     }
-  }, []);
+  }, [savePiPState]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -168,7 +260,7 @@ export function PiPProvider({ children }: { children: ReactNode }) {
   }, [isPiPActive]);
 
   return (
-    <PiPContext.Provider value={{ isPiPActive, startPiP, stopPiP, updateCanvasStream }}>
+    <PiPContext.Provider value={{ isPiPActive, startPiP, stopPiP, updateCanvasStream, restorePiP }}>
       {children}
     </PiPContext.Provider>
   );

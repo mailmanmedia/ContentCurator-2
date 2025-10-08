@@ -714,7 +714,24 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
             
             ctx.fillStyle = textColor;
-            ctx.font = `bold ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
+            // Measure text and scale to fit if needed
+            let actualFontSize = scaledFontSize;
+            const maxTextWidth = overlayWidth - 20; // Leave padding
+            
+            // Function to find the right font size using measureText
+            const fitTextToContainer = () => {
+              for (let size = scaledFontSize; size >= 10; size--) {
+                ctx.font = `bold ${size}px "${overlay.fontFamily}", sans-serif`;
+                const textMetrics = ctx.measureText(tickerText);
+                if (textMetrics.width <= maxTextWidth) {
+                  actualFontSize = size;
+                  break;
+                }
+              }
+            };
+            
+            fitTextToContainer();
+            ctx.font = `bold ${actualFontSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             

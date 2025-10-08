@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, RefreshCw, Clock, Trophy } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface H2HMatchCardOverlayProps {
   homeTeamId: number;
@@ -10,6 +11,15 @@ interface H2HMatchCardOverlayProps {
   opacity?: number;
 }
 
+interface H2HResult {
+  date: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  competition: string;
+}
+
 export default function H2HMatchCardOverlay({
   homeTeamId,
   awayTeamId,
@@ -17,16 +27,83 @@ export default function H2HMatchCardOverlay({
   height,
   opacity = 0.95,
 }: H2HMatchCardOverlayProps) {
-  const { data: prediction, isLoading } = useQuery({
-    queryKey: ['/api/cached-stats/matchup', homeTeamId, awayTeamId],
+  const queryClient = useQueryClient();
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fetch real H2H match results - show actual scores
+  const { data: h2hData, isLoading, refetch } = useQuery({
+    queryKey: ['/api/fixtures/h2h', homeTeamId, awayTeamId],
     queryFn: async () => {
+      // Try to get real H2H results first
+      const h2hRes = await fetch(`/api/fixtures/h2h?team1=${homeTeamId}&team2=${awayTeamId}&limit=10`);
+      if (h2hRes.ok) {
+        const data = await h2hRes.json();
+        setLastUpdated(new Date());
+        return data;
+      }
+      
+      // Fallback to prediction/cached data
       const res = await fetch(`/api/cached-stats/matchup/${homeTeamId}/${awayTeamId}`);
-      if (!res.ok) throw new Error('Failed to fetch match prediction');
+      if (!res.ok) throw new Error('Failed to fetch H2H data');
       return res.json();
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 24 * 60 * 60 * 1000, // Daily auto-refresh
   });
 
-  if (isLoading || !prediction) {
+  // Manual refresh handler
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      setLastUpdated(new Date());
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Format timestamp
+  const formatTimestamp = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Calculate H2H stats from real match data
+  const calculateStats = (results: H2HResult[]) => {
+    let homeWins = 0;
+    let awayWins = 0;
+    let draws = 0;
+    
+    results?.forEach((match) => {
+      if (match.homeScore > match.awayScore) {
+        if (match.homeTeam.includes('Liverpool') || match.homeTeam.includes(homeTeamId.toString())) {
+          homeWins++;
+        } else {
+          awayWins++;
+        }
+      } else if (match.awayScore > match.homeScore) {
+        if (match.awayTeam.includes('Liverpool') || match.awayTeam.includes(awayTeamId.toString())) {
+          homeWins++;
+        } else {
+          awayWins++;
+        }
+      } else {
+        draws++;
+      }
+    });
+    
+    return { homeWins, awayWins, draws };
+  };
+
+  if (isLoading || !h2hData) {
     return (
       <div
         style={{

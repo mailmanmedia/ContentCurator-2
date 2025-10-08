@@ -764,6 +764,14 @@ export default function LivePresentation() {
           setNeedsPermission(true);
           setCameraPermissionStatus('prompt');
           setCameras([]);
+          
+          // Auto-request permissions on page load for better UX
+          if (cameraPermissionStatus === 'unknown') {
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+              requestCameraPermissions();
+            }, 1000);
+          }
           return;
         }
         
@@ -772,6 +780,13 @@ export default function LivePresentation() {
           setNeedsPermission(true);
           setCameraPermissionStatus('prompt');
           setCameras(videoDevices);
+          
+          // Auto-request permissions if not yet determined
+          if (cameraPermissionStatus === 'unknown') {
+            setTimeout(() => {
+              requestCameraPermissions();
+            }, 1000);
+          }
           return;
         }
         
@@ -796,7 +811,7 @@ export default function LivePresentation() {
     };
   }, []);
 
-  const requestCameraPermissions = async () => {
+  const requestCameraPermissions = useCallback(async () => {
     try {
       const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
       tempStream.getTracks().forEach(track => track.stop());
@@ -821,7 +836,7 @@ export default function LivePresentation() {
         variant: "destructive"
       });
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     if (isOverlayDialogOpen) {
@@ -848,13 +863,30 @@ export default function LivePresentation() {
   useEffect(() => {
     if (liveStateData?.liveState) {
       const state = liveStateData.liveState;
-      if (state.activeSources) setActiveSources(typeof state.activeSources === 'string' ? JSON.parse(state.activeSources) : state.activeSources);
-      if (state.overlays) setOverlays(typeof state.overlays === 'string' ? JSON.parse(state.overlays) : state.overlays);
-      if (state.outputResolution) setOutputResolution(typeof state.outputResolution === 'string' ? JSON.parse(state.outputResolution) : state.outputResolution);
-      if (state.globalFitMode) setGlobalFitMode(state.globalFitMode as any);
-      if (state.sourceFitModes) setSourceFitModes(typeof state.sourceFitModes === 'string' ? JSON.parse(state.sourceFitModes) : state.sourceFitModes);
-      if (state.sourceSettings) setSourceSettings(typeof state.sourceSettings === 'string' ? JSON.parse(state.sourceSettings) : state.sourceSettings);
-      if (state.isBroadcasting !== undefined) setIsBroadcasting(state.isBroadcasting);
+      // Handle both JSON objects and strings properly
+      if (state.activeSources) {
+        const sources = typeof state.activeSources === 'string' ? JSON.parse(state.activeSources) : state.activeSources;
+        setActiveSources(Array.isArray(sources) ? sources : []);
+      }
+      if (state.overlays) {
+        const overlayData = typeof state.overlays === 'string' ? JSON.parse(state.overlays) : state.overlays;
+        setOverlays(Array.isArray(overlayData) ? overlayData : []);
+      }
+      if (state.outputResolution) {
+        setOutputResolution(typeof state.outputResolution === 'string' ? JSON.parse(state.outputResolution) : state.outputResolution);
+      }
+      if (state.globalFitMode) {
+        setGlobalFitMode(state.globalFitMode as any);
+      }
+      if (state.sourceFitModes) {
+        setSourceFitModes(typeof state.sourceFitModes === 'string' ? JSON.parse(state.sourceFitModes) : state.sourceFitModes);
+      }
+      if (state.sourceSettings) {
+        setSourceSettings(typeof state.sourceSettings === 'string' ? JSON.parse(state.sourceSettings) : state.sourceSettings);
+      }
+      if (state.isBroadcasting !== undefined) {
+        setIsBroadcasting(state.isBroadcasting);
+      }
     }
   }, [liveStateData]);
 
@@ -882,14 +914,29 @@ export default function LivePresentation() {
 
       lastSavedStateRef.current = currentState;
       
+      // Send data as JSON objects, not stringified - backend expects JSONB columns
       apiRequest('PATCH', '/api/live-state', {
-        activeSources: JSON.stringify(activeSources),
-        overlays: JSON.stringify(overlays),
-        outputResolution: JSON.stringify(outputResolution),
+        activeSources: activeSources.map(source => ({
+          id: source.id,
+          name: source.name,
+          type: source.type,
+          deviceId: source.deviceId,
+          deviceLabel: source.deviceLabel,
+          resolution: source.resolution,
+          customWidth: source.customWidth,
+          customHeight: source.customHeight,
+          healthStatus: source.healthStatus,
+          lastError: source.lastError,
+          reconnectAttempts: source.reconnectAttempts
+        })),
+        overlays: overlays,
+        outputResolution: outputResolution,
         globalFitMode,
-        sourceFitModes: JSON.stringify(sourceFitModes),
-        sourceSettings: JSON.stringify(sourceSettings),
+        sourceFitModes: sourceFitModes,
+        sourceSettings: sourceSettings,
         isBroadcasting,
+      }).then(() => {
+        console.log('Live state saved successfully');
       }).catch(err => console.error('Failed to save live state:', err));
     }, 3000);
 
@@ -1058,10 +1105,127 @@ export default function LivePresentation() {
     }
   }, [activeSources, sourceSettings, acquireStream, acquireScreenShare, toast]);
 
+  const createMockMediaStream = (type: 'test-camera' | 'demo-source'): MediaStream => {
+    // Create a canvas to generate a test pattern
+    const canvas = document.createElement('canvas');
+    canvas.width = 1920;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d');
+    
+    if (ctx) {
+      // Create animated test pattern
+      let frame = 0;
+      const animate = () => {
+        frame++;
+        
+        // Fill background with gradient
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        if (type === 'test-camera') {
+          gradient.addColorStop(0, '#C8102E');
+          gradient.addColorStop(0.5, '#002147');
+          gradient.addColorStop(1, '#F6EB61');
+        } else {
+          gradient.addColorStop(0, '#002147');
+          gradient.addColorStop(0.5, '#F6EB61');
+          gradient.addColorStop(1, '#C8102E');
+        }
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Add test pattern text
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 72px League Spartan';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        const text = type === 'test-camera' ? 'TEST CAMERA' : 'DEMO DISPLAY';
+        ctx.fillText(text, canvas.width / 2, canvas.height / 2 - 100);
+        
+        // Add frame counter
+        ctx.font = '48px League Spartan';
+        ctx.fillText(`Frame: ${frame}`, canvas.width / 2, canvas.height / 2);
+        
+        // Add Liverpool FC branding
+        ctx.font = '36px League Spartan';
+        ctx.fillText('MAILMAN MEDIA • LIVERPOOL FC', canvas.width / 2, canvas.height / 2 + 100);
+        
+        // Add animated elements
+        const time = Date.now() / 1000;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(
+          canvas.width / 2 + Math.sin(time) * 200,
+          canvas.height / 2 + 200,
+          50,
+          0,
+          Math.PI * 2
+        );
+        ctx.stroke();
+        
+        requestAnimationFrame(animate);
+      };
+      
+      animate();
+    }
+    
+    // Create a media stream from the canvas
+    const stream = canvas.captureStream(30); // 30 FPS
+    
+    // Add a mock audio track (silence)
+    const audioContext = new AudioContext();
+    const oscillator = audioContext.createOscillator();
+    oscillator.frequency.value = 0; // Silent
+    const dest = audioContext.createMediaStreamDestination();
+    oscillator.connect(dest);
+    oscillator.start();
+    stream.addTrack(dest.stream.getAudioTracks()[0]);
+    
+    return stream;
+  };
+
   const handleSourceSelection = async (value: string) => {
     setSelectedValue('');
     
-    if (value === 'screen-share') {
+    if (value === 'test-camera') {
+      // Handle test camera
+      const sourceId = `test-camera-${Date.now()}`;
+      const mockStream = createMockMediaStream('test-camera');
+      
+      const newSource: ActiveSource = {
+        id: sourceId,
+        name: 'Test Camera (Demo)',
+        type: 'camera',
+        stream: mockStream,
+        healthStatus: 'connected' as SourceHealthStatus,
+        resolution: '1080p',
+      };
+      
+      setActiveSources(prev => [...prev, newSource]);
+      toast({
+        title: 'Test Camera Added',
+        description: 'A demo test camera has been added to your sources',
+      });
+    } else if (value === 'demo-source') {
+      // Handle demo display source
+      const sourceId = `demo-source-${Date.now()}`;
+      const mockStream = createMockMediaStream('demo-source');
+      
+      const newSource: ActiveSource = {
+        id: sourceId,
+        name: 'Demo Display',
+        type: 'screen',
+        stream: mockStream,
+        healthStatus: 'connected' as SourceHealthStatus,
+        resolution: '1080p',
+      };
+      
+      setActiveSources(prev => [...prev, newSource]);
+      toast({
+        title: 'Demo Display Added',
+        description: 'A demo display source has been added to your sources',
+      });
+    } else if (value === 'screen-share') {
       await handleAddScreenShare();
     } else if (value === 'branded-overlay') {
       setEditingOverlayId(null);
@@ -2348,6 +2512,22 @@ export default function LivePresentation() {
                     <SelectValue placeholder="Select a source to add..." />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Test Sources</SelectLabel>
+                      <SelectItem value="test-camera" data-testid="select-test-camera">
+                        <div className="flex items-center gap-2">
+                          <Video className="w-4 h-4" />
+                          Test Camera (Demo)
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="demo-source" data-testid="select-demo-source">
+                        <div className="flex items-center gap-2">
+                          <Monitor className="w-4 h-4" />
+                          Demo Display
+                        </div>
+                      </SelectItem>
+                    </SelectGroup>
+                    <SelectSeparator />
                     {needsPermission && (
                       <div className="p-2">
                         <Button 

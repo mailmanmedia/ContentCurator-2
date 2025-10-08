@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingUp, Activity, Radio, Users } from "lucide-react";
+import { TrendingUp, Activity, Radio, Users, RefreshCw, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface RssSentimentOverlayProps {
   width: number;

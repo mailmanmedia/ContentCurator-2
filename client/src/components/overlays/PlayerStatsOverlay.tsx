@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Activity, Target, TrendingUp } from "lucide-react";
+import { Activity, Target, TrendingUp, RefreshCw, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface PlayerStatsOverlayProps {
   playerId?: number;

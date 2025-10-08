@@ -1,0 +1,89 @@
+he current implementation does not meet expectations for accuracy, real-time updates, persistent overlays (especially picture-in-picture), and user control over displayed datasets. Multiple overlays (form guide, RSS sentiment, league table) are displaying outdated or irrelevant information, have major UI issues, and lack dropdowns or editing options. Fixes claimed by the agent are not being verified properly.
+
+Critical Goals
+These MUST be satisfied at all times.
+
+Picture-in-Picture (PiP) Overlay:
+
+PiP must remain active when navigating away from the live presentation page and only close when the user actively closes it.
+
+The video feed in PiP must persist, not require session re-setup, and should not blank out.
+
+If PiP fails, agent must log error reasons and chase a fix.
+
+Overlay Data Integrity & Recency:
+
+All overlays (form guide, league table, sentiment…) must pull the freshest data DAILY.
+
+Maintain a core hardcoded database for historical stats but always append latest updates via API (never overwrite).
+
+Clearly show “Last Updated” timestamp for every overlay.
+
+User must have option to manually refresh overlays and data on demand.
+
+Dropdown selectors for overlays must always be current, covering every team in Premier League, FA Cup, Carabao Cup, Europa League, and Champions League. This coverage must auto-expand with new teams by league and round.
+
+Data Connection, Categorization, and Selection:
+
+Data must be categorized by competition, team, and timeframe.
+
+User controls must allow selecting/toggling which dataset, match, or segment displays in an overlay (H2H, form, sentiment, etc.).
+
+RSS overlays must show live (or recently updated) sentiment analysis based on all loaded articles.
+
+Form guide and H2H overlays must show correct, real-time results (no stale data).
+
+UI Rendering and Editability:
+
+Overlay text must fit inside box boundaries (no overflow/overlap).
+
+User must be able to edit titles, select font sizes, and change what data is displayed easily in all overlays.
+
+All changes must apply immediately (hot reload).
+
+League Table Overlay:
+
+Must always reflect the actual league table for current season and round, with up-to-date points, matches, goal difference, etc.
+
+Dropdown for team selection is mandatory, and data must clarify "as of" the selected matchday.
+
+Agent Protocol & Technical Steps
+Always verify any fix via end-to-end automated agent test, showing a screenshot or log with the actual rendered output, not just a completion message.
+
+Overlay creation and data source queries must block overlay rendering until fresh data arrives—never allow “empty” or “stale” overlays.
+
+Implement API requests as needed for recency, with fallback to cached/hardcoded data only if latest data fails to load.
+
+When user selects an overlay, provide dropdowns/multi-selects for dataset, team, or league—do not hardcode only Liverpool or a single competition.
+
+Show “Manual Refresh” buttons for each data widget/overlay.
+
+Always show “Last Updated: [absolute and relative date/time]” on overlays.
+
+Fix UI CSS so all overlay text fits inside containers; scale font size if needed.
+
+Sentiment/RSS overlays must run sentiment analysis and display data based on the selected, most recent articles.
+
+Form guide overlays must include actual match results, not prediction placeholders, and allow user to select any head-to-head matchup.
+
+All overlays, especially PiP and persistent overlays, must survive route/page changes and remain active until explicitly closed.
+
+Prompt Example
+To the agent:
+Please read my instructions carefully and follow these HARD RULES for all overlays and presentation features:
+
+PiP must remain active across navigation, only close when commanded.
+
+All stats and overlays must show the latest, real, complete data with last-updated timestamp and manual refresh.
+
+User selection for teams, competitions, and datasets is mandatory in every overlay.
+
+No blank overlays, no text overflow, and all changes must be instantly visible.
+
+RSS sentiment overlays must perform actual text analysis on real feed items each session.
+
+Form guides, league tables, and H2H must always pull daily-updated stats, with manual refresh and correct dataset toggling.
+
+When in doubt, prioritize user control, real-time accuracy, and clear display of update times over any other workflow.
+
+If a problem is found, do not claim “all issues resolved” until providing a screenshot or debug log that the fixes were applied. Always verify end-to-end.
