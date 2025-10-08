@@ -618,7 +618,7 @@ export default function LivePresentation() {
   
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare, isScreenShareSupported } = useCameraStreams();
-  const { isPiPActive, startPiP, stopPiP } = usePiP();
+  const { isPiPActive, startPiP, stopPiP, restorePiP, updateCanvasStream } = usePiP();
   
   const compositorRef = useRef<VideoCompositorRef>(null);
   const canvasRef = compositorRef.current?.canvasRef || { current: null };
@@ -810,6 +810,27 @@ export default function LivePresentation() {
       navigator.mediaDevices.removeEventListener('devicechange', detectCameras);
     };
   }, []);
+
+  // Reconnect PiP to canvas when page loads and PiP is active
+  useEffect(() => {
+    const reconnectPiP = async () => {
+      if (isPiPActive && canvasRef.current) {
+        console.log('Reconnecting PiP to canvas on page load');
+        await restorePiP(canvasRef.current);
+      }
+    };
+
+    // Small delay to ensure canvas is fully initialized
+    const timer = setTimeout(reconnectPiP, 500);
+    return () => clearTimeout(timer);
+  }, [isPiPActive, restorePiP]);
+
+  // Update PiP stream when canvas or overlays change
+  useEffect(() => {
+    if (isPiPActive && canvasRef.current) {
+      updateCanvasStream(canvasRef.current);
+    }
+  }, [overlays, activeSources, isPiPActive, updateCanvasStream]);
 
   const requestCameraPermissions = useCallback(async () => {
     try {

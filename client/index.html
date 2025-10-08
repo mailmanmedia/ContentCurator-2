@@ -9,6 +9,8 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Persistent PiP portal - survives React navigation -->
+    <div id="pip-portal" style="position: fixed; bottom: -1000px; right: -1000px; width: 1px; height: 1px; pointer-events: none; z-index: -9999;"></div>
     <script type="module" src="/src/main.tsx"></script>
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
