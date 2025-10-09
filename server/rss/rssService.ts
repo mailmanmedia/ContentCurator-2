@@ -76,8 +76,11 @@ export class RssService {
           }
 
           const article = await this.parseArticle(item, sourceId, contentHash);
-          await storage.createRssArticle(article);
-          articlesAdded++;
+          const createdArticle = await storage.createRssArticle(article);
+          
+          if (createdArticle) {
+            articlesAdded++;
+          }
 
         } catch (error) {
           console.error(`Error processing article: ${item.title}`, error);

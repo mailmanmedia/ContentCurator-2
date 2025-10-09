@@ -131,7 +131,7 @@ export interface IStorage {
   getRecentRssArticles(limit?: number): Promise<RssArticle[]>;
   getRssArticlesByDateRange(startDate: Date, endDate: Date): Promise<RssArticle[]>;
   searchRssArticles(query: string): Promise<RssArticle[]>;
-  createRssArticle(article: InsertRssArticle): Promise<RssArticle>;
+  createRssArticle(article: InsertRssArticle): Promise<RssArticle | null>;
   updateRssArticle(id: string, updates: Partial<InsertRssArticle>): Promise<RssArticle | undefined>;
   deleteRssArticle(id: string): Promise<boolean>;
 
@@ -1283,8 +1283,12 @@ export class MemStorage implements IStorage {
     return results;
   }
 
-  async createRssArticle(insertArticle: InsertRssArticle): Promise<RssArticle> {
-    const results = await db.insert(rssArticlesTable).values(insertArticle).returning();
+  async createRssArticle(insertArticle: InsertRssArticle): Promise<RssArticle | null> {
+    const results = await db.insert(rssArticlesTable).values(insertArticle).onConflictDoNothing().returning();
+    
+    if (results.length === 0) {
+      return null;
+    }
     
     const source = await this.getRssSource(insertArticle.sourceId);
     if (source) {

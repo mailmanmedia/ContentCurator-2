@@ -1721,6 +1721,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertRssArticleSchema.parse(req.body);
       const article = await storage.createRssArticle(validatedData);
+      
+      if (!article) {
+        return res.status(409).json({ error: "Article already exists (duplicate)" });
+      }
+      
       res.json({ article });
     } catch (error) {
       console.error('Error creating RSS article:', error);
