@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
 import { useH2HData } from "@/hooks/useFootballData";
+import { useQuery } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
@@ -25,6 +27,27 @@ interface H2HMatch {
   competition?: string;
 }
 
+interface TeamInfo {
+  id: number;
+  name: string;
+  badge: string | null;
+  code?: string;
+}
+
+function useTeamBadge(teamId?: number) {
+  return useQuery<TeamInfo>({
+    queryKey: ['teamBadge', teamId],
+    queryFn: async () => {
+      if (!teamId) throw new Error('Team ID required');
+      const response = await fetch(`/api/football/team/${teamId}`);
+      if (!response.ok) throw new Error('Failed to fetch team badge');
+      return response.json();
+    },
+    enabled: !!teamId,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
 export default function H2HMatchCardOverlay({
   homeTeamId,
   awayTeamId,
@@ -33,49 +56,50 @@ export default function H2HMatchCardOverlay({
   opacity = 0.95,
   colorPalette = 'classic',
 }: H2HMatchCardOverlayProps) {
-  const { data, isLoading, error, refetch } = useH2HData(homeTeamId, awayTeamId);
+  const { data, isLoading, error, refetch, isFetching } = useH2HData(homeTeamId, awayTeamId);
+  const { data: homeTeam } = useTeamBadge(homeTeamId);
+  const { data: awayTeam } = useTeamBadge(awayTeamId);
 
-  // Color palette configurations
   const palettes = {
     classic: {
       primary: '#C8102E',
       secondary: '#0891A8',
-      accent: '#E8D9C5',
+      accent: '#00FF87',
       text: '#FFFFFF',
-      statBg: '#0891A8',
-      valueBg: '#E8D9C5',
-      valueText: '#002147',
-      background: 'rgba(0, 33, 71, 0.95)'
+      textSecondary: '#CCCCCC',
+      background: 'rgba(0, 33, 71, 0.95)',
+      cardBg: 'rgba(255, 255, 255, 0.05)',
+      border: 'rgba(200, 16, 46, 0.3)',
     },
     navy: {
       primary: '#002147',
       secondary: '#0891A8',
-      accent: '#E8D9C5',
+      accent: '#00FF87',
       text: '#FFFFFF',
-      statBg: '#0891A8',
-      valueBg: '#E8D9C5',
-      valueText: '#002147',
-      background: 'rgba(0, 33, 71, 0.95)'
+      textSecondary: '#CCCCCC',
+      background: 'rgba(0, 33, 71, 0.95)',
+      cardBg: 'rgba(255, 255, 255, 0.05)',
+      border: 'rgba(8, 145, 168, 0.3)',
     },
     cream: {
       primary: '#8B7355',
       secondary: '#0891A8',
-      accent: '#E8D9C5',
+      accent: '#00FF87',
       text: '#2C2416',
-      statBg: '#8B7355',
-      valueBg: '#E8D9C5',
-      valueText: '#2C2416',
-      background: 'rgba(232, 217, 197, 0.95)'
+      textSecondary: '#6B5D4F',
+      background: 'rgba(232, 217, 197, 0.95)',
+      cardBg: 'rgba(0, 0, 0, 0.05)',
+      border: 'rgba(139, 115, 85, 0.3)',
     },
     dark: {
-      primary: '#FFFFFF',
+      primary: '#C8102E',
       secondary: '#0891A8',
-      accent: '#333333',
+      accent: '#00FF87',
       text: '#FFFFFF',
-      statBg: '#0891A8',
-      valueBg: '#333333',
-      valueText: '#FFFFFF',
-      background: 'rgba(17, 17, 17, 0.95)'
+      textSecondary: '#999999',
+      background: 'rgba(17, 17, 17, 0.95)',
+      cardBg: 'rgba(255, 255, 255, 0.08)',
+      border: 'rgba(200, 16, 46, 0.3)',
     }
   };
 
@@ -108,9 +132,19 @@ export default function H2HMatchCardOverlay({
   }
 
   const h2hData = data.data;
-  const matches: H2HMatch[] = h2hData.fixtures || [];
+  const allMatches: H2HMatch[] = h2hData.fixtures || [];
 
-  if (matches.length === 0) {
+  // Sort matches by date (most recent first)
+  const sortedMatches = [...allMatches].sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  // Filter out upcoming/unplayed matches (only include completed matches)
+  const completedMatches = sortedMatches.filter(
+    m => m.homeScore != null && m.awayScore != null
+  );
+
+  if (completedMatches.length === 0) {
     return (
       <OverlayEmptyState
         message="No previous matches found between these teams"
@@ -120,16 +154,12 @@ export default function H2HMatchCardOverlay({
     );
   }
 
-  // Calculate statistics
+  // Calculate W-D-L stats from completed matches only
   let homeWins = 0;
   let awayWins = 0;
   let draws = 0;
-  let homeGoals = 0;
-  let awayGoals = 0;
 
-  matches.forEach((match) => {
-    homeGoals += match.homeScore;
-    awayGoals += match.awayScore;
+  completedMatches.forEach((match) => {
     if (match.homeScore > match.awayScore) {
       homeWins++;
     } else if (match.awayScore > match.homeScore) {
@@ -139,104 +169,224 @@ export default function H2HMatchCardOverlay({
     }
   });
 
-  const totalMatches = matches.length;
-  const homeWinPct = totalMatches > 0 ? Math.round((homeWins / totalMatches) * 100) : 0;
-  const awayWinPct = totalMatches > 0 ? Math.round((awayWins / totalMatches) * 100) : 0;
-  const avgHomeGoals = totalMatches > 0 ? (homeGoals / totalMatches).toFixed(1) : '0.0';
-  const avgAwayGoals = totalMatches > 0 ? (awayGoals / totalMatches).toFixed(1) : '0.0';
+  const totalMatches = completedMatches.length;
+  const recentMatches = completedMatches.slice(0, 5);
 
-  // Halftone dot pattern
-  const HalftoneDots = ({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) => {
-    const dots = [];
-    const rows = 4;
-    const cols = 4;
-    const dotSize = 8;
-    const gap = 12;
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  };
 
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        dots.push(
-          <circle
-            key={`${row}-${col}`}
-            cx={col * gap}
-            cy={row * gap}
-            r={dotSize - (row + col) * 0.8}
-            fill={colors.text}
-            opacity={0.3}
-          />
-        );
-      }
-    }
+  const formatTimestamp = (timestamp?: string) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
-    const positions = {
-      tl: { top: 60, left: 20 },
-      tr: { top: 60, right: 20 },
-      bl: { bottom: 20, left: 20 },
-      br: { bottom: 20, right: 20 },
-    };
-
+  const TeamBadge = ({ team, teamId, side }: { team?: TeamInfo; teamId: number; side: 'home' | 'away' }) => {
+    const initials = team?.name?.substring(0, 2).toUpperCase() || (side === 'home' ? 'H' : 'A');
+    
     return (
-      <svg
-        style={{
-          position: 'absolute',
-          ...positions[position],
-          width: 60,
-          height: 60,
-        }}
-      >
-        {dots}
-      </svg>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '8px',
+        flex: 1,
+      }}>
+        <div style={{
+          width: 'clamp(80px, 12vw, 120px)',
+          height: 'clamp(80px, 12vw, 120px)',
+          backgroundColor: colors.cardBg,
+          borderRadius: '8px',
+          border: `2px solid ${colors.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}>
+          {team?.badge ? (
+            <img
+              src={team.badge}
+              alt={team.name}
+              style={{
+                width: '75%',
+                height: '75%',
+                objectFit: 'contain',
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                if (e.currentTarget.nextSibling) {
+                  (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                }
+              }}
+              data-testid={`team-badge-${side}`}
+            />
+          ) : null}
+          <div style={{
+            display: team?.badge ? 'none' : 'flex',
+            fontSize: 'clamp(32px, 5vw, 48px)',
+            fontWeight: 'bold',
+            color: colors.text,
+          }}>
+            {initials}
+          </div>
+        </div>
+        <div style={{
+          fontSize: 'clamp(12px, 1.8vw, 16px)',
+          fontWeight: 'bold',
+          textAlign: 'center',
+          color: colors.text,
+          maxWidth: '140px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }} data-testid={`team-name-${side}`}>
+          {team?.name || `Team ${teamId}`}
+        </div>
+      </div>
     );
   };
 
-  // Stat bar component
-  const StatBar = ({ label, leftValue, rightValue }: { label: string; leftValue: string | number; rightValue: string | number }) => (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: '8px',
-      marginBottom: '12px',
-    }}>
+  const WDLIndicator = ({ type, count }: { type: 'W' | 'D' | 'L'; count: number }) => {
+    const colorMap = {
+      W: '#00FF87',
+      D: '#F6EB61',
+      L: '#FF4444',
+    };
+    
+    return (
       <div style={{
-        backgroundColor: colors.valueBg,
-        color: colors.valueText,
-        padding: '8px 16px',
-        fontWeight: 'bold',
-        fontSize: '20px',
-        minWidth: '60px',
-        textAlign: 'center',
-        fontFamily: 'League Spartan, sans-serif',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
       }}>
-        {leftValue}
+        <div style={{
+          width: 'clamp(40px, 6vw, 60px)',
+          height: 'clamp(40px, 6vw, 60px)',
+          borderRadius: '50%',
+          backgroundColor: colorMap[type],
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 'clamp(18px, 3vw, 28px)',
+          fontWeight: 'bold',
+          color: '#000',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+        }} data-testid={`wdl-badge-${type.toLowerCase()}`}>
+          {count}
+        </div>
+        <div style={{
+          fontSize: 'clamp(12px, 1.8vw, 16px)',
+          fontWeight: 'bold',
+          color: colors.text,
+          letterSpacing: '0.5px',
+        }}>
+          {type === 'W' ? 'WINS' : type === 'D' ? 'DRAWS' : 'LOSSES'}
+        </div>
       </div>
-      <div style={{
-        flex: 1,
-        backgroundColor: colors.statBg,
-        color: colors.text,
-        padding: '10px',
-        textAlign: 'center',
-        fontWeight: 'bold',
-        fontSize: '14px',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
-        fontFamily: 'League Spartan, sans-serif',
-      }}>
-        {label}
-      </div>
-      <div style={{
-        backgroundColor: colors.valueBg,
-        color: colors.valueText,
-        padding: '8px 16px',
-        fontWeight: 'bold',
-        fontSize: '20px',
-        minWidth: '60px',
-        textAlign: 'center',
-        fontFamily: 'League Spartan, sans-serif',
-      }}>
-        {rightValue}
-      </div>
-    </div>
-  );
+    );
+  };
+
+  const MatchHistoryCard = ({ match, index }: { match: H2HMatch; index: number }) => {
+    const isHomeWin = match.homeScore > match.awayScore;
+    const isAwayWin = match.awayScore > match.homeScore;
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: index * 0.1 }}
+        style={{
+          backgroundColor: colors.cardBg,
+          borderRadius: '6px',
+          padding: 'clamp(8px, 1.5vw, 12px)',
+          border: `1px solid ${colors.border}`,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+        }}
+        data-testid={`match-history-${index}`}
+      >
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <div style={{
+            flex: 1,
+            fontSize: 'clamp(11px, 1.5vw, 13px)',
+            color: colors.text,
+            fontWeight: isHomeWin ? 'bold' : 'normal',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {match.homeTeam}
+          </div>
+          
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 12px',
+            backgroundColor: isHomeWin ? 'rgba(0, 255, 135, 0.15)' : isAwayWin ? 'rgba(255, 68, 68, 0.15)' : 'rgba(246, 235, 97, 0.15)',
+            borderRadius: '4px',
+            fontSize: 'clamp(13px, 2vw, 16px)',
+            fontWeight: 'bold',
+            color: colors.text,
+          }}>
+            <span>{match.homeScore}</span>
+            <span style={{ opacity: 0.5 }}>-</span>
+            <span>{match.awayScore}</span>
+          </div>
+          
+          <div style={{
+            flex: 1,
+            fontSize: 'clamp(11px, 1.5vw, 13px)',
+            color: colors.text,
+            fontWeight: isAwayWin ? 'bold' : 'normal',
+            textAlign: 'right',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {match.awayTeam}
+          </div>
+        </div>
+        
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: 'clamp(9px, 1.2vw, 11px)',
+          color: colors.textSecondary,
+          gap: '8px',
+        }}>
+          <span>{formatDate(match.date)}</span>
+          {match.competition && (
+            <div style={{
+              backgroundColor: `${colors.secondary}30`,
+              padding: '2px 6px',
+              borderRadius: '3px',
+              fontWeight: 'bold',
+              fontSize: 'clamp(8px, 1.1vw, 10px)',
+            }}>
+              {match.competition}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <motion.div
@@ -249,132 +399,168 @@ export default function H2HMatchCardOverlay({
         backgroundColor: colors.background,
         color: colors.text,
         fontFamily: 'League Spartan, sans-serif',
-        padding: '24px',
+        padding: 'clamp(16px, 3vw, 24px)',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
+        borderRadius: '8px',
+        border: `3px solid ${colors.primary}`,
       }}
       data-testid="overlay-h2h"
     >
-      {/* Halftone decorative dots */}
-      <HalftoneDots position="tl" />
-      <HalftoneDots position="tr" />
-      <HalftoneDots position="bl" />
-      <HalftoneDots position="br" />
-
-      {/* Title */}
       <div style={{
-        fontSize: '32px',
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-        letterSpacing: '1px',
-        color: colors.text,
-        marginBottom: '20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 'clamp(12px, 2vw, 16px)',
       }}>
-        TEAMS HEAD 2 HEAD
+        <div style={{
+          fontSize: 'clamp(18px, 3.5vw, 28px)',
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+          color: colors.accent,
+        }} data-testid="overlay-title">
+          HEAD-TO-HEAD RECORD
+        </div>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          {data.timestamp && (
+            <div style={{
+              fontSize: 'clamp(8px, 1.1vw, 10px)',
+              color: colors.textSecondary,
+              textAlign: 'right',
+            }} data-testid="last-updated">
+              Updated: {formatTimestamp(data.timestamp)}
+            </div>
+          )}
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            style={{
+              backgroundColor: 'transparent',
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              padding: 'clamp(4px, 0.8vw, 6px)',
+              cursor: isFetching ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: colors.accent,
+              transition: 'all 0.2s ease',
+              opacity: isFetching ? 0.5 : 1,
+            }}
+            data-testid="button-refresh-h2h"
+          >
+            <RefreshCw
+              size={parseInt('clamp(12px, 2vw, 16px)'.match(/\d+/)?.[0] || '14')}
+              style={{
+                animation: isFetching ? 'spin 1s linear infinite' : 'none',
+              }}
+            />
+          </button>
+        </div>
       </div>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
 
-      {/* Team badges and VS */}
       <div style={{
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: '40px',
-        marginBottom: '24px',
-        padding: '16px 0',
+        gap: 'clamp(20px, 4vw, 40px)',
+        marginBottom: 'clamp(16px, 2.5vw, 20px)',
+        padding: 'clamp(12px, 2vw, 16px) 0',
       }}>
+        <TeamBadge team={homeTeam} teamId={homeTeamId} side="home" />
+        
         <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '8px',
-        }}>
-          <div style={{
-            width: '100px',
-            height: '100px',
-            backgroundColor: colors.valueBg,
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '48px',
-            fontWeight: 'bold',
-            color: colors.valueText,
-          }}>
-            {h2hData.homeTeam?.team?.substring(0, 2).toUpperCase() || 'H'}
-          </div>
-          <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>
-            {h2hData.homeTeam?.team || `Team ${homeTeamId}`}
-          </div>
-        </div>
-
-        <div style={{
-          width: '60px',
-          height: '60px',
+          width: 'clamp(50px, 8vw, 70px)',
+          height: 'clamp(50px, 8vw, 70px)',
           backgroundColor: colors.secondary,
           borderRadius: '50%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '20px',
+          fontSize: 'clamp(16px, 2.5vw, 22px)',
           fontWeight: 'bold',
           color: colors.text,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
         }}>
           VS
         </div>
 
+        <TeamBadge team={awayTeam} teamId={awayTeamId} side="away" />
+      </div>
+
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        gap: 'clamp(12px, 2vw, 16px)',
+        marginBottom: 'clamp(16px, 2.5vw, 20px)',
+        padding: 'clamp(12px, 2vw, 16px)',
+        backgroundColor: colors.cardBg,
+        borderRadius: '8px',
+        border: `1px solid ${colors.border}`,
+      }}>
+        <WDLIndicator type="W" count={homeWins} />
+        <WDLIndicator type="D" count={draws} />
+        <WDLIndicator type="L" count={awayWins} />
+      </div>
+
+      <div style={{
+        marginBottom: 'clamp(8px, 1.5vw, 12px)',
+      }}>
         <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '8px',
+          fontSize: 'clamp(13px, 2vw, 16px)',
+          fontWeight: 'bold',
+          color: colors.accent,
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+          marginBottom: '8px',
         }}>
-          <div style={{
-            width: '100px',
-            height: '100px',
-            backgroundColor: colors.valueBg,
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '48px',
-            fontWeight: 'bold',
-            color: colors.valueText,
-          }}>
-            {h2hData.awayTeam?.team?.substring(0, 2).toUpperCase() || 'A'}
-          </div>
-          <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>
-            {h2hData.awayTeam?.team || `Team ${awayTeamId}`}
-          </div>
+          Recent Matches
         </div>
       </div>
 
-      {/* Stat bars */}
-      <div style={{ marginTop: '8px' }}>
-        <StatBar label="Head 2 Head Wins" leftValue={homeWins} rightValue={awayWins} />
-        <StatBar label="Win Percentage" leftValue={`${homeWinPct}%`} rightValue={`${awayWinPct}%`} />
-        <StatBar label="Total Matches" leftValue={totalMatches} rightValue={totalMatches} />
-        <StatBar label="Average Goals" leftValue={avgHomeGoals} rightValue={avgAwayGoals} />
-        <StatBar label="Draws" leftValue={draws} rightValue={draws} />
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'clamp(6px, 1vw, 8px)',
+      }}>
+        {recentMatches.map((match, index) => (
+          <MatchHistoryCard key={index} match={match} index={index} />
+        ))}
       </div>
 
-      {/* Footer info */}
-      {totalMatches > 0 && (
+      {totalMatches > 5 && (
         <div style={{
-          marginTop: 'auto',
-          paddingTop: '12px',
-          fontSize: '11px',
-          color: colors.text,
-          opacity: 0.7,
+          marginTop: 'clamp(8px, 1.5vw, 12px)',
+          paddingTop: 'clamp(8px, 1.5vw, 12px)',
+          borderTop: `1px solid ${colors.border}`,
+          fontSize: 'clamp(9px, 1.2vw, 11px)',
+          color: colors.textSecondary,
           textAlign: 'center',
         }}>
-          Based on {totalMatches} match{totalMatches !== 1 ? 'es' : ''}
+          Showing 5 of {totalMatches} total matches
         </div>
       )}
 
-      {/* Source Badge */}
-      <OverlaySourceBadge source={data.source as any} timestamp={data.timestamp} />
+      <OverlaySourceBadge 
+        source={data.source as any} 
+        timestamp={data.timestamp ? new Date(data.timestamp).getTime() : undefined} 
+      />
     </motion.div>
   );
 }

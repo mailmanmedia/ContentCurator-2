@@ -1,0 +1,50 @@
+diff --git a//dev/null b/TEAM_FORM_CARD_ISSUE.md
+index 0000000000000000000000000000000000000000..8b0cf58f9c31a5bb9e85a2b523c36d40efd1d10a 100644
+--- a//dev/null
++++ b/TEAM_FORM_CARD_ISSUE.md
+@@ -0,0 +1,45 @@
++# Team Form Card assessment
++
++## Overview
++The `TeamFormCard` implementation committed last time lives in
++[`team-specific-components.tsx`](team-specific-components.tsx) and ships with a
++large bundle of generated data (`FORM_COMPETITIONS`) and a fully branded UI. The
++card looks polished, but it never connects to real team form information –
++instead it fabricates deterministic pseudo-random data for every club across the
++Premier League, Champions League, Europa League, FA Cup, and Carabao Cup.
++
++## Why the output is misleading
++1. **No live data wiring** – Every selector option and stat shown in the card is
++   produced by `generateTeamData`, which spins up a seeded RNG and invents
++   opponents, scores, streaks, narratives, and fixtures. None of it comes from
++   our analytics services or upstream APIs, so the storytelling is fiction even
++   though the UI reads like genuine intelligence.【F:team-specific-components.tsx†L1286-L1448】
++2. **Synthetic fixtures & headlines** – The helper functions build random match
++   labels, storylines, and upcoming fixture details (broadcast partners, kickoff
++   times, venues). Because they pull from canned arrays, the same club can be
++   shown playing itself, visiting stadiums it never uses, or carrying
++   contradictory streaks once an engineer cross-checks the copy against actual
++   results.【F:team-specific-components.tsx†L1362-L1514】
++3. **Hard-coded competition rosters** – Each competition list is defined inline
++   and quickly goes stale (for example, Champions League entrants change every
++   season, yet the array is frozen in code). Updating one club now means editing
++   multiple constants and re-running the pseudo-random generator, which is not
++   sustainable for production dashboards.【F:team-specific-components.tsx†L688-L775】
++4. **UI asset parity issues** – The Mailman Media crest is recreated from
++   scratch as an inline SVG (`MailmanMediaSeal`). It does not match the official
++   logo asset that lives alongside the design system, so the colours, stroke
++   weights, and typography diverge from brand guidelines even though the code
++   claims to use the “logo from the second file.”【F:team-specific-components.tsx†L1188-L1283】
++
++## Impact
++Shipping this component would surface fabricated scouting intel to users, which
++is worse than leaving the old form card in place. It also balloons
++`team-specific-components.tsx` by ~1,000 lines of tightly coupled UI and data
++logic, making it harder for another engineer to wire in the real services later.
++
++## Recommendation
++Scrap the generated datasets and refactor the card so it consumes real form,
++fixture, and competition metadata from our analytics pipeline. Keep the brand
++styling, but replace the custom SVG with the approved asset from the design
++system and move the competition/team copy into CMS-backed sources so the list
++stays current.
