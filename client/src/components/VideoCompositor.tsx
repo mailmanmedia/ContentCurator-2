@@ -1237,6 +1237,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
       cursor: isDragging ? 'grabbing' : 'grab',
       border: isSelected ? '2px solid #C8102E' : 'none',
       boxSizing: 'border-box',
+      overflow: 'hidden',
     };
 
     const overlayComponent = (() => {
