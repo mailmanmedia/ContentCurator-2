@@ -96,7 +96,7 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     category: 'stats',
     overlayType: 'metric',
     width: 40,
-    height: 250,
+    height: 350,
     position: 'top',
     zIndex: 110,
     opacity: 0.88,
