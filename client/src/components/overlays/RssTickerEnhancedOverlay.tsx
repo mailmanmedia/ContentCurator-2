@@ -125,8 +125,8 @@ export default function RssTickerEnhancedOverlay({
     return (
       <div
         style={{
-          width: `${width}%`,
-          height: `${height}px`,
+          width: '100%',
+          height: '100%',
           backgroundColor: `rgba(0, 33, 71, ${opacity})`,
           display: 'flex',
           alignItems: 'center',
@@ -146,8 +146,8 @@ export default function RssTickerEnhancedOverlay({
     return (
       <div
         style={{
-          width: `${width}%`,
-          height: `${height}px`,
+          width: '100%',
+          height: '100%',
           backgroundColor: `rgba(0, 33, 71, ${opacity})`,
           display: 'flex',
           alignItems: 'center',
@@ -171,8 +171,8 @@ export default function RssTickerEnhancedOverlay({
   return (
     <div
       style={{
-        width: `${width}%`,
-        height: `${height}px`,
+        width: '100%',
+        height: '100%',
         backgroundColor: `rgba(0, 33, 71, ${opacity})`,
         fontFamily: 'League Spartan, sans-serif',
         borderRadius: '8px',

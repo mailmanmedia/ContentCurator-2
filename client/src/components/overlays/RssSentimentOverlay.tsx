@@ -49,8 +49,8 @@ export default function RssSentimentOverlay({
     return (
       <div
         style={{
-          width: `${width}%`,
-          height: `${height}px`,
+          width: '100%',
+          height: '100%',
           backgroundColor: `rgba(0, 33, 71, ${opacity})`,
           display: 'flex',
           flexDirection: 'column',
@@ -104,8 +104,8 @@ export default function RssSentimentOverlay({
     return (
       <div
         style={{
-          width: `${width}%`,
-          height: `${height}px`,
+          width: '100%',
+          height: '100%',
           backgroundColor: `rgba(0, 33, 71, ${opacity})`,
           display: 'flex',
           alignItems: 'center',
@@ -164,8 +164,8 @@ export default function RssSentimentOverlay({
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.4 }}
       style={{
-        width: `${width}%`,
-        height: `${height}px`,
+        width: '100%',
+        height: '100%',
         backgroundColor: `rgba(0, 33, 71, ${opacity})`,
         color: '#FFFFFF',
         fontFamily: 'League Spartan, sans-serif',

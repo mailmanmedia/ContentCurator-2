@@ -150,6 +150,40 @@ function getH2HRecord(h2hData: any, opponentId: number): HeadToHeadRecord | null
   };
 }
 
+async function getLiveLeagueTable() {
+  try {
+    const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/football/standings/39/2025`);
+    const standingsData = await response.json();
+    
+    if (!standingsData || !standingsData.standings) {
+      throw new Error('Invalid standings data received from API');
+    }
+    
+    const standings = standingsData.standings.map((entry: any) => ({
+      position: entry.position,
+      team: {
+        id: entry.teamId,
+        name: entry.teamName,
+        logo: entry.logo
+      },
+      played: entry.matchesPlayed,
+      won: entry.wins,
+      drawn: entry.draws,
+      lost: entry.losses,
+      goalsFor: entry.goalsFor,
+      goalsAgainst: entry.goalsAgainst,
+      goalDifference: entry.goalDifference,
+      points: entry.points,
+      form: entry.form || ''
+    }));
+    
+    return { standings };
+  } catch (error) {
+    console.error('Error fetching live league table from API Football:', error);
+    return loadJSONFile("league_table.json");
+  }
+}
+
 export function registerAnalyticsRoutes(app: Express, storage: IStorage) {
   app.get("/api/analytics/team-metrics", async (req: Request, res: Response) => {
     try {
@@ -660,9 +694,9 @@ export function registerAnalyticsRoutes(app: Express, storage: IStorage) {
     "/api/analytics/comparative-metrics",
     async (req: Request, res: Response) => {
       try {
-        const comparisons = await analyticsCache.get("comparative-metrics", () => {
+        const comparisons = await analyticsCache.get("comparative-metrics", async () => {
           const matchesData = loadJSONFile("matches.json");
-          const leagueTable = loadJSONFile("league_table.json");
+          const leagueTable = await getLiveLeagueTable();
           const opponentsData = loadJSONFile("opponents.json");
 
           if (!matchesData || !leagueTable || !opponentsData) {

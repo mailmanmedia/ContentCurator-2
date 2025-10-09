@@ -244,8 +244,8 @@ export default function H2HMatchCardOverlay({
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.5 }}
       style={{
-        width: `${width}%`,
-        height: `${height}px`,
+        width: '100%',
+        height: '100%',
         backgroundColor: colors.background,
         color: colors.text,
         fontFamily: 'League Spartan, sans-serif',

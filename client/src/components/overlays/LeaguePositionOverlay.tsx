@@ -32,8 +32,8 @@ export default function LeaguePositionOverlay({
     return (
       <div
         style={{
-          width: `${width}%`,
-          height: `${height}px`,
+          width: '100%',
+          height: '100%',
           backgroundColor: `rgba(0, 33, 71, ${opacity})`,
           display: 'flex',
           alignItems: 'center',
@@ -69,8 +69,8 @@ export default function LeaguePositionOverlay({
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
       style={{
-        width: `${width}%`,
-        height: `${height}px`,
+        width: '100%',
+        height: '100%',
         backgroundColor: `rgba(0, 33, 71, ${opacity})`,
         color: '#F6EB61',
         fontFamily: 'League Spartan, sans-serif',

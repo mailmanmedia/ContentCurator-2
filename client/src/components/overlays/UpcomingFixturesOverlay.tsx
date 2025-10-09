@@ -125,8 +125,8 @@ export default function UpcomingFixturesOverlay({
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.4 }}
       style={{
-        width: `${width}%`,
-        height: `${height}px`,
+        width: '100%',
+        height: '100%',
         backgroundColor: palette.background,
         opacity,
         color: palette.text,

@@ -929,6 +929,16 @@ export default function LivePresentation() {
     }
   }, [toast]);
 
+  const handleUpdateOverlay = useCallback((overlayId: string, updates: Partial<OverlayConfig>) => {
+    setOverlays(prev => prev.map(overlay => 
+      overlay.id === overlayId ? { ...overlay, ...updates } : overlay
+    ));
+  }, []);
+
+  const handleSelectOverlay = useCallback((overlayId: string | null) => {
+    console.log('Selected overlay:', overlayId);
+  }, []);
+
   useEffect(() => {
     if (isOverlayDialogOpen) {
       const conflict = checkPositionConflict(
@@ -2599,6 +2609,8 @@ export default function LivePresentation() {
                     globalFitMode={globalFitMode}
                     sourceFitModes={sourceFitModes}
                     overlays={overlays}
+                    onUpdateOverlay={handleUpdateOverlay}
+                    onSelectOverlay={handleSelectOverlay}
                     className="w-full h-full"
                   />
                 </div>

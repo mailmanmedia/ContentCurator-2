@@ -91,8 +91,8 @@ export default function PlayerStatsOverlay({
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
       style={{
-        width: `${width}%`,
-        height: `${height}px`,
+        width: '100%',
+        height: '100%',
         backgroundColor: `rgba(246, 235, 97, ${opacity})`,
         color: '#002147',
         fontFamily: 'League Spartan, sans-serif',
