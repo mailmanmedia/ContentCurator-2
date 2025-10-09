@@ -37,7 +37,7 @@ export default function LeaguePositionOverlay({
     const scaleHeight = height / baseHeight;
     // Use the smaller scale to ensure content fits in both dimensions
     const calculatedScale = Math.min(scaleWidth, scaleHeight);
-    const fn = (size: number) => Math.max(size * calculatedScale, size * 0.5); // Min 50% of original
+    const fn = (size: number) => Math.max(size * calculatedScale, size * 0.2); // Min 20% of original for extreme compression
     
     return { scale: calculatedScale, scaleFn: fn };
   }, [width, height]);
@@ -77,6 +77,14 @@ export default function LeaguePositionOverlay({
 
   const trend = getPositionTrend();
 
+  // Calculate adaptive values based on dimensions
+  const isUltraCompact = height < 120;
+  const isCompact = height < 150 && !isUltraCompact;
+  const teamCount = isUltraCompact ? 2 : (height < 180 ? 3 : Math.max(3, Math.min(6, Math.floor((height - 150) / 25))));
+  const maxChars = Math.max(8, Math.floor(width / 30));
+  const dynamicPadding = isUltraCompact ? 3 : (isCompact ? Math.max(scaleFn(8), 4) : Math.max(scaleFn(16) * (height / 300), 8));
+  const dynamicSpacing = isUltraCompact ? 1 : (isCompact ? Math.max(scaleFn(6), 2) : Math.max(scaleFn(12) * (height / 300), 4));
+
   return (
     <motion.div
       initial={{ y: -50, opacity: 0 }}
@@ -88,15 +96,16 @@ export default function LeaguePositionOverlay({
         backgroundColor: `rgba(0, 33, 71, ${opacity})`,
         color: '#F6EB61',
         fontFamily: 'League Spartan, sans-serif',
-        padding: `${scaleFn(16)}px`,
+        padding: `${dynamicPadding}px`,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         borderRadius: `${scaleFn(8)}px`,
         border: `${Math.max(2 * scale, 1)}px solid #F6EB61`,
+        overflow: 'hidden',
       }}
     >
-      <div style={{ fontSize: `${scaleFn(14)}px`, fontWeight: 'bold', marginBottom: `${scaleFn(12)}px`, color: '#FFFFFF' }}>
+      <div style={{ fontSize: `${isUltraCompact ? 7 : (isCompact ? 9 : Math.max(scaleFn(14), 10))}px`, fontWeight: 'bold', marginBottom: `${dynamicSpacing}px`, color: '#FFFFFF', lineHeight: (isUltraCompact || isCompact) ? '1' : 'normal' }}>
         LEAGUE POSITION
       </div>
 
@@ -104,34 +113,35 @@ export default function LeaguePositionOverlay({
         display: 'flex',
         alignItems: 'center',
         gap: `${scaleFn(16)}px`,
-        marginBottom: `${scaleFn(12)}px`,
+        marginBottom: `${dynamicSpacing}px`,
       }}>
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 200 }}
           style={{
-            width: `${scaleFn(70)}px`,
-            height: `${scaleFn(70)}px`,
+            width: `${isUltraCompact ? 30 : (isCompact ? scaleFn(50) : scaleFn(70))}px`,
+            height: `${isUltraCompact ? 30 : (isCompact ? scaleFn(50) : scaleFn(70))}px`,
             borderRadius: '50%',
             backgroundColor: '#F6EB61',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: `${scaleFn(36)}px`,
+            fontSize: `${isUltraCompact ? 14 : (isCompact ? scaleFn(24) : scaleFn(36))}px`,
             fontWeight: 'bold',
             color: '#002147',
             border: `${Math.max(3 * scale, 1)}px solid #C8102E`,
+            lineHeight: isUltraCompact ? '1' : 'normal',
           }}
         >
           {liverpoolPosition}
         </motion.div>
 
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: `${scaleFn(28)}px`, fontWeight: 'bold', color: '#FFFFFF' }}>
+          <div style={{ fontSize: `${isUltraCompact ? 14 : scaleFn(28)}px`, fontWeight: 'bold', color: '#FFFFFF', lineHeight: (isUltraCompact || isCompact) ? '1' : 'normal' }}>
             {liverpoolPoints} PTS
           </div>
-          <div style={{ fontSize: `${scaleFn(12)}px`, color: '#CCCCCC', marginTop: `${scaleFn(4)}px`, display: 'flex', alignItems: 'center', gap: `${scaleFn(4)}px` }}>
+          <div style={{ fontSize: `${isUltraCompact ? 6 : scaleFn(12)}px`, color: '#CCCCCC', marginTop: `${scaleFn(4)}px`, display: 'flex', alignItems: 'center', gap: `${scaleFn(4)}px`, lineHeight: (isUltraCompact || isCompact) ? '1' : 'normal' }}>
             {trend === 'up' && <TrendingUp size={scaleFn(14)} color="#00FF87" />}
             {trend === 'down' && <TrendingDown size={scaleFn(14)} color="#FF4444" />}
             {trend === 'stable' && <Minus size={scaleFn(14)} color="#F6EB61" />}
@@ -144,58 +154,65 @@ export default function LeaguePositionOverlay({
         </div>
       </div>
 
-      <div style={{
-        borderTop: `${Math.max(1 * scale, 0.5)}px solid rgba(246, 235, 97, 0.3)`,
-        paddingTop: `${scaleFn(12)}px`,
-        marginBottom: `${scaleFn(8)}px`,
-      }}>
-        <div style={{ fontSize: `${scaleFn(11)}px`, color: '#CCCCCC', marginBottom: `${scaleFn(8)}px` }}>
-          TOP 4 RACE
-        </div>
+      {!isUltraCompact && height >= 130 && (
         <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: `${scaleFn(12)}px`,
-          marginBottom: `${scaleFn(6)}px`,
+          borderTop: `${Math.max(1 * scale, 0.5)}px solid rgba(246, 235, 97, 0.3)`,
+          paddingTop: `${scaleFn(12)}px`,
+          marginBottom: `${dynamicSpacing}px`,
         }}>
-          <span style={{ color: '#FFFFFF' }}>Points from Leader</span>
-          <span style={{ fontWeight: 'bold', color: pointsFromLeader === 0 ? '#00FF87' : '#FFFFFF' }}>
-            {pointsFromLeader === 0 ? '1st Place' : `-${pointsFromLeader}`}
-          </span>
+          <div style={{ fontSize: `${isCompact ? 7 : Math.max(scaleFn(11), 8)}px`, color: '#CCCCCC', marginBottom: `${scaleFn(8)}px`, lineHeight: (isUltraCompact || isCompact) ? '1' : 'normal' }}>
+            TOP 4 RACE
+          </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: `${scaleFn(12)}px`,
+            marginBottom: `${scaleFn(6)}px`,
+            lineHeight: (isUltraCompact || isCompact) ? '1' : 'normal',
+          }}>
+            <span style={{ color: '#FFFFFF' }}>Points from Leader</span>
+            <span style={{ fontWeight: 'bold', color: pointsFromLeader === 0 ? '#00FF87' : '#FFFFFF' }}>
+              {pointsFromLeader === 0 ? '1st Place' : `-${pointsFromLeader}`}
+            </span>
+          </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: `${scaleFn(12)}px`,
+            lineHeight: (isUltraCompact || isCompact) ? '1' : 'normal',
+          }}>
+            <span style={{ color: '#FFFFFF' }}>Gap to 4th Place</span>
+            <span style={{ fontWeight: 'bold', color: pointsFromTop4 <= 0 ? '#00FF87' : '#FF4444' }}>
+              {pointsFromTop4 <= 0 ? `+${Math.abs(pointsFromTop4)}` : `-${pointsFromTop4}`}
+            </span>
+          </div>
         </div>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: `${scaleFn(12)}px`,
-        }}>
-          <span style={{ color: '#FFFFFF' }}>Gap to 4th Place</span>
-          <span style={{ fontWeight: 'bold', color: pointsFromTop4 <= 0 ? '#00FF87' : '#FF4444' }}>
-            {pointsFromTop4 <= 0 ? `+${Math.abs(pointsFromTop4)}` : `-${pointsFromTop4}`}
-          </span>
-        </div>
-      </div>
+      )}
 
       <div style={{
         backgroundColor: 'rgba(246, 235, 97, 0.1)',
-        padding: `${scaleFn(8)}px`,
+        padding: `${isUltraCompact ? 2 : (isCompact ? Math.max(scaleFn(4), 2) : scaleFn(8))}px`,
         borderRadius: `${scaleFn(6)}px`,
       }}>
-        <div style={{ fontSize: `${scaleFn(10)}px`, color: '#CCCCCC', marginBottom: `${scaleFn(6)}px` }}>
+        <div style={{ fontSize: `${isUltraCompact ? 5 : (isCompact ? 7 : Math.max(scaleFn(10), 7))}px`, color: '#CCCCCC', marginBottom: `${isUltraCompact ? 1 : scaleFn(6)}px`, lineHeight: (isUltraCompact || isCompact) ? '1' : 'normal' }}>
           TOP 6 STANDINGS
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: `${scaleFn(3)}px` }}>
-          {top6Teams.slice(0, 6).map((team: any, index: number) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: `${isUltraCompact ? 0 : (isCompact ? Math.max(scaleFn(1), 1) : scaleFn(3))}px` }}>
+          {top6Teams.slice(0, teamCount).map((team: any, index: number) => (
             <div
               key={index}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontSize: `${scaleFn(10)}px`,
+                fontSize: `${isUltraCompact ? 5 : (isCompact ? 7 : Math.max(scaleFn(10), 7))}px`,
                 color: team.position === liverpoolPosition ? '#F6EB61' : '#FFFFFF',
                 fontWeight: team.position === liverpoolPosition ? 'bold' : 'normal',
+                lineHeight: (isUltraCompact || isCompact) ? '1' : 'normal',
               }}
             >
-              <span>{team.position}. {team.name.substring(0, 12)}</span>
+              <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                {team.position}. {team.name.substring(0, maxChars)}
+              </span>
               <span>{team.points} pts</span>
             </div>
           ))}
