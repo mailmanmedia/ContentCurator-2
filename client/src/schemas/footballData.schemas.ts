@@ -105,8 +105,8 @@ export const H2HMatchSchema = z.object({
   date: z.string().min(1),
   homeTeam: z.string().min(1),
   awayTeam: z.string().min(1),
-  homeScore: z.number().int().nonnegative(),
-  awayScore: z.number().int().nonnegative(),
+  homeScore: z.number().int().nonnegative().nullable(),
+  awayScore: z.number().int().nonnegative().nullable(),
   competition: z.string().optional(),
   venue: z.string().optional(),
 }).passthrough(); // Allow additional fields

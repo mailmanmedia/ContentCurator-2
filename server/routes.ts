@@ -2453,20 +2453,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team IDs" });
       }
 
+      // Get team names from database
+      const teams = await db
+        .select({ id: footballTeams.id, name: footballTeams.name })
+        .from(footballTeams)
+        .where(or(eq(footballTeams.id, homeTeamId), eq(footballTeams.id, awayTeamId)));
+      
+      const teamMap = new Map(teams.map(t => [t.id, t.name]));
+
       // First try to get data from database (includes historical data)
       const { historicalDataService } = await import('./services/historicalDataService');
       const dbFixtures = await historicalDataService.getHeadToHeadData(homeTeamId, awayTeamId, 30);
       
+      // Transform fixtures to match H2HDataSchema
+      const transformFixtures = (fixtures: any[]) => {
+        return fixtures.map((fixture: any) => ({
+          id: fixture.id,
+          date: fixture.date,
+          homeTeam: teamMap.get(fixture.homeTeamId) || `Team ${fixture.homeTeamId}`,
+          awayTeam: teamMap.get(fixture.awayTeamId) || `Team ${fixture.awayTeamId}`,
+          homeScore: fixture.goals?.home ?? null,
+          awayScore: fixture.goals?.away ?? null,
+          competition: fixture.competition,
+          venue: fixture.venue,
+        }));
+      };
+
       // If we have sufficient data from database, use it
       if (dbFixtures.length >= 5) {
         console.log(`✓ Using database data for teams ${homeTeamId} vs ${awayTeamId} (${dbFixtures.length} matches)`);
-        return res.json({ fixtures: dbFixtures, source: 'database' });
+        const transformedFixtures = transformFixtures(dbFixtures);
+        return res.json({ fixtures: transformedFixtures, source: 'database' });
       }
 
       // Otherwise fall back to API
       console.log(`⚠ Insufficient database data, fetching from API for teams ${homeTeamId} vs ${awayTeamId}`);
       const fixtures = await storage.getFootballHeadToHead(homeTeamId, awayTeamId);
-      res.json({ fixtures, source: 'api' });
+      const transformedFixtures = transformFixtures(fixtures);
+      res.json({ fixtures: transformedFixtures, source: 'api' });
     } catch (error) {
       console.error('Error fetching head-to-head stats:', error);
       res.status(500).json({ error: "Failed to fetch head-to-head statistics" });
