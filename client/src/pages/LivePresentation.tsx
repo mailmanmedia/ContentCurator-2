@@ -2009,24 +2009,47 @@ export default function LivePresentation() {
       if (!response.ok) throw new Error('Failed to fetch default templates');
       
       const templates = await response.json();
-      const newOverlays: OverlayConfig[] = Object.values(templates).map((template: any) => ({
-        ...template,
-        text: template.metricType || '',
-        animationType: 'static' as const,
-        templateStyle: 'corner' as const,
-        backgroundColor: '#F6EB61',
-        textColor: '#002147',
-        fontSize: 18,
-        fontFamily: 'League Spartan',
-        scrollSpeed: 50,
-        scrollDirection: 'left' as const,
-        isBold: true,
-        isItalic: false,
-        overlayType: 'metric' as const,
-        zIndex: 100,
-        category: 'metrics',
-      }));
+      console.log('[handleLoadDefaultOverlays] Templates from API:', templates);
       
+      const newOverlays: OverlayConfig[] = Object.values(templates).map((template: any) => {
+        console.log(`[handleLoadDefaultOverlays] Processing template ${template.id}:`, {
+          width: template.width,
+          height: template.height,
+          x: template.x,
+          y: template.y,
+          position: template.position,
+          opacity: template.opacity,
+          visible: template.visible
+        });
+        
+        return {
+          ...template,
+          text: template.metricType || '',
+          animationType: 'static' as const,
+          templateStyle: 'corner' as const,
+          backgroundColor: '#F6EB61',
+          textColor: '#002147',
+          fontSize: 18,
+          fontFamily: 'League Spartan',
+          scrollSpeed: 50,
+          scrollDirection: 'left' as const,
+          isBold: true,
+          isItalic: false,
+          overlayType: 'metric' as const,
+          zIndex: 100,
+          category: 'metrics',
+          // Preserve critical positioning and dimension properties from template
+          width: template.width,
+          height: template.height,
+          x: template.x,
+          y: template.y,
+          position: template.position,
+          opacity: template.opacity,
+          visible: template.visible,
+        };
+      });
+      
+      console.log('[handleLoadDefaultOverlays] Final overlays created:', newOverlays);
       setOverlays(prev => [...prev, ...newOverlays]);
       
       toast({
@@ -4590,6 +4613,18 @@ export default function LivePresentation() {
                 const isEditing = overlay.id === editingPositionOverlayId;
                 const x = isEditing ? overlayX : overlay.x;
                 const y = isEditing ? overlayY : overlay.y;
+                
+                // Log overlay dimensions for debugging
+                if (isEditing) {
+                  console.log(`[Positioning Grid] Editing overlay ${overlay.id}:`, {
+                    overlayWidth: overlay.width,
+                    overlayHeight: overlay.height,
+                    overlayX: x,
+                    overlayY: y,
+                    outputResolution,
+                    calculatedHeightPercent: (overlay.height / outputResolution.height) * 100
+                  });
+                }
                 
                 return (
                   <div
