@@ -2334,7 +2334,7 @@ export class MemStorage implements IStorage {
         },
         position: 'bottom',
         width: 30,
-        height: 300,
+        height: 450,
         x: 65,
         y: 65,
         opacity: 0.92,
