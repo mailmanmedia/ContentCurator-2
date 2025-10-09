@@ -563,6 +563,16 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             ctx.fillText('Loading video...', xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
           }
         } else if (overlay.overlayType === 'metric') {
+          const metricType = overlay.metricType || 'default';
+          
+          // Skip canvas rendering for metric overlays that have dedicated React components
+          // These are rendered as DOM elements instead (see metricOverlays rendering below)
+          const hasReactComponent = ['h2h-card', 'form-guide', 'player-stats', 'league-table', 'rss-sentiment', 'rss-ticker-enhanced', 'upcoming-fixtures', 'player-comparison'].includes(metricType);
+          if (hasReactComponent) {
+            ctx.globalAlpha = 1;
+            return;
+          }
+
           ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.9);
           ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
           
@@ -578,7 +588,6 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
 
-          const metricType = overlay.metricType || 'default';
           const metricData = overlay.metricData;
 
           if (metricType === 'h2h-card' && metricData) {
