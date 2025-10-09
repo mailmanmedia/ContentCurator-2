@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Minus, RefreshCw, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 interface LeaguePositionOverlayProps {
   width: number;
@@ -28,6 +28,20 @@ export default function LeaguePositionOverlay({
     queryKey: ['/api/analytics/comparative-metrics'],
   });
 
+  // Memoize scale calculations to ensure they update when dimensions change
+  const { scale, scaleFn } = useMemo(() => {
+    // Scale factors based on container dimensions (base: 576px × 450px for 30% width)
+    const baseWidth = 576;
+    const baseHeight = 450;
+    const scaleWidth = width / baseWidth;
+    const scaleHeight = height / baseHeight;
+    // Use the smaller scale to ensure content fits in both dimensions
+    const calculatedScale = Math.min(scaleWidth, scaleHeight);
+    const fn = (size: number) => Math.max(size * calculatedScale, size * 0.5); // Min 50% of original
+    
+    return { scale: calculatedScale, scaleFn: fn };
+  }, [width, height]);
+
   if (isLoading || !comparative) {
     return (
       <div
@@ -40,7 +54,7 @@ export default function LeaguePositionOverlay({
           justifyContent: 'center',
           color: '#F6EB61',
           fontFamily: 'League Spartan, sans-serif',
-          fontSize: '14px',
+          fontSize: `${scaleFn(14)}px`,
         }}
       >
         Loading...
@@ -74,53 +88,53 @@ export default function LeaguePositionOverlay({
         backgroundColor: `rgba(0, 33, 71, ${opacity})`,
         color: '#F6EB61',
         fontFamily: 'League Spartan, sans-serif',
-        padding: '16px',
+        padding: `${scaleFn(16)}px`,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        borderRadius: '8px',
-        border: '2px solid #F6EB61',
+        borderRadius: `${scaleFn(8)}px`,
+        border: `${Math.max(2 * scale, 1)}px solid #F6EB61`,
       }}
     >
-      <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px', color: '#FFFFFF' }}>
+      <div style={{ fontSize: `${scaleFn(14)}px`, fontWeight: 'bold', marginBottom: `${scaleFn(12)}px`, color: '#FFFFFF' }}>
         LEAGUE POSITION
       </div>
 
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '16px',
-        marginBottom: '12px',
+        gap: `${scaleFn(16)}px`,
+        marginBottom: `${scaleFn(12)}px`,
       }}>
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 200 }}
           style={{
-            width: '70px',
-            height: '70px',
+            width: `${scaleFn(70)}px`,
+            height: `${scaleFn(70)}px`,
             borderRadius: '50%',
             backgroundColor: '#F6EB61',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '36px',
+            fontSize: `${scaleFn(36)}px`,
             fontWeight: 'bold',
             color: '#002147',
-            border: '3px solid #C8102E',
+            border: `${Math.max(3 * scale, 1)}px solid #C8102E`,
           }}
         >
           {liverpoolPosition}
         </motion.div>
 
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#FFFFFF' }}>
+          <div style={{ fontSize: `${scaleFn(28)}px`, fontWeight: 'bold', color: '#FFFFFF' }}>
             {liverpoolPoints} PTS
           </div>
-          <div style={{ fontSize: '12px', color: '#CCCCCC', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {trend === 'up' && <TrendingUp size={14} color="#00FF87" />}
-            {trend === 'down' && <TrendingDown size={14} color="#FF4444" />}
-            {trend === 'stable' && <Minus size={14} color="#F6EB61" />}
+          <div style={{ fontSize: `${scaleFn(12)}px`, color: '#CCCCCC', marginTop: `${scaleFn(4)}px`, display: 'flex', alignItems: 'center', gap: `${scaleFn(4)}px` }}>
+            {trend === 'up' && <TrendingUp size={scaleFn(14)} color="#00FF87" />}
+            {trend === 'down' && <TrendingDown size={scaleFn(14)} color="#FF4444" />}
+            {trend === 'stable' && <Minus size={scaleFn(14)} color="#F6EB61" />}
             <span>
               {trend === 'up' && 'Strong Position'}
               {trend === 'down' && 'Need Improvement'}
@@ -131,18 +145,18 @@ export default function LeaguePositionOverlay({
       </div>
 
       <div style={{
-        borderTop: '1px solid rgba(246, 235, 97, 0.3)',
-        paddingTop: '12px',
-        marginBottom: '8px',
+        borderTop: `${Math.max(1 * scale, 0.5)}px solid rgba(246, 235, 97, 0.3)`,
+        paddingTop: `${scaleFn(12)}px`,
+        marginBottom: `${scaleFn(8)}px`,
       }}>
-        <div style={{ fontSize: '11px', color: '#CCCCCC', marginBottom: '8px' }}>
+        <div style={{ fontSize: `${scaleFn(11)}px`, color: '#CCCCCC', marginBottom: `${scaleFn(8)}px` }}>
           TOP 4 RACE
         </div>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          fontSize: '12px',
-          marginBottom: '6px',
+          fontSize: `${scaleFn(12)}px`,
+          marginBottom: `${scaleFn(6)}px`,
         }}>
           <span style={{ color: '#FFFFFF' }}>Points from Leader</span>
           <span style={{ fontWeight: 'bold', color: pointsFromLeader === 0 ? '#00FF87' : '#FFFFFF' }}>
@@ -152,7 +166,7 @@ export default function LeaguePositionOverlay({
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          fontSize: '12px',
+          fontSize: `${scaleFn(12)}px`,
         }}>
           <span style={{ color: '#FFFFFF' }}>Gap to 4th Place</span>
           <span style={{ fontWeight: 'bold', color: pointsFromTop4 <= 0 ? '#00FF87' : '#FF4444' }}>
@@ -163,20 +177,20 @@ export default function LeaguePositionOverlay({
 
       <div style={{
         backgroundColor: 'rgba(246, 235, 97, 0.1)',
-        padding: '8px',
-        borderRadius: '6px',
+        padding: `${scaleFn(8)}px`,
+        borderRadius: `${scaleFn(6)}px`,
       }}>
-        <div style={{ fontSize: '10px', color: '#CCCCCC', marginBottom: '6px' }}>
+        <div style={{ fontSize: `${scaleFn(10)}px`, color: '#CCCCCC', marginBottom: `${scaleFn(6)}px` }}>
           TOP 6 STANDINGS
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: `${scaleFn(3)}px` }}>
           {top6Teams.slice(0, 6).map((team: any, index: number) => (
             <div
               key={index}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontSize: '10px',
+                fontSize: `${scaleFn(10)}px`,
                 color: team.position === liverpoolPosition ? '#F6EB61' : '#FFFFFF',
                 fontWeight: team.position === liverpoolPosition ? 'bold' : 'normal',
               }}

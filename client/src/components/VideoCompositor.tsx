@@ -1212,6 +1212,9 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
     const canvas = canvasRef.current;
     const canvasRect = canvas.getBoundingClientRect();
     
+    // Calculate actual pixel width from percentage
+    const pixelWidth = (width / 100) * canvas.width;
+    
     // Calculate adjusted y position to prevent clipping at bottom
     let adjustedY = y;
     const canvasHeight = canvas.height;
@@ -1285,7 +1288,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         case 'league-table':
           return (
             <LeaguePositionOverlay
-              width={100}
+              width={pixelWidth}
               height={height}
               opacity={opacity}
             />
