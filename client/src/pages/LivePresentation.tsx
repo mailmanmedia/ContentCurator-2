@@ -2215,13 +2215,12 @@ export default function LivePresentation() {
     const rawX = (e.clientX - rect.left) * scaleX;
     const rawY = (e.clientY - rect.top) * scaleY;
     
-    // Get current overlay dimensions to calculate max boundaries
-    const editingOverlay = overlays.find(o => o.id === editingPositionOverlayId);
-    const overlayWidth = editingOverlay ? (editingOverlay.width / 100) * outputResolution.width : 0;
-    const overlayHeight = editingOverlay ? editingOverlay.height : 0;
+    // Use current slider state values for dimensions
+    const overlayWidthPx = (overlayWidth / 100) * outputResolution.width;
+    const overlayHeightPx = overlayHeight;
     
-    const maxX = outputResolution.width - overlayWidth;
-    const maxY = outputResolution.height - overlayHeight;
+    const maxX = outputResolution.width - overlayWidthPx;
+    const maxY = outputResolution.height - overlayHeightPx;
     
     const snappedX = snapToGrid(rawX, 20, 0, maxX);
     const snappedY = snapToGrid(rawY, 20, 0, maxY);

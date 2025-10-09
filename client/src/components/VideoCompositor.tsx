@@ -1253,7 +1253,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               competitionFilter={metricData?.competitionFilter}
               venueFilter={metricData?.venueFilter || 'all'}
               seasonRange={metricData?.seasonFilter ? { from: metricData.seasonFilter, to: metricData.seasonFilter } : undefined}
-              width={100}
+              width={pixelWidth}
               height={height}
               opacity={opacity}
             />
@@ -1261,7 +1261,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         case 'form-guide':
           return (
             <FormGuideOverlay
-              width={100}
+              width={pixelWidth}
               height={height}
               opacity={opacity}
               layout={metricData?.layout || 'horizontal'}
@@ -1280,7 +1280,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           return (
             <PlayerStatsOverlay
               playerId={metricData?.playerId || 1}
-              width={100}
+              width={pixelWidth}
               height={height}
               opacity={opacity}
             />
@@ -1296,7 +1296,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         case 'rss-sentiment':
           return (
             <RssSentimentOverlay
-              width={overlay.width}
+              width={pixelWidth}
               height={overlay.height}
               opacity={overlay.opacity}
               timeframe={metricData?.timeframe || '24h'}
@@ -1308,7 +1308,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         case 'rss-ticker-enhanced':
           return (
             <RssTickerEnhancedOverlay
-              width={overlay.width}
+              width={pixelWidth}
               height={overlay.height}
               opacity={overlay.opacity}
               rssSourceIds={metricData?.rssSourceIds || []}
@@ -1323,7 +1323,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         case 'upcoming-fixtures':
           return (
             <UpcomingFixturesOverlay
-              width={overlay.width}
+              width={pixelWidth}
               height={overlay.height}
               opacity={overlay.opacity}
               fixtureCount={metricData?.fixtureCount}
@@ -1338,7 +1338,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             <PlayerComparisonOverlay
               player1Id={metricData?.player1Id}
               player2Id={metricData?.player2Id}
-              width={overlay.width}
+              width={pixelWidth}
               height={overlay.height}
               opacity={overlay.opacity}
               viewMode={metricData?.viewMode}
