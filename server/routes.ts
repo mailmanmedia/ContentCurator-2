@@ -3147,13 +3147,20 @@ Return ONLY a JSON object with this structure:
   app.get("/api/cached-stats/teams", async (req, res) => {
     try {
       const currentSeason = new Date().getFullYear();
-      const leagueId = req.query.leagueId ? parseInt(req.query.leagueId as string) : 39;
+      const leagueIdParam = req.query.leagueId ? parseInt(req.query.leagueId as string) : null;
+      
+      // Supported leagues for multi-league support
+      const supportedLeagues = [39, 2, 45, 48, 3]; // Premier League, Champions League, FA Cup, EFL Cup, Europa League
+      
+      // Determine which leagues to query
+      const leaguesToQuery = leagueIdParam ? [leagueIdParam] : supportedLeagues;
       
       const teamsWithStats = await db
         .select({
           teamId: teamSeasonStatistics.teamId,
           teamName: footballTeams.name,
           leagueId: teamSeasonStatistics.leagueId,
+          leagueName: footballCompetitions.name,
           season: teamSeasonStatistics.season,
           lastUpdated: teamSeasonStatistics.lastUpdated,
           matchesPlayed: teamSeasonStatistics.matchesPlayed,
@@ -3161,13 +3168,17 @@ Return ONLY a JSON object with this structure:
         })
         .from(teamSeasonStatistics)
         .innerJoin(footballTeams, eq(teamSeasonStatistics.teamId, footballTeams.id))
+        .leftJoin(footballCompetitions, and(
+          eq(teamSeasonStatistics.leagueId, footballCompetitions.id),
+          eq(teamSeasonStatistics.season, footballCompetitions.season)
+        ))
         .where(
           and(
-            eq(teamSeasonStatistics.leagueId, leagueId),
+            inArray(teamSeasonStatistics.leagueId, leaguesToQuery),
             eq(teamSeasonStatistics.season, currentSeason)
           )
         )
-        .orderBy(desc(teamSeasonStatistics.lastUpdated));
+        .orderBy(teamSeasonStatistics.leagueId, footballTeams.name);
 
       res.json({ teams: teamsWithStats });
     } catch (error) {

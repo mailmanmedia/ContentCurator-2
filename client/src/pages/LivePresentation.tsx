@@ -628,6 +628,7 @@ export default function LivePresentation() {
   const [overlayHomeTeamId, setOverlayHomeTeamId] = useState<number | null>(null);
   const [overlayAwayTeamId, setOverlayAwayTeamId] = useState<number | null>(null);
   const [overlayTeamId, setOverlayTeamId] = useState<number | null>(null);
+  const [selectedLeagueFilter, setSelectedLeagueFilter] = useState<number | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [showClearConfirmDialog, setShowClearConfirmDialog] = useState(false);
   const [overlayBorderWidth, setOverlayBorderWidth] = useState(0);
@@ -722,7 +723,15 @@ export default function LivePresentation() {
   });
 
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ['/api/cached-stats/teams'],
+    queryKey: ['/api/cached-stats/teams', selectedLeagueFilter],
+    queryFn: async () => {
+      const url = selectedLeagueFilter 
+        ? `/api/cached-stats/teams?leagueId=${selectedLeagueFilter}`
+        : '/api/cached-stats/teams';
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch teams');
+      return response.json();
+    },
     enabled: overlayType === 'metric' && isOverlayDialogOpen,
     select: (response: any) => response?.teams || [],
   });
@@ -3339,6 +3348,64 @@ export default function LivePresentation() {
 
                     {overlayMetricType === 'h2h-card' && (
                       <>
+                        <div>
+                          <Label htmlFor="league-filter">League Filter</Label>
+                          <Select 
+                            value={selectedLeagueFilter ? String(selectedLeagueFilter) : 'all'} 
+                            onValueChange={(v) => {
+                              setSelectedLeagueFilter(v === 'all' ? null : parseInt(v));
+                              setOverlayHomeTeamId(null);
+                              setOverlayAwayTeamId(null);
+                            }}
+                          >
+                            <SelectTrigger id="league-filter" data-testid="select-league-filter">
+                              <SelectValue placeholder="All Leagues" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">
+                                <div className="flex items-center gap-2">
+                                  <Trophy className="w-4 h-4" />
+                                  <span>All Leagues</span>
+                                </div>
+                              </SelectItem>
+                              <SelectSeparator />
+                              <SelectItem value="39">
+                                <div className="flex items-center gap-2">
+                                  <Trophy className="w-4 h-4 text-purple-600" />
+                                  <span>Premier League</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="2">
+                                <div className="flex items-center gap-2">
+                                  <Trophy className="w-4 h-4 text-blue-600" />
+                                  <span>Champions League</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="45">
+                                <div className="flex items-center gap-2">
+                                  <Trophy className="w-4 h-4 text-red-600" />
+                                  <span>FA Cup</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="48">
+                                <div className="flex items-center gap-2">
+                                  <Trophy className="w-4 h-4 text-green-600" />
+                                  <span>EFL Cup</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="3">
+                                <div className="flex items-center gap-2">
+                                  <Trophy className="w-4 h-4 text-orange-600" />
+                                  <span>Europa League</span>
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Filter teams by competition (or select all leagues)
+                          </p>
+                        </div>
+
                         {isLoadingTeams ? (
                           <div className="text-center py-4">
                             <p className="text-sm text-muted-foreground">Loading teams...</p>
@@ -3357,7 +3424,14 @@ export default function LivePresentation() {
                                 <SelectContent>
                                   {teamsData.map((team: any) => (
                                     <SelectItem key={team.teamId} value={String(team.teamId)}>
-                                      {team.teamName}
+                                      <div className="flex items-center justify-between gap-2 w-full">
+                                        <span>{team.teamName}</span>
+                                        {team.leagueName && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {team.leagueName}
+                                          </Badge>
+                                        )}
+                                      </div>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -3379,7 +3453,14 @@ export default function LivePresentation() {
                                 <SelectContent>
                                   {teamsData.map((team: any) => (
                                     <SelectItem key={team.teamId} value={String(team.teamId)}>
-                                      {team.teamName}
+                                      <div className="flex items-center justify-between gap-2 w-full">
+                                        <span>{team.teamName}</span>
+                                        {team.leagueName && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {team.leagueName}
+                                          </Badge>
+                                        )}
+                                      </div>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
