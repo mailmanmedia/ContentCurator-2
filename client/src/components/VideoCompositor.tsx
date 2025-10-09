@@ -1259,12 +1259,10 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             <H2HMatchCardOverlay
               homeTeamId={metricData?.homeTeamId || 40}
               awayTeamId={metricData?.awayTeamId || 47}
-              competitionFilter={metricData?.competitionFilter}
-              venueFilter={metricData?.venueFilter || 'all'}
-              seasonRange={metricData?.seasonFilter ? { from: metricData.seasonFilter, to: metricData.seasonFilter } : undefined}
               width={pixelWidth}
               height={height}
               opacity={opacity}
+              colorPalette={overlay.colorPalette || 'classic'}
             />
           );
         case 'form-guide':
@@ -1274,11 +1272,6 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               height={height}
               opacity={opacity}
               layout={metricData?.layout || 'horizontal'}
-              teamId={metricData?.teamId || 40}
-              competitionId={metricData?.competitionId}
-              seasonFilter={metricData?.seasonFilter}
-              matchLimit={metricData?.matchLimit || 5}
-              showCompetitionBadges={metricData?.showCompetitionBadges || false}
               colorPalette={overlay.colorPalette || 'classic'}
               titleSize={overlay.formTitleSize}
               circleSize={overlay.formCircleSize}
@@ -1336,7 +1329,6 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               height={overlay.height}
               opacity={overlay.opacity}
               fixtureCount={metricData?.fixtureCount}
-              competitionFilter={metricData?.competitionFilter}
               showCountdown={metricData?.showCountdown}
               showOpponentForm={metricData?.showOpponentForm}
               colorPalette={overlay.colorPalette}
@@ -1352,8 +1344,6 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               opacity={overlay.opacity}
               viewMode={metricData?.viewMode}
               statCategories={metricData?.statCategories}
-              season={metricData?.season}
-              competition={metricData?.competition}
               colorPalette={overlay.colorPalette}
             />
           );
