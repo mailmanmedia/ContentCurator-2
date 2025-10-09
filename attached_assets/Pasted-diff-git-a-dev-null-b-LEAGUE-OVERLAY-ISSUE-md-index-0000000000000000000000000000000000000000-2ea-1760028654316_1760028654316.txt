@@ -1,0 +1,17 @@
+diff --git a//dev/null b/LEAGUE_OVERLAY_ISSUE.md
+index 0000000000000000000000000000000000000000..2eae435de16404b73b8db9ed08f4afe597d3838d 100644
+--- a//dev/null
++++ b/LEAGUE_OVERLAY_ISSUE.md
+@@ -0,0 +1,12 @@
++# League Position Overlay Responsiveness Issue
++
++## Summary
++The overlay attempts to resize itself by applying a single scale factor that is derived from a 384×300 baseline. In practice, several hard-coded fallbacks prevent the layout from getting smaller than that baseline allows, so when the widget is rendered in a smaller slot the content either distorts or overflows.
++
++## Root Causes
++- **Minimum size clamps tied to the baseline layout.** Every dimension is computed through `scaleValue`, which clamps the scaled number to at least 20% of the baseline (`base * 0.2`).【F:league-position-overlay.tsx†L33-L45】 Even when the container is much smaller, the hero badge, typography, and padding will never shrink past those floors, leaving a stack of elements that is taller than the available space.
++- **Static "reserved" height assumptions.** The list of standings depends on `estimatedReserved` to approximate how much vertical space the header and stats blocks will consume.【F:league-position-overlay.tsx†L83-L86】 Those constants (70px, 130px, 170px) are accurate only for the baseline canvas; when the widget is shorter, the real header blocks can exceed the reserved budget, so the list portion is forced to overflow the container.
++- **Early rendering of the Top 4 panel.** As soon as the height crosses 150px, `showTopRace` becomes true, but the reserved budget for that layout jumps to 170px.【F:league-position-overlay.tsx†L79-L86】 The extra 20px between the threshold (150px) and the reserved cost (170px) is not enough space, so on heights around 150–170px the Top 4 panel pushes the standings section out of view. Because the root container sets `overflow: "hidden"`, the displaced content appears clipped instead of scrolling.【F:league-position-overlay.tsx†L117-L137】
++
++## How to Explain It
++Tell the coder that the overlay still assumes it will be drawn at roughly 384×300. When the dashboard gives it less space, the min-size clamps and fixed height budget keep the header blocks large, so there is no room left for the standings list. Instead of flowing, the bottom section gets clipped by the container's hidden overflow, which is why the UI looks warped or truncated.
