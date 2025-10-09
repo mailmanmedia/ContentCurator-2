@@ -31,20 +31,29 @@ export default function LeaguePositionOverlay({
   });
 
   const { scale, scaleValue } = useMemo(() => {
-    const baseWidth = 384;
-    const baseHeight = 300;
+    // Use actual container dimensions
+    const containerWidth = width || 100;
+    const containerHeight = height || 100;
+    
+    // Smaller baseline for better scaling
+    const baseWidth = 280;
+    const baseHeight = 220;
 
-    const scaleWidth = width ? width / baseWidth : 1;
-    const scaleHeight = height ? height / baseHeight : 1;
-    const calculatedScale = clamp(Math.min(scaleWidth, scaleHeight) || 1, 0.15, 2);
+    const scaleWidth = containerWidth / baseWidth;
+    const scaleHeight = containerHeight / baseHeight;
+    const calculatedScale = Math.min(scaleWidth, scaleHeight);
+    
+    // More flexible scale range
+    const finalScale = clamp(calculatedScale, 0.3, 2.5);
 
     const valueFn = (base: number, options?: { min?: number; max?: number }) => {
-      const min = options?.min ?? base * 0.2;
-      const max = options?.max ?? base * 1.25;
-      return clamp(base * calculatedScale, min, max);
+      const scaled = base * finalScale;
+      const min = options?.min ?? base * 0.25;
+      const max = options?.max ?? base * 2;
+      return clamp(scaled, min, max);
     };
 
-    return { scale: calculatedScale, scaleValue: valueFn };
+    return { scale: finalScale, scaleValue: valueFn };
   }, [width, height]);
 
   if (isLoading || !comparative) {
