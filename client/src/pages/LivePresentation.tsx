@@ -931,7 +931,7 @@ export default function LivePresentation() {
 
   const handleUpdateOverlay = useCallback((overlayId: string, updates: Partial<OverlayConfig>) => {
     setOverlays(prev => prev.map(overlay => 
-      overlay.id === overlayId ? { ...overlay, ...updates } : overlay
+      overlay.id === overlayId ? normalizeOverlay({ ...overlay, ...updates }) : overlay
     ));
   }, []);
 
@@ -1776,7 +1776,7 @@ export default function LivePresentation() {
         newOverlay.rssShowSource = rssShowSource;
       }
 
-      setOverlays(prev => [...prev, newOverlay]);
+      setOverlays(prev => [...prev, normalizeOverlay(newOverlay)]);
       toast({ title: 'Overlay added', description: preset.name });
     }
     
@@ -2003,6 +2003,32 @@ export default function LivePresentation() {
     setIsOverlayDialogOpen(true);
   };
 
+  // Normalize overlay to ensure all required dimension fields have valid defaults
+  const normalizeOverlay = (overlay: any): OverlayConfig => {
+    const defaults = {
+      width: 30,
+      height: 200,
+      x: 100,
+      y: 100,
+      opacity: 0.9,
+      visible: true,
+      position: 'bottom' as const,
+    };
+    
+    const validPositions = ['top', 'bottom'];
+    
+    return {
+      ...overlay,
+      width: Number.isFinite(overlay.width) ? overlay.width : defaults.width,
+      height: Number.isFinite(overlay.height) ? overlay.height : defaults.height,
+      x: Number.isFinite(overlay.x) ? overlay.x : defaults.x,
+      y: Number.isFinite(overlay.y) ? overlay.y : defaults.y,
+      opacity: Number.isFinite(overlay.opacity) ? Math.max(0, Math.min(1, overlay.opacity)) : defaults.opacity,
+      visible: typeof overlay.visible === 'boolean' ? overlay.visible : defaults.visible,
+      position: validPositions.includes(overlay.position) ? overlay.position : defaults.position,
+    };
+  };
+
   const handleLoadDefaultOverlays = async () => {
     try {
       const response = await fetch('/api/overlays/default-templates');
@@ -2022,7 +2048,7 @@ export default function LivePresentation() {
           visible: template.visible
         });
         
-        return {
+        const baseOverlay = {
           ...template,
           text: template.metricType || '',
           animationType: 'static' as const,
@@ -2047,6 +2073,8 @@ export default function LivePresentation() {
           opacity: template.opacity,
           visible: template.visible,
         };
+        
+        return normalizeOverlay(baseOverlay);
       });
       
       console.log('[handleLoadDefaultOverlays] Final overlays created:', newOverlays);
