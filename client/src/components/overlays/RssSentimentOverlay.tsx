@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingUp, Activity, PieChart, Hash, Tag } from "lucide-react";
+import { TrendingUp, Activity, PieChart, Hash, Tag, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface RssSentimentOverlayProps {
   width: number;
@@ -28,10 +29,76 @@ export default function RssSentimentOverlay({
     trendingTopics: Array<{ topic: string; count: number; sentiment: number }>;
     topKeywords: Array<{ keyword: string; frequency: number }>;
     sentimentBreakdown: { positive: number; neutral: number; negative: number };
+    lastFetched?: string;
   }>({
     queryKey: ['/api/rss/sentiment-summary', { timeframe }],
     refetchInterval: 60000,
   });
+
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/rss/sentiment-summary/refresh', {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rss/sentiment-summary'] });
+    },
+  });
+
+  if (!isLoading && sentimentSummary?.totalArticles === 0) {
+    return (
+      <div
+        style={{
+          width: `${width}%`,
+          height: `${height}px`,
+          backgroundColor: `rgba(0, 33, 71, ${opacity})`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#FFFFFF',
+          fontFamily: 'League Spartan, sans-serif',
+          borderRadius: '8px',
+          border: '2px solid #C8102E',
+          padding: '24px',
+          gap: '16px',
+        }}
+        data-testid="overlay-sentiment-empty"
+      >
+        <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#F6EB61', textAlign: 'center' }}>
+          No RSS articles available
+        </div>
+        <div style={{ fontSize: '12px', color: '#CCCCCC', textAlign: 'center' }}>
+          Click refresh to fetch latest news
+        </div>
+        <button
+          onClick={() => refreshMutation.mutate()}
+          disabled={refreshMutation.isPending}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            backgroundColor: '#C8102E',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            cursor: refreshMutation.isPending ? 'not-allowed' : 'pointer',
+            opacity: refreshMutation.isPending ? 0.6 : 1,
+          }}
+          data-testid="button-refresh-empty"
+        >
+          <RefreshCw 
+            size={16} 
+            className={refreshMutation.isPending ? 'animate-spin' : ''} 
+          />
+          {refreshMutation.isPending ? 'Fetching...' : 'Refresh'}
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading || !sentimentSummary) {
     return (
@@ -59,7 +126,8 @@ export default function RssSentimentOverlay({
     totalArticles,
     trendingTopics,
     topKeywords,
-    sentimentBreakdown
+    sentimentBreakdown,
+    lastFetched
   } = sentimentSummary;
 
   const getSentimentColor = (value: number) => {
@@ -115,10 +183,55 @@ export default function RssSentimentOverlay({
         <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#F6EB61' }}>
           RSS SENTIMENT ANALYSIS
         </div>
-        <div style={{ fontSize: '10px', color: '#CCCCCC' }}>
-          {timeframeLabels[timeframe]}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontSize: '10px', color: '#CCCCCC' }}>
+            {timeframeLabels[timeframe]}
+          </div>
+          <button
+            onClick={() => refreshMutation.mutate()}
+            disabled={isLoading || refreshMutation.isPending}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '4px',
+              backgroundColor: 'transparent',
+              color: '#F6EB61',
+              border: '1px solid #F6EB61',
+              borderRadius: '4px',
+              cursor: (isLoading || refreshMutation.isPending) ? 'not-allowed' : 'pointer',
+              opacity: (isLoading || refreshMutation.isPending) ? 0.5 : 1,
+            }}
+            data-testid="button-refresh-sentiment"
+          >
+            <RefreshCw 
+              size={12} 
+              className={refreshMutation.isPending ? 'animate-spin' : ''} 
+            />
+          </button>
         </div>
       </div>
+
+      {refreshMutation.isPending && (
+        <div style={{ 
+          fontSize: '10px', 
+          color: '#F6EB61', 
+          marginBottom: '8px',
+          textAlign: 'center' 
+        }} data-testid="text-fetching">
+          Fetching...
+        </div>
+      )}
+
+      {refreshMutation.isSuccess && refreshMutation.data?.articlesAdded !== undefined && (
+        <div style={{ 
+          fontSize: '10px', 
+          color: '#00FF87', 
+          marginBottom: '8px',
+          textAlign: 'center' 
+        }} data-testid="text-articles-added">
+          {refreshMutation.data.articlesAdded} new articles added
+        </div>
+      )}
 
       <motion.div
         initial={{ scale: 0 }}
@@ -158,6 +271,11 @@ export default function RssSentimentOverlay({
           <div style={{ fontSize: '11px', color: '#CCCCCC', marginTop: '2px' }}>
             {totalArticles} articles analyzed
           </div>
+          {lastFetched && (
+            <div style={{ fontSize: '9px', color: '#999999', marginTop: '2px' }} data-testid="text-last-fetched">
+              Last updated: {new Date(lastFetched).toLocaleTimeString()}
+            </div>
+          )}
         </div>
       </motion.div>
 

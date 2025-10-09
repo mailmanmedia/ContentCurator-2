@@ -1962,6 +1962,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RSS Sentiment Summary Refresh Endpoint - Fetches new articles and analyzes sentiment
+  app.post("/api/rss/sentiment-summary/refresh", async (req, res) => {
+    try {
+      // Step 1: Fetch all RSS sources
+      console.log('Starting RSS sentiment summary refresh...');
+      const fetchResults = await rssService.fetchAllSources();
+      
+      // Calculate total articles added
+      const articlesAdded = fetchResults.reduce((sum, result) => sum + result.result.articlesAdded, 0);
+      const lastFetched = new Date();
+      
+      console.log(`Fetched ${articlesAdded} new articles from ${fetchResults.length} sources`);
+      
+      // Step 2: Get articles from the last 24 hours
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const articles = await storage.getRssArticlesByDateRange(since, new Date());
+      
+      console.log(`Found ${articles.length} articles from the last 24 hours`);
+      
+      if (articles.length === 0) {
+        return res.json({
+          averageSentiment: 0,
+          totalArticles: 0,
+          trendingTopics: [],
+          topKeywords: [],
+          sentimentBreakdown: { positive: 0, neutral: 0, negative: 0 },
+          articlesAdded,
+          lastFetched: lastFetched.toISOString()
+        });
+      }
+      
+      // Step 3: Import sentiment analysis service
+      const { sentimentAnalysisService } = await import('./rss/sentimentAnalysisService');
+      
+      // Step 4: Analyze sentiment for articles missing sentiment data
+      let totalSentiment = 0;
+      let sentimentCount = 0;
+      const sentimentBreakdown = { positive: 0, neutral: 0, negative: 0 };
+      const topicCounts: Record<string, { count: number; totalSentiment: number }> = {};
+      const keywordCounts: Record<string, number> = {};
+      
+      for (const article of articles) {
+        // Get or analyze sentiment
+        let sentimentData = (article.rawDataJson as any)?.sentiment;
+        
+        if (!sentimentData) {
+          console.log(`Analyzing sentiment for article: ${article.title}`);
+          sentimentData = await sentimentAnalysisService.analyzeSentiment(
+            parseInt(article.id),
+            article.title,
+            article.content || undefined
+          );
+          
+          // Update article with sentiment
+          if (sentimentData) {
+            await storage.updateRssArticle(article.id, {
+              rawDataJson: {
+                ...(article.rawDataJson || {}),
+                sentiment: sentimentData
+              } as any
+            });
+          }
+        }
+        
+        if (sentimentData && typeof sentimentData.score === 'number') {
+          totalSentiment += sentimentData.score;
+          sentimentCount++;
+          
+          // Categorize sentiment
+          if (sentimentData.score > 0.3) {
+            sentimentBreakdown.positive++;
+          } else if (sentimentData.score < -0.3) {
+            sentimentBreakdown.negative++;
+          } else {
+            sentimentBreakdown.neutral++;
+          }
+          
+          // Collect keywords
+          if (sentimentData.keywords && Array.isArray(sentimentData.keywords)) {
+            sentimentData.keywords.forEach((keyword: string) => {
+              keywordCounts[keyword] = (keywordCounts[keyword] || 0) + 1;
+            });
+          }
+        }
+        
+        // Collect topics
+        if (article.topics && Array.isArray(article.topics)) {
+          article.topics.forEach(topic => {
+            if (!topicCounts[topic]) {
+              topicCounts[topic] = { count: 0, totalSentiment: 0 };
+            }
+            topicCounts[topic].count++;
+            topicCounts[topic].totalSentiment += sentimentData?.score || 0;
+          });
+        }
+      }
+      
+      // Calculate average sentiment
+      const averageSentiment = sentimentCount > 0 ? totalSentiment / sentimentCount : 0;
+      
+      // Get top keywords
+      const topKeywords = Object.entries(keywordCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([keyword, frequency]) => ({ keyword, frequency }));
+      
+      // Get trending topics with sentiment
+      const trendingTopics = Object.entries(topicCounts)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 10)
+        .map(([topic, data]) => ({
+          topic,
+          count: data.count,
+          sentiment: data.count > 0 ? data.totalSentiment / data.count : 0
+        }));
+      
+      console.log(`Sentiment analysis complete. Average sentiment: ${averageSentiment.toFixed(2)}`);
+      
+      res.json({
+        averageSentiment,
+        totalArticles: articles.length,
+        trendingTopics,
+        topKeywords,
+        sentimentBreakdown,
+        articlesAdded,
+        lastFetched: lastFetched.toISOString()
+      });
+    } catch (error) {
+      console.error('Error refreshing sentiment summary:', error);
+      res.status(500).json({ 
+        error: "Failed to refresh sentiment summary",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // RSS Sentiment Summary Endpoint
   app.get("/api/rss/sentiment-summary", async (req, res) => {
     try {
