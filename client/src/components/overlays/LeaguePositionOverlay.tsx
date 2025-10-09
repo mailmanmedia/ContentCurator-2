@@ -30,9 +30,9 @@ export default function LeaguePositionOverlay({
 
   // Memoize scale calculations to ensure they update when dimensions change
   const { scale, scaleFn } = useMemo(() => {
-    // Scale factors based on container dimensions (base: 576px × 450px for 30% width)
-    const baseWidth = 576;
-    const baseHeight = 450;
+    // Scale factors based on container dimensions (base: 384px × 300px for 20% width)
+    const baseWidth = 384;  // 20% of 1920px standard canvas
+    const baseHeight = 300;
     const scaleWidth = width / baseWidth;
     const scaleHeight = height / baseHeight;
     // Use the smaller scale to ensure content fits in both dimensions
