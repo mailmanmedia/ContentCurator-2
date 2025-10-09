@@ -1,0 +1,81 @@
+Overlay Test Results & Production Readiness
+1. League Position/League Table Overlay
+Major issues:
+
+Data is outdated and incorrect (Liverpool shown at Position 2, 16 pts, does not match October 8, 2025 reality)
+
+No “Last Updated” timestamp, so no way to verify freshness
+
+No manual refresh button to force data update
+
+Overlays conflict at the bottom of the screen if moved—causing overlaps
+
+Pass: Text fit and controls work
+
+2. RSS Sentiment Overlay
+Needs improvement:
+
+Slow refresh speed, but refresh does fetch new data and display sentiment/keywords
+
+No “Last Updated” timestamp
+
+Potential overflow/clipping if moved to the bottom
+
+Pass: All data fields and dropdowns work when at the top position
+
+3. Form Guide Overlay
+Major issues:
+
+No data showing—“No recent matches available”
+
+No “Last Updated” timestamp or refresh button
+
+Position conflicts with RSS Sentiment overlay
+
+4. Head-to-Head (H2H) Overlay
+Major issues:
+
+No data shown—“No head-to-head data available”
+
+No “Last Updated” timestamp or refresh button
+
+Dropdown selection and filters work
+
+5. Player Stats/Metric Overlay
+Major issues:
+
+No data—“No player statistics available”
+
+No metric type selected by default
+
+No timestamp or refresh button
+
+Urgent Cross-cutting Problems
+Position Conflicts: Multiple overlays often occupy the same position, causing overlaps and hidden data.
+
+Missing Timestamps: Critical for transparency; not shown anywhere.
+
+Manual Refresh Buttons: Needed for all overlays but only present in RSS Sentiment.
+
+Data Fetch Failures: 3/5 overlays fail to display any meaningful data.
+
+Overflow/Clipping: RSS Sentiment clips/overflows when moved to bottom.
+
+Immediate Required Action Plan
+CRITICAL: Fix Form Guide, H2H, and Player Stats overlays—restore API connection and data fetching.
+
+CRITICAL: Correct League Position overlay—ensure live Premier League standings are accurate.
+
+HIGH: Add “Last Updated” timestamps to all overlays.
+
+HIGH: Add a manual refresh button to every overlay for on-demand updates.
+
+HIGH: Solve overlay position conflicts; overlays must self-adjust to avoid overlaps.
+
+MEDIUM: Fix content overflow for overlays moved or resized.
+
+LOW: Ensure error messaging and retry logic for blank/failed overlays.
+
+Verdict:
+Production deployment should not occur until all overlays display correct, timely, and complete data with verifiable timestamps and refresh controls, and the UI works cleanly regardless of overlay position. Urgent developer/tester attention is required for API, UI, and component logic.
+
