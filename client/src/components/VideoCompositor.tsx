@@ -127,6 +127,8 @@ interface VideoCompositorProps {
   sourceFitModes?: Record<string, 'contain' | 'cover' | 'fill'>;
   overlays?: OverlayConfig[];
   className?: string;
+  onUpdateOverlay?: (overlayId: string, updates: Partial<OverlayConfig>) => void;
+  onSelectOverlay?: (overlayId: string | null) => void;
 }
 
 export interface VideoCompositorRef {
@@ -149,7 +151,9 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   globalFitMode = 'contain',
   sourceFitModes = {},
   overlays = [],
-  className = "" 
+  className = "",
+  onUpdateOverlay,
+  onSelectOverlay
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -161,6 +165,13 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   const fadeStates = useRef<Map<string, number>>(new Map());
   const [isEditing, setIsEditing] = useState(false);
   const lastOverlayUpdate = useRef<number>(0);
+  
+  const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [initialOverlayState, setInitialOverlayState] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   useImperativeHandle(ref, () => ({
     canvasRef
@@ -745,7 +756,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             
             // Function to find the right font size using measureText
             const fitTextToContainer = () => {
-              for (let size = scaledFontSize; size >= 10; size--) {
+              for (let size = scaledFontSize; size > 10; size -= 2) {
                 ctx.font = `bold ${size}px "${overlay.fontFamily}", sans-serif`;
                 const textMetrics = ctx.measureText(tickerText);
                 if (textMetrics.width <= maxTextWidth) {
@@ -756,6 +767,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             };
             
             fitTextToContainer();
+            
             ctx.font = `bold ${actualFontSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -778,130 +790,49 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             return;
           }
 
-          // Render background
+          // Draw background with color palette
           ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
           ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
           
-          // Add accent stripe at top for visual polish
+          // Add accent stripe at top
           const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
           ctx.fillStyle = hexToRgba(textColor, 0.3);
           ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
-
-          // Render scrolling ticker text
+          
+          ctx.fillStyle = textColor;
           const fontWeight = overlay.isBold ? 'bold' : 'normal';
           const fontStyle = overlay.isItalic ? 'italic' : 'normal';
           ctx.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
-          ctx.fillStyle = textColor;
           ctx.textBaseline = 'middle';
 
-          // Add text shadow for better visibility
+          // Add text shadow for readability
           ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
           ctx.shadowBlur = 8;
           ctx.shadowOffsetX = 2;
           ctx.shadowOffsetY = 2;
 
-          // Use existing scroll animation logic
           if (overlay.animationType === 'scroll') {
             const scrollSpeed = overlay.scrollSpeed / 10;
-            const isVertical = overlay.scrollDirection === 'up' || overlay.scrollDirection === 'down';
+            let scrollX = scrollPositions.current.get(overlay.id) || overlayWidth;
+            ctx.textAlign = 'left';
+            const textWidth = ctx.measureText(tickerText).width;
             
-            if (isVertical) {
-              let scrollY = scrollPositions.current.get(overlay.id);
-              if (scrollY === undefined) {
-                scrollY = overlay.scrollDirection === 'down' ? -scaledHeight : canvas.height;
-              }
-              
-              ctx.textAlign = 'center';
-              if (overlay.borderWidth && overlay.borderWidth > 0) {
-                ctx.strokeStyle = overlay.borderColor || '#000000';
-                ctx.lineWidth = overlay.borderWidth;
-                ctx.strokeText(tickerText, xPosition + overlayWidth / 2, scrollY + scaledHeight / 2);
-              }
-              ctx.fillText(tickerText, xPosition + overlayWidth / 2, scrollY + scaledHeight / 2);
-              
-              const textHeight = scaledFontSize * 1.2;
-              if (overlay.scrollDirection === 'up') {
-                scrollY -= scrollSpeed;
-                if (scrollY < -textHeight - 50) {
-                  scrollY = canvas.height;
-                }
-              } else {
-                scrollY += scrollSpeed;
-                if (scrollY > canvas.height + 50) {
-                  scrollY = -scaledHeight;
-                }
-              }
-              
-              scrollPositions.current.set(overlay.id, scrollY);
+            if (overlay.scrollDirection === 'left') {
+              scrollX -= scrollSpeed;
+              if (scrollX < -textWidth - 100) scrollX = overlayWidth;
             } else {
-              // Horizontal scrolling - seamless loop
-              let scrollX = scrollPositions.current.get(overlay.id);
-              if (scrollX === undefined) {
-                scrollX = overlayWidth;
-              }
-              
-              ctx.textAlign = 'left';
-              const textWidth = ctx.measureText(tickerText).width;
-              
-              if (overlay.scrollDirection === 'left') {
-                scrollX -= scrollSpeed;
-                if (scrollX < -textWidth - 100) {
-                  scrollX = overlayWidth;
-                }
-              } else {
-                scrollX += scrollSpeed;
-                if (scrollX > overlayWidth + 100) {
-                  scrollX = -textWidth;
-                }
-              }
-              
-              // Draw main text
-              if (overlay.borderWidth && overlay.borderWidth > 0) {
-                ctx.strokeStyle = overlay.borderColor || '#000000';
-                ctx.lineWidth = overlay.borderWidth;
-                ctx.strokeText(tickerText, xPosition + scrollX, yPosition + scaledHeight / 2);
-              }
-              ctx.fillText(tickerText, xPosition + scrollX, yPosition + scaledHeight / 2);
-              
-              // Draw duplicate for seamless loop
-              const x2 = overlay.scrollDirection === 'left'
-                ? scrollX + textWidth + 100
-                : scrollX - textWidth - 100;
-              if (overlay.borderWidth && overlay.borderWidth > 0) {
-                ctx.strokeStyle = overlay.borderColor || '#000000';
-                ctx.lineWidth = overlay.borderWidth;
-                ctx.strokeText(tickerText, xPosition + x2, yPosition + scaledHeight / 2);
-              }
-              ctx.fillText(tickerText, xPosition + x2, yPosition + scaledHeight / 2);
-              
-              scrollPositions.current.set(overlay.id, scrollX);
+              scrollX += scrollSpeed;
+              if (scrollX > overlayWidth + 100) scrollX = -textWidth;
             }
-          } else if (overlay.animationType === 'fade') {
-            let fadeTime = fadeStates.current.get(overlay.id) || 0;
-            fadeTime += 0.02;
             
-            const opacity = (Math.sin(fadeTime) + 1) / 2;
-            const baseOpacity = overlay.opacity !== undefined ? overlay.opacity : 1;
-            ctx.globalAlpha = opacity * 0.5 * baseOpacity + 0.5 * baseOpacity;
-            
-            ctx.textAlign = 'center';
-            if (overlay.borderWidth && overlay.borderWidth > 0) {
-              ctx.strokeStyle = overlay.borderColor || '#000000';
-              ctx.lineWidth = overlay.borderWidth;
-              ctx.strokeText(tickerText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
-            }
-            ctx.fillText(tickerText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
-            ctx.globalAlpha = baseOpacity;
-            
-            fadeStates.current.set(overlay.id, fadeTime);
+            ctx.fillText(tickerText, xPosition + scrollX, yPosition + scaledHeight / 2);
+            const x2 = overlay.scrollDirection === 'left'
+              ? scrollX + textWidth + 100
+              : scrollX - textWidth - 100;
+            ctx.fillText(tickerText, xPosition + x2, yPosition + scaledHeight / 2);
+            scrollPositions.current.set(overlay.id, scrollX);
           } else {
-            // Static display
             ctx.textAlign = 'center';
-            if (overlay.borderWidth && overlay.borderWidth > 0) {
-              ctx.strokeStyle = overlay.borderColor || '#000000';
-              ctx.lineWidth = overlay.borderWidth;
-              ctx.strokeText(tickerText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
-            }
             ctx.fillText(tickerText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
           }
 
@@ -911,65 +842,64 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 0;
         } else if (overlay.overlayType === 'text') {
-          // Text Overlay
-          // Use color palette if set, otherwise use overlay colors
-          const bgColor = overlay.colorPalette && COLOR_PALETTES[overlay.colorPalette]
-            ? COLOR_PALETTES[overlay.colorPalette].background
-            : overlay.backgroundColor;
-          const textColor = overlay.colorPalette && COLOR_PALETTES[overlay.colorPalette]
-            ? COLOR_PALETTES[overlay.colorPalette].text
-            : overlay.textColor;
-          
-          // Apply advanced background styling
+          // Enhanced Background Rendering
           if (overlay.backgroundType === 'linear-gradient') {
-            const angle = (overlay.gradientAngle || 90) * (Math.PI / 180);
-            const x0 = xPosition + overlayWidth / 2 - Math.cos(angle) * overlayWidth / 2;
-            const y0 = yPosition + scaledHeight / 2 - Math.sin(angle) * scaledHeight / 2;
-            const x1 = xPosition + overlayWidth / 2 + Math.cos(angle) * overlayWidth / 2;
-            const y1 = yPosition + scaledHeight / 2 + Math.sin(angle) * scaledHeight / 2;
+            const angle = (overlay.gradientAngle || 0) * Math.PI / 180;
+            const x1 = xPosition + overlayWidth / 2 - Math.cos(angle) * overlayWidth / 2;
+            const y1 = yPosition + scaledHeight / 2 - Math.sin(angle) * scaledHeight / 2;
+            const x2 = xPosition + overlayWidth / 2 + Math.cos(angle) * overlayWidth / 2;
+            const y2 = yPosition + scaledHeight / 2 + Math.sin(angle) * scaledHeight / 2;
             
-            const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
-            gradient.addColorStop(0, hexToRgba(overlay.gradientColor1 || bgColor, overlay.opacity || 0.95));
-            gradient.addColorStop(1, hexToRgba(overlay.gradientColor2 || bgColor, overlay.opacity || 0.95));
+            const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+            gradient.addColorStop(0, overlay.gradientColor1 || overlay.backgroundColor);
+            gradient.addColorStop(1, overlay.gradientColor2 || overlay.backgroundColor);
             ctx.fillStyle = gradient;
           } else if (overlay.backgroundType === 'radial-gradient') {
             const gradient = ctx.createRadialGradient(
               xPosition + overlayWidth / 2, yPosition + scaledHeight / 2, 0,
-              xPosition + overlayWidth / 2, yPosition + scaledHeight / 2, overlayWidth / 2
+              xPosition + overlayWidth / 2, yPosition + scaledHeight / 2, Math.max(overlayWidth, scaledHeight) / 2
             );
-            gradient.addColorStop(0, hexToRgba(overlay.gradientColor1 || bgColor, overlay.opacity || 0.95));
-            gradient.addColorStop(1, hexToRgba(overlay.gradientColor2 || bgColor, overlay.opacity || 0.95));
+            gradient.addColorStop(0, overlay.gradientColor1 || overlay.backgroundColor);
+            gradient.addColorStop(1, overlay.gradientColor2 || overlay.backgroundColor);
             ctx.fillStyle = gradient;
           } else {
-            ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
+            ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.9);
           }
-          
-          // Apply border radius
+
+          // Apply border radius if specified
           if (overlay.borderRadius && overlay.borderRadius > 0) {
             ctx.save();
             ctx.beginPath();
-            ctx.roundRect(xPosition, yPosition, overlayWidth, scaledHeight, overlay.borderRadius);
+            const radius = Math.min(overlay.borderRadius, scaledHeight / 2, overlayWidth / 2);
+            ctx.moveTo(xPosition + radius, yPosition);
+            ctx.lineTo(xPosition + overlayWidth - radius, yPosition);
+            ctx.quadraticCurveTo(xPosition + overlayWidth, yPosition, xPosition + overlayWidth, yPosition + radius);
+            ctx.lineTo(xPosition + overlayWidth, yPosition + scaledHeight - radius);
+            ctx.quadraticCurveTo(xPosition + overlayWidth, yPosition + scaledHeight, xPosition + overlayWidth - radius, yPosition + scaledHeight);
+            ctx.lineTo(xPosition + radius, yPosition + scaledHeight);
+            ctx.quadraticCurveTo(xPosition, yPosition + scaledHeight, xPosition, yPosition + scaledHeight - radius);
+            ctx.lineTo(xPosition, yPosition + radius);
+            ctx.quadraticCurveTo(xPosition, yPosition, xPosition + radius, yPosition);
+            ctx.closePath();
             ctx.clip();
           }
-          
+
           ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
-          
-          // Apply box shadow/glow effect
-          if (overlay.glowEffect) {
-            ctx.shadowColor = textColor;
-            ctx.shadowBlur = 20;
+
+          // Add box shadow/glow effect
+          if (overlay.boxShadow || overlay.glowEffect) {
+            ctx.shadowColor = overlay.glowEffect ? overlay.textColor : 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = overlay.glowEffect ? 20 : 10;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
-            ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
           }
-          
-          // Add accent stripe at top for visual polish
+
+          // Add accent stripe
           const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
-          ctx.fillStyle = hexToRgba(textColor, 0.3);
+          ctx.fillStyle = hexToRgba(overlay.textColor, 0.3);
           ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
 
-          // Apply advanced typography
-          ctx.fillStyle = textColor;
+          ctx.fillStyle = overlay.textColor;
           const fontWeight = overlay.fontWeight || (overlay.isBold ? 700 : 400);
           const fontStyle = overlay.isItalic ? 'italic' : 'normal';
           ctx.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
@@ -1127,17 +1057,186 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
     };
   }, [activeSources, overlays, outputResolution, globalFitMode, sourceFitModes, rssArticles, sourceNameMap, formatRssTicker]);
 
+  const handleOverlayClick = (overlayId: string) => {
+    setSelectedOverlayId(overlayId);
+    if (onSelectOverlay) {
+      onSelectOverlay(overlayId);
+    }
+  };
+
+  const handleOverlayMouseDown = (e: React.MouseEvent, overlayId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const overlay = overlays.find(o => o.id === overlayId);
+    if (!overlay) return;
+
+    setSelectedOverlayId(overlayId);
+    if (onSelectOverlay) {
+      onSelectOverlay(overlayId);
+    }
+
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setInitialOverlayState({ 
+      x: overlay.x, 
+      y: overlay.y, 
+      width: overlay.width, 
+      height: overlay.height 
+    });
+  };
+
+  const handleResizeMouseDown = (e: React.MouseEvent, overlayId: string, handle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const overlay = overlays.find(o => o.id === overlayId);
+    if (!overlay) return;
+
+    setIsResizing(true);
+    setResizeHandle(handle);
+    setSelectedOverlayId(overlayId);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setInitialOverlayState({ 
+      x: overlay.x, 
+      y: overlay.y, 
+      width: overlay.width, 
+      height: overlay.height 
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragStart || !initialOverlayState || !canvasRef.current) return;
+
+      const canvas = canvasRef.current;
+      const canvasRect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / canvasRect.width;
+      const scaleY = canvas.height / canvasRect.height;
+
+      const deltaX = (e.clientX - dragStart.x) * scaleX;
+      const deltaY = (e.clientY - dragStart.y) * scaleY;
+
+      if (isDragging && selectedOverlayId && onUpdateOverlay) {
+        const newX = Math.max(0, Math.min(canvas.width - (canvas.width * initialOverlayState.width / 100), initialOverlayState.x + deltaX));
+        const newY = Math.max(0, Math.min(canvas.height - initialOverlayState.height, initialOverlayState.y + deltaY));
+        
+        onUpdateOverlay(selectedOverlayId, { 
+          x: newX, 
+          y: newY 
+        });
+      } else if (isResizing && selectedOverlayId && resizeHandle && onUpdateOverlay) {
+        const overlay = overlays.find(o => o.id === selectedOverlayId);
+        if (!overlay) return;
+
+        const canvasWidthPx = canvas.width * (initialOverlayState.width / 100);
+        let newX = initialOverlayState.x;
+        let newY = initialOverlayState.y;
+        let newWidth = initialOverlayState.width;
+        let newHeight = initialOverlayState.height;
+
+        switch (resizeHandle) {
+          case 'nw':
+            newX = initialOverlayState.x + deltaX;
+            newY = initialOverlayState.y + deltaY;
+            newWidth = Math.max(10, (canvasWidthPx - deltaX) / canvas.width * 100);
+            newHeight = Math.max(30, initialOverlayState.height - deltaY);
+            break;
+          case 'n':
+            newY = initialOverlayState.y + deltaY;
+            newHeight = Math.max(30, initialOverlayState.height - deltaY);
+            break;
+          case 'ne':
+            newY = initialOverlayState.y + deltaY;
+            newWidth = Math.max(10, (canvasWidthPx + deltaX) / canvas.width * 100);
+            newHeight = Math.max(30, initialOverlayState.height - deltaY);
+            break;
+          case 'e':
+            newWidth = Math.max(10, (canvasWidthPx + deltaX) / canvas.width * 100);
+            break;
+          case 'se':
+            newWidth = Math.max(10, (canvasWidthPx + deltaX) / canvas.width * 100);
+            newHeight = Math.max(30, initialOverlayState.height + deltaY);
+            break;
+          case 's':
+            newHeight = Math.max(30, initialOverlayState.height + deltaY);
+            break;
+          case 'sw':
+            newX = initialOverlayState.x + deltaX;
+            newWidth = Math.max(10, (canvasWidthPx - deltaX) / canvas.width * 100);
+            newHeight = Math.max(30, initialOverlayState.height + deltaY);
+            break;
+          case 'w':
+            newX = initialOverlayState.x + deltaX;
+            newWidth = Math.max(10, (canvasWidthPx - deltaX) / canvas.width * 100);
+            break;
+        }
+
+        // Ensure overlay stays within canvas bounds
+        newX = Math.max(0, Math.min(canvas.width - (canvas.width * newWidth / 100), newX));
+        newY = Math.max(0, Math.min(canvas.height - newHeight, newY));
+
+        onUpdateOverlay(selectedOverlayId, { 
+          x: newX, 
+          y: newY, 
+          width: newWidth, 
+          height: newHeight 
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      setIsResizing(false);
+      setResizeHandle(null);
+      setDragStart(null);
+      setInitialOverlayState(null);
+    };
+
+    if (isDragging || isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, isResizing, dragStart, initialOverlayState, selectedOverlayId, resizeHandle, overlays, onUpdateOverlay]);
+
   const renderMetricOverlay = (overlay: OverlayConfig) => {
     const { metricType, metricData, width, height, opacity, x, y } = overlay;
+
+    if (!canvasRef.current) return null;
+
+    const canvas = canvasRef.current;
+    const canvasRect = canvas.getBoundingClientRect();
+    
+    // Calculate adjusted y position to prevent clipping at bottom
+    let adjustedY = y;
+    const canvasHeight = canvas.height;
+    
+    // If overlay extends beyond canvas height, adjust y position
+    if (y + height > canvasHeight) {
+      adjustedY = canvasHeight - height;
+    }
+    
+    // Ensure overlay doesn't go above canvas
+    adjustedY = Math.max(0, adjustedY);
+
+    const isSelected = selectedOverlayId === overlay.id;
 
     const style: React.CSSProperties = {
       position: 'absolute',
       width: `${width}%`,
       height: `${height}px`,
       left: `${x}px`,
-      top: `${y}px`,
+      top: `${adjustedY}px`,
       zIndex: overlay.zIndex || 100,
-      pointerEvents: 'none',
+      pointerEvents: 'auto',
+      cursor: isDragging ? 'grabbing' : 'grab',
+      border: isSelected ? '2px solid #C8102E' : 'none',
+      boxSizing: 'border-box',
     };
 
     const overlayComponent = (() => {
@@ -1250,9 +1349,79 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
       }
     })();
 
+    const resizeHandles = isSelected ? (
+      <>
+        {['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(handle => {
+          let cursorStyle = '';
+          let positionStyle: React.CSSProperties = {};
+          
+          switch (handle) {
+            case 'nw':
+              cursorStyle = 'nwse-resize';
+              positionStyle = { top: '-4px', left: '-4px' };
+              break;
+            case 'n':
+              cursorStyle = 'ns-resize';
+              positionStyle = { top: '-4px', left: '50%', transform: 'translateX(-50%)' };
+              break;
+            case 'ne':
+              cursorStyle = 'nesw-resize';
+              positionStyle = { top: '-4px', right: '-4px' };
+              break;
+            case 'e':
+              cursorStyle = 'ew-resize';
+              positionStyle = { top: '50%', right: '-4px', transform: 'translateY(-50%)' };
+              break;
+            case 'se':
+              cursorStyle = 'nwse-resize';
+              positionStyle = { bottom: '-4px', right: '-4px' };
+              break;
+            case 's':
+              cursorStyle = 'ns-resize';
+              positionStyle = { bottom: '-4px', left: '50%', transform: 'translateX(-50%)' };
+              break;
+            case 'sw':
+              cursorStyle = 'nesw-resize';
+              positionStyle = { bottom: '-4px', left: '-4px' };
+              break;
+            case 'w':
+              cursorStyle = 'ew-resize';
+              positionStyle = { top: '50%', left: '-4px', transform: 'translateY(-50%)' };
+              break;
+          }
+
+          return (
+            <div
+              key={handle}
+              data-testid={`resize-handle-${handle}-${overlay.id}`}
+              onMouseDown={(e) => handleResizeMouseDown(e, overlay.id, handle)}
+              style={{
+                position: 'absolute',
+                width: '8px',
+                height: '8px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #C8102E',
+                cursor: cursorStyle,
+                zIndex: 1000,
+                ...positionStyle,
+              }}
+            />
+          );
+        })}
+      </>
+    ) : null;
+
     return (
       <OverlayErrorBoundary key={overlay.id} overlayId={overlay.id}>
-        <div style={style}>{overlayComponent}</div>
+        <div 
+          style={style}
+          onMouseDown={(e) => handleOverlayMouseDown(e, overlay.id)}
+          onClick={() => handleOverlayClick(overlay.id)}
+          data-testid={`metric-overlay-${overlay.id}`}
+        >
+          {overlayComponent}
+          {resizeHandles}
+        </div>
       </OverlayErrorBoundary>
     );
   };
