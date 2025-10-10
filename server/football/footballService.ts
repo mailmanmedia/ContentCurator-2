@@ -201,6 +201,29 @@ class FootballService {
     48  // League Cup (Carabao Cup)
   ];
 
+  /**
+   * Get current season dynamically based on current date
+   * Football seasons typically run from August to May
+   * Using July 1st as the cutoff to handle preseason and qualification matches
+   */
+  private getCurrentSeason(): number {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // getMonth() is 0-indexed
+    const currentDay = now.getDate();
+    
+    // Season starts around July 1st (handles preseason, qualifiers, and early fixtures)
+    // If it's before July 1st, the season is the previous year
+    // If it's July 1st or later, the season is the current year
+    if (currentMonth < 7) {
+      return currentYear - 1;
+    } else if (currentMonth === 7 && currentDay === 1) {
+      return currentYear; // Boundary case: July 1st belongs to new season
+    } else {
+      return currentYear;
+    }
+  }
+
   async fetchFromAPI<T>(endpoint: string, params: Record<string, any> = {}): Promise<FootballAPIResponse<T>> {
     const url = new URL(`${this.baseUrl}${endpoint}`);
     Object.entries(params).forEach(([key, value]) => {
@@ -1376,24 +1399,22 @@ class FootballService {
   }
 
   async getHeadToHeadStats(homeTeamId: number, awayTeamId: number, last: number = 10): Promise<FootballFixture[]> {
-    // PHASE 1: Query database first for persistent H2H fixtures (CURRENT SEASON ONLY)
-    const currentSeason = 2025; // 2025-26 Premier League season
+    // PHASE 1: Query database for H2H fixtures across ALL seasons
     try {
+      const currentSeason = this.getCurrentSeason();
+      // First check for recent matches across all seasons, not just current
       const dbFixtures = await db
         .select()
         .from(footballFixtures)
         .where(
-          and(
-            eq(footballFixtures.season, currentSeason),
-            or(
-              and(
-                eq(footballFixtures.homeTeamId, homeTeamId),
-                eq(footballFixtures.awayTeamId, awayTeamId)
-              ),
-              and(
-                eq(footballFixtures.homeTeamId, awayTeamId),
-                eq(footballFixtures.awayTeamId, homeTeamId)
-              )
+          or(
+            and(
+              eq(footballFixtures.homeTeamId, homeTeamId),
+              eq(footballFixtures.awayTeamId, awayTeamId)
+            ),
+            and(
+              eq(footballFixtures.homeTeamId, awayTeamId),
+              eq(footballFixtures.awayTeamId, homeTeamId)
             )
           )
         )
@@ -1401,14 +1422,14 @@ class FootballService {
         .limit(last);
 
       if (dbFixtures.length > 0) {
-        console.log(`Found ${dbFixtures.length} H2H fixtures in database (season ${currentSeason})`);
+        console.log(`Found ${dbFixtures.length} H2H fixtures in database across all seasons`);
         return dbFixtures;
       }
     } catch (dbError) {
-      console.error('Database H2H query failed, falling back to cache/API:', dbError);
+      console.error('Database H2H query failed, falling back to API:', dbError);
     }
 
-    // PHASE 2: If no database fixtures, try cache/API
+    // PHASE 2: If no database fixtures, fetch from API
     return await smartFootballCache.getHeadToHead(homeTeamId, awayTeamId, () => 
       this.fetchHeadToHeadRaw(homeTeamId, awayTeamId, last)
     );

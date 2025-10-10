@@ -478,26 +478,6 @@ export const insertFootballCompetitionSchema = createInsertSchema(football_compe
 export type InsertFootballCompetition = z.infer<typeof insertFootballCompetitionSchema>;
 export type FootballCompetition = typeof football_competitions.$inferSelect;
 
-// Historical Head to Head (existing table)
-export const historical_head_to_head = pgTable('historical_head_to_head', {
-  id: serial('id').primaryKey(),
-  team1_id: integer('team1_id'),
-  team1_name: varchar('team1_name', { length: 255 }),
-  team2_id: integer('team2_id'),
-  team2_name: varchar('team2_name', { length: 255 }),
-  fixture_date: timestamp('fixture_date'),
-  competition: varchar('competition', { length: 255 }),
-  venue: varchar('venue', { length: 255 }),
-  team1_score: integer('team1_score'),
-  team2_score: integer('team2_score'),
-  winner: varchar('winner', { length: 255 }),
-  season: varchar('season', { length: 10 }),
-  created_at: timestamp('created_at').defaultNow()
-});
-
-export const insertHistoricalHeadToHeadSchema = createInsertSchema(historical_head_to_head).omit({ id: true, created_at: true });
-export type InsertHistoricalHeadToHead = z.infer<typeof insertHistoricalHeadToHeadSchema>;
-export type HistoricalHeadToHead = typeof historical_head_to_head.$inferSelect;
 
 // Data Update Schedule (existing table)
 export const data_update_schedule = pgTable('data_update_schedule', {
@@ -814,6 +794,38 @@ export const insertAudioTrackSchema = createInsertSchema(audio_tracks).omit({ id
 export type InsertAudioTrack = z.infer<typeof insertAudioTrackSchema>;
 export type AudioTrack = typeof audio_tracks.$inferSelect;
 
+// Historical Head-to-Head Table
+export const historicalHeadToHead = pgTable('historical_head_to_head', {
+  id: serial('id').primaryKey(),
+  team1Id: integer('team1_id').references(() => football_teams.id),
+  team1Name: varchar('team1_name', { length: 255 }),
+  team2Id: integer('team2_id').references(() => football_teams.id),
+  team2Name: varchar('team2_name', { length: 255 }),
+  fixtureDate: timestamp('fixture_date').notNull(),
+  competition: varchar('competition', { length: 255 }),
+  competitionId: integer('competition_id'),
+  venue: varchar('venue', { length: 255 }),
+  homeTeamId: integer('home_team_id'),
+  awayTeamId: integer('away_team_id'),
+  team1Score: integer('team1_score'),
+  team2Score: integer('team2_score'),
+  winner: varchar('winner', { length: 50 }),
+  season: integer('season'),
+  lastUpdated: timestamp('last_updated').defaultNow(),
+  isFallback: boolean('is_fallback').default(false),
+  fallbackReason: text('fallback_reason'),
+  createdAt: timestamp('created_at').defaultNow()
+}, (table) => ({
+  fixtureDateIdx: index('idx_h2h_fixture_date').on(table.fixtureDate),
+  team1Team2DateIdx: uniqueIndex('idx_h2h_teams_date').on(table.team1Id, table.team2Id, table.fixtureDate),
+  seasonIdx: index('idx_h2h_season').on(table.season),
+  lastUpdatedIdx: index('idx_h2h_last_updated').on(table.lastUpdated)
+}));
+
+export const insertHistoricalHeadToHeadSchema = createInsertSchema(historicalHeadToHead).omit({ id: true, createdAt: true, lastUpdated: true });
+export type InsertHistoricalHeadToHead = z.infer<typeof insertHistoricalHeadToHeadSchema>;
+export type HistoricalHeadToHead = typeof historicalHeadToHead.$inferSelect;
+
 // Framework Categories
 export const framework_categories = pgTable('framework_categories', {
   id: serial('id').primaryKey(),
@@ -991,7 +1003,7 @@ export const footballPlayers = football_players;
 export const footballFixtures = football_fixtures;
 export const teamSeasonStatistics = team_season_statistics;
 export const playerSeasonStatistics = player_season_statistics;
-export const historicalHeadToHead = historical_head_to_head;
+// historicalHeadToHead is already defined directly above (not an alias)
 
 // Other tables
 export const audioTracks = audio_tracks;

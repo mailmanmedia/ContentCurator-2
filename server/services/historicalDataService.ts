@@ -1,12 +1,13 @@
 import { db } from "../db";
-import { historicalHeadToHead, dataUpdateSchedule, footballFixtures } from "@shared/schema";
-import { eq, and, or, desc, gte } from "drizzle-orm";
+import { historicalHeadToHead, data_update_schedule as dataUpdateSchedule, footballFixtures } from "@shared/schema";
+import { eq, and, or, desc, gte, lte, sql } from "drizzle-orm";
 import { toSafeDate, toSafeDateRequired } from '../utils/dateUtils';
+import { apiFootballService } from '../football/apiFootballService';
 
 /**
  * Historical Data Service
- * Manages historical head-to-head data from 2020+ with hardcoded historical matches
- * and optimal update cadence for different competitions
+ * Manages historical head-to-head data by fetching from API
+ * Implements smart fallback handling and proper timestamp tracking
  */
 
 interface HistoricalMatch {
@@ -23,6 +24,27 @@ interface HistoricalMatch {
   homeScore: number;
   awayScore: number;
   venue?: string;
+  isFallback?: boolean;
+  fallbackReason?: string;
+}
+
+/**
+ * Get current season dynamically based on current date
+ * Using July 1st as the cutoff to handle preseason and qualification matches
+ */
+function getCurrentSeason(): number {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const currentDay = now.getDate();
+  
+  if (currentMonth < 7) {
+    return currentYear - 1;
+  } else if (currentMonth === 7 && currentDay === 1) {
+    return currentYear;
+  } else {
+    return currentYear;
+  }
 }
 
 // Hardcoded historical Premier League data (2020-2024)
@@ -170,38 +192,172 @@ const COMPETITION_UPDATE_SCHEDULES: UpdateCadenceConfig[] = [
 class HistoricalDataService {
   
   /**
-   * Initialize historical data in database
+   * Fetch head-to-head data from API and store in database
+   * @param team1Id - First team ID
+   * @param team2Id - Second team ID
+   * @param seasons - Array of seasons to fetch (defaults to last 5 seasons)
+   * @returns Array of matches with proper timestamp tracking
    */
-  async initializeHistoricalData(): Promise<void> {
-    console.log('📊 Initializing historical head-to-head data...');
+  async fetchAndStoreH2HFromAPI(
+    team1Id: number, 
+    team2Id: number, 
+    seasons?: number[]
+  ): Promise<HistoricalMatch[]> {
+    const currentSeason = getCurrentSeason();
+    const seasonsToFetch = seasons || [
+      currentSeason,
+      currentSeason - 1,
+      currentSeason - 2,
+      currentSeason - 3,
+      currentSeason - 4
+    ];
     
-    const dataToInsert = HISTORICAL_PREMIER_LEAGUE_DATA.map(match => ({
-      team1Id: Math.min(match.team1Id, match.team2Id),
-      team2Id: Math.max(match.team1Id, match.team2Id),
-      fixtureId: null,
-      date: toSafeDateRequired(match.date),
-      season: match.season,
-      competitionId: match.competitionId,
-      competitionName: match.competitionName,
-      homeTeamId: match.homeTeamId,
-      awayTeamId: match.awayTeamId,
-      homeScore: match.homeScore,
-      awayScore: match.awayScore,
-      venue: match.venue,
-      isHistorical: true,
-      dataSource: 'hardcoded',
-      lastUpdated: toSafeDateRequired(Date.now()),
-    }));
+    const matches: HistoricalMatch[] = [];
+    let isFallback = false;
+    let fallbackReason = '';
 
-    for (const data of dataToInsert) {
-      try {
-        await db.insert(historicalHeadToHead).values(data).onConflictDoNothing();
-      } catch (error) {
-        console.error(`Failed to insert historical match:`, error);
+    try {
+      // Fetch H2H data from API for all seasons
+      for (const season of seasonsToFetch) {
+        console.log(`📊 Fetching H2H data for teams ${team1Id} vs ${team2Id} - Season ${season}`);
+        
+        try {
+          const fixtures = await apiFootballService.getFixtures({
+            season,
+            team: team1Id,
+            status: 'FT' // Only finished matches
+          });
+          
+          // Filter for matches between these two teams
+          const h2hFixtures = fixtures.filter((f: any) => 
+            (f.teams.home.id === team1Id && f.teams.away.id === team2Id) ||
+            (f.teams.home.id === team2Id && f.teams.away.id === team1Id)
+          );
+          
+          // Store each match in database
+          for (const fixture of h2hFixtures) {
+            const match: HistoricalMatch = {
+              team1Id: Math.min(team1Id, team2Id),
+              team1Name: fixture.teams.home.id === Math.min(team1Id, team2Id) ? 
+                fixture.teams.home.name : fixture.teams.away.name,
+              team2Id: Math.max(team1Id, team2Id),
+              team2Name: fixture.teams.home.id === Math.max(team1Id, team2Id) ? 
+                fixture.teams.home.name : fixture.teams.away.name,
+              date: fixture.fixture.date,
+              season,
+              competitionId: fixture.league.id,
+              competitionName: fixture.league.name,
+              homeTeamId: fixture.teams.home.id,
+              awayTeamId: fixture.teams.away.id,
+              homeScore: fixture.goals.home,
+              awayScore: fixture.goals.away,
+              venue: fixture.fixture.venue?.name || '',
+              isFallback: false
+            };
+            
+            matches.push(match);
+            
+            // Store in database
+            await this.storeH2HMatch(match);
+          }
+          
+        } catch (apiError) {
+          console.error(`Failed to fetch season ${season}:`, apiError);
+        }
       }
+      
+      console.log(`✓ Fetched ${matches.length} H2H matches from API`);
+      
+    } catch (error: any) {
+      console.error('Failed to fetch H2H data from API:', error);
+      isFallback = true;
+      fallbackReason = `API error: ${error.message || 'Unknown error'}`;
     }
+    
+    // If API failed and no matches found, use minimal fallback
+    if (matches.length === 0 && isFallback) {
+      console.warn('⚠️ Using fallback data due to API failure');
+      return this.getMinimalFallbackData(team1Id, team2Id, fallbackReason);
+    }
+    
+    return matches;
+  }
 
-    console.log(`✓ Initialized ${dataToInsert.length} historical matches`);
+  /**
+   * Store H2H match in database with proper timestamp tracking
+   */
+  private async storeH2HMatch(match: HistoricalMatch): Promise<void> {
+    try {
+      await db.insert(historicalHeadToHead)
+        .values({
+          team1Id: match.team1Id,
+          team1Name: match.team1Name,
+          team2Id: match.team2Id,
+          team2Name: match.team2Name,
+          fixtureDate: toSafeDateRequired(match.date),
+          competition: match.competitionName,
+          competitionId: match.competitionId,
+          venue: match.venue,
+          homeTeamId: match.homeTeamId,
+          awayTeamId: match.awayTeamId,
+          team1Score: match.homeTeamId === match.team1Id ? match.homeScore : match.awayScore,
+          team2Score: match.homeTeamId === match.team2Id ? match.homeScore : match.awayScore,
+          winner: match.homeScore > match.awayScore ? 
+            (match.homeTeamId === match.team1Id ? match.team1Name : match.team2Name) :
+            match.homeScore < match.awayScore ? 
+            (match.awayTeamId === match.team1Id ? match.team1Name : match.team2Name) : 
+            'draw',
+          season: match.season,
+          lastUpdated: new Date(),
+          isFallback: match.isFallback || false,
+          fallbackReason: match.fallbackReason || null
+        })
+        .onConflictDoUpdate({
+          target: [historicalHeadToHead.team1Id, historicalHeadToHead.team2Id, historicalHeadToHead.fixtureDate],
+          set: {
+            team1Score: match.homeTeamId === match.team1Id ? match.homeScore : match.awayScore,
+            team2Score: match.homeTeamId === match.team2Id ? match.homeScore : match.awayScore,
+            lastUpdated: new Date(),
+            isFallback: match.isFallback || false,
+            fallbackReason: match.fallbackReason || null
+          }
+        });
+    } catch (error) {
+      console.error('Failed to store H2H match:', error);
+    }
+  }
+
+  /**
+   * Get minimal fallback data when API is unreachable
+   * Returns empty array with fallback metadata
+   */
+  private getMinimalFallbackData(
+    team1Id: number, 
+    team2Id: number, 
+    fallbackReason: string
+  ): HistoricalMatch[] {
+    // Store fallback status in database
+    this.logFallbackUsage(team1Id, team2Id, fallbackReason);
+    
+    // Return empty array - let the UI handle no data gracefully
+    return [];
+  }
+
+  /**
+   * Log fallback usage for monitoring
+   */
+  private async logFallbackUsage(
+    team1Id: number,
+    team2Id: number,
+    reason: string
+  ): Promise<void> {
+    console.error(`⚠️ FALLBACK MODE ACTIVATED:
+      Teams: ${team1Id} vs ${team2Id}
+      Reason: ${reason}
+      Time: ${new Date().toISOString()}
+    `);
+    
+    // Could also log to monitoring service or admin dashboard here
   }
 
   /**
@@ -268,12 +424,35 @@ class HistoricalDataService {
 
   /**
    * Get head-to-head data for two teams
-   * First checks database (historical + current), then falls back to live data
+   * Fetches from API if data is stale, then returns from database
    */
   async getHeadToHeadData(team1Id: number, team2Id: number, limit: number = 20): Promise<any[]> {
     const minTeamId = Math.min(team1Id, team2Id);
     const maxTeamId = Math.max(team1Id, team2Id);
+    
+    // Check when data was last updated
+    const lastUpdate = await db
+      .select({ lastUpdated: historicalHeadToHead.lastUpdated })
+      .from(historicalHeadToHead)
+      .where(
+        and(
+          eq(historicalHeadToHead.team1Id, minTeamId),
+          eq(historicalHeadToHead.team2Id, maxTeamId)
+        )
+      )
+      .orderBy(desc(historicalHeadToHead.lastUpdated))
+      .limit(1);
+    
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    
+    // If data is stale or doesn't exist, fetch from API
+    if (!lastUpdate[0] || lastUpdate[0].lastUpdated < oneHourAgo) {
+      console.log(`📊 H2H data is stale or missing for teams ${team1Id} vs ${team2Id}, fetching from API...`);
+      await this.fetchAndStoreH2HFromAPI(team1Id, team2Id);
+    }
 
+    // Now return the data from database
     const historicalMatches = await db
       .select()
       .from(historicalHeadToHead)
@@ -283,7 +462,7 @@ class HistoricalDataService {
           eq(historicalHeadToHead.team2Id, maxTeamId)
         )
       )
-      .orderBy(desc(historicalHeadToHead.date))
+      .orderBy(desc(historicalHeadToHead.fixtureDate))
       .limit(limit);
 
     return historicalMatches.map(match => ({
