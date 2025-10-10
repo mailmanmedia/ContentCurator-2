@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
 import { CameraStreamProvider } from "@/contexts/CameraStreamContext";
 import { PiPProvider } from "@/contexts/PictureInPictureContext";
-import VisualAssistant from "@/components/VisualAssistant";
+import VisualAssistant from "@/pages/VisualAssistant";
 import FrameworkDirectory from "@/pages/FrameworkDirectory";
 import CreateFramework from "@/pages/CreateFramework";
 import RssIntelligence from "@/pages/RssIntelligence";
@@ -19,6 +19,7 @@ import OverlayTemplateBuilder from "@/pages/OverlayTemplateBuilder";
 import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
 import VideoEditor from "@/pages/VideoEditor";
 import DatabaseStatus from "@/pages/DatabaseStatus";
+import TeamFormsList from "@/pages/TeamFormsList";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -37,8 +38,7 @@ function Router() {
       <Route path="/templates" component={Templates} />
       <Route path="/overlay-templates" component={OverlayTemplateBuilder} />
       <Route path="/analytics" component={AnalyticsDashboard} />
-      <Route path="/video-editor" component={VideoEditor} />
-      <Route path="/database-status" component={DatabaseStatus} />
+      <Route path="/teams-forms" component={TeamFormsList} />
       <Route component={NotFound} />
     </Switch>
   );

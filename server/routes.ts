@@ -1091,6 +1091,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ framework });
     } catch (error) {
       console.error('Error creating framework:', error);
+
+
+  // Get all teams with their current form from database
+  app.get("/api/football/teams/all-forms", async (req, res) => {
+    try {
+      const season = parseInt(req.query.season as string) || 2025;
+      const leagueId = parseInt(req.query.leagueId as string) || 39; // Default to Premier League
+
+      const teamsWithForm = await db
+        .select({
+          teamId: teamSeasonStatistics.teamId,
+          teamName: footballTeams.name,
+          form: teamSeasonStatistics.form,
+          matchesPlayed: teamSeasonStatistics.matchesPlayed,
+          wins: teamSeasonStatistics.wins,
+          draws: teamSeasonStatistics.draws,
+          losses: teamSeasonStatistics.losses,
+          goalsFor: teamSeasonStatistics.goalsFor,
+          goalsAgainst: teamSeasonStatistics.goalsAgainst,
+          lastUpdated: teamSeasonStatistics.lastUpdated,
+        })
+        .from(teamSeasonStatistics)
+        .innerJoin(footballTeams, eq(teamSeasonStatistics.teamId, footballTeams.id))
+        .where(
+          and(
+            eq(teamSeasonStatistics.leagueId, leagueId),
+            eq(teamSeasonStatistics.season, season)
+          )
+        )
+        .orderBy(footballTeams.name);
+
+      res.json({ 
+        teams: teamsWithForm,
+        season,
+        leagueId,
+        count: teamsWithForm.length
+      });
+    } catch (error) {
+      console.error('Error fetching all teams with form:', error);
+      res.status(500).json({ error: "Failed to fetch teams with form data" });
+    }
+  });
+
       res.status(500).json({ error: "Failed to create framework" });
     }
   });
