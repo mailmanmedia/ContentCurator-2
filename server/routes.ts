@@ -154,13 +154,13 @@ class LiveSSEManager {
   addClient(clientId: string, res: express.Response) {
     this.clients.set(clientId, res);
     this.updateThrottle.set(clientId, 0);
-    
+
     // Send initial connection event
     this.sendToClient(clientId, 'connected', { 
       timestamp: new Date().toISOString(),
       clientId 
     });
-    
+
     console.log(`Live SSE client connected: ${clientId} (total: ${this.clients.size})`);
   }
 
@@ -226,9 +226,9 @@ const controlTokens = new Map<string, { expires: Date; permissions: string[] }>(
 function generateControlToken(permissions: string[] = ['basic']): string {
   const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
   const expires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-  
+
   controlTokens.set(token, { expires, permissions });
-  
+
   // Cleanup expired tokens
   setTimeout(() => {
     for (const [key, value] of Array.from(controlTokens.entries())) {
@@ -244,19 +244,19 @@ function generateControlToken(permissions: string[] = ['basic']): string {
 function validateControlToken(token: string, requiredPermission: string = 'basic'): boolean {
   const tokenData = controlTokens.get(token);
   if (!tokenData) return false;
-  
+
   if (tokenData.expires < new Date()) {
     controlTokens.delete(token);
     return false;
   }
-  
+
   return tokenData.permissions.includes(requiredPermission) || tokenData.permissions.includes('admin');
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from uploads directory
   app.use('/uploads', express.static('uploads'));
-  
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
@@ -277,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/ai/suggestions", async (req, res) => {
     try {
       const { prompt, context } = req.body;
-      
+
       if (!prompt) {
         return res.status(400).json({ error: "Prompt is required" });
       }
@@ -312,7 +312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const content = completion.choices[0]?.message?.content || "";
-      
+
       // Parse JSON response with fallback
       let suggestions;
       try {
@@ -326,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ suggestions });
     } catch (error) {
       console.error('Error generating suggestions:', error);
-      
+
       // Fallback suggestions on error
       const fallbackSuggestions = [
         "Liverpool Squad Analysis: Strengths and Weaknesses This Season",
@@ -335,7 +335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "Transfer Rumors: What Liverpool Need in January Window",
         "Match Preview: Key Battles in Liverpool's Next Fixture"
       ];
-      
+
       res.json({ suggestions: fallbackSuggestions });
     }
   });
@@ -358,7 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       targetAudience = [],
       contentGoal = []
     } = req.body;
-    
+
     // Define fallback variations function accessible to both try and catch blocks
     const createFallbackVariations = () => [
       {
@@ -386,7 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         confidence: 75
       }
     ];
-    
+
     try {
       // Check if at least one editorial brief field has content
       const hasEditorialBriefContent = !!(
@@ -401,7 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Require either custom prompt OR at least one editorial brief field, plus output type
       const hasContent = text || hasEditorialBriefContent;
-      
+
       if (!hasContent || !outputType) {
         return res.status(400).json({ 
           error: "Please provide either a custom prompt or fill at least one editorial brief field, and select an output type" 
@@ -448,7 +448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const content = completion.choices[0]?.message?.content || "";
-      
+
       // Try to parse JSON with better error handling
       let variations;
       try {
@@ -472,7 +472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Image Search endpoint using Perplexity
   app.post("/api/ai/search-images", async (req, res) => {
     const { query } = req.body;
-    
+
     try {
       if (!query) {
         return res.status(400).json({ error: "Search query is required" });
@@ -528,7 +528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (perplexityResponse.ok) {
             const perplexityData = await perplexityResponse.json();
             const searchResults = perplexityData.choices[0]?.message?.content || "";
-            
+
             res.json({ 
               results: searchResults,
               suggestions: imageSuggestions,
@@ -560,7 +560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           category: 'General'
         }
       ];
-      
+
       res.json({
         results: `Search for "${query || 'images'}" completed. Found relevant Liverpool FC content.`,
         suggestions: fallbackSuggestions,
@@ -570,12 +570,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image Management Routes
-  
+
   // Get all images
   app.get("/api/images", async (req, res) => {
     try {
       const { category, search } = req.query;
-      
+
       let images;
       if (search) {
         images = await storage.searchImages(search as string);
@@ -584,7 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         images = await storage.getImages();
       }
-      
+
       res.json({ images });
     } catch (error) {
       console.error('Error fetching images:', error);
@@ -612,12 +612,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       const updatedImage = await storage.updateImage(id, updates);
       if (!updatedImage) {
         return res.status(404).json({ error: "Image not found" });
       }
-      
+
       res.json({ image: updatedImage });
     } catch (error) {
       console.error('Error updating image:', error);
@@ -629,16 +629,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/images/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       // Get image info before deletion to clean up files
       const image = await storage.getImages().then(images => images.find(img => img.id === id));
-      
+
       const deleted = await storage.deleteImage(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "Image not found" });
       }
-      
+
       // Clean up associated files
       if (image?.url && image.url.startsWith('/uploads/')) {
         try {
@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.warn('Could not delete image file:', image.url);
         }
       }
-      
+
       if (image?.thumbnail && image.thumbnail.startsWith('/uploads/')) {
         try {
           await fs.unlink(path.join(process.cwd(), image.thumbnail));
@@ -655,7 +655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.warn('Could not delete thumbnail file:', image.thumbnail);
         }
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting image:', error);
@@ -671,7 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { title, description, category } = req.body;
-      
+
       // Generate thumbnail
       const thumbnailPath = `uploads/thumbnails/thumb-${req.file.filename}`;
       await sharp(req.file.path)
@@ -696,7 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertImageSchema.parse(imageData);
       const image = await storage.createImage(validatedData);
-      
+
       res.status(201).json({ image });
     } catch (error) {
       // Clean up uploaded file if processing failed
@@ -707,7 +707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.warn('Could not clean up uploaded file:', req.file.path);
         }
       }
-      
+
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid image data", details: error.errors });
       }
@@ -734,11 +734,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { key } = req.params;
       const style = await storage.getPresentationStyleByKey(key);
-      
+
       if (!style) {
         return res.status(404).json({ error: "Presentation style not found" });
       }
-      
+
       res.json({ style });
     } catch (error) {
       console.error('Error getting presentation style:', error);
@@ -777,11 +777,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const report = await storage.getReport(id);
-      
+
       if (!report) {
         return res.status(404).json({ error: "Report not found" });
       }
-      
+
       res.json({ report });
     } catch (error) {
       console.error('Error getting report:', error);
@@ -810,11 +810,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertReportSchema.partial().parse(req.body);
       const report = await storage.updateReport(id, validatedData);
-      
+
       if (!report) {
         return res.status(404).json({ error: "Report not found" });
       }
-      
+
       res.json({ report });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -830,11 +830,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteReport(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "Report not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting report:', error);
@@ -847,26 +847,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { style: styleKey = 'claudeArtifact' } = req.query as { style?: string };
-      
+
       // Get report
       const report = await storage.getReport(id);
       if (!report) {
         return res.status(404).json({ error: "Report not found" });
       }
-      
+
       // Get style
       const style = await storage.getPresentationStyleByKey(styleKey);
       if (!style) {
         return res.status(404).json({ error: "Presentation style not found" });
       }
-      
+
       // Check for existing rendering
       let rendering = await storage.getReportRendering(id, styleKey);
-      
+
       if (!rendering) {
         // Generate new rendering
         const renderedContent = await renderPresentation(report, style);
-        
+
         const renderingData = {
           reportId: id,
           styleKey: styleKey,
@@ -874,11 +874,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           blocksJson: renderedContent.blocks,
           metaJson: renderedContent.meta
         };
-        
+
         const validatedData = insertReportRenderingSchema.parse(renderingData);
         rendering = await storage.createReportRendering(validatedData);
       }
-      
+
       res.json({ 
         rendering,
         report,
@@ -895,22 +895,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { style: styleKey = 'claudeArtifact' } = req.body;
-      
+
       // Get report
       const report = await storage.getReport(id);
       if (!report) {
         return res.status(404).json({ error: "Report not found" });
       }
-      
+
       // Get style
       const style = await storage.getPresentationStyleByKey(styleKey);
       if (!style) {
         return res.status(404).json({ error: "Presentation style not found" });
       }
-      
+
       // Generate new rendering
       const renderedContent = await renderPresentation(report, style);
-      
+
       const renderingData = {
         reportId: id,
         styleKey: styleKey,
@@ -918,10 +918,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         blocksJson: renderedContent.blocks,
         metaJson: renderedContent.meta
       };
-      
+
       const validatedData = insertReportRenderingSchema.parse(renderingData);
       const rendering = await storage.createReportRendering(validatedData);
-      
+
       res.json({ 
         rendering,
         report,
@@ -938,26 +938,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { style: styleKey = 'claudeArtifact' } = req.query as { style?: string };
-      
+
       // Get report
       const report = await storage.getReport(id);
       if (!report) {
         return res.status(404).json({ error: "Report not found" });
       }
-      
+
       // Get style
       const style = await storage.getPresentationStyleByKey(styleKey);
       if (!style) {
         return res.status(404).json({ error: "Presentation style not found" });
       }
-      
+
       // Get or generate rendering
       let rendering = await storage.getReportRendering(id, styleKey);
-      
+
       if (!rendering) {
         // Generate new rendering
         const renderedContent = await renderPresentation(report, style);
-        
+
         const renderingData = {
           reportId: id,
           styleKey: styleKey,
@@ -965,14 +965,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           blocksJson: renderedContent.blocks,
           metaJson: renderedContent.meta
         };
-        
+
         const validatedData = insertReportRenderingSchema.parse(renderingData);
         rendering = await storage.createReportRendering(validatedData);
       }
-      
+
       // Generate secure HTML with CSP headers
       const secureHtml = wrapWithSecurityHeaders(rendering.contentHtml, report.title);
-      
+
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="${report.title.replace(/[^a-zA-Z0-9]/g, '-')}-${styleKey}.html"`);
       res.send(secureHtml);
@@ -1009,11 +1009,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertFrameworkCategorySchema.partial().parse(req.body);
       const category = await storage.updateFrameworkCategory(id, validatedData);
-      
+
       if (!category) {
         return res.status(404).json({ error: "Framework category not found" });
       }
-      
+
       res.json({ category });
     } catch (error) {
       console.error('Error updating framework category:', error);
@@ -1025,11 +1025,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteFrameworkCategory(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "Framework category not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting framework category:', error);
@@ -1041,7 +1041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/frameworks", async (req, res) => {
     try {
       const { category, search } = req.query as { category?: string; search?: string };
-      
+
       let frameworks;
       if (search) {
         frameworks = await storage.searchFrameworks(search);
@@ -1050,7 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         frameworks = await storage.getFrameworks();
       }
-      
+
       res.json({ frameworks });
     } catch (error) {
       console.error('Error fetching frameworks:', error);
@@ -1062,17 +1062,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const framework = await storage.getFramework(id);
-      
+
       if (!framework) {
         return res.status(404).json({ error: "Framework not found" });
       }
-      
+
       // Get current version and category details
       const currentVersion = framework.currentVersionId 
         ? await storage.getFrameworkVersion(framework.currentVersionId)
         : null;
       const category = await storage.getFrameworkCategory(framework.categoryId);
-      
+
       res.json({ 
         framework,
         currentVersion,
@@ -1100,11 +1100,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertFrameworkSchema.partial().parse(req.body);
       const framework = await storage.updateFramework(id, validatedData);
-      
+
       if (!framework) {
         return res.status(404).json({ error: "Framework not found" });
       }
-      
+
       res.json({ framework });
     } catch (error) {
       console.error('Error updating framework:', error);
@@ -1116,11 +1116,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteFramework(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "Framework not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting framework:', error);
@@ -1144,11 +1144,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const version = await storage.getFrameworkVersion(id);
-      
+
       if (!version) {
         return res.status(404).json({ error: "Framework version not found" });
       }
-      
+
       res.json({ version });
     } catch (error) {
       console.error('Error fetching framework version:', error);
@@ -1176,11 +1176,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertFrameworkVersionSchema.partial().parse(req.body);
       const version = await storage.updateFrameworkVersion(id, validatedData);
-      
+
       if (!version) {
         return res.status(404).json({ error: "Framework version not found" });
       }
-      
+
       res.json({ version });
     } catch (error) {
       console.error('Error updating framework version:', error);
@@ -1192,11 +1192,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteFrameworkVersion(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "Framework version not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting framework version:', error);
@@ -1209,16 +1209,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { versionId } = req.body;
-      
+
       // Increment download counts
       const framework = await storage.getFramework(id);
       if (!framework) {
         return res.status(404).json({ error: "Framework not found" });
       }
-      
+
       const currentDownloads = parseInt(framework.totalDownloads) + 1;
       await storage.updateFramework(id, { totalDownloads: currentDownloads.toString() });
-      
+
       if (versionId) {
         const version = await storage.getFrameworkVersion(versionId);
         if (version) {
@@ -1226,7 +1226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateFrameworkVersion(versionId, { downloadCount: versionDownloads.toString() });
         }
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error tracking framework download:', error);
@@ -1253,7 +1253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { processDocumentToFramework } = await import('./services/documentAdapter');
 
       const fileBuffer = await fs.readFile(file.path);
-      
+
       // Process document and convert to framework
       const { framework, extractedText, metadata } = await processDocumentToFramework(
         fileBuffer,
@@ -1348,7 +1348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         const fileBuffer = await fs.readFile(file.path);
-        
+
         if (file.mimetype === 'application/pdf') {
           // Process PDF - use dynamic import to avoid require-time issues
           const pdfParse = (await import('pdf-parse')).default;
@@ -1436,9 +1436,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { executeFramework, createExecutionContext } = await import('./services/frameworkExecutor');
-      
+
       const result = await executeFramework(framework, inputData);
-      
+
       res.json(result);
     } catch (error) {
       console.error('Error executing framework:', error);
@@ -1458,7 +1458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { createExecutionContext } = await import('./services/frameworkExecutor');
       const context = createExecutionContext(framework);
-      
+
       res.json({ context });
     } catch (error) {
       console.error('Error getting execution context:', error);
@@ -1493,11 +1493,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const source = await storage.getRssSource(id);
-      
+
       if (!source) {
         return res.status(404).json({ error: "RSS source not found" });
       }
-      
+
       res.json({ source });
     } catch (error) {
       console.error('Error fetching RSS source:', error);
@@ -1508,13 +1508,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/rss-sources", async (req, res) => {
     try {
       const validatedData = insertRssSourceSchema.parse(req.body);
-      
+
       // Check if source already exists
       const existingSource = await storage.getRssSourceByUrl(validatedData.feedUrl);
       if (existingSource) {
         return res.status(400).json({ error: "RSS source with this URL already exists" });
       }
-      
+
       const source = await storage.createRssSource(validatedData);
       res.json({ source });
     } catch (error) {
@@ -1528,11 +1528,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertRssSourceSchema.partial().parse(req.body);
       const source = await storage.updateRssSource(id, validatedData);
-      
+
       if (!source) {
         return res.status(404).json({ error: "RSS source not found" });
       }
-      
+
       res.json({ source });
     } catch (error) {
       console.error('Error updating RSS source:', error);
@@ -1544,11 +1544,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteRssSource(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "RSS source not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting RSS source:', error);
@@ -1649,13 +1649,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enrich articles with sentiment data if requested
       if (includeSentiment === 'true') {
         const { sentimentAnalysisService } = await import('./rss/sentimentAnalysisService');
-        
+
         // Get sentiment data for articles
         const articlesWithSentiment = await Promise.all(
           articles.map(async (article) => {
             // Check if sentiment exists in rawDataJson
             let sentimentData = (article.rawDataJson as any)?.sentiment;
-            
+
             // If not, analyze it
             if (!sentimentData) {
               sentimentData = await sentimentAnalysisService.analyzeSentiment(
@@ -1663,7 +1663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 article.title,
                 article.content || undefined
               );
-              
+
               // Update rawDataJson with sentiment
               if (sentimentData) {
                 await storage.updateRssArticle(article.id, {
@@ -1674,7 +1674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               }
             }
-            
+
             return {
               ...article,
               sentiment: sentimentData || null,
@@ -1683,7 +1683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           })
         );
-        
+
         res.json({ articles: articlesWithSentiment });
       } else {
         // Return articles with optional topics
@@ -1692,7 +1692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           topics: includeTopics === 'true' ? article.topics : null,
           category: article.categories?.[0] || null
         }));
-        
+
         res.json({ articles: enrichedArticles });
       }
     } catch (error) {
@@ -1705,11 +1705,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const article = await storage.getRssArticle(id);
-      
+
       if (!article) {
         return res.status(404).json({ error: "RSS article not found" });
       }
-      
+
       res.json({ article });
     } catch (error) {
       console.error('Error fetching RSS article:', error);
@@ -1721,11 +1721,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertRssArticleSchema.parse(req.body);
       const article = await storage.createRssArticle(validatedData);
-      
+
       if (!article) {
         return res.status(409).json({ error: "Article already exists (duplicate)" });
       }
-      
+
       res.json({ article });
     } catch (error) {
       console.error('Error creating RSS article:', error);
@@ -1738,11 +1738,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertRssArticleSchema.partial().parse(req.body);
       const article = await storage.updateRssArticle(id, validatedData);
-      
+
       if (!article) {
         return res.status(404).json({ error: "RSS article not found" });
       }
-      
+
       res.json({ article });
     } catch (error) {
       console.error('Error updating RSS article:', error);
@@ -1754,11 +1754,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteRssArticle(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "RSS article not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting RSS article:', error);
@@ -1771,7 +1771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { analysisType = 'sentiment' } = req.body;
-      
+
       const article = await storage.getRssArticle(id);
       if (!article) {
         return res.status(404).json({ error: "RSS article not found" });
@@ -1779,7 +1779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (analysisType === 'sentiment') {
         const sentimentResult = await rssService.analyzeArticleSentiment(id);
-        
+
         // Save analysis
         const analysis = await storage.createRssAnalysis({
           articleId: id,
@@ -1830,11 +1830,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const analysis = await storage.getRssAnalysis(id);
-      
+
       if (!analysis) {
         return res.status(404).json({ error: "RSS analysis not found" });
       }
-      
+
       res.json({ analysis });
     } catch (error) {
       console.error('Error fetching RSS analysis:', error);
@@ -1858,11 +1858,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertRssAnalysisSchema.partial().parse(req.body);
       const analysis = await storage.updateRssAnalysis(id, validatedData);
-      
+
       if (!analysis) {
         return res.status(404).json({ error: "RSS analysis not found" });
       }
-      
+
       res.json({ analysis });
     } catch (error) {
       console.error('Error updating RSS analysis:', error);
@@ -1874,11 +1874,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteRssAnalysis(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "RSS analysis not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting RSS analysis:', error);
@@ -1911,11 +1911,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const comparison = await storage.getRssComparison(id);
-      
+
       if (!comparison) {
         return res.status(404).json({ error: "RSS comparison not found" });
       }
-      
+
       res.json({ comparison });
     } catch (error) {
       console.error('Error fetching RSS comparison:', error);
@@ -1939,11 +1939,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertRssComparisonSchema.partial().parse(req.body);
       const comparison = await storage.updateRssComparison(id, validatedData);
-      
+
       if (!comparison) {
         return res.status(404).json({ error: "RSS comparison not found" });
       }
-      
+
       res.json({ comparison });
     } catch (error) {
       console.error('Error updating RSS comparison:', error);
@@ -1955,11 +1955,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteRssComparison(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "RSS comparison not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting RSS comparison:', error);
@@ -1973,19 +1973,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Step 1: Fetch all RSS sources
       console.log('Starting RSS sentiment summary refresh...');
       const fetchResults = await rssService.fetchAllSources();
-      
+
       // Calculate total articles added
       const articlesAdded = fetchResults.reduce((sum, result) => sum + result.result.articlesAdded, 0);
       const lastFetched = new Date();
-      
+
       console.log(`Fetched ${articlesAdded} new articles from ${fetchResults.length} sources`);
-      
+
       // Step 2: Get articles from the last 24 hours
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const articles = await storage.getRssArticlesByDateRange(since, new Date());
-      
+
       console.log(`Found ${articles.length} articles from the last 24 hours`);
-      
+
       if (articles.length === 0) {
         return res.json({
           averageSentiment: 0,
@@ -1997,21 +1997,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastFetched: lastFetched.toISOString()
         });
       }
-      
+
       // Step 3: Import sentiment analysis service
       const { sentimentAnalysisService } = await import('./rss/sentimentAnalysisService');
-      
+
       // Step 4: Analyze sentiment for articles missing sentiment data
       let totalSentiment = 0;
       let sentimentCount = 0;
       const sentimentBreakdown = { positive: 0, neutral: 0, negative: 0 };
       const topicCounts: Record<string, { count: number; totalSentiment: number }> = {};
       const keywordCounts: Record<string, number> = {};
-      
+
       for (const article of articles) {
         // Get or analyze sentiment
         let sentimentData = (article.rawDataJson as any)?.sentiment;
-        
+
         if (!sentimentData) {
           console.log(`Analyzing sentiment for article: ${article.title}`);
           sentimentData = await sentimentAnalysisService.analyzeSentiment(
@@ -2019,7 +2019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             article.title,
             article.content || undefined
           );
-          
+
           // Update article with sentiment
           if (sentimentData) {
             await storage.updateRssArticle(article.id, {
@@ -2030,11 +2030,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
-        
+
         if (sentimentData && typeof sentimentData.score === 'number') {
           totalSentiment += sentimentData.score;
           sentimentCount++;
-          
+
           // Categorize sentiment
           if (sentimentData.score > 0.3) {
             sentimentBreakdown.positive++;
@@ -2043,7 +2043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             sentimentBreakdown.neutral++;
           }
-          
+
           // Collect keywords
           if (sentimentData.keywords && Array.isArray(sentimentData.keywords)) {
             sentimentData.keywords.forEach((keyword: string) => {
@@ -2051,7 +2051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
-        
+
         // Collect topics
         if (article.topics && Array.isArray(article.topics)) {
           article.topics.forEach(topic => {
@@ -2063,16 +2063,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Calculate average sentiment
       const averageSentiment = sentimentCount > 0 ? totalSentiment / sentimentCount : 0;
-      
+
       // Get top keywords
       const topKeywords = Object.entries(keywordCounts)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10)
         .map(([keyword, frequency]) => ({ keyword, frequency }));
-      
+
       // Get trending topics with sentiment
       const trendingTopics = Object.entries(topicCounts)
         .sort((a, b) => b[1].count - a[1].count)
@@ -2082,9 +2082,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           count: data.count,
           sentiment: data.count > 0 ? data.totalSentiment / data.count : 0
         }));
-      
+
       console.log(`Sentiment analysis complete. Average sentiment: ${averageSentiment.toFixed(2)}`);
-      
+
       res.json({
         averageSentiment,
         totalArticles: articles.length,
@@ -2107,20 +2107,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/rss/sentiment-summary", async (req, res) => {
     try {
       const { timeframe = '24h' } = req.query;
-      
+
       // Calculate time range
       const timeframeMap: Record<string, number> = {
         '24h': 24 * 60 * 60 * 1000,
         '7d': 7 * 24 * 60 * 60 * 1000,
         '30d': 30 * 24 * 60 * 60 * 1000
       };
-      
+
       const timeRangeMs = timeframeMap[timeframe as string] || timeframeMap['24h'];
       const since = new Date(Date.now() - timeRangeMs);
-      
+
       // Get articles in timeframe
       const articles = await storage.getRssArticlesByDateRange(since, new Date());
-      
+
       if (articles.length === 0) {
         return res.json({
           averageSentiment: 0,
@@ -2130,28 +2130,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sentimentBreakdown: { positive: 0, neutral: 0, negative: 0 }
         });
       }
-      
+
       // Import sentiment analysis service
       const { sentimentAnalysisService } = await import('./rss/sentimentAnalysisService');
-      
+
       // Analyze sentiment for all articles
       let totalSentiment = 0;
       let sentimentCount = 0;
       const sentimentBreakdown = { positive: 0, neutral: 0, negative: 0 };
       const topicCounts: Record<string, { count: number; totalSentiment: number }> = {};
       const keywordCounts: Record<string, number> = {};
-      
+
       for (const article of articles) {
         // Get or analyze sentiment
         let sentimentData = (article.rawDataJson as any)?.sentiment;
-        
+
         if (!sentimentData) {
           sentimentData = await sentimentAnalysisService.analyzeSentiment(
             parseInt(article.id),
             article.title,
             article.content || undefined
           );
-          
+
           // Update article with sentiment
           if (sentimentData) {
             await storage.updateRssArticle(article.id, {
@@ -2162,11 +2162,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
-        
+
         if (sentimentData && typeof sentimentData.score === 'number') {
           totalSentiment += sentimentData.score;
           sentimentCount++;
-          
+
           // Categorize sentiment
           if (sentimentData.score > 0.3) {
             sentimentBreakdown.positive++;
@@ -2175,7 +2175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             sentimentBreakdown.neutral++;
           }
-          
+
           // Collect keywords
           if (sentimentData.keywords && Array.isArray(sentimentData.keywords)) {
             sentimentData.keywords.forEach((keyword: string) => {
@@ -2183,7 +2183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
-        
+
         // Collect topics
         if (article.topics && Array.isArray(article.topics)) {
           article.topics.forEach(topic => {
@@ -2195,16 +2195,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Calculate average sentiment
       const averageSentiment = sentimentCount > 0 ? totalSentiment / sentimentCount : 0;
-      
+
       // Get top keywords
       const topKeywords = Object.entries(keywordCounts)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10)
         .map(([keyword, frequency]) => ({ keyword, frequency }));
-      
+
       // Get trending topics with sentiment
       const trendingTopics = Object.entries(topicCounts)
         .sort((a, b) => b[1].count - a[1].count)
@@ -2214,7 +2214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           count: data.count,
           sentiment: data.count > 0 ? data.totalSentiment / data.count : 0
         }));
-      
+
       res.json({
         averageSentiment,
         totalArticles: articles.length,
@@ -2234,7 +2234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sources = await storage.getRssSources();
       const recentArticles = await storage.getRecentRssArticles(20);
       const activeSources = await storage.getActiveRssSources();
-      
+
       // Calculate stats
       const totalArticles = (await storage.getRssArticles()).length;
       const articlesThisWeek = (await storage.getRssArticlesByDateRange(
@@ -2328,7 +2328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Football API Routes for Team Matchup Studio
-  
+
   // Get static data statistics
   app.get("/api/football/static-data/stats", async (req, res) => {
     try {
@@ -2340,7 +2340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch static data stats" });
     }
   });
-  
+
   // Get all competitions
   app.get("/api/football/competitions", async (req, res) => {
     try {
@@ -2361,9 +2361,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           season: footballFixtures.season,
         })
         .from(footballFixtures);
-      
+
       const uniqueCompetitionIds = Array.from(new Set(competitionsFromFixtures.map(c => c.id)));
-      
+
       if (uniqueCompetitionIds.length === 0) {
         return res.json({
           competitions: [
@@ -2373,7 +2373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ]
         });
       }
-      
+
       const competitions = await db
         .select({
           id: footballCompetitions.id,
@@ -2382,20 +2382,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(footballCompetitions)
         .where(inArray(footballCompetitions.id, uniqueCompetitionIds));
-      
+
       const minCompetitions = [
         { id: 39, name: 'Premier League', type: 'league' },
         { id: 2, name: 'UEFA Champions League', type: 'cup' },
         { id: 45, name: 'FA Cup', type: 'cup' }
       ];
-      
+
       const competitionMap = new Map(competitions.map(c => [c.id, c]));
       minCompetitions.forEach(minComp => {
         if (!competitionMap.has(minComp.id)) {
           competitions.push(minComp);
         }
       });
-      
+
       return res.json({ competitions });
     } catch (error) {
       console.error('Error fetching active competitions:', error);
@@ -2424,13 +2424,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const leagueId = parseInt(req.params.leagueId);
       const season = parseInt(req.params.season);
-      
+
       if (isNaN(leagueId) || isNaN(season)) {
         return res.status(400).json({ error: "Invalid league ID or season" });
       }
 
       const standingsData = await footballService.getStandings(leagueId, season);
-      
+
       if (!standingsData) {
         return res.status(404).json({ error: "No standings data available for this league and season" });
       }
@@ -2448,7 +2448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const homeTeamId = parseInt(req.params.homeTeamId);
       const awayTeamId = parseInt(req.params.awayTeamId);
-      
+
       if (isNaN(homeTeamId) || isNaN(awayTeamId)) {
         return res.status(400).json({ error: "Invalid team IDs" });
       }
@@ -2458,13 +2458,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({ id: footballTeams.id, name: footballTeams.name })
         .from(footballTeams)
         .where(or(eq(footballTeams.id, homeTeamId), eq(footballTeams.id, awayTeamId)));
-      
+
       const teamMap = new Map(teams.map(t => [t.id, t.name]));
 
       // First try to get data from database (includes historical data)
       const { historicalDataService } = await import('./services/historicalDataService');
       const dbFixtures = await historicalDataService.getHeadToHeadData(homeTeamId, awayTeamId, 30);
-      
+
       // Transform fixtures to match H2HDataSchema
       const transformFixtures = (fixtures: any[]) => {
         return fixtures.map((fixture: any) => ({
@@ -2501,12 +2501,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/football/initialize-historical", async (req, res) => {
     try {
       const { historicalDataService } = await import('./services/historicalDataService');
-      
+
       await historicalDataService.initializeHistoricalData();
       await historicalDataService.initializeUpdateSchedules();
-      
+
       const summary = historicalDataService.getUpdateStrategySummary();
-      
+
       res.json({ 
         success: true, 
         message: "Historical data and update schedules initialized",
@@ -2528,7 +2528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { historicalDataService } = await import('./services/historicalDataService');
       const schedule = await historicalDataService.getUpdateSchedule(competitionId);
-      
+
       res.json({ schedule });
     } catch (error) {
       console.error('Error fetching update schedule:', error);
@@ -2541,7 +2541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { historicalDataService } = await import('./services/historicalDataService');
       const schedules = await historicalDataService.getActiveSchedules();
-      
+
       res.json({ schedules });
     } catch (error) {
       console.error('Error fetching update schedules:', error);
@@ -2555,7 +2555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamId = parseInt(req.params.teamId);
       const leagueId = parseInt(req.query.leagueId as string);
       const season = parseInt(req.query.season as string);
-      
+
       if (isNaN(teamId) || isNaN(leagueId) || isNaN(season)) {
         return res.status(400).json({ error: "Invalid parameters" });
       }
@@ -2573,15 +2573,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const teamId = parseInt(req.params.teamId);
       const season = parseInt(req.query.season as string);
-      
+
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
       }
-      
+
       if (isNaN(season)) {
         return res.status(400).json({ error: "Invalid season parameter" });
       }
-      
+
       const squad = await storage.getFootballTeamSquad(teamId, season);
       res.json({ squad });
     } catch (error) {
@@ -2594,17 +2594,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/football/team/:teamId", async (req, res) => {
     try {
       const teamId = parseInt(req.params.teamId);
-      
+
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
       }
-      
+
       // Try to get team from database
       const team = await db.select()
         .from(footballTeams)
         .where(eq(footballTeams.id, teamId))
         .limit(1);
-      
+
       if (team.length > 0) {
         return res.json({
           id: team[0].id,
@@ -2614,7 +2614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           country: team[0].country,
         });
       }
-      
+
       // If not in database, return basic info
       res.json({
         id: teamId,
@@ -2682,12 +2682,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamName = req.params.teamName;
       const { fbrefService } = await import('./football/fbrefService');
       const { theFishyService } = await import('./football/theFishyService');
-      
+
       const [fbrefData, fishyForm] = await Promise.all([
         fbrefService.getEnrichedTeamData(teamName),
         theFishyService.getTeamForm(teamName),
       ]);
-      
+
       res.json({
         team: teamName,
         fbref: fbrefData.fbref,
@@ -2722,7 +2722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const season = parseInt(req.query.season as string) || new Date().getFullYear();
       const leagueId = parseInt(req.query.leagueId as string) || 39; // Premier League
       const limit = parseInt(req.query.limit as string) || 5;
-      
+
       const topScorers = await db
         .select({
           id: footballPlayers.id,
@@ -2825,12 +2825,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!stats || !stats.statistics) {
         const dbStats = await storage.getTeamSeasonStatisticsFromDB(teamId, leagueId, season);
-        
+
         if (dbStats) {
           const winRate = dbStats.matchesPlayed > 0 
             ? Math.round((dbStats.wins / dbStats.matchesPlayed) * 100) 
             : 0;
-          
+
           return res.json({
             form: dbStats.form || "N/A",
             goals: { 
@@ -2841,7 +2841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cleanSheets: dbStats.cleanSheets
           });
         }
-        
+
         const staticFallbackData: { [key: number]: any } = {
           40: { form: "WWDWW", goals: { for: 28, against: 12 }, winRate: 76, cleanSheets: 8 },
           49: { form: "DWLWL", goals: { for: 22, against: 18 }, winRate: 52, cleanSheets: 5 },
@@ -2850,14 +2850,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           42: { form: "WWDWL", goals: { for: 26, against: 14 }, winRate: 68, cleanSheets: 7 },
           47: { form: "WDWLW", goals: { for: 24, against: 19 }, winRate: 58, cleanSheets: 5 }
         };
-        
+
         const teamFallback = staticFallbackData[teamId] || {
           form: "WDWLD",
           goals: { for: 18, against: 15 },
           winRate: 50,
           cleanSheets: 4
         };
-        
+
         return res.json(teamFallback);
       }
 
@@ -2874,12 +2874,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const extractNumber = (obj: any): number | null => {
         if (obj === null || obj === undefined) return null;
         if (typeof obj === 'number') return obj;
-        
+
         // Handle nested .total structures recursively
         if (obj.total !== undefined) {
           return extractNumber(obj.total);
         }
-        
+
         // Handle home/away aggregation
         if (obj.home !== undefined && obj.away !== undefined) {
           const home = extractNumber(obj.home);
@@ -2888,7 +2888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return home + away;
           }
         }
-        
+
         // Unsupported structure - return null to trigger fallback
         return null;
       };
@@ -2920,7 +2920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         42: { form: "WWDWL", goalsFor: 26, goalsAgainst: 14, played: 10, wins: 6, cleanSheets: 7 },
         47: { form: "WDWLW", goalsFor: 24, goalsAgainst: 19, played: 10, wins: 5, cleanSheets: 5 }
       };
-      
+
       const defaultFallback = { form: "WDWLD", goalsFor: 18, goalsAgainst: 15, played: 10, wins: 5, cleanSheets: 4 };
       const fallback = teamFallbacks[teamId] || defaultFallback;
 
@@ -3042,7 +3042,7 @@ Return ONLY a JSON object with this structure:
 
       const content = completion.choices[0]?.message?.content || "{}";
       let analysis;
-      
+
       try {
         analysis = JSON.parse(content);
       } catch {
@@ -3081,20 +3081,20 @@ Return ONLY a JSON object with this structure:
 
   // === CACHED STATS ENDPOINTS ===
   // These endpoints serve pre-computed stats from the database
-  
+
   // Get latest team statistics from cache
   app.get("/api/cached-stats/team/:teamId/:leagueId", async (req, res) => {
     try {
       const teamId = parseInt(req.params.teamId);
       const leagueId = parseInt(req.params.leagueId);
       const seasonYear = req.query.seasonYear ? parseInt(req.query.seasonYear as string) : undefined;
-      
+
       if (isNaN(teamId) || isNaN(leagueId)) {
         return res.status(400).json({ error: "Invalid team ID or league ID" });
       }
 
       const currentSeason = seasonYear || new Date().getFullYear();
-      
+
       const stats = await db
         .select()
         .from(teamSeasonStatistics)
@@ -3124,7 +3124,7 @@ Return ONLY a JSON object with this structure:
     try {
       const homeTeamId = parseInt(req.params.homeTeamId);
       const awayTeamId = parseInt(req.params.awayTeamId);
-      
+
       if (isNaN(homeTeamId) || isNaN(awayTeamId)) {
         return res.status(400).json({ error: "Invalid team IDs" });
       }
@@ -3147,7 +3147,7 @@ Return ONLY a JSON object with this structure:
 
       const matchupData = analysis[0];
       const resultJson = matchupData.resultJson as any;
-      
+
       if (resultJson && resultJson.prediction) {
         res.json({
           prediction: resultJson.prediction,
@@ -3172,13 +3172,13 @@ Return ONLY a JSON object with this structure:
     try {
       const currentSeason = new Date().getFullYear();
       const leagueIdParam = req.query.leagueId ? parseInt(req.query.leagueId as string) : null;
-      
+
       // Supported leagues for multi-league support
       const supportedLeagues = [39, 2, 45, 48, 3]; // Premier League, Champions League, FA Cup, EFL Cup, Europa League
-      
+
       // Determine which leagues to query
       const leaguesToQuery = leagueIdParam ? [leagueIdParam] : supportedLeagues;
-      
+
       const teamsWithStats = await db
         .select({
           teamId: teamSeasonStatistics.teamId,
@@ -3215,9 +3215,9 @@ Return ONLY a JSON object with this structure:
   app.post("/api/admin/update-all-team-stats", async (req, res) => {
     try {
       console.log('📊 Admin triggered batch update for all Premier League teams...');
-      
+
       const result = await updateAllPremierLeagueStats();
-      
+
       // Return 500 if any errors occurred
       if (result.errors > 0 && result.teamsUpdated === 0) {
         return res.status(500).json({
@@ -3228,7 +3228,7 @@ Return ONLY a JSON object with this structure:
           errorDetails: `All ${result.errors} teams failed to update`
         });
       }
-      
+
       // Return 207 Multi-Status if partial success (some teams updated, some failed)
       if (result.errors > 0 && result.teamsUpdated > 0) {
         return res.status(207).json({
@@ -3239,7 +3239,7 @@ Return ONLY a JSON object with this structure:
           errorDetails: `${result.errors} teams failed to update`
         });
       }
-      
+
       // Return 200 only if all teams updated successfully
       res.status(200).json({
         success: true,
@@ -3260,7 +3260,7 @@ Return ONLY a JSON object with this structure:
   });
 
   // === FIXTURES AND H2H ENDPOINTS ===
-  
+
   // Get fixture results with optional filtering
   app.get("/api/fixtures/results", async (req, res) => {
     try {
@@ -3269,26 +3269,26 @@ Return ONLY a JSON object with this structure:
       const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom as string) : undefined;
       const dateTo = req.query.dateTo ? new Date(req.query.dateTo as string) : undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-      
+
       // Build where conditions dynamically
       const conditions = [];
-      
+
       if (competitionId !== undefined && !isNaN(competitionId)) {
         conditions.push(eq(footballFixtures.leagueId, competitionId));
       }
-      
+
       if (seasonYear !== undefined && !isNaN(seasonYear)) {
         conditions.push(eq(footballFixtures.season, seasonYear));
       }
-      
+
       if (dateFrom && !isNaN(dateFrom.getTime())) {
         conditions.push(gte(footballFixtures.date, dateFrom));
       }
-      
+
       if (dateTo && !isNaN(dateTo.getTime())) {
         conditions.push(lte(footballFixtures.date, dateTo));
       }
-      
+
       // Query fixtures with filters
       const query = db
         .select({
@@ -3305,22 +3305,22 @@ Return ONLY a JSON object with this structure:
           venue: footballFixtures.venue,
         })
         .from(footballFixtures);
-      
+
       if (conditions.length > 0) {
         query.where(and(...conditions));
       }
-      
+
       const fixtures = await query
         .orderBy(desc(footballFixtures.date))
         .limit(Math.min(limit, 100)); // Cap at 100 for performance
-      
+
       return res.json({ results: fixtures });
     } catch (error) {
       console.error('Error fetching fixture results:', error);
       return res.status(500).json({ error: "Failed to fetch fixture results" });
     }
   });
-  
+
   // Get head-to-head fixtures with optional filtering
   app.get("/api/fixtures/h2h", async (req, res) => {
     try {
@@ -3332,14 +3332,14 @@ Return ONLY a JSON object with this structure:
       const seasonTo = req.query.seasonTo ? parseInt(req.query.seasonTo as string) : undefined;
       const venueFilter = req.query.venueFilter as string || 'all'; // 'home', 'away', 'all'
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      
+
       if (!team1 || !team2 || isNaN(team1) || isNaN(team2)) {
         return res.status(400).json({ error: "Both team1 and team2 parameters are required" });
       }
-      
+
       // Build where conditions
       const conditions = [];
-      
+
       // Team matchup condition - check both directions
       conditions.push(
         or(
@@ -3353,28 +3353,28 @@ Return ONLY a JSON object with this structure:
           )
         )
       );
-      
+
       // Competition filter
       if (competitionId !== undefined && !isNaN(competitionId)) {
         conditions.push(eq(historicalHeadToHead.competitionId, competitionId));
       }
-      
+
       // Season range filters
       if (seasonFrom !== undefined && !isNaN(seasonFrom)) {
         conditions.push(gte(historicalHeadToHead.season, seasonFrom));
       }
-      
+
       if (seasonTo !== undefined && !isNaN(seasonTo)) {
         conditions.push(lte(historicalHeadToHead.season, seasonTo));
       }
-      
+
       // Venue filter (home only for team1)
       if (homeOnly || venueFilter === 'home') {
         conditions.push(eq(historicalHeadToHead.homeTeamId, team1));
       } else if (venueFilter === 'away') {
         conditions.push(eq(historicalHeadToHead.awayTeamId, team1));
       }
-      
+
       // Query h2h data
       const h2hMatches = await db
         .select()
@@ -3382,12 +3382,12 @@ Return ONLY a JSON object with this structure:
         .where(and(...conditions))
         .orderBy(desc(historicalHeadToHead.date))
         .limit(Math.min(limit, 50)); // Cap at 50 for performance
-      
+
       // Calculate statistics from the matches
       let homeWins = 0;
       let awayWins = 0;
       let draws = 0;
-      
+
       h2hMatches.forEach(match => {
         if (match.homeScore > match.awayScore) {
           if (match.homeTeamId === team1) homeWins++;
@@ -3399,7 +3399,7 @@ Return ONLY a JSON object with this structure:
           draws++;
         }
       });
-      
+
       return res.json({ 
         results: h2hMatches,
         statistics: {
@@ -3414,14 +3414,14 @@ Return ONLY a JSON object with this structure:
       return res.status(500).json({ error: "Failed to fetch head-to-head fixtures" });
     }
   });
-  
+
   // === LIVE PRESENTATION SYSTEM ROUTES ===
 
   // Library Items routes
   app.get("/api/library-items", async (req, res) => {
     try {
       const { type, category, search } = req.query;
-      
+
       let items;
       if (search) {
         items = await storage.searchLibraryItems(search as string);
@@ -3432,7 +3432,7 @@ Return ONLY a JSON object with this structure:
       } else {
         items = await storage.getLibraryItems();
       }
-      
+
       res.json({ libraryItems: items });
     } catch (error) {
       console.error('Error fetching library items:', error);
@@ -3503,7 +3503,7 @@ Return ONLY a JSON object with this structure:
   app.get("/api/scenes", async (req, res) => {
     try {
       const { layout, templates, search } = req.query;
-      
+
       let scenes;
       if (search) {
         scenes = await storage.searchScenes(search as string);
@@ -3514,7 +3514,7 @@ Return ONLY a JSON object with this structure:
       } else {
         scenes = await storage.getScenes();
       }
-      
+
       res.json({ scenes });
     } catch (error) {
       console.error('Error fetching scenes:', error);
@@ -3621,7 +3621,7 @@ Return ONLY a JSON object with this structure:
   app.post("/api/scenes/from-template", async (req, res) => {
     try {
       const { templateId, name } = req.body;
-      
+
       if (!templateId || !name) {
         return res.status(400).json({ error: "templateId and name are required" });
       }
@@ -3703,7 +3703,7 @@ Return ONLY a JSON object with this structure:
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      
+
       res.send(html);
     } catch (error) {
       console.error('Error rendering OBS scene:', error);
@@ -3831,14 +3831,14 @@ Return ONLY a JSON object with this structure:
   app.get("/api/presentation-sets", async (req, res) => {
     try {
       const { active } = req.query;
-      
+
       let sets;
       if (active === 'true') {
         sets = await storage.getActivePresentationSets();
       } else {
         sets = await storage.getPresentationSets();
       }
-      
+
       res.json({ presentationSets: sets });
     } catch (error) {
       console.error('Error fetching presentation sets:', error);
@@ -3910,7 +3910,7 @@ Return ONLY a JSON object with this structure:
       const { sceneIds } = z.object({
         sceneIds: z.array(z.string())
       }).parse(req.body);
-      
+
       const set = await storage.updatePresentationSet(req.params.id, { sceneIds });
       if (!set) {
         return res.status(404).json({ error: "Presentation set not found" });
@@ -4001,7 +4001,7 @@ Return ONLY a JSON object with this structure:
       const { sceneIds } = z.object({
         sceneIds: z.array(z.string())
       }).parse(req.body);
-      
+
       const set = await storage.updatePresentationSet(req.params.id, { sceneIds });
       if (!set) {
         return res.status(404).json({ error: "Presentation set not found" });
@@ -4021,14 +4021,14 @@ Return ONLY a JSON object with this structure:
   app.get("/api/ticker-playlists", async (req, res) => {
     try {
       const { active } = req.query;
-      
+
       let playlists;
       if (active === 'true') {
         playlists = await storage.getActiveTickerPlaylists();
       } else {
         playlists = await storage.getTickerPlaylists();
       }
-      
+
       res.json({ tickerPlaylists: playlists });
     } catch (error) {
       console.error('Error fetching ticker playlists:', error);
@@ -4409,7 +4409,7 @@ Return ONLY a JSON object with this structure:
   // Server-Sent Events endpoint for real-time live presentation updates
   app.get("/api/live/stream", (req, res) => {
     const clientId = req.query.clientId as string || `client-${Date.now()}-${Math.random().toString(36).substring(2)}`;
-    
+
     // Set SSE headers
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -4450,9 +4450,9 @@ Return ONLY a JSON object with this structure:
       const requestedPermissions = Array.isArray(permissions) 
         ? permissions.filter(p => validPermissions.includes(p))
         : ['basic'];
-      
+
       const token = generateControlToken(requestedPermissions);
-      
+
       res.json({ 
         token,
         permissions: requestedPermissions,
@@ -4469,7 +4469,7 @@ Return ONLY a JSON object with this structure:
     try {
       const liveState = await storage.getLiveState();
       const connectedClients = liveSSEManager.getClientCount();
-      
+
       res.json({
         liveState,
         connectedClients,
@@ -4487,7 +4487,7 @@ Return ONLY a JSON object with this structure:
       // Get available video sources to auto-connect
       const videoSources = await storage.getVideoSources();
       const connectedSource = videoSources.find(s => s.isConnected && s.isActive);
-      
+
       // Create a default scene with basic layers
       const sceneData = {
         name: "Quick Setup Scene",
@@ -4540,7 +4540,7 @@ Return ONLY a JSON object with this structure:
       const presentationSet = await storage.createPresentationSet(setData);
 
       // Note: Old LiveState update removed (currentSetId, previewSceneId no longer exist in new schema)
-      
+
       // Broadcast the update to all connected SSE clients
       liveSSEManager.broadcast('quick-setup-complete', {
         scene,
@@ -4560,7 +4560,7 @@ Return ONLY a JSON object with this structure:
   });
 
   // Video Recording Endpoints
-  
+
   // Upload a new video recording
   app.post("/api/recordings", videoUpload.single('video'), async (req, res) => {
     try {
@@ -4569,7 +4569,7 @@ Return ONLY a JSON object with this structure:
       }
 
       const { duration, resolution, codec, metadata } = req.body;
-      
+
       const recording = await storage.createRecording({
         filename: req.file.filename,
         filepath: req.file.path,
@@ -4630,7 +4630,7 @@ Return ONLY a JSON object with this structure:
 
       // Delete from database
       await storage.deleteRecording(req.params.id);
-      
+
       res.json({ success: true, message: "Recording deleted successfully" });
     } catch (error: any) {
       console.error('Error deleting recording:', error);
@@ -4654,21 +4654,21 @@ Return ONLY a JSON object with this structure:
   });
 
   // =============== Video Project Routes ===============
-  
+
   // Create a new video project
   app.post("/api/video-projects", async (req, res) => {
     try {
       const validatedData = insertVideoProjectSchema.parse(req.body);
-      
+
       // Get the recording to get its duration
       const recording = await storage.getRecording(validatedData.recordingId);
       if (!recording) {
         return res.status(404).json({ error: "Recording not found" });
       }
-      
+
       // Create the project
       const project = await storage.createVideoProject(validatedData);
-      
+
       // Create an initial clip that spans the entire recording
       const durationMs = (recording.duration || 0) * 1000;
       await storage.createVideoClip({
@@ -4679,7 +4679,7 @@ Return ONLY a JSON object with this structure:
         duration: durationMs,
         order: 0
       });
-      
+
       res.status(201).json(project);
     } catch (error: any) {
       console.error('Error creating video project:', error);
@@ -5007,9 +5007,9 @@ Return ONLY a JSON object with this structure:
       };
 
       const jobId = await addRenderJob(req.params.id, clips, settings);
-      
+
       await storage.updateVideoProject(req.params.id, { status: 'processing' });
-      
+
       res.status(201).json({ renderJobId: jobId });
     } catch (error: any) {
       console.error('Error starting render:', error);
@@ -5063,7 +5063,7 @@ Return ONLY a JSON object with this structure:
 
       const project = await storage.getVideoProject(job.projectId);
       const filename = `${project?.name || 'video'}_${job.id}.${job.outputPath.endsWith('.webm') ? 'webm' : 'mp4'}`;
-      
+
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.sendFile(path.resolve(job.outputPath));
     } catch (error: any) {
@@ -5098,7 +5098,7 @@ Return ONLY a JSON object with this structure:
   });
 
   // =============== Database Status Route ===============
-  
+
   // Get database status and data availability
   app.get("/api/database-status", async (req, res) => {
     try {
@@ -5134,7 +5134,7 @@ Return ONLY a JSON object with this structure:
       const getArticleDates = (articles: typeof rssArticles) => {
         const articlesWithDates = articles.filter(a => a.publishedAt);
         if (articlesWithDates.length === 0) return { earliest: null, latest: null };
-        
+
         const timestamps = articlesWithDates.map(a => new Date(a.publishedAt!).getTime());
         return {
           earliest: new Date(Math.min(...timestamps)).toISOString(),
@@ -5147,7 +5147,7 @@ Return ONLY a JSON object with this structure:
       // Helper function to safely get recording dates
       const getRecordingDates = (recs: typeof recordings) => {
         if (recs.length === 0) return { earliest: null, latest: null };
-        
+
         const timestamps = recs.map(r => new Date(r.createdAt).getTime());
         return {
           earliest: new Date(Math.min(...timestamps)).toISOString(),

@@ -103,10 +103,11 @@ export default function FormGuideOverlay({
   const { data: teamStatsData, isLoading: isLoadingStats, error: statsError } = useQuery({
     queryKey: ['team-stats', teamId],
     queryFn: async () => {
-      const response = await fetch(`/api/football/teams/${teamId}/statistics?season=2025`);
+      const response = await fetch(`/api/football/teams/${teamId}/statistics?leagueId=39&season=2025`);
       if (!response.ok) throw new Error('Failed to fetch team stats');
       return response.json();
     },
+    enabled: !!teamId,
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
@@ -118,6 +119,7 @@ export default function FormGuideOverlay({
       if (!response.ok) throw new Error('Failed to fetch fixtures');
       return response.json();
     },
+    enabled: !!teamId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -125,22 +127,24 @@ export default function FormGuideOverlay({
   const error = statsError || fixturesError;
 
   const { teamName, matches, sequence, record, competition, source } = useMemo(() => {
-    if (!teamStatsData || !fixturesData) {
+    if (!fixturesData?.fixtures || fixturesData.fixtures.length === 0) {
       return {
-        teamName: "Team",
+        teamName: teamStatsData?.team?.name || "Team",
         matches: [],
         sequence: [],
         record: { W: 0, D: 0, L: 0 },
-        competition: "Unknown",
-        source: "Loading..."
+        competition: "Premier League",
+        source: "No Data"
       };
     }
 
-    const processedMatches = fixturesData.fixtures
-      .filter((f: any) => f.status?.short === 'FT')
+    const fixtures = Array.isArray(fixturesData.fixtures) ? fixturesData.fixtures : [];
+    
+    const processedMatches = fixtures
+      .filter((f: any) => f.status?.short === 'FT' && f.goals?.home !== null && f.goals?.away !== null)
       .slice(0, matchLimit)
       .map((fixture: any) => {
-        const isHome = fixture.teams?.home?.id === teamId;
+        const isHome = fixture.teams?.home?.id === teamId || fixture.homeTeamId === teamId;
         const homeScore = fixture.goals?.home ?? 0;
         const awayScore = fixture.goals?.away ?? 0;
         const teamScore = isHome ? homeScore : awayScore;
@@ -151,10 +155,14 @@ export default function FormGuideOverlay({
         else if (teamScore < opponentScore) result = 'L';
         else result = 'D';
 
+        const opponentName = isHome 
+          ? (fixture.teams?.away?.name || fixture.awayTeam?.name || "Opponent")
+          : (fixture.teams?.home?.name || fixture.homeTeam?.name || "Opponent");
+
         return {
-          opponent: isHome ? fixture.teams.away.name : fixture.teams.home.name,
-          date: fixture.fixture.date,
-          competition: fixture.league?.name || "Unknown",
+          opponent: opponentName,
+          date: fixture.fixture?.date || fixture.date,
+          competition: fixture.league?.name || "Premier League",
           venue: isHome ? "H" : "A" as "H" | "A",
           score: `${teamScore}-${opponentScore}`,
           result,
@@ -164,14 +172,14 @@ export default function FormGuideOverlay({
     const formSequence = processedMatches.map((m: any) => m.result);
     const tally = formSequence.reduce(
       (acc: any, result: string) => {
-        acc[result] += 1;
+        acc[result] = (acc[result] || 0) + 1;
         return acc;
       },
       { W: 0, D: 0, L: 0 }
     );
 
     return {
-      teamName: teamStatsData.team?.name || "Team",
+      teamName: teamStatsData?.team?.name || fixturesData.team?.name || "Team",
       matches: processedMatches,
       sequence: formSequence,
       record: tally,
@@ -239,16 +247,25 @@ export default function FormGuideOverlay({
 
   const badgeText = `${record.W}W-${record.D}D-${record.L}L`;
 
+  // Debug logging
+  console.log('[FormGuideOverlay] Team ID:', teamId);
+  console.log('[FormGuideOverlay] Loading states:', { isLoadingStats, isLoadingFixtures });
+  console.log('[FormGuideOverlay] Fixtures data:', fixturesData);
+  console.log('[FormGuideOverlay] Team stats data:', teamStatsData);
+  console.log('[FormGuideOverlay] Processed data:', { teamName, matches, sequence, record });
+
   if (isLoading) {
     return <OverlayLoadingSkeleton width={width} height={height} />;
   }
 
   if (error) {
+    console.error('[FormGuideOverlay] Error:', error);
     return <OverlayErrorState width={width} height={height} error={error as Error} />;
   }
 
-  if (!sequence.length) {
-    return <OverlayEmptyState width={width} height={height} message={`No form data available for ${teamName}`} />;
+  if (!sequence.length || matches.length === 0) {
+    console.warn('[FormGuideOverlay] No matches found for team:', teamId);
+    return <OverlayEmptyState width={width} height={height} message={`No recent form data available for ${teamName}`} />;
   }
 
   return (
