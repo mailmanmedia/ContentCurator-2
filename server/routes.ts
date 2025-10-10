@@ -40,7 +40,7 @@ import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplat
 import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
 import { db } from "./db";
-import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, libraryItems, scenes } from "@shared/schema";
+import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, library_items, scenes, rssArticles } from "@shared/schema";
 import { desc, eq, and, gte, lte, or, inArray, sql } from "drizzle-orm";
 import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
 import { addRenderJob } from "./video/renderQueue";
@@ -3190,45 +3190,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team ID" });
       }
 
-      // Get team data
-      const [teamData] = await db.select()
-        .from(footballTeams)
-        .where(eq(footballTeams.id, teamId))
-        .limit(1);
+      // Get team data and stats using raw SQL to avoid schema issues
+      const teamResult = await db.execute(sql`
+        SELECT id, name, logo FROM football_teams WHERE id = ${teamId} LIMIT 1
+      `);
+      const teamData = teamResult.rows[0];
 
-      // Get most recent team statistics regardless of season
-      const [stats] = await db.select()
-        .from(teamSeasonStatistics)
-        .where(
-          and(
-            eq(teamSeasonStatistics.teamId, teamId),
-            eq(teamSeasonStatistics.leagueId, leagueId)
-          )
-        )
-        .orderBy(desc(teamSeasonStatistics.lastUpdated))
-        .limit(1);
+      const statsResult = await db.execute(sql`
+        SELECT * FROM team_season_statistics 
+        WHERE team_id = ${teamId}
+        ORDER BY last_updated DESC LIMIT 1
+      `);
+      const stats = statsResult.rows[0];
 
-      // Get recent form from fixtures (most recent completed matches regardless of season)
-      const recentFixtures = await db.select()
-        .from(footballFixtures)
-        .where(
-          and(
-            or(
-              eq(footballFixtures.homeTeamId, teamId),
-              eq(footballFixtures.awayTeamId, teamId)
-            ),
-            eq(footballFixtures.statusShort, 'FT')
-          )
-        )
-        .orderBy(desc(footballFixtures.timestamp))
-        .limit(5);
+      // Get recent form from fixtures using raw SQL to extract JSONB data
+      const recentFixtures = await db.execute(sql`
+        SELECT 
+          id,
+          home_team_id,
+          away_team_id,
+          (goals->>'home')::int as goals_home,
+          (goals->>'away')::int as goals_away,
+          date as timestamp
+        FROM football_fixtures
+        WHERE (home_team_id = ${teamId} OR away_team_id = ${teamId})
+          AND (status->>'short') = 'FT'
+        ORDER BY date DESC
+        LIMIT 5
+      `);
 
       // Calculate form string
       let formString = '';
-      for (const fixture of recentFixtures) {
-        const isHome = fixture.homeTeamId === teamId;
-        const teamGoals = isHome ? fixture.goalsHome : fixture.goalsAway;
-        const opponentGoals = isHome ? fixture.goalsAway : fixture.goalsHome;
+      for (const fixture of recentFixtures.rows) {
+        const isHome = fixture.home_team_id === teamId;
+        const teamGoals = isHome ? fixture.goals_home : fixture.goals_away;
+        const opponentGoals = isHome ? fixture.goals_away : fixture.goals_home;
 
         if (teamGoals !== null && opponentGoals !== null) {
           if (teamGoals > opponentGoals) formString = 'W' + formString;
@@ -4258,7 +4254,7 @@ Return ONLY a JSON object with this structure:
         items = await storage.getLibraryItems();
       }
 
-      res.json({ libraryItems: items });
+      res.json({ library_items: items });
     } catch (error) {
       console.error('Error fetching library items:', error);
       res.status(500).json({ error: "Failed to fetch library items" });
@@ -5935,7 +5931,7 @@ Return ONLY a JSON object with this structure:
         { name: 'Football Teams', table: footballTeams, dateField: 'updated_at' },
         { name: 'Football Fixtures', table: footballFixtures, dateField: 'timestamp' },
         { name: 'RSS Articles', table: rssArticles, dateField: 'created_at' },
-        { name: 'Library Items', table: libraryItems, dateField: 'created_at' },
+        { name: 'Library Items', table: library_items, dateField: 'created_at' },
         { name: 'Scenes', table: scenes, dateField: 'created_at' }
       ];
 
