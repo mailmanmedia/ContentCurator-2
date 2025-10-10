@@ -28,6 +28,7 @@ import {
   type TextOverlay, type InsertTextOverlay,
   type Keyframe, type InsertKeyframe,
   type AudioTrack, type InsertAudioTrack,
+  type SelectDataImport, type InsertDataImport,
   videoSources as videoSourcesTable,
   scenes as scenesTable,
   presentationSets as presentationSetsTable,
@@ -44,7 +45,8 @@ import {
   keyframes as keyframesTable,
   audioTracks as audioTracksTable,
   sourceTemplates as sourceTemplatesTable,
-  setTemplates as setTemplatesTable
+  setTemplates as setTemplatesTable,
+  data_imports as dataImportsTable
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
@@ -336,6 +338,11 @@ export interface IStorage {
 
   // Default Overlay Templates
   getDefaultOverlayTemplates(): Promise<any>;
+
+  // Data Import methods
+  createDataImport(data: InsertDataImport): Promise<SelectDataImport>;
+  getDataImports(): Promise<SelectDataImport[]>;
+  updateDataImport(id: number, data: Partial<InsertDataImport>): Promise<SelectDataImport>;
 }
 
 export class MemStorage implements IStorage {
@@ -2309,6 +2316,24 @@ export class MemStorage implements IStorage {
         visible: true,
       }
     };
+  }
+
+  async createDataImport(data: InsertDataImport): Promise<SelectDataImport> {
+    const results = await db.insert(dataImportsTable).values(data).returning();
+    return results[0];
+  }
+
+  async getDataImports(): Promise<SelectDataImport[]> {
+    const results = await db.select().from(dataImportsTable).orderBy(desc(dataImportsTable.created_at));
+    return results;
+  }
+
+  async updateDataImport(id: number, data: Partial<InsertDataImport>): Promise<SelectDataImport> {
+    const results = await db.update(dataImportsTable)
+      .set(data)
+      .where(eq(dataImportsTable.id, id))
+      .returning();
+    return results[0];
   }
 }
 

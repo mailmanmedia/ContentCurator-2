@@ -999,6 +999,24 @@ export const insertRecordingSchema = createInsertSchema(recordings).omit({ id: t
 export type InsertRecording = z.infer<typeof insertRecordingSchema>;
 export type Recording = typeof recordings.$inferSelect;
 
+// Data Imports
+export const data_imports = pgTable('data_imports', {
+  id: serial('id').primaryKey(),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  file_type: varchar('file_type', { length: 50 }).notNull(),
+  operation: varchar('operation', { length: 10 }).notNull(),
+  target_table: varchar('target_table', { length: 100 }).notNull(),
+  status: varchar('status', { length: 20 }).notNull(),
+  records_affected: integer('records_affected'),
+  error_message: text('error_message'),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  file_size: integer('file_size')
+});
+
+export const insertDataImportSchema = createInsertSchema(data_imports).omit({ id: true, created_at: true });
+export type InsertDataImport = z.infer<typeof insertDataImportSchema>;
+export type SelectDataImport = typeof data_imports.$inferSelect;
+
 // ============================================
 // ALL CAMELCASE ALIASES FOR BACKWARD COMPATIBILITY
 // ============================================
