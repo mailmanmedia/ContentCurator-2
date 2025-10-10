@@ -39,7 +39,7 @@ import { updateAllPremierLeagueStats } from "./football/statsScheduler";
 import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplates";
 import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, library_items, scenes, rssArticles } from "@shared/schema";
 import { desc, eq, and, gte, lte, or, inArray, sql } from "drizzle-orm";
 import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
@@ -1093,43 +1093,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ framework });
     } catch (error) {
       console.error('Error creating framework:', error);
-
+      res.status(500).json({ error: "Failed to create framework" });
+    }
+  });
 
   // Get database status for DatabaseStatus page
   app.get("/api/database-status", async (req, res) => {
     try {
-      // Get all tables with counts
-      const tables = [
-        { tableName: "RSS Articles", table: rssArticles },
-        { tableName: "Library Items", table: library_items },
-        { tableName: "Scenes", table: scenes }
-      ];
+      // Get simple counts using raw SQL to avoid Drizzle issues
+      const tablesResult = await pool.query(`
+        SELECT 'RSS Articles' as "tableName", count(*)::int as "recordCount" FROM rss_articles
+        UNION ALL
+        SELECT 'Library Items', count(*)::int FROM library_items
+        UNION ALL
+        SELECT 'Scenes', count(*)::int FROM scenes
+      `);
+      
+      const tableStats = tablesResult.rows.map((row: any) => ({
+        tableName: row.tableName,
+        recordCount: row.recordCount,
+        earliestDate: null,
+        latestDate: null
+      }));
 
-      const tableStats = await Promise.all(
-        tables.map(async ({ tableName, table }) => {
-          const count = await db.select({ count: sql<number>`count(*)` }).from(table);
-          return {
-            tableName,
-            recordCount: Number(count[0]?.count || 0),
-            earliestDate: null,
-            latestDate: null
-          };
-        })
-      );
-
-      // Get player season statistics
-      const playerSeasons = await db
-        .select({
-          season: playerSeasonStatistics.season,
-          playerCount: sql<number>`count(distinct ${playerSeasonStatistics.playerId})`,
-          totalGoals: sql<number>`sum(${playerSeasonStatistics.goals})`,
-          totalAssists: sql<number>`sum(${playerSeasonStatistics.assists})`,
-          earliestUpdate: sql<Date>`min(${playerSeasonStatistics.updatedAt})`,
-          latestUpdate: sql<Date>`max(${playerSeasonStatistics.updatedAt})`
-        })
-        .from(playerSeasonStatistics)
-        .groupBy(playerSeasonStatistics.season)
-        .orderBy(desc(playerSeasonStatistics.season));
+      // Get player season statistics using raw SQL
+      let playerSeasons: any[] = [];
+      try {
+        const playerSeasonsResult = await pool.query(`
+          SELECT 
+            season,
+            count(distinct player_id)::int as "playerCount",
+            sum(goals)::int as "totalGoals",
+            sum(assists)::int as "totalAssists",
+            min(last_updated) as "earliestUpdate",
+            max(last_updated) as "latestUpdate"
+          FROM player_season_statistics
+          GROUP BY season
+          ORDER BY season DESC
+        `);
+        playerSeasons = playerSeasonsResult.rows;
+      } catch (err) {
+        console.error('Error fetching player seasons:', err);
+        playerSeasons = [];
+      }
 
       // Get all teams
       let allTeams: any[] = [];
@@ -1175,11 +1181,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const leaguesResult = await db
           .select({
-            id: footballFixtures.leagueId
+            id: footballFixtures.league_id
           })
           .from(footballFixtures)
-          .groupBy(footballFixtures.leagueId)
-          .orderBy(footballFixtures.leagueId);
+          .groupBy(footballFixtures.league_id)
+          .orderBy(footballFixtures.league_id);
 
         allLeagues = leaguesResult.map(l => ({ 
           id: l.id, 
@@ -1291,10 +1297,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching all teams with form:', error);
       res.status(500).json({ error: "Failed to fetch teams with form data" });
-    }
-  });
-
-      res.status(500).json({ error: "Failed to create framework" });
     }
   });
 
@@ -6073,115 +6075,6 @@ Return ONLY a JSON object with this structure:
     } catch (error: any) {
       console.error('Error deleting render job:', error);
       res.status(500).json({ error: "Failed to delete render job" });
-    }
-  });
-
-  // =============== Database Status Route ===============
-
-  // Get database status and data availability
-  app.get("/api/database-status", async (req, res) => {
-    try {
-      const stats: any = {};
-
-      // Get table counts and date ranges
-      const tables = [
-        { name: 'Football Players', table: footballPlayers, dateField: 'updated_at' },
-        { name: 'Football Teams', table: footballTeams, dateField: 'updated_at' },
-        { name: 'Football Fixtures', table: footballFixtures, dateField: 'timestamp' },
-        { name: 'RSS Articles', table: rssArticles, dateField: 'created_at' },
-        { name: 'Library Items', table: library_items, dateField: 'created_at' },
-        { name: 'Scenes', table: scenes, dateField: 'created_at' }
-      ];
-
-      for (const { name, table, dateField } of tables) {
-        try {
-          const count = await db.select({ count: sql<number>`count(*)` }).from(table);
-
-          let earliestDate = null;
-          let latestDate = null;
-
-          // Get date range using the specified date field
-          if (dateField) {
-            try {
-              const dates = await db.select({
-                earliest: sql<Date>`min(${sql.raw(dateField)})`,
-                latest: sql<Date>`max(${sql.raw(dateField)})`
-              }).from(table);
-
-              if (dates[0]?.earliest) {
-                earliestDate = dates[0].earliest;
-                latestDate = dates[0].latest;
-              }
-            } catch (dateError) {
-              // Skip date range if unavailable
-            }
-          }
-
-          stats[name] = {
-            count: count[0]?.count || 0,
-            earliestDate,
-            latestDate
-          };
-        } catch (error) {
-          console.warn(`Warning: Could not fetch ${name.toLowerCase()}:`, error.message);
-          stats[name] = { count: 0, earliestDate: null, latestDate: null };
-        }
-      }
-
-      // Get player season statistics with proper grouping
-      const playerSeasons = await db.select({
-        season: playerSeasonStatistics.season,
-        playerCount: sql<number>`count(distinct ${playerSeasonStatistics.playerId})`,
-        totalGoals: sql<number>`sum(${playerSeasonStatistics.goals})`,
-        totalAssists: sql<number>`sum(${playerSeasonStatistics.assists})`,
-        earliestUpdate: sql<Date>`min(${playerSeasonStatistics.updated_at})`,
-        latestUpdate: sql<Date>`max(${playerSeasonStatistics.updated_at})`
-      })
-        .from(playerSeasonStatistics)
-        .groupBy(playerSeasonStatistics.season)
-        .orderBy(desc(playerSeasonStatistics.season));
-
-      // Get all teams
-      const allTeams = await db.select({
-        id: footballTeams.id,
-        name: footballTeams.name
-      })
-        .from(footballTeams)
-        .orderBy(footballTeams.name)
-        .limit(100);
-
-      // Get all seasons
-      const allSeasons = await db.selectDistinct({
-        season: footballFixtures.season
-      })
-        .from(footballFixtures)
-        .orderBy(desc(footballFixtures.season));
-
-      // Get all leagues
-      const allLeagues = await db.selectDistinct({
-        id: footballFixtures.league_id,
-        name: sql<string>`(SELECT name FROM football_leagues WHERE id = ${footballFixtures.league_id} LIMIT 1)`
-      })
-        .from(footballFixtures)
-        .limit(50);
-
-      res.json({
-        tables: Object.entries(stats).map(([tableName, data]: [string, any]) => ({
-          tableName,
-          recordCount: data.count,
-          earliestDate: data.earliestDate,
-          latestDate: data.latestDate
-        })),
-        playerSeasons,
-        allTeams,
-        allSeasons,
-        allLeagues,
-        lastApiUpdate: new Date().toISOString(),
-        dataSource: 'historical'
-      });
-    } catch (error: any) {
-      console.error('Error fetching database status:', error);
-      res.status(500).json({ error: "Failed to fetch database status" });
     }
   });
 
