@@ -3187,6 +3187,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Data Audit Endpoint
+  app.get("/api/admin/data-audit", async (req, res) => {
+    try {
+      const { player_season_statistics } = await import('@shared/schema');
+
+      // 1. Find duplicate players (GROUP BY name, HAVING count > 1)
+      const duplicatePlayers = await db
+        .select({
+          name: footballPlayers.name,
+          count: sql<number>`count(*)::int`,
+          ids: sql<number[]>`array_agg(${footballPlayers.id})`,
+          playerIds: sql<(number | null)[]>`array_agg(${footballPlayers.player_id})`,
+          photos: sql<(string | null)[]>`array_agg(${footballPlayers.photo})`
+        })
+        .from(footballPlayers)
+        .groupBy(footballPlayers.name)
+        .having(sql`count(*) > 1`)
+        .orderBy(sql`count(*) DESC`);
+
+      // Get detailed records for duplicates
+      const duplicateDetails = await Promise.all(
+        duplicatePlayers.slice(0, 50).map(async (dup) => {
+          const records = await db
+            .select({
+              id: footballPlayers.id,
+              name: footballPlayers.name,
+              player_id: footballPlayers.player_id,
+              photo: footballPlayers.photo,
+              position: footballPlayers.position,
+              nationality: footballPlayers.nationality
+            })
+            .from(footballPlayers)
+            .where(eq(footballPlayers.name, dup.name));
+          
+          return {
+            name: dup.name,
+            count: dup.count,
+            records
+          };
+        })
+      );
+
+      // 2. Count players missing player_id
+      const missingPlayerIdCount = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(footballPlayers)
+        .where(sql`${footballPlayers.player_id} IS NULL`);
+
+      const missingPlayerIdRecords = await db
+        .select({
+          id: footballPlayers.id,
+          name: footballPlayers.name,
+          photo: footballPlayers.photo,
+          position: footballPlayers.position,
+          nationality: footballPlayers.nationality
+        })
+        .from(footballPlayers)
+        .where(sql`${footballPlayers.player_id} IS NULL`)
+        .limit(100);
+
+      // 3. Find players with missing or broken photos
+      const missingPhotosCount = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(footballPlayers)
+        .where(
+          or(
+            sql`${footballPlayers.photo} IS NULL`,
+            eq(footballPlayers.photo, ''),
+            eq(footballPlayers.photo, 'null')
+          )
+        );
+
+      const missingPhotoRecords = await db
+        .select({
+          id: footballPlayers.id,
+          name: footballPlayers.name,
+          player_id: footballPlayers.player_id,
+          photo: footballPlayers.photo,
+          position: footballPlayers.position,
+          nationality: footballPlayers.nationality
+        })
+        .from(footballPlayers)
+        .where(
+          or(
+            sql`${footballPlayers.photo} IS NULL`,
+            eq(footballPlayers.photo, ''),
+            eq(footballPlayers.photo, 'null')
+          )
+        )
+        .limit(100);
+
+      // 4. Find orphaned player_season_statistics (player_id not in football_players)
+      const orphanedStatsCount = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(player_season_statistics)
+        .where(
+          sql`${player_season_statistics.player_id} NOT IN (SELECT id FROM ${footballPlayers})`
+        );
+
+      const orphanedStatsRecords = await db
+        .select({
+          id: player_season_statistics.id,
+          player_id: player_season_statistics.player_id,
+          team_id: player_season_statistics.team_id,
+          league_id: player_season_statistics.league_id,
+          season: player_season_statistics.season,
+          goals: player_season_statistics.goals,
+          assists: player_season_statistics.assists,
+          appearances: player_season_statistics.appearances
+        })
+        .from(player_season_statistics)
+        .where(
+          sql`${player_season_statistics.player_id} NOT IN (SELECT id FROM ${footballPlayers})`
+        )
+        .limit(100);
+
+      // 5. Total counts for summary
+      const totalPlayers = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(footballPlayers);
+
+      const totalPlayerStats = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(player_season_statistics);
+
+      res.json({
+        summary: {
+          totalPlayers: totalPlayers[0]?.count || 0,
+          totalPlayerStats: totalPlayerStats[0]?.count || 0,
+          duplicatePlayersCount: duplicatePlayers.length,
+          missingPlayerIdCount: missingPlayerIdCount[0]?.count || 0,
+          missingPhotosCount: missingPhotosCount[0]?.count || 0,
+          orphanedStatsCount: orphanedStatsCount[0]?.count || 0
+        },
+        duplicatePlayers: duplicateDetails,
+        missingPlayerIds: {
+          count: missingPlayerIdCount[0]?.count || 0,
+          records: missingPlayerIdRecords
+        },
+        missingPhotos: {
+          count: missingPhotosCount[0]?.count || 0,
+          records: missingPhotoRecords
+        },
+        orphanedStats: {
+          count: orphanedStatsCount[0]?.count || 0,
+          records: orphanedStatsRecords
+        }
+      });
+    } catch (error: any) {
+      console.error('Error running data audit:', error);
+      res.status(500).json({ error: error.message || "Failed to run data audit" });
+    }
+  });
+
   // Bootstrap Historical Data
   app.post("/api/admin/bootstrap", async (req, res) => {
     try {
