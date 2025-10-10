@@ -2571,7 +2571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(footballFixtures.awayTeamId, teamId)
             ),
             eq(footballFixtures.season, season),
-            eq(footballFixtures.status.short, 'FT')
+            sql`${footballFixtures.status}->>'short' = 'FT'`
           )
         )
         .orderBy(desc(footballFixtures.date))
