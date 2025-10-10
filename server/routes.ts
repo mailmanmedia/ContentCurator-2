@@ -3757,16 +3757,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Populate Liverpool players from Football API
+  // Populate Liverpool players from Football API (FULL SQUAD - 25-30 players)
   app.post("/api/football/players/populate-liverpool", async (req, res) => {
     try {
       const season = parseInt(req.body.season) || new Date().getFullYear();
-      const { populateLiverpoolPlayers } = await import('./football/populateLiverpoolPlayers');
-      const success = await populateLiverpoolPlayers(season);
+      const { populateLiverpoolSquadFull } = await import('./football/populateLiverpoolSquadFull');
+      const result = await populateLiverpoolSquadFull(season);
       res.json({ 
-        success, 
+        success: result.success, 
         season,
-        message: success ? `Liverpool players populated for ${season}` : "Failed to populate Liverpool players" 
+        playersPopulated: result.playersPopulated,
+        message: result.success ? `${result.playersPopulated} Liverpool players populated for ${season}` : "Failed to populate Liverpool players" 
       });
     } catch (error) {
       console.error('Error populating Liverpool players:', error);

@@ -1,4 +1,5 @@
 import { pgTable, serial, varchar, integer, timestamp, text, real, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -61,15 +62,14 @@ export const football_players = pgTable('football_players', {
   photo: text('photo'),
   position: varchar('position', { length: 50 }),
   jersey_number: integer('jersey_number'),
-  team_id: integer('team_id').references(() => football_teams.id),
-  updated_at: timestamp('updated_at').defaultNow()
+  injured: boolean('injured').default(false),
+  last_updated: timestamp('last_updated').defaultNow()
 }, (table) => ({
   nameIdx: index('idx_football_players_name').on(table.name),
-  teamIdIdx: index('idx_football_players_team_id').on(table.team_id),
   positionIdx: index('idx_football_players_position').on(table.position)
 }));
 
-export const insertFootballPlayerSchema = createInsertSchema(football_players).omit({ id: true, updated_at: true });
+export const insertFootballPlayerSchema = createInsertSchema(football_players).omit({ id: true, last_updated: true });
 export type InsertFootballPlayer = z.infer<typeof insertFootballPlayerSchema>;
 export type FootballPlayer = typeof football_players.$inferSelect;
 
@@ -418,23 +418,29 @@ export type VideoClip = typeof videoClips.$inferSelect;
 
 // Player Season Statistics (existing table)
 export const player_season_statistics = pgTable('player_season_statistics', {
-  id: serial('id').primaryKey(),
-  player_id: integer('player_id'),
-  season: varchar('season', { length: 10 }),
-  team: varchar('team', { length: 255 }),
-  competition: varchar('competition', { length: 255 }),
-  appearances: integer('appearances'),
-  goals: integer('goals'),
-  assists: integer('assists'),
-  minutes_played: integer('minutes_played'),
-  yellow_cards: integer('yellow_cards'),
-  red_cards: integer('red_cards'),
-  clean_sheets: integer('clean_sheets'),
-  created_at: timestamp('created_at').defaultNow(),
-  updated_at: timestamp('updated_at').defaultNow()
-});
+  id: varchar('id').primaryKey().default(sql`gen_random_uuid()`),
+  player_id: integer('player_id').notNull(),
+  team_id: integer('team_id').notNull(),
+  league_id: integer('league_id').notNull(),
+  season: integer('season').notNull(),
+  goals: integer('goals').notNull().default(0),
+  assists: integer('assists').notNull().default(0),
+  appearances: integer('appearances').notNull().default(0),
+  minutes: integer('minutes').notNull().default(0),
+  yellow_cards: integer('yellow_cards').notNull().default(0),
+  red_cards: integer('red_cards').notNull().default(0),
+  rating: text('rating'),
+  last_updated: timestamp('last_updated').notNull().defaultNow()
+}, (table) => ({
+  playerSeasonLeagueUnique: uniqueIndex('player_season_league_unique').on(
+    table.player_id,
+    table.team_id,
+    table.league_id,
+    table.season
+  )
+}));
 
-export const insertPlayerSeasonStatisticsSchema = createInsertSchema(player_season_statistics).omit({ id: true, created_at: true, updated_at: true });
+export const insertPlayerSeasonStatisticsSchema = createInsertSchema(player_season_statistics).omit({ id: true, last_updated: true });
 export type InsertPlayerSeasonStatistics = z.infer<typeof insertPlayerSeasonStatisticsSchema>;
 export type PlayerSeasonStatistics = typeof player_season_statistics.$inferSelect;
 

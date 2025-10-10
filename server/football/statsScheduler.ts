@@ -4,7 +4,7 @@ import { teamSeasonStatistics, footballFixtures, footballPlayers, playerSeasonSt
 import { eq, and, gte, lte, or, desc, sql, inArray } from 'drizzle-orm';
 import { footballService } from './footballService';
 import { sportmonksService } from './sportmonksService';
-import { populateLiverpoolPlayers } from './populateLiverpoolPlayers';
+import { populateLiverpoolSquadFull } from './populateLiverpoolSquadFull';
 
 export async function updateTeamStatistics(teamId: number, leagueId: number, season: number) {
   try {
@@ -215,10 +215,10 @@ async function updateLiverpoolPlayerStats() {
       }
     }
     
-    // Fallback to original method
-    const success = await populateLiverpoolPlayers(currentSeason);
-    if (success) {
-      console.log('✓ Liverpool player statistics updated successfully');
+    // Fallback to full squad population method
+    const result = await populateLiverpoolSquadFull(currentSeason);
+    if (result.success) {
+      console.log(`✓ Liverpool player statistics updated successfully (${result.playersPopulated} players)`);
     } else {
       console.log('⚠️  Failed to update Liverpool player statistics');
     }
