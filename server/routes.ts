@@ -41,7 +41,7 @@ import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
 import { db } from "./db";
 import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead } from "@shared/schema";
-import { desc, eq, and, gte, lte, or, inArray } from "drizzle-orm";
+import { desc, eq, and, gte, lte, or, inArray, sql } from "drizzle-orm";
 import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
 import { addRenderJob } from "./video/renderQueue";
 import { insertVideoProjectSchema, insertVideoClipSchema } from "@shared/schema";
@@ -3209,28 +3209,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
 
       // Get recent form from fixtures (most recent completed matches regardless of season)
-      const recentFixtures = await db.select()
-        .from(footballFixtures)
-        .where(
-          and(
-            or(
-              eq(footballFixtures.homeTeamId, teamId),
-              eq(footballFixtures.awayTeamId, teamId)
-            ),
-            eq(footballFixtures.statusShort, 'FT')
-          )
-        )
-        .orderBy(desc(footballFixtures.timestamp))
-        .limit(5);
+      // Using raw SQL to access JSONB fields
+      const recentFixturesRaw = await db.execute(sql`
+        SELECT id, home_team_id, away_team_id, goals, status, timestamp
+        FROM football_fixtures
+        WHERE (home_team_id = ${teamId} OR away_team_id = ${teamId})
+          AND status->>'short' = 'FT'
+        ORDER BY timestamp DESC
+        LIMIT 5
+      `);
 
       // Calculate form string
       let formString = '';
-      for (const fixture of recentFixtures) {
-        const isHome = fixture.homeTeamId === teamId;
-        const teamGoals = isHome ? fixture.goalsHome : fixture.goalsAway;
-        const opponentGoals = isHome ? fixture.goalsAway : fixture.goalsHome;
+      for (const row of recentFixturesRaw.rows) {
+        const isHome = row.home_team_id === teamId;
+        const goals = typeof row.goals === 'string' ? JSON.parse(row.goals) : row.goals;
+        const teamGoals = isHome ? goals?.home : goals?.away;
+        const opponentGoals = isHome ? goals?.away : goals?.home;
         
-        if (teamGoals !== null && opponentGoals !== null) {
+        if (teamGoals !== null && teamGoals !== undefined && opponentGoals !== null && opponentGoals !== undefined) {
           if (teamGoals > opponentGoals) formString = 'W' + formString;
           else if (teamGoals < opponentGoals) formString = 'L' + formString;
           else formString = 'D' + formString;
