@@ -69,3 +69,54 @@ Includes an advanced data filtering system for metric overlays (competition, sea
 - **fluent-ffmpeg**: Node.js wrapper for FFmpeg.
 - **Bull**: Redis-based job queue.
 - **ioredis**: Redis client for Bull Queue.
+
+### File Processing & Data Management
+- **xlsx**: Excel file parsing and generation for import/export.
+- **pdf-parse**: PDF text extraction (dynamic import to avoid startup issues).
+- **officeparser**: DOCX and office document parsing.
+- **sharp**: Image metadata extraction and processing.
+- **multer**: Multipart form data handling for file uploads.
+
+## Data Import/Export System
+A comprehensive file management system for importing and exporting database content in multiple formats. Accessible at `/data-admin` with full admin capabilities for data management.
+
+**Supported File Formats:**
+- **Import**: JSON, CSV, XLSX, PDF, DOCX, HTML, JPEG, PNG, .web
+- **Export**: JSON, CSV, XLSX
+
+**Key Features:**
+- **Drag & Drop Upload**: Intuitive file upload interface with visual feedback
+- **Multi-Format Parsing**: Intelligent parsing service supporting structured data, documents, and images
+- **Database Tracking**: Complete audit trail in `data_imports` table
+- **Export Capability**: Download data from any table (football_players, rss_articles, library_items, scenes) in JSON/CSV/XLSX
+- **Import History**: Real-time status tracking with color-coded badges (pending, processing, completed, failed)
+- **Admin UI**: Full-featured management interface at `/data-admin`
+
+**Technical Architecture:**
+- **File Parser Service** (`server/admin/fileParserService.ts`):
+  * JSON/CSV/XLSX parsers for structured data
+  * PDF/DOCX/HTML text extraction
+  * Image metadata extraction with Sharp
+  * Dynamic pdf-parse import prevents startup errors
+- **API Routes**:
+  * `POST /api/admin/import` - Upload and parse files (FormData with multer)
+  * `GET /api/admin/imports` - Fetch import/export history
+  * `POST /api/admin/export/:format?table=X` - Export data in JSON/CSV/XLSX
+  * `GET /api/admin/import/:id` - Get single import record details
+- **Database Tracking** (`data_imports` table):
+  * Fields: filename, file_type, operation, target_table, status, records_affected, error_message
+  * Timestamp tracking (created_at) for audit
+  * File size tracking in bytes
+- **Frontend UI** (`client/src/pages/DataImportExport.tsx`):
+  * File upload with drag-and-drop (50MB limit)
+  * Table and format selection for exports
+  * Import history table with sortable columns
+  * Real-time refresh with React Query cache invalidation
+  * Toast notifications for success/error feedback
+
+**Security & Validation:**
+- Files processed in memory only (no disk storage)
+- Multer middleware with 50MB size limit
+- Extension-based format validation
+- Comprehensive error handling with user-friendly messages
+- POST method enforcement for data mutations

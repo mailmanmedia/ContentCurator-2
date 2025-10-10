@@ -21,6 +21,7 @@ import DatabaseStatus from "@/pages/DatabaseStatus";
 import TeamFormsList from "@/pages/TeamFormsList";
 import AdminDashboard from "@/pages/AdminDashboard";
 import DataAudit from "@/pages/DataAudit";
+import DataImportExport from "@/pages/DataImportExport";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/database-status" component={DatabaseStatus} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/data-audit" component={DataAudit} />
+      <Route path="/data-admin" component={DataImportExport} />
       <Route path="/frameworks" component={FrameworkDirectory} />
       <Route path="/frameworks/create" component={CreateFramework} />
       <Route path="/rss" component={RssIntelligence} />

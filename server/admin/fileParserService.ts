@@ -1,5 +1,4 @@
 import * as XLSX from 'xlsx';
-import pdfParse from 'pdf-parse';
 import { parseOffice } from 'officeparser';
 import { XMLParser } from 'fast-xml-parser';
 import sharp from 'sharp';
@@ -99,6 +98,7 @@ export async function parseXLSX(buffer: Buffer): Promise<any[]> {
 
 export async function parsePDF(buffer: Buffer): Promise<string> {
   try {
+    const pdfParse = (await import('pdf-parse')).default;
     const data = await pdfParse(buffer);
     return data.text;
   } catch (error) {
