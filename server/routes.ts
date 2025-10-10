@@ -2549,6 +2549,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get team fixtures
+  app.get("/api/football/teams/:teamId/fixtures", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const last = parseInt(req.query.last as string) || 10;
+      const season = parseInt(req.query.season as string) || 2025;
+
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Get fixtures from database
+      const fixtures = await db
+        .select()
+        .from(footballFixtures)
+        .where(
+          and(
+            or(
+              eq(footballFixtures.homeTeamId, teamId),
+              eq(footballFixtures.awayTeamId, teamId)
+            ),
+            eq(footballFixtures.season, season),
+            eq(footballFixtures.status.short, 'FT')
+          )
+        )
+        .orderBy(desc(footballFixtures.date))
+        .limit(last);
+
+      res.json({ fixtures });
+    } catch (error) {
+      console.error('Error fetching team fixtures:', error);
+      res.status(500).json({ error: "Failed to fetch team fixtures" });
+    }
+  });
+
   // Get team statistics for a specific competition/season
   app.get("/api/football/teams/:teamId/statistics", async (req, res) => {
     try {
