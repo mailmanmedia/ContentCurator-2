@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeStatsScheduler } from "./football/statsScheduler";
 import { scheduledUpdateService } from "./football/scheduledUpdateService";
+import { initializeH2HExportScheduler } from './scripts/scheduledH2HExport';
 
 const app = express();
 app.use(express.json());
@@ -40,11 +41,14 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
-  
+
   initializeStatsScheduler();
-  
-  // Initialize the scheduled update service
+
+  // Initialize scheduled updates
   scheduledUpdateService.initialize();
+
+  // Initialize H2H export scheduler
+  initializeH2HExportScheduler();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
