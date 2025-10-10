@@ -105,28 +105,46 @@ export default function FormGuideOverlay({
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch team statistics from database
-  const { data: teamStatsData, isLoading: isLoadingStats, error: statsError, refetch: refetchStats } = useQuery({
-    queryKey: ['team-stats-db', teamId],
+  // Define leagueId and season as constants or derive them from props/context if needed
+  const leagueId = 39; 
+  const season = 2025;
+
+  // Fetch team statistics from database with retry logic
+  const { 
+    data: teamStatsData, 
+    isLoading: isLoadingStats,
+    error: statsError,
+    refetch: refetchStats
+  } = useQuery({
+    queryKey: ['database-team-stats', teamId, leagueId, season],
     queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=39&season=2025`);
+      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}&season=${season}`);
       if (!response.ok) throw new Error('Failed to fetch team stats');
       return response.json();
     },
     enabled: !!teamId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2, // Retry failed requests twice
+    retryDelay: 1000, // Wait 1 second between retries
   });
 
-  // Fetch team fixtures from database
-  const { data: fixturesData, isLoading: isLoadingFixtures, error: fixturesError, refetch: refetchFixtures } = useQuery({
-    queryKey: ['team-fixtures-db', teamId, matchLimit],
+  // Fetch team fixtures from database with retry logic
+  const { 
+    data: fixturesData, 
+    isLoading: isLoadingFixtures,
+    error: fixturesError,
+    refetch: refetchFixtures
+  } = useQuery({
+    queryKey: ['database-team-fixtures', teamId, matchLimit, season],
     queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}&season=2025`);
+      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}&season=${season}`);
       if (!response.ok) throw new Error('Failed to fetch fixtures');
       return response.json();
     },
     enabled: !!teamId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Handle refresh of data
@@ -137,7 +155,7 @@ export default function FormGuideOverlay({
       const response = await fetch(`/api/admin/update/team/${teamId}`, { 
         method: 'POST' 
       });
-      
+
       if (response.ok) {
         // Refetch data after successful update
         await Promise.all([refetchStats(), refetchFixtures()]);
@@ -166,18 +184,18 @@ export default function FormGuideOverlay({
     // Extract data from database responses
     const statsDbData = teamStatsData?.data?.statistics || teamStatsData?.data;
     const fixturesDbData = fixturesData?.data?.fixtures || fixturesData?.data;
-    
+
     // Get last updated timestamp
     const statsLastUpdated = teamStatsData?.lastUpdated;
     const fixturesLastUpdated = fixturesData?.lastUpdated;
     const mostRecentUpdate = statsLastUpdated || fixturesLastUpdated || new Date().toISOString();
-    
+
     // Extract team name from stats data
     const teamNameFromStats = statsDbData?.team?.name || "Liverpool";
-    
+
     // Check if we have fixtures data
     const hasFixtures = fixturesDbData && Array.isArray(fixturesDbData) && fixturesDbData.length > 0;
-    
+
     if (!hasFixtures) {
       // Try to use form data from team statistics if available
       const formString = statsDbData?.form;
@@ -192,7 +210,7 @@ export default function FormGuideOverlay({
           },
           { W: 0, D: 0, L: 0 }
         );
-        
+
         return {
           teamName: teamNameFromStats,
           matches: [],
@@ -203,7 +221,7 @@ export default function FormGuideOverlay({
           lastUpdated: mostRecentUpdate
         };
       }
-      
+
       return {
         teamName: teamNameFromStats,
         matches: [],
@@ -216,7 +234,7 @@ export default function FormGuideOverlay({
     }
 
     const fixtures = fixturesDbData;
-    
+
     const processedMatches = fixtures
       .filter((f: any) => f.status?.short === 'FT' && f.goals?.home !== null && f.goals?.away !== null)
       .slice(0, matchLimit)
@@ -427,6 +445,14 @@ export default function FormGuideOverlay({
         >
           <span style={{ opacity: 0.75 }}>Record:</span> {badgeText}
         </div>
+
+        {/* Data Source Badge */}
+        {source && lastUpdated && (
+          <OverlaySourceBadge 
+            source={source as any} 
+            timestamp={new Date(lastUpdated).getTime()} 
+          />
+        )}
       </header>
 
       <div
