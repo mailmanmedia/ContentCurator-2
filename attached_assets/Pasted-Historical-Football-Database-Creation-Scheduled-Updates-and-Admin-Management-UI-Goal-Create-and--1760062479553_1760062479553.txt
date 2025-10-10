@@ -1,0 +1,92 @@
+Historical Football Database Creation, Scheduled Updates, and Admin Management UI
+
+Goal:
+Create and maintain a local database storing all relevant historical football data (teams, players, fixtures, league standings) for Premier League, Champions League, and all their clubs from today back to 2020, with automatic update and full admin/manageability within the app.
+
+Instructions:
+
+1. Historical Database Bootstrap (2020–present)
+Build a server script/service to fetch and archive all teams, player rosters, fixtures/results, and league tables by season for every Premier League and Champions League season 2020/21 to present.
+
+Data must include:
+
+Full list of teams for every season/competition (including promoted/relegated clubs and UCL groups).
+
+Complete player roster for each team by season, with position and bio fields.
+
+All competitive fixtures: date, teams, venue, result, scorers, events.
+
+Final league standings for every completed season, and current table for 2025.
+
+Populate the app’s database tables with this data, keyed by season and league.
+
+2. Scheduled + Manual Data Updates
+Implement an update service that automatically fetches new results, updated squads, and table changes twice a week (cron job, GitHub Actions, or server scheduler).
+
+Add a Manual Update button in every database-powered UI module—running this triggers an immediate data refresh and logs the time of update.
+
+On every fetch, save the timestamp (“data current as of...”) for all updated tables.
+
+3. Admin/Database Management Page
+Add a page (“Database Management” / “Data Status”) to the app under /admin or via nav:
+
+List database table row counts for teams, players, fixtures, league tables, etc.
+
+For each league/season, show:
+
+Oldest & newest data timestamp in each table
+
+Last successful update time
+
+% completeness (e.g., number of fixtures vs. official count)
+
+Controls:
+
+“Manual Refresh” for each data type
+
+Download/export database snapshot (.csv, .json)
+
+View error logs (if any fetches failed)
+
+4. Database-Driven UI
+Refactor all overlays/pages currently showing teams, player lists, fixtures, or league tables to exclusively pull from the local database, not live API calls.
+
+On loading, display: “Data accurate as of [timestamp]”
+
+When Manual Update is clicked, show loading and update status.
+
+All listings and stats must match the database contents.
+
+5. Data Verification & Visualization
+Add table/visualization widgets on admin page to let the user:
+
+Query which seasons/teams/competitions are stored
+
+Drill down into players per club/season
+
+Directly verify data completeness for all entities
+
+Add API endpoint (/api/database/status) to return all data freshness + completeness stats for external auditing.
+
+Important:
+
+No mock or fake data—must match official sources.
+
+Maintain logs of every update and successful import.
+
+The primary UI must clearly show the “last update” date for transparency.
+
+Example Instructions (for Copilot or Developer):
+
+text
+// Steps
+1. Write fetching scripts for API-Football Pro/FBRef/etc. for full historical crawl 2020-2025; write DB seeders.
+2. Write cron/scheduler to call the update job 2x/week.
+3. Build an admin management page listing each table, row counts, last update time, % completeness, manual refresh button, CSV export.
+4. Refactor React overlays/pages to fetch from database.
+5. Add “last updated” banner and completeness widget to all key data pages.
+6. Provide internal endpoint for checking DB status.
+
+Key tables: football_teams, football_players, football_fixtures, league_standings (each with season, league).
+
+Notes: Never serve user UI from live API calls, except during background update jobs.
