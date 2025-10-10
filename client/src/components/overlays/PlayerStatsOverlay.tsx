@@ -1,6 +1,10 @@
 import { motion } from "framer-motion";
-import { Activity, Target, TrendingUp } from "lucide-react";
-import { useTopScorers } from "@/hooks/useFootballData";
+import { Activity, Target, TrendingUp, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
@@ -32,7 +36,44 @@ export default function PlayerStatsOverlay({
   height,
   opacity = 0.92,
 }: PlayerStatsOverlayProps) {
-  const { data, isLoading, error, refetch } = useTopScorers();
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Fetch player statistics from database
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['player-stats-db'],
+    queryFn: async () => {
+      const response = await fetch('/api/database/players/top-scorers?season=2025&teamId=40');
+      if (!response.ok) throw new Error('Failed to fetch player stats');
+      return response.json();
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+  
+  // Handle refresh of data
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch('/api/admin/update/players', { method: 'POST' });
+      if (response.ok) {
+        await refetch();
+        toast({
+          title: "Data refreshed",
+          description: "Player statistics have been updated.",
+        });
+      } else {
+        throw new Error('Failed to refresh data');
+      }
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Could not update player stats. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   if (isLoading) {
     return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;

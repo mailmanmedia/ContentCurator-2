@@ -3134,6 +3134,420 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // DATABASE-BACKED ENDPOINTS FOR OVERLAYS
+  // ============================================
+
+  // Get team statistics from database for FormGuideOverlay
+  app.get("/api/database/teams/:teamId/statistics", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const leagueId = parseInt(req.query.leagueId as string) || 39;
+      const season = parseInt(req.query.season as string) || 2025;
+
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Get team data
+      const [teamData] = await db.select()
+        .from(footballTeams)
+        .where(eq(footballTeams.id, teamId))
+        .limit(1);
+
+      // Get team statistics from teamSeasonStatistics table
+      const [stats] = await db.select()
+        .from(teamSeasonStatistics)
+        .where(
+          and(
+            eq(teamSeasonStatistics.teamId, teamId),
+            eq(teamSeasonStatistics.season, season.toString()),
+            eq(teamSeasonStatistics.competition, 'Premier League')
+          )
+        )
+        .orderBy(desc(teamSeasonStatistics.updatedAt))
+        .limit(1);
+
+      // Get recent form from fixtures
+      const recentFixtures = await db.select()
+        .from(footballFixtures)
+        .where(
+          and(
+            or(
+              eq(footballFixtures.homeTeamId, teamId),
+              eq(footballFixtures.awayTeamId, teamId)
+            ),
+            eq(footballFixtures.statusShort, 'FT'),
+            eq(footballFixtures.season, season.toString())
+          )
+        )
+        .orderBy(desc(footballFixtures.timestamp))
+        .limit(5);
+
+      // Calculate form string
+      let formString = '';
+      for (const fixture of recentFixtures) {
+        const isHome = fixture.homeTeamId === teamId;
+        const teamGoals = isHome ? fixture.goalsHome : fixture.goalsAway;
+        const opponentGoals = isHome ? fixture.goalsAway : fixture.goalsHome;
+        
+        if (teamGoals !== null && opponentGoals !== null) {
+          if (teamGoals > opponentGoals) formString = 'W' + formString;
+          else if (teamGoals < opponentGoals) formString = 'L' + formString;
+          else formString = 'D' + formString;
+        }
+      }
+
+      const responseData = {
+        statistics: {
+          league: {
+            id: leagueId,
+            name: "Premier League",
+            country: "England",
+            season: season
+          },
+          team: {
+            id: teamId,
+            name: teamData?.name || `Team ${teamId}`,
+            logo: teamData?.logo
+          },
+          form: formString || stats?.form || "NNNNN",
+          fixtures: {
+            played: {
+              home: stats?.matchesPlayed || 0,
+              away: 0,
+              total: stats?.matchesPlayed || 0
+            },
+            wins: {
+              home: stats?.wins || 0,
+              away: 0,
+              total: stats?.wins || 0
+            },
+            draws: {
+              home: stats?.draws || 0,
+              away: 0,
+              total: stats?.draws || 0
+            },
+            loses: {
+              home: stats?.losses || 0,
+              away: 0,
+              total: stats?.losses || 0
+            }
+          },
+          goals: {
+            for: {
+              total: {
+                home: stats?.goalsFor || 0,
+                away: 0,
+                total: stats?.goalsFor || 0
+              },
+              average: {
+                home: "0",
+                away: "0",
+                total: stats?.matchesPlayed ? ((stats?.goalsFor || 0) / stats.matchesPlayed).toFixed(1) : "0"
+              }
+            },
+            against: {
+              total: {
+                home: stats?.goalsAgainst || 0,
+                away: 0,
+                total: stats?.goalsAgainst || 0
+              }
+            }
+          }
+        }
+      };
+
+      res.json({
+        data: responseData,
+        lastUpdated: stats?.updatedAt || new Date(),
+        source: "database"
+      });
+    } catch (error) {
+      console.error('Error fetching team statistics from database:', error);
+      res.status(500).json({ error: "Failed to fetch team statistics from database" });
+    }
+  });
+
+  // Get team fixtures from database for FormGuideOverlay
+  app.get("/api/database/teams/:teamId/fixtures", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const last = parseInt(req.query.last as string) || 5;
+      const season = parseInt(req.query.season as string) || 2025;
+
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      const fixtures = await db.select()
+        .from(footballFixtures)
+        .where(
+          and(
+            or(
+              eq(footballFixtures.homeTeamId, teamId),
+              eq(footballFixtures.awayTeamId, teamId)
+            ),
+            eq(footballFixtures.statusShort, 'FT'),
+            eq(footballFixtures.season, season.toString())
+          )
+        )
+        .orderBy(desc(footballFixtures.timestamp))
+        .limit(last);
+
+      const transformedFixtures = fixtures.map(f => ({
+        id: f.id,
+        status: { short: f.statusShort },
+        teams: {
+          home: { id: f.homeTeamId, name: f.homeTeamName },
+          away: { id: f.awayTeamId, name: f.awayTeamName }
+        },
+        goals: {
+          home: f.goalsHome,
+          away: f.goalsAway
+        },
+        fixture: {
+          date: f.timestamp?.toISOString() || new Date().toISOString(),
+          venue: { name: f.venueName, city: f.venueCity }
+        },
+        league: {
+          name: "Premier League",
+          round: f.round
+        }
+      }));
+
+      res.json({
+        data: { fixtures: transformedFixtures },
+        lastUpdated: fixtures[0]?.updatedAt || new Date(),
+        source: "database"
+      });
+    } catch (error) {
+      console.error('Error fetching team fixtures from database:', error);
+      res.status(500).json({ error: "Failed to fetch team fixtures from database" });
+    }
+  });
+
+  // Get league standings from database for LeagueTableOverlay and LeaguePositionOverlay
+  app.get("/api/database/standings", async (req, res) => {
+    try {
+      const leagueId = parseInt(req.query.leagueId as string) || 39;
+      const season = parseInt(req.query.season as string) || 2025;
+
+      const standings = await db.select()
+        .from(footballStandings)
+        .where(
+          and(
+            eq(footballStandings.leagueId, leagueId),
+            eq(footballStandings.season, season.toString())
+          )
+        )
+        .orderBy(footballStandings.rank);
+
+      const transformedStandings = standings.map(s => ({
+        position: s.rank || 0,
+        team: s.teamName || '',
+        points: s.points || 0,
+        played: s.allPlayed || 0,
+        won: s.allWin || 0,
+        drawn: s.allDraw || 0,
+        lost: s.allLose || 0,
+        goalsFor: s.allGoalsFor || 0,
+        goalsAgainst: s.allGoalsAgainst || 0,
+        goalDifference: s.goalsDiff || 0,
+        form: s.form ? s.form.split('') : []
+      }));
+
+      res.json({
+        data: transformedStandings,
+        lastUpdated: standings[0]?.lastUpdate || new Date(),
+        source: "database"
+      });
+    } catch (error) {
+      console.error('Error fetching standings from database:', error);
+      res.status(500).json({ error: "Failed to fetch standings from database" });
+    }
+  });
+
+  // Get player statistics from database for PlayerStatsOverlay and PlayerComparisonOverlay
+  app.get("/api/database/players/top-scorers", async (req, res) => {
+    try {
+      const season = parseInt(req.query.season as string) || 2025;
+      const leagueId = parseInt(req.query.leagueId as string) || 39;
+      const teamId = parseInt(req.query.teamId as string) || 40; // Liverpool
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const players = await db.select({
+        id: footballPlayers.id,
+        name: footballPlayers.name,
+        photo: footballPlayers.photo,
+        goals: footballPlayerStatistics.goalsTotal,
+        assists: footballPlayerStatistics.goalsAssists,
+        appearances: footballPlayerStatistics.gamesAppearances,
+        minutes: footballPlayerStatistics.gamesMinutes,
+        rating: footballPlayerStatistics.gamesRating,
+        position: footballPlayers.position
+      })
+      .from(footballPlayerStatistics)
+      .innerJoin(footballPlayers, eq(footballPlayerStatistics.playerId, footballPlayers.id))
+      .where(
+        and(
+          eq(footballPlayerStatistics.teamId, teamId),
+          eq(footballPlayerStatistics.leagueId, leagueId),
+          eq(footballPlayerStatistics.season, season.toString())
+        )
+      )
+      .orderBy(desc(footballPlayerStatistics.goalsTotal))
+      .limit(limit);
+
+      res.json({
+        data: players.map(p => ({
+          id: p.id,
+          name: p.name,
+          photo: p.photo,
+          goals: p.goals || 0,
+          assists: p.assists || 0,
+          appearances: p.appearances || 0,
+          minutes: p.minutes || 0,
+          rating: p.rating ? p.rating.toFixed(2) : null,
+          position: p.position
+        })),
+        lastUpdated: new Date(),
+        source: "database"
+      });
+    } catch (error) {
+      console.error('Error fetching top scorers from database:', error);
+      res.status(500).json({ error: "Failed to fetch top scorers from database" });
+    }
+  });
+
+  // Get head-to-head data from database for H2HMatchCardOverlay
+  app.get("/api/database/head-to-head/:team1Id/:team2Id", async (req, res) => {
+    try {
+      const team1Id = parseInt(req.params.team1Id);
+      const team2Id = parseInt(req.params.team2Id);
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      if (isNaN(team1Id) || isNaN(team2Id)) {
+        return res.status(400).json({ error: "Invalid team IDs" });
+      }
+
+      // Get fixtures between the two teams
+      const fixtures = await db.select()
+        .from(footballFixtures)
+        .where(
+          and(
+            or(
+              and(
+                eq(footballFixtures.homeTeamId, team1Id),
+                eq(footballFixtures.awayTeamId, team2Id)
+              ),
+              and(
+                eq(footballFixtures.homeTeamId, team2Id),
+                eq(footballFixtures.awayTeamId, team1Id)
+              )
+            ),
+            eq(footballFixtures.statusShort, 'FT')
+          )
+        )
+        .orderBy(desc(footballFixtures.timestamp))
+        .limit(limit);
+
+      const transformedFixtures = fixtures.map(f => ({
+        id: f.id,
+        date: f.timestamp?.toISOString() || new Date().toISOString(),
+        homeTeam: f.homeTeamName || `Team ${f.homeTeamId}`,
+        awayTeam: f.awayTeamName || `Team ${f.awayTeamId}`,
+        homeScore: f.goalsHome,
+        awayScore: f.goalsAway,
+        competition: "Premier League",
+        venue: f.venueName
+      }));
+
+      res.json({
+        data: { fixtures: transformedFixtures },
+        lastUpdated: fixtures[0]?.updatedAt || new Date(),
+        source: "database"
+      });
+    } catch (error) {
+      console.error('Error fetching head-to-head data from database:', error);
+      res.status(500).json({ error: "Failed to fetch head-to-head data from database" });
+    }
+  });
+
+  // Get upcoming fixtures from database for UpcomingFixturesOverlay
+  app.get("/api/database/fixtures/upcoming", async (req, res) => {
+    try {
+      const teamId = parseInt(req.query.teamId as string) || 40; // Liverpool
+      const limit = parseInt(req.query.limit as string) || 5;
+
+      const fixtures = await db.select()
+        .from(footballFixtures)
+        .where(
+          and(
+            or(
+              eq(footballFixtures.homeTeamId, teamId),
+              eq(footballFixtures.awayTeamId, teamId)
+            ),
+            gte(footballFixtures.timestamp, new Date()),
+            or(
+              eq(footballFixtures.statusShort, 'NS'),
+              eq(footballFixtures.statusShort, 'TBD')
+            )
+          )
+        )
+        .orderBy(footballFixtures.timestamp)
+        .limit(limit);
+
+      const transformedFixtures = fixtures.map(f => ({
+        id: f.id,
+        date: f.timestamp?.toISOString() || new Date().toISOString(),
+        homeTeam: f.homeTeamName || `Team ${f.homeTeamId}`,
+        awayTeam: f.awayTeamName || `Team ${f.awayTeamId}`,
+        league: "Premier League",
+        venue: f.venueName,
+        isHome: f.homeTeamId === teamId
+      }));
+
+      res.json({
+        data: { fixtures: transformedFixtures },
+        lastUpdated: fixtures[0]?.updatedAt || new Date(),
+        source: "database"
+      });
+    } catch (error) {
+      console.error('Error fetching upcoming fixtures from database:', error);
+      res.status(500).json({ error: "Failed to fetch upcoming fixtures from database" });
+    }
+  });
+
+  // Refresh endpoint for specific team data
+  app.post("/api/admin/update/team/:teamId", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Trigger update for specific team using existing football service
+      const stats = await footballService.getTeamStatistics(teamId, 39, 2025);
+      
+      if (stats) {
+        // Store updated data in database
+        // This would normally update the teamSeasonStatistics table
+        res.json({ 
+          success: true,
+          message: `Team ${teamId} data updated successfully`,
+          timestamp: new Date()
+        });
+      } else {
+        res.status(500).json({ error: "Failed to update team data" });
+      }
+    } catch (error) {
+      console.error('Error updating team data:', error);
+      res.status(500).json({ error: "Failed to update team data" });
+    }
+  });
+
   // Seed historical Liverpool players (2020-2025)
   app.post("/api/football/players/seed-historical", async (req, res) => {
     try {

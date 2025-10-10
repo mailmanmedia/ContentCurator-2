@@ -1,6 +1,10 @@
 import { motion } from "framer-motion";
-import { Calendar, Clock, MapPin } from "lucide-react";
-import { useFixtures } from "@/hooks/useFootballData";
+import { Calendar, Clock, MapPin, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
@@ -40,7 +44,44 @@ export default function UpcomingFixturesOverlay({
   colorPalette = 'classic',
 }: UpcomingFixturesOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
-  const { data, isLoading, error, refetch } = useFixtures();
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Fetch upcoming fixtures from database
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['upcoming-fixtures-db'],
+    queryFn: async () => {
+      const response = await fetch('/api/database/fixtures/upcoming?teamId=40&limit=10');
+      if (!response.ok) throw new Error('Failed to fetch fixtures');
+      return response.json();
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+  
+  // Handle refresh of data
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch('/api/admin/update/fixtures', { method: 'POST' });
+      if (response.ok) {
+        await refetch();
+        toast({
+          title: "Data refreshed",
+          description: "Fixtures have been updated.",
+        });
+      } else {
+        throw new Error('Failed to refresh data');
+      }
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Could not update fixtures. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   if (isLoading) {
     return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;

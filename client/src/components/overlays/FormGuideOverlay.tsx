@@ -1,6 +1,10 @@
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
@@ -98,12 +102,14 @@ export default function FormGuideOverlay({
   matchLimit = 5,
 }: FormGuideOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch team statistics from API
-  const { data: teamStatsData, isLoading: isLoadingStats, error: statsError } = useQuery({
-    queryKey: ['team-stats', teamId],
+  // Fetch team statistics from database
+  const { data: teamStatsData, isLoading: isLoadingStats, error: statsError, refetch: refetchStats } = useQuery({
+    queryKey: ['team-stats-db', teamId],
     queryFn: async () => {
-      const response = await fetch(`/api/football/teams/${teamId}/statistics?leagueId=39&season=2025`);
+      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=39&season=2025`);
       if (!response.ok) throw new Error('Failed to fetch team stats');
       return response.json();
     },
@@ -111,36 +117,70 @@ export default function FormGuideOverlay({
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Fetch team fixtures for form
-  const { data: fixturesData, isLoading: isLoadingFixtures, error: fixturesError } = useQuery({
-    queryKey: ['team-fixtures', teamId, matchLimit],
+  // Fetch team fixtures from database
+  const { data: fixturesData, isLoading: isLoadingFixtures, error: fixturesError, refetch: refetchFixtures } = useQuery({
+    queryKey: ['team-fixtures-db', teamId, matchLimit],
     queryFn: async () => {
-      const response = await fetch(`/api/football/teams/${teamId}/fixtures?last=${matchLimit}&season=2025`);
+      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}&season=2025`);
       if (!response.ok) throw new Error('Failed to fetch fixtures');
-      const data = await response.json();
-      // Handle both array and object responses
-      if (Array.isArray(data)) {
-        return { fixtures: data };
-      }
-      return data;
+      return response.json();
     },
     enabled: !!teamId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Handle refresh of data
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Trigger database update for this team
+      const response = await fetch(`/api/admin/update/team/${teamId}`, { 
+        method: 'POST' 
+      });
+      
+      if (response.ok) {
+        // Refetch data after successful update
+        await Promise.all([refetchStats(), refetchFixtures()]);
+        toast({
+          title: "Data refreshed",
+          description: "Team data has been updated successfully.",
+        });
+      } else {
+        throw new Error('Failed to refresh data');
+      }
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Could not update team data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const isLoading = isLoadingStats || isLoadingFixtures;
   const error = statsError || fixturesError;
 
-  const { teamName, matches, sequence, record, competition, source } = useMemo(() => {
+  const { teamName, matches, sequence, record, competition, source, lastUpdated } = useMemo(() => {
+    // Extract data from database responses
+    const statsDbData = teamStatsData?.data?.statistics || teamStatsData?.data;
+    const fixturesDbData = fixturesData?.data?.fixtures || fixturesData?.data;
+    
+    // Get last updated timestamp
+    const statsLastUpdated = teamStatsData?.lastUpdated;
+    const fixturesLastUpdated = fixturesData?.lastUpdated;
+    const mostRecentUpdate = statsLastUpdated || fixturesLastUpdated || new Date().toISOString();
+    
     // Extract team name from stats data
-    const teamNameFromStats = teamStatsData?.team?.name || teamStatsData?.statistics?.team?.name || "Team";
+    const teamNameFromStats = statsDbData?.team?.name || "Liverpool";
     
     // Check if we have fixtures data
-    const hasFixtures = fixturesData?.fixtures && Array.isArray(fixturesData.fixtures) && fixturesData.fixtures.length > 0;
+    const hasFixtures = fixturesDbData && Array.isArray(fixturesDbData) && fixturesDbData.length > 0;
     
     if (!hasFixtures) {
       // Try to use form data from team statistics if available
-      const formString = teamStatsData?.statistics?.form || teamStatsData?.form;
+      const formString = statsDbData?.form;
       if (formString && typeof formString === 'string') {
         const formArray = formString.split('').slice(0, matchLimit);
         const formRecord = formArray.reduce(
@@ -159,7 +199,8 @@ export default function FormGuideOverlay({
           sequence: formArray,
           record: formRecord,
           competition: "Premier League",
-          source: "Team Statistics"
+          source: "Database",
+          lastUpdated: mostRecentUpdate
         };
       }
       
@@ -169,11 +210,12 @@ export default function FormGuideOverlay({
         sequence: [],
         record: { W: 0, D: 0, L: 0 },
         competition: "Premier League",
-        source: "No Data"
+        source: "No Data",
+        lastUpdated: mostRecentUpdate
       };
     }
 
-    const fixtures = fixturesData.fixtures;
+    const fixtures = fixturesDbData;
     
     const processedMatches = fixtures
       .filter((f: any) => f.status?.short === 'FT' && f.goals?.home !== null && f.goals?.away !== null)
@@ -219,7 +261,8 @@ export default function FormGuideOverlay({
       sequence: formSequence,
       record: tally,
       competition: processedMatches[0]?.competition || "Premier League",
-      source: "Live API Data"
+      source: "Database",
+      lastUpdated: mostRecentUpdate
     };
   }, [teamStatsData, fixturesData, teamId, matchLimit]);
 
@@ -521,7 +564,41 @@ export default function FormGuideOverlay({
           <span>Losses: {record.L}</span>
           {streakLabel && <span>{streakLabel}</span>}
         </div>
-        <OverlaySourceBadge source={source} timestamp={new Date().toISOString()} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: px(8, { min: 4, max: 12 }),
+            fontSize: `${px(11, { min: 9, max: 14 })}px`,
+            color: palette.muted,
+          }}
+        >
+          <span>
+            Data as of {formatDistanceToNow(new Date(lastUpdated))} ago
+          </span>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            style={{
+              width: px(24, { min: 20, max: 32 }),
+              height: px(24, { min: 20, max: 32 }),
+              padding: 0,
+              background: `${palette.text}10`,
+              border: `1px solid ${palette.text}20`,
+            }}
+          >
+            <RefreshCw 
+              className={isRefreshing ? "animate-spin" : ""} 
+              style={{ 
+                width: px(14, { min: 12, max: 18 }), 
+                height: px(14, { min: 12, max: 18 }),
+                color: palette.text
+              }} 
+            />
+          </Button>
+        </div>
       </footer>
     </motion.div>
   );

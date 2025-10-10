@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { useMemo } from "react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface LeaguePositionOverlayProps {
   width: number;
@@ -26,9 +29,73 @@ export default function LeaguePositionOverlay({
   height,
   opacity = 0.88,
 }: LeaguePositionOverlayProps) {
-  const { data: comparative, isLoading } = useQuery<ComparativeMetrics>({
-    queryKey: ["/api/analytics/comparative-metrics"],
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Fetch standings data from database
+  const { data: standingsData, isLoading, refetch } = useQuery({
+    queryKey: ['standings-db'],
+    queryFn: async () => {
+      const response = await fetch('/api/database/standings?leagueId=39&season=2025');
+      if (!response.ok) throw new Error('Failed to fetch standings');
+      return response.json();
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
+  
+  // Handle refresh of data
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch('/api/admin/update/standings', { method: 'POST' });
+      if (response.ok) {
+        await refetch();
+        toast({
+          title: "Data refreshed",
+          description: "League standings have been updated.",
+        });
+      } else {
+        throw new Error('Failed to refresh data');
+      }
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Could not update standings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
+  // Process standings data to get Liverpool position and metrics
+  const comparative = useMemo(() => {
+    if (!standingsData?.data) return null;
+    
+    const standings = standingsData.data;
+    const liverpoolData = standings.find((t: any) => t.team === 'Liverpool' || t.team.includes('Liverpool'));
+    const top6 = standings.slice(0, 6);
+    
+    if (!liverpoolData) return null;
+    
+    const leaderPoints = standings[0]?.points || 0;
+    const top4Points = standings[3]?.points || 0;
+    
+    return {
+      standings: {
+        liverpoolPosition: liverpoolData.position,
+        liverpoolPoints: liverpoolData.points,
+        pointsFromLeader: leaderPoints - liverpoolData.points,
+        pointsFromTop4: Math.max(0, top4Points - liverpoolData.points),
+        top6Standings: top6.map((t: any) => ({
+          position: t.position,
+          name: t.team,
+          points: t.points
+        }))
+      },
+      lastUpdated: standingsData.lastUpdated
+    };
+  }, [standingsData]);
 
   const { scale, scaleValue } = useMemo(() => {
     // Use actual container dimensions

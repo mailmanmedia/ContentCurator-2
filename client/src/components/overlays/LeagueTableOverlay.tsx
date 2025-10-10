@@ -1,6 +1,10 @@
 import { motion } from "framer-motion";
-import { Trophy, TrendingDown } from "lucide-react";
-import { useLeagueTable } from "@/hooks/useFootballData";
+import { Trophy, TrendingDown, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
@@ -41,7 +45,44 @@ export default function LeagueTableOverlay({
   showFullTable,
   teamCount = 10,
 }: LeagueTableOverlayProps) {
-  const { data, isLoading, error, refetch } = useLeagueTable();
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Fetch standings from database
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['league-table-db'],
+    queryFn: async () => {
+      const response = await fetch('/api/database/standings?leagueId=39&season=2025');
+      if (!response.ok) throw new Error('Failed to fetch standings');
+      return response.json();
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+  
+  // Handle refresh of data
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch('/api/admin/update/standings', { method: 'POST' });
+      if (response.ok) {
+        await refetch();
+        toast({
+          title: "Data refreshed",
+          description: "League table has been updated.",
+        });
+      } else {
+        throw new Error('Failed to refresh data');
+      }
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Could not update league table. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   // Determine effective team count
   let effectiveTeamCount: number | 'full';

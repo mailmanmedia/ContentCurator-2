@@ -6,11 +6,13 @@
  * empty navy box on compact canvases.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp } from "lucide-react";
-
-import { useTopScorers } from "@/hooks/useFootballData";
+import { TrendingUp, RefreshCw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
@@ -247,7 +249,44 @@ export default function PlayerComparisonOverlay({
   colorPalette = "classic",
 }: PlayerComparisonOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
-  const { data, isLoading, error, refetch } = useTopScorers();
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Fetch player statistics from database
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['player-comparison-db'],
+    queryFn: async () => {
+      const response = await fetch('/api/database/players/top-scorers?season=2025&teamId=40&limit=20');
+      if (!response.ok) throw new Error('Failed to fetch player stats');
+      return response.json();
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+  
+  // Handle refresh of data
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch('/api/admin/update/players', { method: 'POST' });
+      if (response.ok) {
+        await refetch();
+        toast({
+          title: "Data refreshed",
+          description: "Player data has been updated.",
+        });
+      } else {
+        throw new Error('Failed to refresh data');
+      }
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Could not update player data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   if (isLoading) {
     return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;

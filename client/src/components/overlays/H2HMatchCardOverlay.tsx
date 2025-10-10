@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
-import { useH2HData } from "@/hooks/useFootballData";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
@@ -56,9 +58,53 @@ export default function H2HMatchCardOverlay({
   opacity = 0.95,
   colorPalette = 'classic',
 }: H2HMatchCardOverlayProps) {
-  const { data, isLoading, error, refetch, isFetching } = useH2HData(homeTeamId, awayTeamId);
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Fetch H2H data from database
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['h2h-db', homeTeamId, awayTeamId],
+    queryFn: async () => {
+      const response = await fetch(`/api/database/head-to-head/${homeTeamId}/${awayTeamId}?limit=30`);
+      if (!response.ok) throw new Error('Failed to fetch H2H data');
+      return response.json();
+    },
+    enabled: !!homeTeamId && !!awayTeamId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+  
   const { data: homeTeam } = useTeamBadge(homeTeamId);
   const { data: awayTeam } = useTeamBadge(awayTeamId);
+  
+  // Handle refresh of data
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Trigger database update for these teams
+      const response = await fetch(`/api/admin/update/all`, { 
+        method: 'POST' 
+      });
+      
+      if (response.ok) {
+        // Refetch data after successful update
+        await refetch();
+        toast({
+          title: "Data refreshed",
+          description: "H2H data has been updated successfully.",
+        });
+      } else {
+        throw new Error('Failed to refresh data');
+      }
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Could not update H2H data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const palettes = {
     classic: {
@@ -121,7 +167,7 @@ export default function H2HMatchCardOverlay({
     );
   }
 
-  if (!data?.data) {
+  if (!data?.data?.fixtures && !data?.data) {
     return (
       <OverlayEmptyState
         message="No head-to-head data available"
@@ -131,8 +177,10 @@ export default function H2HMatchCardOverlay({
     );
   }
 
+  // Extract fixtures from database response
   const h2hData = data.data;
-  const allMatches: H2HMatch[] = h2hData.fixtures || [];
+  const allMatches: H2HMatch[] = h2hData?.fixtures || h2hData || [];
+  const lastUpdated = data.lastUpdated || new Date().toISOString();
 
   // Sort matches by date (most recent first)
   const sortedMatches = [...allMatches].sort((a, b) => 
@@ -429,37 +477,35 @@ export default function H2HMatchCardOverlay({
           alignItems: 'center',
           gap: '8px',
         }}>
-          {data.timestamp && (
-            <div style={{
-              fontSize: 'clamp(8px, 1.1vw, 10px)',
-              color: colors.textSecondary,
-              textAlign: 'right',
-            }} data-testid="last-updated">
-              Updated: {formatTimestamp(data.timestamp)}
-            </div>
-          )}
+          <div style={{
+            fontSize: 'clamp(8px, 1.1vw, 10px)',
+            color: colors.textSecondary,
+            textAlign: 'right',
+          }} data-testid="last-updated">
+            Data as of {formatDistanceToNow(new Date(lastUpdated))} ago
+          </div>
           <button
-            onClick={() => refetch()}
-            disabled={isFetching}
+            onClick={handleRefresh}
+            disabled={isRefreshing}
             style={{
               backgroundColor: 'transparent',
               border: `1px solid ${colors.border}`,
               borderRadius: '4px',
               padding: 'clamp(4px, 0.8vw, 6px)',
-              cursor: isFetching ? 'not-allowed' : 'pointer',
+              cursor: isRefreshing ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: colors.accent,
               transition: 'all 0.2s ease',
-              opacity: isFetching ? 0.5 : 1,
+              opacity: isRefreshing ? 0.5 : 1,
             }}
             data-testid="button-refresh-h2h"
           >
             <RefreshCw
               size={parseInt('clamp(12px, 2vw, 16px)'.match(/\d+/)?.[0] || '14')}
               style={{
-                animation: isFetching ? 'spin 1s linear infinite' : 'none',
+                animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
               }}
             />
           </button>
@@ -556,11 +602,6 @@ export default function H2HMatchCardOverlay({
           Showing 5 of {totalMatches} total matches
         </div>
       )}
-
-      <OverlaySourceBadge 
-        source={data.source as any} 
-        timestamp={data.timestamp ? new Date(data.timestamp).getTime() : undefined} 
-      />
     </motion.div>
   );
 }

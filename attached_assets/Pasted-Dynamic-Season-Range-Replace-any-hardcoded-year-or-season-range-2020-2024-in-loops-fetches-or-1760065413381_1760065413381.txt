@@ -1,0 +1,47 @@
+Dynamic Season Range
+
+Replace any hardcoded year or season range (2020...2024) in loops, fetches, or queries with dynamic logic:
+
+Use JavaScript/TypeScript: const currentYear = new Date().getFullYear(); for (let year = 2020; year <= currentYear; year++) { ... }
+
+Alternatively: First fetch the available seasons from the API (/leagues/seasons) and loop through all returned years when fetching teams, fixtures, or player data.
+
+Scheduled and Manual Data Updates
+
+Implement or confirm a scheduler (cron, node-cron, serverless, etc.) to fetch and update all relevant football data (teams, players, fixtures, stats) at least twice per week, covering all seasons including the current one.
+
+Ensure there is a manual update (refresh) button in every admin or data status UI module that immediately triggers the latest data fetch for all supported seasons.
+
+Timestamp & Data Integrity
+
+Every time data is fetched or updated, record a last_updated timestamp in the database for that season, league, or resource.
+
+On all pages/widgets that present league standings, fixtures, squads, or statistics, display “data accurate as of [timestamp]” to the user.
+
+File/Folder Review
+
+Review and, if needed, modify the following folder locations:
+
+services/ (all data bootstrapping and fetch logic)
+
+server/ (API route logic, scheduler, DB connectors)
+
+shared/ (all DB schemas/models)
+
+client/src/pages/ (admin/status/analytics dashboards)
+
+client/src/components/overlays/ (all overlays using season logic)
+
+Any util/helper modules that generate or use season/year ranges.
+
+Error Logging and Verification
+
+If any fetch or update fails, log the error to a visible admin page and surface incomplete data indicators.
+
+Implement or refine completeness checks comparing the number of records for each season/team/league to the expected totals from the API provider.
+
+Test and Validate
+
+After updating, run the data fetch pipeline to confirm that 2025 data is fully represented in the database, UI, and all overlays/updaters.
+
+Confirm all future seasons will be included automatically without further manual code changes.
