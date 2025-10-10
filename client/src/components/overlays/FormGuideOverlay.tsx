@@ -1,19 +1,12 @@
-/**
- * NOTE FOR FUTURE CODERS:
- * The old form overlay was rendering as a blank navy tile because the
- * analytics payload's `form` field arrives as a compact string (e.g. "WWDL")
- * but the component assumed it was an array and called `.join()`. That
- * TypeError bailed out of the render before any markup or brand styling could
- * mount. This version normalises whatever we get back (string or array),
- * guards against missing matches, and keeps a fully styled layout even when we
- * fall back to curated data. After the first rewrite we discovered the inner
- * layout still locked to our 420×260 reference size, so this update adds
- * responsive breakpoints that collapse the grid, re-scale typography, and
- * allow the fixture list to scroll when an embed provides only a narrow slot.
- */
-
 import { motion } from "framer-motion";
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  OverlayLoadingSkeleton,
+  OverlayErrorState,
+  OverlayEmptyState,
+  OverlaySourceBadge,
+} from "./OverlayStates";
 
 export const COLOR_PALETTES = {
   classic: {
@@ -56,186 +49,21 @@ export const COLOR_PALETTES = {
 
 export type ColorPaletteKey = keyof typeof COLOR_PALETTES;
 
-export interface MatchSummary {
-  opponent: string;
-  date: string;
-  competition: string;
-  venue: "H" | "A" | "N";
-  score: string;
-  result: "W" | "D" | "L";
-  note?: string;
+interface FormGuideOverlayProps {
+  width: number;
+  height: number;
+  opacity?: number;
+  layout?: "horizontal" | "vertical";
+  teamId?: number;
+  colorPalette?: ColorPaletteKey;
+  titleSize?: number;
+  circleSize?: number;
+  labelSize?: number;
+  matchLimit?: 3 | 5 | 10;
 }
 
-interface TeamFormRecord {
-  team: string;
-  competition: string;
-  updated: string;
-  source: string;
-  matches: MatchSummary[];
-}
-
-const TEAM_FORM_DATA: Record<string, TeamFormRecord> = {
-  liverpool: {
-    team: "Liverpool",
-    competition: "Premier League",
-    updated: "2024-05-19T18:30:00Z",
-    source: "Mailman Media analytics (Premier League match centre)",
-    matches: [
-      {
-        opponent: "Wolverhampton Wanderers",
-        competition: "Premier League",
-        date: "2024-05-19",
-        venue: "H",
-        score: "2-0",
-        result: "W",
-      },
-      {
-        opponent: "Aston Villa",
-        competition: "Premier League",
-        date: "2024-05-13",
-        venue: "A",
-        score: "3-3",
-        result: "D",
-        note: "Came back from two goals down",
-      },
-      {
-        opponent: "Tottenham Hotspur",
-        competition: "Premier League",
-        date: "2024-05-05",
-        venue: "H",
-        score: "4-2",
-        result: "W",
-      },
-      {
-        opponent: "West Ham United",
-        competition: "Premier League",
-        date: "2024-04-27",
-        venue: "A",
-        score: "2-2",
-        result: "D",
-      },
-      {
-        opponent: "Everton",
-        competition: "Premier League",
-        date: "2024-04-24",
-        venue: "A",
-        score: "0-2",
-        result: "L",
-      },
-    ],
-  },
-  "manchester-city": {
-    team: "Manchester City",
-    competition: "Premier League",
-    updated: "2024-05-19T17:30:00Z",
-    source: "Mailman Media analytics (Premier League match centre)",
-    matches: [
-      {
-        opponent: "West Ham United",
-        competition: "Premier League",
-        date: "2024-05-19",
-        venue: "H",
-        score: "3-1",
-        result: "W",
-      },
-      {
-        opponent: "Tottenham Hotspur",
-        competition: "Premier League",
-        date: "2024-05-14",
-        venue: "A",
-        score: "2-0",
-        result: "W",
-      },
-      {
-        opponent: "Fulham",
-        competition: "Premier League",
-        date: "2024-05-11",
-        venue: "A",
-        score: "4-0",
-        result: "W",
-      },
-      {
-        opponent: "Wolverhampton Wanderers",
-        competition: "Premier League",
-        date: "2024-05-04",
-        venue: "H",
-        score: "5-1",
-        result: "W",
-      },
-      {
-        opponent: "Nottingham Forest",
-        competition: "Premier League",
-        date: "2024-04-28",
-        venue: "A",
-        score: "2-0",
-        result: "W",
-      },
-    ],
-  },
-  arsenal: {
-    team: "Arsenal",
-    competition: "Premier League",
-    updated: "2024-05-19T18:00:00Z",
-    source: "Mailman Media analytics (Premier League match centre)",
-    matches: [
-      {
-        opponent: "Everton",
-        competition: "Premier League",
-        date: "2024-05-19",
-        venue: "H",
-        score: "2-1",
-        result: "W",
-      },
-      {
-        opponent: "Manchester United",
-        competition: "Premier League",
-        date: "2024-05-12",
-        venue: "A",
-        score: "1-0",
-        result: "W",
-      },
-      {
-        opponent: "AFC Bournemouth",
-        competition: "Premier League",
-        date: "2024-05-04",
-        venue: "H",
-        score: "3-0",
-        result: "W",
-      },
-      {
-        opponent: "Tottenham Hotspur",
-        competition: "Premier League",
-        date: "2024-04-28",
-        venue: "A",
-        score: "3-2",
-        result: "W",
-      },
-      {
-        opponent: "Chelsea",
-        competition: "Premier League",
-        date: "2024-04-23",
-        venue: "H",
-        score: "5-0",
-        result: "W",
-      },
-    ],
-  },
-};
-
-const DEFAULT_TEAM_KEY = "liverpool";
-
-// Utility to clamp values between min and max
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-// Normalize team names to keys
-const normaliseKey = (name: string) =>
-  name
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-
-// Format date to short display
 const formatDate = (iso: string) => {
   const date = new Date(iso);
   return date.toLocaleDateString(undefined, {
@@ -244,7 +72,6 @@ const formatDate = (iso: string) => {
   });
 };
 
-// Venue label helper
 const venueLabel = (venue: "H" | "A" | "N") => {
   switch (venue) {
     case "H":
@@ -258,25 +85,12 @@ const venueLabel = (venue: "H" | "A" | "N") => {
   }
 };
 
-interface FormGuideOverlayProps {
-  width: number;
-  height: number;
-  opacity?: number;
-  layout?: "horizontal" | "vertical";
-  teamName?: string;
-  colorPalette?: ColorPaletteKey;
-  titleSize?: number;
-  circleSize?: number;
-  labelSize?: number;
-  matchLimit?: 3 | 5 | 10;
-}
-
 export default function FormGuideOverlay({
   width,
   height,
   opacity = 0.92,
   layout = "horizontal",
-  teamName = "Liverpool",
+  teamId = 40,
   colorPalette = "navy",
   titleSize = 20,
   circleSize = 54,
@@ -285,33 +99,86 @@ export default function FormGuideOverlay({
 }: FormGuideOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
 
-  const { record, matches, sequence, updated, source, isFallback } = useMemo(() => {
-    const key = normaliseKey(teamName);
-    const entry = TEAM_FORM_DATA[key] ?? TEAM_FORM_DATA[DEFAULT_TEAM_KEY];
-    const trimmedMatches = entry.matches
-      .slice()
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, matchLimit);
+  // Fetch team statistics from API
+  const { data: teamStatsData, isLoading: isLoadingStats, error: statsError } = useQuery({
+    queryKey: ['team-stats', teamId],
+    queryFn: async () => {
+      const response = await fetch(`/api/football/teams/${teamId}/statistics?season=2025`);
+      if (!response.ok) throw new Error('Failed to fetch team stats');
+      return response.json();
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-    const formSequence = trimmedMatches.map((match) => match.result);
+  // Fetch team fixtures for form
+  const { data: fixturesData, isLoading: isLoadingFixtures, error: fixturesError } = useQuery({
+    queryKey: ['team-fixtures', teamId, matchLimit],
+    queryFn: async () => {
+      const response = await fetch(`/api/football/teams/${teamId}/fixtures?last=${matchLimit}&season=2025`);
+      if (!response.ok) throw new Error('Failed to fetch fixtures');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
+  const isLoading = isLoadingStats || isLoadingFixtures;
+  const error = statsError || fixturesError;
+
+  const { teamName, matches, sequence, record, competition, source } = useMemo(() => {
+    if (!teamStatsData || !fixturesData) {
+      return {
+        teamName: "Team",
+        matches: [],
+        sequence: [],
+        record: { W: 0, D: 0, L: 0 },
+        competition: "Unknown",
+        source: "Loading..."
+      };
+    }
+
+    const processedMatches = fixturesData.fixtures
+      .filter((f: any) => f.status?.short === 'FT')
+      .slice(0, matchLimit)
+      .map((fixture: any) => {
+        const isHome = fixture.teams?.home?.id === teamId;
+        const homeScore = fixture.goals?.home ?? 0;
+        const awayScore = fixture.goals?.away ?? 0;
+        const teamScore = isHome ? homeScore : awayScore;
+        const opponentScore = isHome ? awayScore : homeScore;
+
+        let result: 'W' | 'D' | 'L';
+        if (teamScore > opponentScore) result = 'W';
+        else if (teamScore < opponentScore) result = 'L';
+        else result = 'D';
+
+        return {
+          opponent: isHome ? fixture.teams.away.name : fixture.teams.home.name,
+          date: fixture.fixture.date,
+          competition: fixture.league?.name || "Unknown",
+          venue: isHome ? "H" : "A" as "H" | "A",
+          score: `${teamScore}-${opponentScore}`,
+          result,
+        };
+      });
+
+    const formSequence = processedMatches.map((m: any) => m.result);
     const tally = formSequence.reduce(
-      (acc, result) => {
+      (acc: any, result: string) => {
         acc[result] += 1;
         return acc;
       },
-      { W: 0, D: 0, L: 0 } as Record<"W" | "D" | "L", number>
+      { W: 0, D: 0, L: 0 }
     );
 
     return {
-      record: tally,
-      matches: trimmedMatches,
+      teamName: teamStatsData.team?.name || "Team",
+      matches: processedMatches,
       sequence: formSequence,
-      updated: entry.updated,
-      source: entry.source,
-      isFallback: key !== normaliseKey(entry.team),
+      record: tally,
+      competition: processedMatches[0]?.competition || "Premier League",
+      source: "Live API Data"
     };
-  }, [teamName, matchLimit]);
+  }, [teamStatsData, fixturesData, teamId, matchLimit]);
 
   // Dynamic scaling based on container dimensions
   const { scale, px } = useMemo(() => {
@@ -335,7 +202,7 @@ export default function FormGuideOverlay({
     return { scale: computed, px };
   }, [width, height]);
 
-  // Responsive layout decisions based on size
+  // Responsive layout decisions
   const isStacked = layout === "vertical" || width < 360 || height < 220 || scale < 0.75;
   const isUltraCompact = width < 280 || height < 180 || scale < 0.6;
 
@@ -349,7 +216,6 @@ export default function FormGuideOverlay({
   const spacing = px(isStacked ? 12 : 18, { min: 6, max: 28 });
   const padding = px(isUltraCompact ? 14 : 18, { min: 10, max: 28 });
   const borderRadius = px(12, { min: 8, max: 22 });
-  const dividerHeight = px(1.5, { min: 1, max: 2 });
 
   // Streak analysis
   const streakType = matches[0]?.result;
@@ -373,28 +239,16 @@ export default function FormGuideOverlay({
 
   const badgeText = `${record.W}W-${record.D}D-${record.L}L`;
 
+  if (isLoading) {
+    return <OverlayLoadingSkeleton width={width} height={height} />;
+  }
+
+  if (error) {
+    return <OverlayErrorState width={width} height={height} error={error as Error} />;
+  }
+
   if (!sequence.length) {
-    return (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          backgroundColor: palette.background,
-          opacity,
-          color: palette.text,
-          borderRadius,
-          border: `${Math.max(1.5 * scale, 1)}px solid ${palette.border}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "League Spartan, sans-serif",
-          padding,
-          textAlign: "center",
-        }}
-      >
-        Form feed unavailable for {teamName}
-      </div>
-    );
+    return <OverlayEmptyState width={width} height={height} message={`No form data available for ${teamName}`} />;
   }
 
   return (
@@ -457,7 +311,7 @@ export default function FormGuideOverlay({
               color: palette.muted,
             }}
           >
-            {matches[0]?.competition} · {streakLabel}
+            {competition} · {streakLabel}
           </div>
         </div>
         <div
@@ -502,7 +356,7 @@ export default function FormGuideOverlay({
             minHeight: circlePx + px(20, { min: 6, max: 16 }),
           }}
         >
-          {sequence.map((result, index) => (
+          {sequence.map((result: string, index: number) => (
             <motion.div
               key={`${result}-${index}`}
               initial={{ opacity: 0, scale: 0.8 }}
@@ -515,7 +369,7 @@ export default function FormGuideOverlay({
                   width: circlePx,
                   height: circlePx,
                   borderRadius: "50%",
-                  backgroundColor: palette.resultColors[result],
+                  backgroundColor: palette.resultColors[result as 'W' | 'D' | 'L'],
                   color: result === "L" ? "#1A1A1A" : "#002147",
                   display: "flex",
                   alignItems: "center",
@@ -555,7 +409,7 @@ export default function FormGuideOverlay({
             width: "100%",
           }}
         >
-          {matches.map((match, index) => (
+          {matches.map((match: any, index: number) => (
             <div
               key={`${match.date}-${match.opponent}`}
               style={{
@@ -591,7 +445,7 @@ export default function FormGuideOverlay({
         style={{
           marginTop: spacing,
           paddingTop: px(12, { min: 8, max: 16 }),
-          borderTop: `${dividerHeight}px solid ${palette.text}20`,
+          borderTop: `${px(1.5, { min: 1, max: 2 })}px solid ${palette.text}20`,
           display: "flex",
           flexDirection: isStacked ? "column" : "row",
           justifyContent: isStacked ? "flex-start" : "space-between",
@@ -615,38 +469,8 @@ export default function FormGuideOverlay({
           <span>Losses: {record.L}</span>
           {streakLabel && <span>{streakLabel}</span>}
         </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: isStacked ? "flex-start" : "flex-end",
-            fontSize: `${px(10, { min: 9, max: 13 })}px`,
-            color: palette.muted,
-            textAlign: isStacked ? "left" : "right",
-          }}
-        >
-          <span>{source}</span>
-          <span>Updated {new Date(updated).toLocaleString(undefined, { month: "short", day: "numeric" })}</span>
-        </div>
+        <OverlaySourceBadge source={source} timestamp={new Date().toISOString()} />
       </footer>
-
-      {isFallback && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: px(12, { min: 8, max: 16 }),
-            left: px(12, { min: 8, max: 16 }),
-            fontSize: `${px(10, { min: 8, max: 12 })}px`,
-            color: palette.muted,
-            backgroundColor: `${palette.background}AA`,
-            padding: `${px(4, { min: 2, max: 6 })}px ${px(8, { min: 4, max: 10 })}px`,
-            borderRadius: px(8, { min: 6, max: 12 }),
-            border: `1px solid ${palette.border}55`,
-          }}
-        >
-          Showing Liverpool data until {teamName} feed is connected
-        </div>
-      )}
     </motion.div>
   );
 }
