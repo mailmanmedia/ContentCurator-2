@@ -18,7 +18,7 @@ interface TableStats {
 }
 
 interface PlayerSeasonStats {
-  season: string;
+  season: number;
   playerCount: number;
   totalGoals: number;
   totalAssists: number;
@@ -40,7 +40,7 @@ interface DatabaseStatusData {
   tables: TableStats[];
   playerSeasons: PlayerSeasonStats[];
   allTeams: Team[];
-  allSeasons: { season: string }[];
+  allSeasons: { season: number }[];
   allLeagues: League[];
   lastApiUpdate: string | null;
   dataSource: 'api' | 'historical';
@@ -148,8 +148,8 @@ export default function DatabaseStatus() {
                     <SelectItem value="all">All Seasons ({data?.allSeasons?.length || 0})</SelectItem>
                     {data?.allSeasons && data.allSeasons.length > 0 ? (
                       data.allSeasons.map((s) => (
-                        <SelectItem key={s.season} value={s.season}>
-                          {s.season}/{(parseInt(s.season) + 1).toString().slice(-2)}
+                        <SelectItem key={s.season} value={s.season.toString()}>
+                          {s.season}/{(s.season + 1).toString().slice(-2)}
                         </SelectItem>
                       ))
                     ) : (
@@ -216,8 +216,8 @@ export default function DatabaseStatus() {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-3">
-                      <Badge variant={parseInt(season.season) >= 2024 ? "default" : "secondary"}>
-                        {parseInt(season.season) - 1}/{season.season.slice(-2)} Season
+                      <Badge variant={season.season >= 2024 ? "default" : "secondary"}>
+                        {season.season - 1}/{season.season.toString().slice(-2)} Season
                       </Badge>
                       <span className="text-sm text-muted-foreground">
                         {season.playerCount} players
