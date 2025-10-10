@@ -133,7 +133,7 @@ export default function AdminDashboard() {
 
   // Manual update mutations
   const updateFixtures = useMutation({
-    mutationFn: () => apiRequest('/api/admin/update/fixtures', 'POST'),
+    mutationFn: () => apiRequest('POST', '/api/admin/update/fixtures'),
     onSuccess: () => {
       toast({ title: "Success", description: "Fixtures updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/database-status'] });
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
   });
 
   const updateStandings = useMutation({
-    mutationFn: () => apiRequest('/api/admin/update/standings', 'POST'),
+    mutationFn: () => apiRequest('POST', '/api/admin/update/standings'),
     onSuccess: () => {
       toast({ title: "Success", description: "Standings updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/database-status'] });
@@ -165,7 +165,7 @@ export default function AdminDashboard() {
   });
 
   const updateTeams = useMutation({
-    mutationFn: () => apiRequest('/api/admin/update/teams', 'POST'),
+    mutationFn: () => apiRequest('POST', '/api/admin/update/teams'),
     onSuccess: () => {
       toast({ title: "Success", description: "Teams updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/database-status'] });
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
   });
 
   const updatePlayers = useMutation({
-    mutationFn: () => apiRequest('/api/admin/update/players', 'POST'),
+    mutationFn: () => apiRequest('POST', '/api/admin/update/players'),
     onSuccess: () => {
       toast({ title: "Success", description: "Players updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/database-status'] });
@@ -197,7 +197,7 @@ export default function AdminDashboard() {
   });
 
   const updateAll = useMutation({
-    mutationFn: () => apiRequest('/api/admin/update/all', 'POST'),
+    mutationFn: () => apiRequest('POST', '/api/admin/update/all'),
     onSuccess: () => {
       toast({ title: "Success", description: "All data updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/database-status'] });
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
 
   const bootstrapData = useMutation({
     mutationFn: (params: { leagues?: string[], seasons?: string[] }) => 
-      apiRequest('/api/admin/bootstrap', 'POST', params),
+      apiRequest('POST', '/api/admin/bootstrap', params),
     onSuccess: () => {
       toast({ title: "Success", description: "Historical data bootstrap initiated" });
       queryClient.invalidateQueries({ queryKey: ['/api/database-status'] });
