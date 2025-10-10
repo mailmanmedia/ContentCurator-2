@@ -524,11 +524,11 @@ class ScheduledUpdateService {
     let recordsUpdated = 0;
     
     try {
-      // Get active players (limit to avoid API rate limits)
+      // Get active players (fetch all Liverpool squad members)
       const players = await db.select()
         .from(footballPlayers)
         .where(eq(footballPlayers.team_id, 40)) // Liverpool FC
-        .limit(30);
+        .limit(50); // Increased to accommodate full squad (typically 25-30 players)
       
       for (const player of players) {
         try {

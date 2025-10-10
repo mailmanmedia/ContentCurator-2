@@ -3618,6 +3618,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Populate FULL Liverpool squad with all players (no limits)
+  app.post("/api/football/players/populate-full-squad", async (req, res) => {
+    try {
+      const season = parseInt(req.body.season) || new Date().getFullYear();
+      const { populateLiverpoolSquadFull } = await import('./football/populateLiverpoolSquadFull');
+      const result = await populateLiverpoolSquadFull(season);
+      res.json(result);
+    } catch (error) {
+      console.error('Error populating full Liverpool squad:', error);
+      res.status(500).json({ 
+        error: "Failed to populate full Liverpool squad",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
 
   // Team statistics endpoint for match preview
   app.get("/api/team-stats/:teamId", async (req, res) => {

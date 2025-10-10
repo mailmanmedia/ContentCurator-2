@@ -230,6 +230,26 @@ export default function AdminDashboard() {
     },
   });
 
+  const populateFullSquad = useMutation({
+    mutationFn: (season?: number) => 
+      apiRequest('POST', '/api/football/players/populate-full-squad', { season: season || new Date().getFullYear() }),
+    onSuccess: (data: any) => {
+      toast({ 
+        title: "Success", 
+        description: `${data.playersPopulated || 0} Liverpool players populated for ${data.season}` 
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/database-status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/update/status'] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to populate full squad",
+        variant: "destructive"
+      });
+    },
+  });
+
   const bootstrapData = useMutation({
     mutationFn: (params: { leagues?: string[], seasons?: string[] }) => 
       apiRequest('POST', '/api/admin/bootstrap', params),
@@ -713,7 +733,7 @@ export default function AdminDashboard() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                       <Users className="h-4 w-4" />
-                      Players
+                      Players (Stats Update)
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -735,6 +755,38 @@ export default function AdminDashboard() {
                         <>
                           <RefreshCcw className="mr-2 h-4 w-4" />
                           Update Players
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover-elevate">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Full Squad (2025)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      onClick={() => {
+                        setActiveOperation('full-squad');
+                        populateFullSquad.mutate(2025);
+                      }}
+                      disabled={populateFullSquad.isPending || updateStatus?.isUpdating}
+                      className="w-full"
+                      data-testid="button-populate-full-squad"
+                    >
+                      {populateFullSquad.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Populating...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCcw className="mr-2 h-4 w-4" />
+                          Populate Full Squad
                         </>
                       )}
                     </Button>
