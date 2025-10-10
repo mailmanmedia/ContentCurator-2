@@ -302,9 +302,9 @@ export default function ContentLibrary() {
   // Filter content with memoization
   const filteredContent = useMemo(() => {
     return allContent.filter(item => {
-      const matchesSearch = item.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      const matchesSearch = item.title?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
                            item.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-                           item.tags.some(tag => tag.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
+                           item.tags?.some(tag => tag?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
       
       const matchesType = selectedType === "all" || item.type === selectedType;
       const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;

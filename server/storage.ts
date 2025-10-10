@@ -51,7 +51,7 @@ import {
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
 import { db } from "./db";
-import { eq, desc, ilike, or, and, gte, lte } from "drizzle-orm";
+import { eq, ilike, or, and, gte, lte } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -1107,7 +1107,7 @@ export class MemStorage implements IStorage {
 
   // RSS Source methods
   async getRssSources(): Promise<RssSource[]> {
-    const results = await db.select().from(rssSourcesTable).orderBy(desc(rssSourcesTable.updatedAt));
+    const results = await db.select().from(rssSourcesTable).orderBy(rssSourcesTable.updatedAt.desc());
     return results;
   }
 
@@ -1155,7 +1155,7 @@ export class MemStorage implements IStorage {
 
   // RSS Article methods
   async getRssArticles(): Promise<RssArticle[]> {
-    const results = await db.select().from(rssArticlesTable).orderBy(desc(rssArticlesTable.published_at));
+    const results = await db.select().from(rssArticlesTable).orderBy(rssArticlesTable.published_at.desc());
     return results;
   }
 
@@ -1167,7 +1167,7 @@ export class MemStorage implements IStorage {
   async getRssArticlesBySource(sourceId: string): Promise<RssArticle[]> {
     const results = await db.select().from(rssArticlesTable)
       .where(eq(rssArticlesTable.sourceId, sourceId))
-      .orderBy(desc(rssArticlesTable.published_at));
+      .orderBy(rssArticlesTable.published_at.desc());
     return results;
   }
 
@@ -1183,7 +1183,7 @@ export class MemStorage implements IStorage {
 
   async getRecentRssArticles(limit: number = 50): Promise<RssArticle[]> {
     const results = await db.select().from(rssArticlesTable)
-      .orderBy(desc(rssArticlesTable.published_at))
+      .orderBy(rssArticlesTable.published_at.desc())
       .limit(limit);
     return results;
   }
@@ -1196,7 +1196,7 @@ export class MemStorage implements IStorage {
           lte(rssArticlesTable.published_at, endDate)
         )
       )
-      .orderBy(desc(rssArticlesTable.published_at));
+      .orderBy(rssArticlesTable.published_at.desc());
     return results;
   }
 
@@ -1210,7 +1210,7 @@ export class MemStorage implements IStorage {
           ilike(rssArticlesTable.author, `%${query}%`)
         )
       )
-      .orderBy(desc(rssArticlesTable.published_at));
+      .orderBy(rssArticlesTable.published_at.desc());
     return results;
   }
 
@@ -1251,7 +1251,7 @@ export class MemStorage implements IStorage {
 
   // RSS Analysis methods
   async getRssAnalyses(): Promise<RssAnalysis[]> {
-    const results = await db.select().from(rssAnalysisTable).orderBy(desc(rssAnalysisTable.updatedAt));
+    const results = await db.select().from(rssAnalysisTable).orderBy(rssAnalysisTable.updatedAt.desc());
     return results;
   }
 
@@ -1263,14 +1263,14 @@ export class MemStorage implements IStorage {
   async getRssAnalysesByArticle(articleId: string): Promise<RssAnalysis[]> {
     const results = await db.select().from(rssAnalysisTable)
       .where(eq(rssAnalysisTable.articleId, articleId))
-      .orderBy(desc(rssAnalysisTable.createdAt));
+      .orderBy(rssAnalysisTable.createdAt.desc());
     return results;
   }
 
   async getRssAnalysesByType(analysisType: string): Promise<RssAnalysis[]> {
     const results = await db.select().from(rssAnalysisTable)
       .where(eq(rssAnalysisTable.analysisType, analysisType))
-      .orderBy(desc(rssAnalysisTable.createdAt));
+      .orderBy(rssAnalysisTable.createdAt.desc());
     return results;
   }
 
@@ -1294,7 +1294,7 @@ export class MemStorage implements IStorage {
 
   // RSS Comparison methods
   async getRssComparisons(): Promise<RssComparison[]> {
-    const results = await db.select().from(rssComparisonsTable).orderBy(desc(rssComparisonsTable.updatedAt));
+    const results = await db.select().from(rssComparisonsTable).orderBy(rssComparisonsTable.updatedAt.desc());
     return results;
   }
 
@@ -1306,14 +1306,14 @@ export class MemStorage implements IStorage {
   async getRssComparisonsByType(comparisonType: string): Promise<RssComparison[]> {
     const results = await db.select().from(rssComparisonsTable)
       .where(eq(rssComparisonsTable.comparisonType, comparisonType))
-      .orderBy(desc(rssComparisonsTable.createdAt));
+      .orderBy(rssComparisonsTable.createdAt.desc());
     return results;
   }
 
   async getPublicRssComparisons(): Promise<RssComparison[]> {
     const results = await db.select().from(rssComparisonsTable)
       .where(eq(rssComparisonsTable.isPublic, true))
-      .orderBy(desc(rssComparisonsTable.createdAt));
+      .orderBy(rssComparisonsTable.createdAt.desc());
     return results;
   }
 
@@ -1460,7 +1460,7 @@ export class MemStorage implements IStorage {
 
   // Scene methods
   async getScenes(): Promise<Scene[]> {
-    const results = await db.select().from(scenesTable).orderBy(desc(scenesTable.updatedAt));
+    const results = await db.select().from(scenesTable).orderBy(scenesTable.updatedAt.desc());
     return results;
   }
 
@@ -1472,14 +1472,14 @@ export class MemStorage implements IStorage {
   async getScenesByLayout(layout: string): Promise<Scene[]> {
     const results = await db.select().from(scenesTable)
       .where(eq(scenesTable.layout, layout))
-      .orderBy(desc(scenesTable.updatedAt));
+      .orderBy(scenesTable.updatedAt.desc());
     return results;
   }
 
   async getSceneTemplates(): Promise<Scene[]> {
     const results = await db.select().from(scenesTable)
       .where(eq(scenesTable.isTemplate, true))
-      .orderBy(desc(scenesTable.updatedAt));
+      .orderBy(scenesTable.updatedAt.desc());
     return results;
   }
 
@@ -1491,7 +1491,7 @@ export class MemStorage implements IStorage {
           ilike(scenesTable.description, `%${query}%`)
         )
       )
-      .orderBy(desc(scenesTable.updatedAt));
+      .orderBy(scenesTable.updatedAt.desc());
     return results;
   }
 
@@ -1563,7 +1563,7 @@ export class MemStorage implements IStorage {
 
   // Presentation Set methods
   async getPresentationSets(): Promise<PresentationSet[]> {
-    const results = await db.select().from(presentationSetsTable).orderBy(desc(presentationSetsTable.updatedAt));
+    const results = await db.select().from(presentationSetsTable).orderBy(presentationSetsTable.updatedAt.desc());
     return results;
   }
 
@@ -1575,7 +1575,7 @@ export class MemStorage implements IStorage {
   async getActivePresentationSets(): Promise<PresentationSet[]> {
     const results = await db.select().from(presentationSetsTable)
       .where(eq(presentationSetsTable.isActive, true))
-      .orderBy(desc(presentationSetsTable.updatedAt));
+      .orderBy(presentationSetsTable.updatedAt.desc());
     return results;
   }
 
@@ -1656,7 +1656,7 @@ export class MemStorage implements IStorage {
 
   // Video Source methods
   async getVideoSources(): Promise<VideoSource[]> {
-    const results = await db.select().from(videoSourcesTable).orderBy(desc(videoSourcesTable.updatedAt));
+    const results = await db.select().from(videoSourcesTable).orderBy(videoSourcesTable.updatedAt.desc());
     return results;
   }
 
@@ -1727,7 +1727,7 @@ export class MemStorage implements IStorage {
 
   // Source Template methods
   async getSourceTemplates(): Promise<SourceTemplate[]> {
-    const results = await db.select().from(sourceTemplatesTable).orderBy(desc(sourceTemplatesTable.createdAt));
+    const results = await db.select().from(sourceTemplatesTable).orderBy(sourceTemplatesTable.createdAt.desc());
     return results;
   }
 
@@ -1758,7 +1758,7 @@ export class MemStorage implements IStorage {
 
   // Set Template methods
   async getSetTemplates(): Promise<SetTemplate[]> {
-    const results = await db.select().from(setTemplatesTable).orderBy(desc(setTemplatesTable.createdAt));
+    const results = await db.select().from(setTemplatesTable).orderBy(setTemplatesTable.createdAt.desc());
     return results;
   }
 
@@ -1983,7 +1983,7 @@ export class MemStorage implements IStorage {
 
   // Recording methods
   async getRecordings(): Promise<Recording[]> {
-    const results = await db.select().from(recordingsTable).orderBy(desc(recordingsTable.createdAt));
+    const results = await db.select().from(recordingsTable).orderBy(recordingsTable.createdAt.desc());
     return results;
   }
 
@@ -2012,7 +2012,7 @@ export class MemStorage implements IStorage {
 
   // Video Project methods
   async getVideoProjects(): Promise<VideoProject[]> {
-    const results = await db.select().from(videoProjectsTable).orderBy(desc(videoProjectsTable.createdAt));
+    const results = await db.select().from(videoProjectsTable).orderBy(videoProjectsTable.createdAt.desc());
     return results;
   }
 
@@ -2166,7 +2166,7 @@ export class MemStorage implements IStorage {
 
   // Render Job methods
   async getRenderJobs(): Promise<RenderJob[]> {
-    const results = await db.select().from(renderJobsTable).orderBy(desc(renderJobsTable.createdAt));
+    const results = await db.select().from(renderJobsTable).orderBy(renderJobsTable.createdAt.desc());
     return results;
   }
 
@@ -2178,7 +2178,7 @@ export class MemStorage implements IStorage {
   async getProjectRenderJobs(projectId: string): Promise<RenderJob[]> {
     const results = await db.select().from(renderJobsTable)
       .where(eq(renderJobsTable.projectId, projectId))
-      .orderBy(desc(renderJobsTable.createdAt));
+      .orderBy(renderJobsTable.createdAt.desc());
     return results;
   }
 
@@ -2324,7 +2324,7 @@ export class MemStorage implements IStorage {
   }
 
   async getDataImports(): Promise<SelectDataImport[]> {
-    const results = await db.select().from(dataImportsTable).orderBy(desc(dataImportsTable.created_at));
+    const results = await db.select().from(dataImportsTable).orderBy(dataImportsTable.created_at.desc());
     return results;
   }
 
