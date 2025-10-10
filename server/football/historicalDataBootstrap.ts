@@ -56,6 +56,7 @@ class HistoricalDataBootstrap {
   private apiService: APIFootballService;
   private leagues: number[] = [39, 2]; // Premier League, Champions League
   private seasons: number[] = [];  // Will be populated dynamically
+  private customSeasonsProvided: boolean = false; // Track if seasons were explicitly provided
   private batchSize: number = 100;
   private delayMs: number = 1000;
   private skipExisting: boolean = false;
@@ -68,9 +69,11 @@ class HistoricalDataBootstrap {
     if (options?.leagues) this.leagues = options.leagues;
     if (options?.seasons) {
       this.seasons = options.seasons;
+      this.customSeasonsProvided = true; // Remember that custom seasons were provided
     } else {
       // Use dynamic season range from 2020 to current year
       this.seasons = this.apiService.getDynamicSeasonRange(2020);
+      this.customSeasonsProvided = false;
     }
     if (options?.batchSize) this.batchSize = options.batchSize;
     if (options?.delayMs) this.delayMs = options.delayMs;
@@ -94,6 +97,18 @@ class HistoricalDataBootstrap {
 
   // Main bootstrap orchestrator
   async bootstrapAll(): Promise<BootstrapReport> {
+    // Only recalculate seasons if they weren't explicitly provided in constructor
+    // This respects custom season lists while handling automatic year rollovers for default usage
+    if (!this.customSeasonsProvided) {
+      const dynamicSeasons = this.apiService.getDynamicSeasonRange(2020);
+      if (this.seasons.join(',') !== dynamicSeasons.join(',')) {
+        console.log(`📅 Updating season range from [${this.seasons.join(', ')}] to [${dynamicSeasons.join(', ')}]`);
+        this.seasons = dynamicSeasons;
+      }
+    } else {
+      console.log(`📅 Using custom season range: [${this.seasons.join(', ')}]`);
+    }
+    
     console.log('\n════════════════════════════════════════════════════════');
     console.log('      HISTORICAL DATA BOOTSTRAP - STARTING');
     console.log('════════════════════════════════════════════════════════');

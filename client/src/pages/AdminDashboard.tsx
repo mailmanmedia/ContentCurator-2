@@ -445,38 +445,33 @@ export default function AdminDashboard() {
               <CardDescription>
                 Real-time overview of all football database tables
               </CardDescription>
-              {dbStatus?.tables && dbStatus.tables.length > 0 && (
-                <Alert className="mt-4">
-                  <Clock className="h-4 w-4" />
-                  <AlertTitle>Data Accuracy</AlertTitle>
-                  <AlertDescription>
-                    Latest data from: {dbStatus.tables
-                      .filter(t => t.latestDate)
+              {dbStatus?.tables && dbStatus.tables.length > 0 && (() => {
+                const tablesWithDates = dbStatus.tables.filter(t => t.latestDate);
+                const latestDate = tablesWithDates.length > 0
+                  ? tablesWithDates
                       .map(t => new Date(t.latestDate!))
                       .sort((a, b) => b.getTime() - a.getTime())[0]
-                      ? format(
-                          dbStatus.tables
-                            .filter(t => t.latestDate)
-                            .map(t => new Date(t.latestDate!))
-                            .sort((a, b) => b.getTime() - a.getTime())[0],
-                          'MMM d, yyyy h:mm a'
-                        )
-                      : 'No data available'}
-                    {' '}({dbStatus.tables
-                      .filter(t => t.latestDate)
-                      .map(t => new Date(t.latestDate!))
-                      .sort((a, b) => b.getTime() - a.getTime())[0]
-                      ? formatDistanceToNow(
-                          dbStatus.tables
-                            .filter(t => t.latestDate)
-                            .map(t => new Date(t.latestDate!))
-                            .sort((a, b) => b.getTime() - a.getTime())[0],
-                          { addSuffix: true }
-                        )
-                      : ''})
-                  </AlertDescription>
-                </Alert>
-              )}
+                  : null;
+                
+                return latestDate ? (
+                  <Alert className="mt-4">
+                    <Clock className="h-4 w-4" />
+                    <AlertTitle>Data Accuracy</AlertTitle>
+                    <AlertDescription>
+                      Latest data from: {format(latestDate, 'MMM d, yyyy h:mm a')}
+                      {' '}({formatDistanceToNow(latestDate, { addSuffix: true })})
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert className="mt-4" variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>No Data Available</AlertTitle>
+                    <AlertDescription>
+                      Database tables are empty. Use the Bootstrap option to import historical data.
+                    </AlertDescription>
+                  </Alert>
+                );
+              })()}
             </CardHeader>
             <CardContent>
               <Table>

@@ -44,15 +44,24 @@ class ScheduledUpdateService {
   /**
    * Get current season dynamically based on current date
    * Football seasons typically run from August to May
+   * Using July 1st as the cutoff to handle preseason and qualification matches
    */
   private getCurrentSeason(): number {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1; // getMonth() is 0-indexed
+    const currentDay = now.getDate();
     
-    // If it's January to July, the season is the previous year
-    // If it's August to December, the season is the current year
-    return currentMonth < 8 ? currentYear - 1 : currentYear;
+    // Season starts around July 1st (handles preseason, qualifiers, and early fixtures)
+    // If it's before July 1st, the season is the previous year
+    // If it's July 1st or later, the season is the current year
+    if (currentMonth < 7) {
+      return currentYear - 1;
+    } else if (currentMonth === 7 && currentDay === 1) {
+      return currentYear; // Boundary case: July 1st belongs to new season
+    } else {
+      return currentYear;
+    }
   }
   
   /**

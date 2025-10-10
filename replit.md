@@ -38,15 +38,31 @@ A comprehensive video editing platform for transforming broadcast recordings int
 - **Render Queue & Export**: Background rendering via Bull Queue with real-time progress tracking, quality presets, and MP4/WebM export.
 
 #### Football Data Integration
-Integrates 2025-26 season football data from multiple live sources, prioritizing real-time accuracy and database-first fetching for fixtures.
+Integrates football data from multiple live sources with **dynamic season handling** that automatically includes current and future seasons without code changes.
+
+**Dynamic Season Management:**
+- **Auto-Season Detection**: System automatically detects and includes seasons from 2020 to current year
+- **Smart Season Calculation**: Football calendar-aware (Aug-May), uses July 1st cutoff for preseason/qualifiers
+- **Automatic Updates**: Historical bootstrap recalculates season range on each run to handle year rollovers
+- **API Integration**: Fetches available seasons from API Football `/leagues/seasons` endpoint with fallback logic
+- **No Hardcoded Years**: All season ranges calculated dynamically - works for 2025, 2026, and beyond
+
+**Data Sources:**
 - **Liverpool FC Official Calendar**: Fetches and parses live fixture data from the official iCalendar feed with caching and error handling.
 - **Team Badge System**: Integrates 100+ team badges with robust name normalization and a multi-tier lookup strategy.
-- **Automatic Statistics Update**: Production-ready cron scheduler for daily and post-match updates of Liverpool FC statistics.
+- **Automatic Statistics Update**: Production-ready cron scheduler (Wed/Sat at 3 AM) for twice-weekly updates of Liverpool FC statistics.
 - **The Fishy Integration**: Real-time Premier League table scraping from thefishy.co.uk providing current standings, form (last 6 games), points, and league positions.
 - **FBRef Integration**: Comprehensive statistics from fbref.com including detailed player stats (goals, assists, minutes, cards), team statistics, and advanced analytics.
 - **Multi-Source Data Enrichment**: Combined endpoints merge data from The Fishy and FBRef for most accurate and complete football statistics.
 - **Team Matchup Studio**: Comprehensive team analysis from a historical Head-to-Head database (2020-present).
 - **Centralized Data Management**: Production-ready data integration layer with centralized `footballDataService.ts` providing **authenticated 4-source fallback chain** (API Football Pro Plan → The Fishy → FBRef → localStorage cache). **NO AI-generated or synthetic data**—all statistics are authentic from verified API endpoints only. All overlay components use unified React hooks (`useFootballData.ts`) with runtime Zod validation, automatic error recovery, and consistent UI states. Features React error boundaries, loading/error/empty state components, source attribution badges showing data origin and freshness timestamps, and localStorage caching for offline resilience. If all 4 sources fail, overlays display error states instead of fallback data.
+
+**Data Freshness & Accuracy:**
+- **Timestamp Tracking**: All data fetches record last_updated timestamps in database
+- **Admin Dashboard**: Displays "Latest data from: [timestamp]" showing most recent data across all tables
+- **Real-time Status**: Tables show earliest/latest dates with color-coded freshness indicators (green=up to date, yellow=needs update, red=stale)
+- **Manual Refresh**: Admin dashboard provides manual update buttons for immediate data refresh
+- **Scheduled Updates**: Automatic twice-weekly updates (Wednesday and Saturday at 3 AM) for all football data
 
 #### RSS Intelligence System
 A comprehensive RSS feed management and analysis platform for monitoring Liverpool FC news and media coverage. Features a PostgreSQL database schema, automated fetching with sentiment analysis, advanced filtering, and dashboard analytics. Integrated with Live Presentation for RSS ticker overlays.
