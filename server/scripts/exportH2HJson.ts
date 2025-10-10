@@ -84,15 +84,17 @@ function getCurrentSeason(): number {
 async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<OpponentH2H | null> {
   try {
     // Get opponent details
-    const opponent = await db.select()
+    const opponents = await db.select()
       .from(footballTeams)
       .where(eq(footballTeams.id, opponentId))
       .limit(1);
 
-    if (!opponent[0]) {
+    if (opponents.length === 0) {
       console.warn(`Opponent ${opponentId} not found`);
       return null;
     }
+    
+    const opponent = opponents[0];
 
     // Fetch matches from database (all seasons, all competitions)
     const dbMatches = await db.select()
@@ -194,20 +196,20 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
       fixtureId: match.id,
       date: match.timestamp?.toISOString() || new Date().toISOString(),
       season: parseInt(match.season) || getCurrentSeason(),
-      competition: match.league_id === 39 ? 'Premier League' : 
-                   match.league_id === 2 ? 'Champions League' :
-                   match.league_id === 3 ? 'Europa League' :
-                   match.league_id === 45 ? 'FA Cup' :
-                   match.league_id === 48 ? 'League Cup' : 'Unknown',
-      competitionId: match.league_id,
-      venue: match.venue_name || '',
-      homeTeamId: match.home_team_id,
-      homeTeamName: match.home_team_name,
-      awayTeamId: match.away_team_id,
-      awayTeamName: match.away_team_name,
-      homeScore: match.goals_home,
-      awayScore: match.goals_away,
-      status: match.status_short,
+      competition: match.leagueId === 39 ? 'Premier League' : 
+                   match.leagueId === 2 ? 'Champions League' :
+                   match.leagueId === 3 ? 'Europa League' :
+                   match.leagueId === 45 ? 'FA Cup' :
+                   match.leagueId === 48 ? 'League Cup' : 'Unknown',
+      competitionId: match.leagueId,
+      venue: typeof match.venue === 'object' ? match.venue?.name || '' : match.venue || '',
+      homeTeamId: match.homeTeamId,
+      homeTeamName: match.homeTeam?.name || '',
+      awayTeamId: match.awayTeamId,
+      awayTeamName: match.awayTeam?.name || '',
+      homeScore: match.goals?.home ?? null,
+      awayScore: match.goals?.away ?? null,
+      status: match.status?.short || 'NS',
       round: match.round || undefined
     }));
 
@@ -229,9 +231,9 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
     });
 
     return {
-      opponentId: opponent[0].id,
-      opponentName: opponent[0].name,
-      opponentLogo: opponent[0].logo,
+      opponentId: opponent.id,
+      opponentName: opponent.name,
+      opponentLogo: opponent.logo,
       matches,
       record: { wins, draws, losses }
     };
@@ -248,37 +250,48 @@ async function fetchLiverpoolSquad(liverpoolId: number): Promise<PlayerData[]> {
   const currentSeason = getCurrentSeason();
   
   try {
-    // Get all Liverpool players with current season stats
-    const playersWithStats = await db.select({
-      player: footballPlayers,
-      stats: playerSeasonStatistics
-    })
+    // Get all Liverpool players
+    const players = await db.select()
       .from(footballPlayers)
-      .leftJoin(
-        playerSeasonStatistics,
-        and(
-          eq(playerSeasonStatistics.playerId, footballPlayers.id),
-          eq(playerSeasonStatistics.season, currentSeason.toString()),
-          eq(playerSeasonStatistics.teamId, liverpoolId)
-        )
-      )
-      .where(eq(footballPlayers.team_id, liverpoolId));
+      .where(eq(footballPlayers.teamId, liverpoolId));
 
-    return playersWithStats.map(({ player, stats }) => ({
-      id: player.id,
-      name: player.name,
-      photo: player.photo || '',
-      position: player.position || undefined,
-      number: player.number || undefined,
-      statistics: stats ? {
-        season: currentSeason,
-        goals: stats.goals,
-        assists: stats.assists,
-        appearances: stats.appearances,
-        minutes: stats.minutes,
-        rating: stats.rating?.toString() || null
-      } : undefined
-    }));
+    // Get stats for these players
+    const playerIds = players.map(p => p.id);
+    
+    let statsMap = new Map();
+    if (playerIds.length > 0) {
+      const stats = await db.select()
+        .from(playerSeasonStatistics)
+        .where(
+          and(
+            inArray(playerSeasonStatistics.playerId, playerIds),
+            eq(playerSeasonStatistics.season, currentSeason.toString())
+          )
+        );
+      
+      stats.forEach(stat => {
+        statsMap.set(stat.playerId, stat);
+      });
+    }
+
+    return players.map(player => {
+      const stat = statsMap.get(player.id);
+      return {
+        id: player.id,
+        name: player.name,
+        photo: player.photo || '',
+        position: player.position || undefined,
+        number: player.number || undefined,
+        statistics: stat ? {
+          season: currentSeason,
+          goals: stat.goals || 0,
+          assists: stat.assists || 0,
+          appearances: stat.appearances || 0,
+          minutes: stat.minutes || 0,
+          rating: stat.rating?.toString() || null
+        } : undefined
+      };
+    });
   } catch (error) {
     console.error('Error fetching Liverpool squad:', error);
     return [];
