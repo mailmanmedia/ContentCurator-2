@@ -46,6 +46,8 @@ import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
 import { addRenderJob } from "./video/renderQueue";
 import { insertVideoProjectSchema, insertVideoClipSchema } from "@shared/schema";
 import { historicalDataService } from "./services/historicalDataService";
+import { parseFile } from "./admin/fileParserService";
+import * as XLSX from 'xlsx';
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -143,6 +145,36 @@ const videoUpload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only WebM, MP4, and MKV video files are allowed'));
+    }
+  }
+});
+
+// Multer configuration for file imports (memory storage)
+const fileImportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit for import files
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow various file types for import
+    const allowedMimes = [
+      'application/json',
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/html',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not supported for import'));
     }
   }
 });
@@ -6359,6 +6391,268 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error fetching players:', error);
       res.status(500).json({ error: 'Failed to fetch players' });
+    }
+  });
+
+  // ===== FILE IMPORT/EXPORT ROUTES =====
+
+  // POST /api/admin/import - Upload and parse file for import
+  app.post("/api/admin/import", fileImportUpload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+
+      const file = req.file;
+      const buffer = file.buffer;
+      const originalName = file.originalname;
+      const mimeType = file.mimetype;
+      const fileSize = file.size;
+
+      // Map file extension to type
+      const ext = path.extname(originalName).toLowerCase();
+      const fileTypeMap: { [key: string]: string } = {
+        '.json': 'json',
+        '.csv': 'csv',
+        '.xlsx': 'xlsx',
+        '.xls': 'xlsx',
+        '.pdf': 'pdf',
+        '.docx': 'docx',
+        '.doc': 'docx',
+        '.html': 'html',
+        '.htm': 'html',
+        '.jpg': 'image',
+        '.jpeg': 'image',
+        '.png': 'image',
+        '.gif': 'image',
+        '.webp': 'image'
+      };
+
+      const fileType = fileTypeMap[ext] || 'unknown';
+
+      if (fileType === 'unknown') {
+        return res.status(400).json({ error: `Unsupported file type: ${ext}` });
+      }
+
+      // Parse the file
+      const parsed = await parseFile(buffer, fileType, mimeType);
+
+      // Determine records parsed
+      let recordsParsed = 0;
+      if (parsed.data) {
+        recordsParsed = parsed.data.length;
+      } else if (parsed.text) {
+        recordsParsed = 1; // Text files count as 1 record
+      } else if (parsed.metadata) {
+        recordsParsed = 1; // Metadata counts as 1 record
+      }
+
+      // Create import record
+      const importRecord = await storage.createDataImport({
+        filename: originalName,
+        file_type: fileType,
+        operation: 'import',
+        target_table: req.body.targetTable || 'general',
+        status: 'completed',
+        records_affected: recordsParsed,
+        file_size: fileSize
+      });
+
+      res.json({
+        success: true,
+        importId: importRecord.id,
+        recordsParsed,
+        parsed,
+        fileType
+      });
+    } catch (error: any) {
+      console.error('Error importing file:', error);
+
+      // Create failed import record if we have file info
+      if (req.file) {
+        try {
+          await storage.createDataImport({
+            filename: req.file.originalname,
+            file_type: path.extname(req.file.originalname).toLowerCase().slice(1),
+            operation: 'import',
+            target_table: req.body.targetTable || 'general',
+            status: 'failed',
+            records_affected: 0,
+            error_message: error.message,
+            file_size: req.file.size
+          });
+        } catch (dbError) {
+          console.error('Error creating failed import record:', dbError);
+        }
+      }
+
+      res.status(500).json({
+        error: "File import failed",
+        message: error.message
+      });
+    }
+  });
+
+  // GET /api/admin/imports - Get all import/export records
+  app.get("/api/admin/imports", async (req, res) => {
+    try {
+      const imports = await storage.getDataImports();
+      res.json({ imports });
+    } catch (error: any) {
+      console.error('Error fetching imports:', error);
+      res.status(500).json({
+        error: "Failed to fetch imports",
+        message: error.message
+      });
+    }
+  });
+
+  // GET /api/admin/import/:id - Get single import record
+  app.get("/api/admin/import/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const imports = await storage.getDataImports();
+      const importRecord = imports.find(i => i.id === parseInt(id));
+
+      if (!importRecord) {
+        return res.status(404).json({ error: "Import record not found" });
+      }
+
+      res.json({ import: importRecord });
+    } catch (error: any) {
+      console.error('Error fetching import:', error);
+      res.status(500).json({
+        error: "Failed to fetch import",
+        message: error.message
+      });
+    }
+  });
+
+  // POST /api/admin/export/:format - Export data in specified format
+  app.post("/api/admin/export/:format", async (req, res) => {
+    try {
+      const { format } = req.params;
+      const { table } = req.query;
+
+      if (!['json', 'csv', 'xlsx'].includes(format)) {
+        return res.status(400).json({ error: `Unsupported export format: ${format}` });
+      }
+
+      if (!table) {
+        return res.status(400).json({ error: "Table parameter is required" });
+      }
+
+      // Query the specified table
+      let data: any[] = [];
+      let tableName = '';
+
+      switch (table) {
+        case 'football_players':
+          data = await db.select().from(football_players).limit(1000);
+          tableName = 'football_players';
+          break;
+        case 'rss_articles':
+          data = await db.select().from(rssArticles).limit(1000);
+          tableName = 'rss_articles';
+          break;
+        case 'library_items':
+          data = await db.select().from(library_items).limit(1000);
+          tableName = 'library_items';
+          break;
+        case 'scenes':
+          data = await db.select().from(scenes).limit(1000);
+          tableName = 'scenes';
+          break;
+        default:
+          return res.status(400).json({ error: `Table not supported: ${table}` });
+      }
+
+      if (data.length === 0) {
+        return res.status(404).json({ error: "No data found in table" });
+      }
+
+      let fileContent: Buffer;
+      let filename: string;
+      let contentType: string;
+
+      // Generate export based on format
+      if (format === 'json') {
+        fileContent = Buffer.from(JSON.stringify(data, null, 2));
+        filename = `${tableName}_export_${Date.now()}.json`;
+        contentType = 'application/json';
+      } else if (format === 'csv') {
+        // Generate CSV
+        const headers = Object.keys(data[0]);
+        const csvRows = [headers.join(',')];
+
+        for (const row of data) {
+          const values = headers.map(header => {
+            const val = row[header];
+            // Handle values that need escaping
+            if (val === null || val === undefined) return '';
+            const strVal = String(val);
+            if (strVal.includes(',') || strVal.includes('"') || strVal.includes('\n')) {
+              return `"${strVal.replace(/"/g, '""')}"`;
+            }
+            return strVal;
+          });
+          csvRows.push(values.join(','));
+        }
+
+        fileContent = Buffer.from(csvRows.join('\n'));
+        filename = `${tableName}_export_${Date.now()}.csv`;
+        contentType = 'text/csv';
+      } else if (format === 'xlsx') {
+        // Generate XLSX
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, tableName);
+        
+        fileContent = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        filename = `${tableName}_export_${Date.now()}.xlsx`;
+        contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      } else {
+        return res.status(400).json({ error: "Invalid format" });
+      }
+
+      // Create export record
+      await storage.createDataImport({
+        filename,
+        file_type: format,
+        operation: 'export',
+        target_table: tableName,
+        status: 'completed',
+        records_affected: data.length,
+        file_size: fileContent.length
+      });
+
+      // Send file
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(fileContent);
+    } catch (error: any) {
+      console.error('Error exporting data:', error);
+
+      // Create failed export record
+      try {
+        await storage.createDataImport({
+          filename: `export_${Date.now()}.${req.params.format}`,
+          file_type: req.params.format,
+          operation: 'export',
+          target_table: req.query.table as string || 'unknown',
+          status: 'failed',
+          records_affected: 0,
+          error_message: error.message,
+          file_size: 0
+        });
+      } catch (dbError) {
+        console.error('Error creating failed export record:', dbError);
+      }
+
+      res.status(500).json({
+        error: "Export failed",
+        message: error.message
+      });
     }
   });
 
