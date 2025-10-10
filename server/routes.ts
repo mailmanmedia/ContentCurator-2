@@ -1095,6 +1095,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error creating framework:', error);
 
 
+  // Get database status for DatabaseStatus page
+  app.get("/api/database-status", async (req, res) => {
+    try {
+      // Get all tables with counts
+      const tables = [
+        { tableName: "RSS Articles", table: rssArticles },
+        { tableName: "Library Items", table: library_items },
+        { tableName: "Scenes", table: scenes }
+      ];
+
+      const tableStats = await Promise.all(
+        tables.map(async ({ tableName, table }) => {
+          const count = await db.select({ count: sql<number>`count(*)` }).from(table);
+          return {
+            tableName,
+            recordCount: Number(count[0]?.count || 0),
+            earliestDate: null,
+            latestDate: null
+          };
+        })
+      );
+
+      // Get player season statistics
+      const playerSeasons = await db
+        .select({
+          season: playerSeasonStatistics.season,
+          playerCount: sql<number>`count(distinct ${playerSeasonStatistics.playerId})`,
+          totalGoals: sql<number>`sum(${playerSeasonStatistics.goals})`,
+          totalAssists: sql<number>`sum(${playerSeasonStatistics.assists})`,
+          earliestUpdate: sql<Date>`min(${playerSeasonStatistics.updatedAt})`,
+          latestUpdate: sql<Date>`max(${playerSeasonStatistics.updatedAt})`
+        })
+        .from(playerSeasonStatistics)
+        .groupBy(playerSeasonStatistics.season)
+        .orderBy(desc(playerSeasonStatistics.season));
+
+      // Get all teams
+      const allTeams = await db
+        .select({
+          id: footballTeams.id,
+          name: footballTeams.name
+        })
+        .from(footballTeams)
+        .orderBy(footballTeams.name);
+
+      // Get all seasons from player statistics
+      const allSeasons = await db
+        .selectDistinct({
+          season: playerSeasonStatistics.season
+        })
+        .from(playerSeasonStatistics)
+        .orderBy(desc(playerSeasonStatistics.season));
+
+      // Get all leagues
+      const allLeagues = await db
+        .selectDistinct({
+          id: footballFixtures.leagueId,
+          name: sql<string>`'League ' || ${footballFixtures.leagueId}`
+        })
+        .from(footballFixtures)
+        .orderBy(footballFixtures.leagueId);
+
+      // Get last API update from data_sync_logs
+      let lastApiUpdate = null;
+      try {
+        const lastSync = await db
+          .select({ timestamp: data_sync_logs.completedAt })
+          .from(data_sync_logs)
+          .orderBy(desc(data_sync_logs.completedAt))
+          .limit(1);
+        
+        lastApiUpdate = lastSync[0]?.timestamp || null;
+      } catch (error) {
+        console.warn('Could not fetch last API update time:', error);
+      }
+
+      res.json({
+        tables: tableStats,
+        playerSeasons: playerSeasons.map(ps => ({
+          season: ps.season,
+          playerCount: Number(ps.playerCount),
+          totalGoals: Number(ps.totalGoals || 0),
+          totalAssists: Number(ps.totalAssists || 0),
+          earliestUpdate: ps.earliestUpdate?.toISOString() || new Date().toISOString(),
+          latestUpdate: ps.latestUpdate?.toISOString() || new Date().toISOString()
+        })),
+        allTeams,
+        allSeasons,
+        allLeagues,
+        lastApiUpdate,
+        dataSource: 'historical'
+      });
+    } catch (error) {
+      console.error('Error fetching database status:', error);
+      res.status(500).json({ error: "Failed to fetch database status" });
+    }
+  });
+
+  // Get database players with filters
+  app.get("/api/database/players", async (req, res) => {
+    try {
+      const { teamId, season } = req.query;
+
+      let query = db.select().from(footballPlayers);
+
+      if (teamId && teamId !== "all") {
+        query = query.where(eq(footballPlayers.teamId, parseInt(teamId as string)));
+      }
+
+      const players = await query;
+
+      res.json({ players });
+    } catch (error) {
+      console.error('Error fetching database players:', error);
+      res.status(500).json({ error: "Failed to fetch players" });
+    }
+  });
+
   // Get all teams with their current form from database
   app.get("/api/football/teams/all-forms", async (req, res) => {
     try {

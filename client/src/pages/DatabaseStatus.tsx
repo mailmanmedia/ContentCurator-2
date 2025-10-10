@@ -123,8 +123,8 @@ export default function DatabaseStatus() {
                     <SelectValue placeholder="Select team" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Teams ({data?.allTeams.length || 0})</SelectItem>
-                    {data?.allTeams.map((team) => (
+                    <SelectItem value="all">All Teams ({data?.allTeams?.length || 0})</SelectItem>
+                    {data?.allTeams?.map((team) => (
                       <SelectItem key={team.id} value={team.id.toString()}>
                         {team.name}
                       </SelectItem>
@@ -141,8 +141,8 @@ export default function DatabaseStatus() {
                     <SelectValue placeholder="Select season" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Seasons ({data?.allSeasons.length || 0})</SelectItem>
-                    {data?.allSeasons.map((s) => (
+                    <SelectItem value="all">All Seasons ({data?.allSeasons?.length || 0})</SelectItem>
+                    {data?.allSeasons?.map((s) => (
                       <SelectItem key={s.season} value={s.season}>
                         {s.season}/{(parseInt(s.season) + 1).toString().slice(-2)}
                       </SelectItem>
@@ -159,8 +159,8 @@ export default function DatabaseStatus() {
                     <SelectValue placeholder="Select league" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Leagues ({data?.allLeagues.length || 0})</SelectItem>
-                    {data?.allLeagues.map((league) => (
+                    <SelectItem value="all">All Leagues ({data?.allLeagues?.length || 0})</SelectItem>
+                    {data?.allLeagues?.map((league) => (
                       <SelectItem key={league.id} value={league.id.toString()}>
                         {league.name || `League ${league.id}`}
                       </SelectItem>
