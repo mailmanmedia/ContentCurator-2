@@ -1141,21 +1141,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(footballTeams.name);
 
       // Get all seasons from player statistics
-      const allSeasons = await db
-        .selectDistinct({
+      const seasonsResult = await db
+        .select({
           season: playerSeasonStatistics.season
         })
         .from(playerSeasonStatistics)
+        .groupBy(playerSeasonStatistics.season)
         .orderBy(desc(playerSeasonStatistics.season));
 
-      // Get all leagues
-      const allLeagues = await db
-        .selectDistinct({
-          id: footballFixtures.leagueId,
-          name: sql<string>`'League ' || ${footballFixtures.leagueId}`
+      const allSeasons = seasonsResult.map(s => ({ season: s.season }));
+
+      // Get all leagues from fixtures
+      const leaguesResult = await db
+        .select({
+          id: footballFixtures.leagueId
         })
         .from(footballFixtures)
+        .groupBy(footballFixtures.leagueId)
         .orderBy(footballFixtures.leagueId);
+
+      const allLeagues = leaguesResult.map(l => ({ 
+        id: l.id, 
+        name: `League ${l.id}` 
+      }));
 
       // Get last API update from data_sync_logs
       let lastApiUpdate = null;
