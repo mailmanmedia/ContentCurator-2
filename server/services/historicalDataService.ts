@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { historicalHeadToHead, dataUpdateSchedule, footballFixtures } from "@shared/schema";
 import { eq, and, or, desc, gte } from "drizzle-orm";
+import { toSafeDate, toSafeDateRequired } from '../utils/dateUtils';
 
 /**
  * Historical Data Service
@@ -178,7 +179,7 @@ class HistoricalDataService {
       team1Id: Math.min(match.team1Id, match.team2Id),
       team2Id: Math.max(match.team1Id, match.team2Id),
       fixtureId: null,
-      date: new Date(match.date),
+      date: toSafeDateRequired(match.date),
       season: match.season,
       competitionId: match.competitionId,
       competitionName: match.competitionName,
@@ -189,7 +190,7 @@ class HistoricalDataService {
       venue: match.venue,
       isHistorical: true,
       dataSource: 'hardcoded',
-      lastUpdated: new Date(),
+      lastUpdated: toSafeDateRequired(Date.now()),
     }));
 
     for (const data of dataToInsert) {
@@ -219,14 +220,14 @@ class HistoricalDataService {
           nextUpdateAt: this.calculateNextUpdate(config),
           isActive: true,
           scheduleConfig: config.scheduleConfig,
-          updatedAt: new Date(),
+          updatedAt: toSafeDateRequired(Date.now()),
         })
         .onConflictDoUpdate({
           target: dataUpdateSchedule.competitionId,
           set: {
             updateCadence: config.updateCadence,
             scheduleConfig: config.scheduleConfig,
-            updatedAt: new Date(),
+            updatedAt: toSafeDateRequired(Date.now()),
           }
         });
     }

@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { apiFootballService } from './apiFootballService';
 import { db } from '../db';
+import { toSafeDate, toSafeDateRequired, convertTimestampFields } from '../utils/dateUtils';
 import {
   football_fixtures as footballFixtures,
   football_standings as footballStandings,
@@ -230,7 +231,7 @@ class ScheduledUpdateService {
             id: fixture.fixture.id,
             referee: fixture.fixture.referee,
             timezone: fixture.fixture.timezone,
-            timestamp: fixture.fixture.date ? new Date(fixture.fixture.date) : null,
+            timestamp: toSafeDate(fixture.fixture.date || fixture.fixture.timestamp),
             venue_id: fixture.fixture.venue?.id || null,
             venue_name: fixture.fixture.venue?.name || null,
             venue_city: fixture.fixture.venue?.city || null,
@@ -258,7 +259,7 @@ class ScheduledUpdateService {
             score_extratime_away: fixture.score.extratime?.away || null,
             score_penalty_home: fixture.score.penalty?.home || null,
             score_penalty_away: fixture.score.penalty?.away || null,
-            updated_at: new Date()
+            updated_at: toSafeDateRequired(Date.now())
           })
           .onConflictDoUpdate({
             target: footballFixtures.id,
@@ -272,7 +273,7 @@ class ScheduledUpdateService {
               score_halftime_away: fixture.score.halftime?.away || null,
               score_fulltime_home: fixture.score.fulltime?.home || null,
               score_fulltime_away: fixture.score.fulltime?.away || null,
-              updated_at: new Date()
+              updated_at: toSafeDateRequired(Date.now())
             }
           });
         
@@ -355,7 +356,7 @@ class ScheduledUpdateService {
               away_lose: standing.away.lose,
               away_goals_for: standing.away.goals.for,
               away_goals_against: standing.away.goals.against,
-              updated_at: new Date()
+              updated_at: toSafeDateRequired(Date.now())
             })
             .onConflictDoUpdate({
               target: [footballStandings.league_id, footballStandings.team_id, footballStandings.season],
@@ -370,7 +371,7 @@ class ScheduledUpdateService {
                 all_lose: standing.all.lose,
                 all_goals_for: standing.all.goals.for,
                 all_goals_against: standing.all.goals.against,
-                updated_at: new Date()
+                updated_at: toSafeDateRequired(Date.now())
               }
             });
           
@@ -438,7 +439,7 @@ class ScheduledUpdateService {
                 biggest_win_away: plStats.biggest.wins.away,
                 biggest_loss_home: plStats.biggest.loses.home,
                 biggest_loss_away: plStats.biggest.loses.away,
-                updated_at: new Date()
+                updated_at: toSafeDateRequired(Date.now())
               })
               .onConflictDoUpdate({
                 target: [teamSeasonStatistics.team_id, teamSeasonStatistics.competition_id, teamSeasonStatistics.season],
@@ -451,7 +452,7 @@ class ScheduledUpdateService {
                   goals_against: plStats.goals.against.total.total,
                   clean_sheets: plStats.clean_sheet.total,
                   form: plStats.form,
-                  updated_at: new Date()
+                  updated_at: toSafeDateRequired(Date.now())
                 }
               });
             
@@ -534,7 +535,7 @@ class ScheduledUpdateService {
                   dribbles_success: stats.dribbles.success || 0,
                   fouls_drawn: stats.fouls.drawn || 0,
                   fouls_committed: stats.fouls.committed || 0,
-                  updated_at: new Date()
+                  updated_at: toSafeDateRequired(Date.now())
                 })
                 .onConflictDoUpdate({
                   target: [playerSeasonStatistics.player_id, playerSeasonStatistics.team_id, playerSeasonStatistics.season],
@@ -546,7 +547,7 @@ class ScheduledUpdateService {
                     yellow_cards: stats.cards.yellow || 0,
                     red_cards: stats.cards.red || 0,
                     rating: stats.games.rating ? parseFloat(stats.games.rating) : null,
-                    updated_at: new Date()
+                    updated_at: toSafeDateRequired(Date.now())
                   }
                 });
               
@@ -600,7 +601,7 @@ class ScheduledUpdateService {
             status_elapsed: match.fixture.status.elapsed,
             goals_home: match.goals.home,
             goals_away: match.goals.away,
-            updated_at: new Date()
+            updated_at: toSafeDateRequired(Date.now())
           })
           .where(eq(footballFixtures.id, match.fixture.id));
         
@@ -720,7 +721,7 @@ class ScheduledUpdateService {
         records_affected: result.recordsUpdated,
         error_message: result.error,
         started_at: result.timestamp,
-        completed_at: new Date()
+        completed_at: toSafeDateRequired(Date.now())
       });
     } catch (error) {
       console.error('Error logging update result:', error);

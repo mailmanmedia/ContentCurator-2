@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import { toSafeDate, toSafeDateRequired, convertTimestampFields } from '../utils/dateUtils';
 
 interface RateLimitState {
   requestsThisMinute: number;
@@ -625,6 +626,73 @@ class APIFootballService {
     }
   }
 
+  // Helper methods to process and convert timestamps in API responses
+  
+  private processFixture(fixture: any): Fixture {
+    // Convert timestamp fields to Date objects
+    if (fixture.fixture) {
+      // Convert Unix timestamp to Date
+      if (fixture.fixture.timestamp) {
+        fixture.fixture.timestamp = toSafeDateRequired(fixture.fixture.timestamp);
+      }
+      // Convert date string to Date
+      if (fixture.fixture.date) {
+        fixture.fixture.date = toSafeDateRequired(fixture.fixture.date);
+      }
+    }
+    return fixture;
+  }
+  
+  private processFixtures(fixtures: any[]): Fixture[] {
+    return fixtures.map(fixture => this.processFixture(fixture));
+  }
+  
+  private processStanding(standing: any): any {
+    // Convert update field to Date
+    if (standing.update) {
+      standing.update = toSafeDateRequired(standing.update);
+    }
+    return standing;
+  }
+  
+  private processStandings(standingsResponse: any[]): any[] {
+    return standingsResponse.map(item => {
+      if (item.standings && Array.isArray(item.standings)) {
+        item.standings = item.standings.map((group: any[]) => 
+          group.map(standing => this.processStanding(standing))
+        );
+      }
+      return item;
+    });
+  }
+  
+  private processPlayer(player: any): Player {
+    // Convert birth date if present
+    if (player.player?.birth?.date) {
+      player.player.birth.date = toSafeDateRequired(player.player.birth.date);
+    }
+    // Process statistics if present
+    if (player.statistics && Array.isArray(player.statistics)) {
+      player.statistics = player.statistics.map((stat: any) => {
+        if (stat.games?.lineups) {
+          // Keep numeric values as is
+        }
+        return stat;
+      });
+    }
+    return player;
+  }
+  
+  private processPlayers(players: any[]): Player[] {
+    return players.map(player => this.processPlayer(player));
+  }
+  
+  private processTeamStatistics(stats: any): TeamStatistics {
+    // No specific date fields in team statistics that need conversion
+    // The form field is a string like "WWDLW" and should remain as is
+    return stats;
+  }
+
   // Public API methods
 
   async fetchLeagues(countryCode?: string, season?: number): Promise<League[]> {
@@ -647,17 +715,23 @@ class APIFootballService {
   }
 
   async fetchPlayers(team: number, season: number, page: number = 1): Promise<Player[]> {
-    return this.makeRequest<Player[]>('/players', {
+    const players = await this.makeRequest<Player[]>('/players', {
       team,
       season,
       page
     }, {
       cacheTTL: this.cacheTTL.players
     });
+    
+    // Process players to convert timestamps
+    return this.processPlayers(players);
   }
 
   async fetchAllPlayersForTeam(team: number, season: number): Promise<Player[]> {
-    return this.fetchAllPages<Player>('/players', { team, season });
+    const players = await this.fetchAllPages<Player>('/players', { team, season });
+    
+    // Process players to convert timestamps
+    return this.processPlayers(players);
   }
 
   async fetchFixtures(
@@ -670,21 +744,27 @@ class APIFootballService {
     if (from) params.from = from;
     if (to) params.to = to;
 
-    return this.makeRequest<Fixture[]>('/fixtures', params, {
+    const fixtures = await this.makeRequest<Fixture[]>('/fixtures', params, {
       cacheTTL: this.cacheTTL.fixtures
     });
+    
+    // Process fixtures to convert timestamps
+    return this.processFixtures(fixtures);
   }
 
   async fetchStandings(league: number, season: number): Promise<{
     league: any;
     standings: Standing[][];
   }[]> {
-    return this.makeRequest<any>('/standings', {
+    const standings = await this.makeRequest<any>('/standings', {
       league,
       season
     }, {
       cacheTTL: this.cacheTTL.standings
     });
+    
+    // Process standings to convert timestamps
+    return this.processStandings(standings);
   }
 
   async fetchTeamStatistics(
@@ -707,7 +787,7 @@ class APIFootballService {
     team: number,
     page: number = 1
   ): Promise<Player[]> {
-    return this.makeRequest<Player[]>('/players', {
+    const players = await this.makeRequest<Player[]>('/players', {
       league,
       season,
       team,
@@ -715,6 +795,9 @@ class APIFootballService {
     }, {
       cacheTTL: this.cacheTTL.players
     });
+    
+    // Process players to convert timestamps
+    return this.processPlayers(players);
   }
 
   async fetchAllPlayerStatistics(
@@ -722,11 +805,14 @@ class APIFootballService {
     season: number,
     team: number
   ): Promise<Player[]> {
-    return this.fetchAllPages<Player>('/players', {
+    const players = await this.fetchAllPages<Player>('/players', {
       league,
       season,
       team
     });
+    
+    // Process players to convert timestamps
+    return this.processPlayers(players);
   }
 
   async fetchFixtureStatistics(fixture: number): Promise<{

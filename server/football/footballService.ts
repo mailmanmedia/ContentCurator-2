@@ -18,6 +18,7 @@ import {
 } from "@shared/schema";
 import { eq, and, or, gte, lte, desc, inArray } from "drizzle-orm";
 import { smartFootballCache } from "./cacheService";
+import { toSafeDate, toSafeDateRequired } from '../utils/dateUtils';
 
 export interface FootballAPIResponse<T> {
   get: string;
@@ -1427,8 +1428,8 @@ class FootballService {
           id: item.fixture.id,
           referee: item.fixture.referee,
           timezone: item.fixture.timezone,
-          date: new Date(item.fixture.date),
-          timestamp: item.fixture.timestamp,
+          date: toSafeDateRequired(item.fixture.date),
+          timestamp: toSafeDateRequired(item.fixture.timestamp),
           periods: item.fixture.periods,
           venue: item.fixture.venue,
           status: item.fixture.status,
@@ -1439,7 +1440,7 @@ class FootballService {
           awayTeamId: item.teams.away.id,
           goals: item.goals,
           score: item.score,
-          lastUpdated: new Date()
+          lastUpdated: toSafeDateRequired(Date.now())
         };
 
         await db.insert(footballFixtures)

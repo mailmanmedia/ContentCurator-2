@@ -1,5 +1,6 @@
 import { APIFootballService } from './apiFootballService';
 import { db } from '../db';
+import { toSafeDate, toSafeDateRequired, convertTimestampFields } from '../utils/dateUtils';
 import { 
   football_leagues,
   football_teams,
@@ -292,7 +293,7 @@ class HistoricalDataBootstrap {
               fixtures.push({
                 referee: item.fixture.referee || null,
                 timezone: item.fixture.timezone || null,
-                timestamp: item.fixture.date ? new Date(item.fixture.date) : null,
+                timestamp: toSafeDate(item.fixture.date || item.fixture.timestamp),
                 venue_id: item.fixture.venue?.id || null,
                 venue_name: item.fixture.venue?.name || null,
                 venue_city: item.fixture.venue?.city || null,
@@ -400,7 +401,7 @@ class HistoricalDataBootstrap {
                   away_lose: standing.away?.lose || 0,
                   away_goals_for: standing.away?.goals?.for || 0,
                   away_goals_against: standing.away?.goals?.against || 0,
-                  last_update: standing.update ? new Date(standing.update) : new Date()
+                  last_update: toSafeDateRequired(standing.update || Date.now())
                 });
               }
             }
@@ -551,7 +552,7 @@ class HistoricalDataBootstrap {
                   firstname: item.player.firstname || null,
                   lastname: item.player.lastname || null,
                   age: item.player.age || null,
-                  birth_date: item.player.birth?.date ? new Date(item.player.birth.date) : null,
+                  birth_date: toSafeDate(item.player.birth?.date, false),
                   birth_place: item.player.birth?.place || null,
                   birth_country: item.player.birth?.country || null,
                   nationality: item.player.nationality || null,
