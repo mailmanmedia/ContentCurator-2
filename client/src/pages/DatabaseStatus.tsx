@@ -1,11 +1,14 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Header from "@/components/Header";
-import { Database, Calendar, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Database, Calendar, AlertCircle, CheckCircle, Clock, Users, Trophy, Shield } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
 
 interface TableStats {
   tableName: string;
@@ -15,7 +18,7 @@ interface TableStats {
 }
 
 interface PlayerSeasonStats {
-  season: number;
+  season: string;
   playerCount: number;
   totalGoals: number;
   totalAssists: number;
@@ -23,16 +26,46 @@ interface PlayerSeasonStats {
   latestUpdate: string;
 }
 
+interface Team {
+  id: number;
+  name: string;
+}
+
+interface League {
+  id: number;
+  name: string;
+}
+
 interface DatabaseStatusData {
   tables: TableStats[];
   playerSeasons: PlayerSeasonStats[];
+  allTeams: Team[];
+  allSeasons: { season: string }[];
+  allLeagues: League[];
   lastApiUpdate: string | null;
   dataSource: 'api' | 'historical';
 }
 
 export default function DatabaseStatus() {
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [selectedSeason, setSelectedSeason] = useState<string>("all");
+  const [selectedLeague, setSelectedLeague] = useState<string>("all");
+
   const { data, isLoading } = useQuery<DatabaseStatusData>({
     queryKey: ['/api/database-status']
+  });
+
+  const { data: playersData } = useQuery({
+    queryKey: ['/api/database/players', selectedTeam, selectedSeason],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedTeam !== "all") params.append("teamId", selectedTeam);
+      if (selectedSeason !== "all") params.append("season", selectedSeason);
+      
+      const res = await fetch(`/api/database/players?${params}`);
+      return res.json();
+    },
+    enabled: !!data
   });
 
   if (isLoading) {
@@ -65,9 +98,90 @@ export default function DatabaseStatus() {
         <Alert className="mb-6 border-blue-500/50 bg-blue-500/10">
           <AlertCircle className="h-4 w-4 text-blue-500" />
           <AlertDescription className="text-sm">
-            <strong>Data Source:</strong> {data?.dataSource === 'api' ? 'Live API updates enabled' : 'Using authentic historical data (2020-2024) due to API rate limits. Live updates will resume when API access is restored.'}
+            <strong>Data Source:</strong> {data?.dataSource === 'api' ? 'Live API updates enabled' : 'Using authentic historical data (2020-2025) due to API rate limits. Live updates will resume when API access is restored.'}
+            <br />
+            <strong>Last Updated:</strong> {data?.lastApiUpdate ? formatDistanceToNow(new Date(data.lastApiUpdate), { addSuffix: true }) : 'Never'}
           </AlertDescription>
         </Alert>
+
+        {/* Filter Controls */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Database Filters
+            </CardTitle>
+            <CardDescription>Filter teams, players, leagues, and seasons</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Team Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Team</label>
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams ({data?.allTeams.length || 0})</SelectItem>
+                    {data?.allTeams.map((team) => (
+                      <SelectItem key={team.id} value={team.id.toString()}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Season Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Season</label>
+                <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select season" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Seasons ({data?.allSeasons.length || 0})</SelectItem>
+                    {data?.allSeasons.map((s) => (
+                      <SelectItem key={s.season} value={s.season}>
+                        {s.season}/{(parseInt(s.season) + 1).toString().slice(-2)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* League Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">League</label>
+                <Select value={selectedLeague} onValueChange={setSelectedLeague}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select league" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Leagues ({data?.allLeagues.length || 0})</SelectItem>
+                    {data?.allLeagues.map((league) => (
+                      <SelectItem key={league.id} value={league.id.toString()}>
+                        {league.name || `League ${league.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Players Count */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Players</label>
+                <div className="h-10 flex items-center px-3 border rounded-md bg-muted">
+                  <Users className="w-4 h-4 mr-2 text-muted-foreground" />
+                  <span className="text-sm font-medium">
+                    {playersData?.players?.length || 0} total
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Player Season Statistics */}
         <Card className="mb-6">
@@ -90,8 +204,8 @@ export default function DatabaseStatus() {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-3">
-                      <Badge variant={season.season >= 2024 ? "default" : "secondary"}>
-                        {season.season - 1}/{season.season.toString().slice(-2)} Season
+                      <Badge variant={parseInt(season.season) >= 2024 ? "default" : "secondary"}>
+                        {parseInt(season.season) - 1}/{season.season.slice(-2)} Season
                       </Badge>
                       <span className="text-sm text-muted-foreground">
                         {season.playerCount} players
@@ -180,13 +294,13 @@ export default function DatabaseStatus() {
           </CardHeader>
           <CardContent className="text-sm space-y-2">
             <p>
-              <strong>Player Statistics:</strong> Authentic historical data covering Liverpool FC seasons 2020-2024. Data includes goals, assists, appearances, and minutes for the squad's top performers each season.
+              <strong>Player Statistics:</strong> Authentic historical data covering Liverpool FC seasons 2020-2025. Data includes goals, assists, appearances, and minutes for the squad's top performers each season.
+            </p>
+            <p>
+              <strong>Teams & Leagues:</strong> {data?.allTeams.length || 0} teams across {data?.allLeagues.length || 0} leagues with {data?.allSeasons.length || 0} seasons of data.
             </p>
             <p>
               <strong>RSS Articles:</strong> Live feed monitoring from Liverpool FC official sources, fan sites, and media outlets with sentiment analysis.
-            </p>
-            <p>
-              <strong>Historical Head-to-Head:</strong> Match data from 2020-present for Liverpool vs Premier League, Champions League, FA Cup, and League Cup opponents.
             </p>
             <p>
               <strong>Update Frequency:</strong> Database automatically updates after every Liverpool FC match when API access is available. Historical data is used as fallback during rate limit periods.

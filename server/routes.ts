@@ -40,7 +40,7 @@ import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplat
 import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
 import { db } from "./db";
-import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead } from "@shared/schema";
+import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, libraryItems, scenes } from "@shared/schema";
 import { desc, eq, and, gte, lte, or, inArray, sql } from "drizzle-orm";
 import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
 import { addRenderJob } from "./video/renderQueue";
@@ -2849,7 +2849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========== Manual Football Data Update Endpoints ==========
   // Import the scheduled update service
   const { scheduledUpdateService } = await import('./football/scheduledUpdateService');
-  
+
   // Manual update: Fixtures
   app.post("/api/admin/update/fixtures", async (req, res) => {
     try {
@@ -2866,7 +2866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || "Failed to update fixtures" });
     }
   });
-  
+
   // Manual update: Standings
   app.post("/api/admin/update/standings", async (req, res) => {
     try {
@@ -2883,7 +2883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || "Failed to update standings" });
     }
   });
-  
+
   // Manual update: Team Statistics
   app.post("/api/admin/update/teams", async (req, res) => {
     try {
@@ -2900,7 +2900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || "Failed to update team statistics" });
     }
   });
-  
+
   // Manual update: Player Statistics
   app.post("/api/admin/update/players", async (req, res) => {
     try {
@@ -2917,7 +2917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || "Failed to update player statistics" });
     }
   });
-  
+
   // Manual update: All Data
   app.post("/api/admin/update/all", async (req, res) => {
     try {
@@ -2934,19 +2934,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || "Failed to update all data" });
     }
   });
-  
+
   // Manual update: Head-to-Head Data
   app.post("/api/admin/update/head-to-head", async (req, res) => {
     try {
       console.log('📊 Manual update requested: head-to-head data');
       const result = await historicalDataService.updateAllH2HData();
-      
+
       // Update last H2H update timestamp in database
       if (result.success) {
         await db.update(historicalHeadToHead)
           .set({ lastUpdated: new Date() });
       }
-      
+
       res.json({ 
         success: result.success,
         recordsUpdated: result.recordsUpdated,
@@ -2958,7 +2958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message || "Failed to update head-to-head data" });
     }
   });
-  
+
   // Get Update Status
   app.get("/api/admin/update/status", async (req, res) => {
     try {
@@ -2981,15 +2981,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status, limit = 100, offset = 0 } = req.query;
       const { data_sync_logs } = await import('@shared/schema');
-      
+
       let logs = [];
       try {
         let query = db.select().from(data_sync_logs);
-        
+
         if (status && status !== 'all') {
           query = query.where(eq(data_sync_logs.status, status as string));
         }
-        
+
         logs = await query
           .orderBy(desc(data_sync_logs.started_at))
           .limit(Number(limit))
@@ -3000,7 +3000,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Return empty array instead of throwing error
         return res.json([]);
       }
-      
+
       // Transform to match frontend expectations
       const transformedLogs = logs.map(log => ({
         id: log.id,
@@ -3016,7 +3016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? Math.floor((new Date(log.completed_at).getTime() - new Date(log.started_at).getTime()) / 1000)
           : null
       }));
-      
+
       res.json(transformedLogs);
     } catch (error: any) {
       console.error('Error fetching sync logs:', error);
@@ -3028,7 +3028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/sync/status", async (req, res) => {
     try {
       const { data_sync_status } = await import('@shared/schema');
-      
+
       let statuses = [];
       try {
         statuses = await db
@@ -3042,7 +3042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Return empty array instead of throwing error
         return res.json([]);
       }
-      
+
       res.json(statuses);
     } catch (error: any) {
       console.error('Error fetching sync status:', error);
@@ -3054,10 +3054,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/bootstrap", async (req, res) => {
     try {
       const { leagues = ['39'], seasons = ['2025'], skipExisting = true } = req.body;
-      
+
       // Import bootstrap module dynamically
       const { HistoricalDataBootstrap } = await import('./football/historicalDataBootstrap');
-      
+
       // Create bootstrap instance
       const bootstrap = new HistoricalDataBootstrap({
         leagues,
@@ -3065,14 +3065,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         skipExisting,
         batchSize: 10
       });
-      
+
       // Start bootstrap process (async, don't wait)
       bootstrap.bootstrapAll().then(report => {
         console.log('Bootstrap completed:', report);
       }).catch(error => {
         console.error('Bootstrap failed:', error);
       });
-      
+
       res.json({ 
         success: true, 
         message: "Bootstrap process initiated",
@@ -3090,9 +3090,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { tableName } = req.params;
       const { format = 'json' } = req.query;
-      
+
       let data: any[] = [];
-      
+
       // Map table names to actual data
       switch(tableName) {
         case 'Football Players':
@@ -3111,20 +3111,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         default:
           return res.status(404).json({ error: "Table not found" });
       }
-      
+
       if (format === 'csv') {
         // Convert to CSV
         if (data.length === 0) {
           return res.type('text/csv').send('');
         }
-        
+
         const headers = Object.keys(data[0]).join(',');
         const rows = data.map(row => 
           Object.values(row).map(val => 
             typeof val === 'string' && val.includes(',') ? `"${val}"` : val
           ).join(',')
         );
-        
+
         const csv = [headers, ...rows].join('\n');
         res.type('text/csv').send(csv);
       } else {
@@ -3140,7 +3140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/export/all", async (req, res) => {
     try {
       const { format = 'json' } = req.query;
-      
+
       const allData = {
         players: await db.select().from(footballPlayers),
         teams: await db.select().from(footballTeams),
@@ -3148,7 +3148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerStats: await db.select().from(playerSeasonStatistics),
         teamStats: await db.select().from(teamSeasonStatistics)
       };
-      
+
       if (format === 'csv') {
         // For CSV, we'd typically create a ZIP file with multiple CSVs
         // For simplicity, returning JSON
@@ -3209,25 +3209,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
 
       // Get recent form from fixtures (most recent completed matches regardless of season)
-      // Using raw SQL to access JSONB fields
-      const recentFixturesRaw = await db.execute(sql`
-        SELECT id, home_team_id, away_team_id, goals, status, timestamp
-        FROM football_fixtures
-        WHERE (home_team_id = ${teamId} OR away_team_id = ${teamId})
-          AND status->>'short' = 'FT'
-        ORDER BY timestamp DESC
-        LIMIT 5
-      `);
+      const recentFixtures = await db.select()
+        .from(footballFixtures)
+        .where(
+          and(
+            or(
+              eq(footballFixtures.homeTeamId, teamId),
+              eq(footballFixtures.awayTeamId, teamId)
+            ),
+            eq(footballFixtures.statusShort, 'FT')
+          )
+        )
+        .orderBy(desc(footballFixtures.timestamp))
+        .limit(5);
 
       // Calculate form string
       let formString = '';
-      for (const row of recentFixturesRaw.rows) {
-        const isHome = row.home_team_id === teamId;
-        const goals = typeof row.goals === 'string' ? JSON.parse(row.goals) : row.goals;
-        const teamGoals = isHome ? goals?.home : goals?.away;
-        const opponentGoals = isHome ? goals?.away : goals?.home;
-        
-        if (teamGoals !== null && teamGoals !== undefined && opponentGoals !== null && opponentGoals !== undefined) {
+      for (const fixture of recentFixtures) {
+        const isHome = fixture.homeTeamId === teamId;
+        const teamGoals = isHome ? fixture.goalsHome : fixture.goalsAway;
+        const opponentGoals = isHome ? fixture.goalsAway : fixture.goalsHome;
+
+        if (teamGoals !== null && opponentGoals !== null) {
           if (teamGoals > opponentGoals) formString = 'W' + formString;
           else if (teamGoals < opponentGoals) formString = 'L' + formString;
           else formString = 'D' + formString;
@@ -3558,14 +3561,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/update/team/:teamId", async (req, res) => {
     try {
       const teamId = parseInt(req.params.teamId);
-      
+
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
       }
 
       // Trigger update for specific team using existing football service
       const stats = await footballService.getTeamStatistics(teamId, 39, 2025);
-      
+
       if (stats) {
         // Store updated data in database
         // This would normally update the teamSeasonStatistics table
@@ -5924,170 +5927,131 @@ Return ONLY a JSON object with this structure:
   // Get database status and data availability
   app.get("/api/database-status", async (req, res) => {
     try {
-      // Get player season statistics using raw SQL - defensive
-      let playerSeasonsResult = { rows: [] };
-      try {
-        playerSeasonsResult = await db.execute(
-          `SELECT 
-            season,
-            COUNT(*) as player_count,
-            SUM(goals) as total_goals,
-            SUM(assists) as total_assists,
-            MIN(last_updated) as earliest_update,
-            MAX(last_updated) as latest_update
-          FROM player_season_statistics
-          GROUP BY season
-          ORDER BY season DESC`
-        );
-      } catch (dbError: any) {
-        console.warn('Warning: Could not fetch player season statistics (table might not exist):', dbError.message);
-        playerSeasonsResult = { rows: [] };
-      }
+      const stats: any = {};
 
-      // Get other table stats - all defensive with try-catch
-      let rssArticles: any[] = [];
-      try {
-        rssArticles = await storage.getRssArticles();
-      } catch (error: any) {
-        console.warn('Warning: Could not fetch RSS articles:', error.message);
-        rssArticles = [];
-      }
-
-      let players: any[] = [];
-      try {
-        players = await db.select().from(footballPlayers);
-      } catch (error: any) {
-        console.warn('Warning: Could not fetch football players:', error.message);
-        players = [];
-      }
-
-      let teamStats: any[] = [];
-      try {
-        teamStats = await db.select().from(teamSeasonStatistics);
-      } catch (error: any) {
-        console.warn('Warning: Could not fetch team season statistics:', error.message);
-        teamStats = [];
-      }
-
-      let recordings: any[] = [];
-      try {
-        recordings = await storage.getRecordings();
-      } catch (error: any) {
-        console.warn('Warning: Could not fetch recordings:', error.message);
-        recordings = [];
-      }
-
-      let videoProjects: any[] = [];
-      try {
-        videoProjects = await storage.getVideoProjects();
-      } catch (error: any) {
-        console.warn('Warning: Could not fetch video projects:', error.message);
-        videoProjects = [];
-      }
-
-      // Get historical head to head data - defensive
-      let h2hResult = { rows: [] };
-      try {
-        h2hResult = await db.execute(
-          `SELECT 
-            COUNT(*) as count, 
-            MIN(date) as earliest, 
-            MAX(date) as latest,
-            MAX(last_updated) as last_updated,
-            SUM(CASE WHEN is_fallback = true THEN 1 ELSE 0 END) as fallback_count
-          FROM historical_head_to_head`
-        );
-      } catch (error: any) {
-        console.warn('Warning: Could not fetch historical head-to-head data:', error.message);
-        h2hResult = { rows: [] };
-      }
-
-      const h2hData = h2hResult.rows[0] || { count: 0, earliest: null, latest: null, last_updated: null, fallback_count: 0 };
-
-      // Helper function to safely get dates from articles
-      const getArticleDates = (articles: typeof rssArticles) => {
-        const articlesWithDates = articles.filter(a => a.publishedAt);
-        if (articlesWithDates.length === 0) return { earliest: null, latest: null };
-
-        const timestamps = articlesWithDates.map(a => new Date(a.publishedAt!).getTime());
-        return {
-          earliest: new Date(Math.min(...timestamps)).toISOString(),
-          latest: new Date(Math.max(...timestamps)).toISOString()
-        };
-      };
-
-      const articleDates = getArticleDates(rssArticles);
-
-      // Helper function to safely get recording dates
-      const getRecordingDates = (recs: typeof recordings) => {
-        if (recs.length === 0) return { earliest: null, latest: null };
-
-        const timestamps = recs.map(r => new Date(r.createdAt).getTime());
-        return {
-          earliest: new Date(Math.min(...timestamps)).toISOString(),
-          latest: new Date(Math.max(...timestamps)).toISOString()
-        };
-      };
-
-      const recordingDates = getRecordingDates(recordings);
-
+      // Get table counts and date ranges
       const tables = [
-        {
-          tableName: 'RSS Articles',
-          recordCount: rssArticles.length,
-          earliestDate: articleDates.earliest,
-          latestDate: articleDates.latest
-        },
-        {
-          tableName: 'Football Players',
-          recordCount: players.length,
-          earliestDate: null,
-          latestDate: null
-        },
-        {
-          tableName: 'Team Season Statistics',
-          recordCount: teamStats.length,
-          earliestDate: null,
-          latestDate: null
-        },
-        {
-          tableName: 'Historical Head-to-Head',
-          recordCount: Number(h2hData.count) || 0,
-          earliestDate: h2hData.earliest ? new Date(String(h2hData.earliest)).toISOString() : null,
-          latestDate: h2hData.latest ? new Date(String(h2hData.latest)).toISOString() : null,
-          lastUpdated: h2hData.last_updated ? new Date(String(h2hData.last_updated)).toISOString() : null,
-          fallbackCount: Number(h2hData.fallback_count) || 0
-        },
-        {
-          tableName: 'Video Projects',
-          recordCount: videoProjects.length,
-          earliestDate: null,
-          latestDate: null
-        },
-        {
-          tableName: 'Recordings',
-          recordCount: recordings.length,
-          earliestDate: recordingDates.earliest,
-          latestDate: recordingDates.latest
-        }
+        { name: 'Football Players', table: footballPlayers, dateField: 'updated_at' },
+        { name: 'Football Teams', table: footballTeams, dateField: 'updated_at' },
+        { name: 'Football Fixtures', table: footballFixtures, dateField: 'timestamp' },
+        { name: 'RSS Articles', table: rssArticles, dateField: 'created_at' },
+        { name: 'Library Items', table: libraryItems, dateField: 'created_at' },
+        { name: 'Scenes', table: scenes, dateField: 'created_at' }
       ];
 
+      for (const { name, table, dateField } of tables) {
+        try {
+          const count = await db.select({ count: sql<number>`count(*)` }).from(table);
+
+          let earliestDate = null;
+          let latestDate = null;
+
+          // Get date range using the specified date field
+          if (dateField) {
+            try {
+              const dates = await db.select({
+                earliest: sql<Date>`min(${sql.raw(dateField)})`,
+                latest: sql<Date>`max(${sql.raw(dateField)})`
+              }).from(table);
+
+              if (dates[0]?.earliest) {
+                earliestDate = dates[0].earliest;
+                latestDate = dates[0].latest;
+              }
+            } catch (dateError) {
+              // Skip date range if unavailable
+            }
+          }
+
+          stats[name] = {
+            count: count[0]?.count || 0,
+            earliestDate,
+            latestDate
+          };
+        } catch (error) {
+          console.warn(`Warning: Could not fetch ${name.toLowerCase()}:`, error.message);
+          stats[name] = { count: 0, earliestDate: null, latestDate: null };
+        }
+      }
+
+      // Get player season statistics with proper grouping
+      const playerSeasons = await db.select({
+        season: playerSeasonStatistics.season,
+        playerCount: sql<number>`count(distinct ${playerSeasonStatistics.playerId})`,
+        totalGoals: sql<number>`sum(${playerSeasonStatistics.goals})`,
+        totalAssists: sql<number>`sum(${playerSeasonStatistics.assists})`,
+        earliestUpdate: sql<Date>`min(${playerSeasonStatistics.updated_at})`,
+        latestUpdate: sql<Date>`max(${playerSeasonStatistics.updated_at})`
+      })
+        .from(playerSeasonStatistics)
+        .groupBy(playerSeasonStatistics.season)
+        .orderBy(desc(playerSeasonStatistics.season));
+
+      // Get all teams
+      const allTeams = await db.select({
+        id: footballTeams.id,
+        name: footballTeams.name
+      })
+        .from(footballTeams)
+        .orderBy(footballTeams.name)
+        .limit(100);
+
+      // Get all seasons
+      const allSeasons = await db.selectDistinct({
+        season: footballFixtures.season
+      })
+        .from(footballFixtures)
+        .orderBy(desc(footballFixtures.season));
+
+      // Get all leagues
+      const allLeagues = await db.selectDistinct({
+        id: footballFixtures.league_id,
+        name: sql<string>`(SELECT name FROM football_leagues WHERE id = ${footballFixtures.league_id} LIMIT 1)`
+      })
+        .from(footballFixtures)
+        .limit(50);
+
       res.json({
-        tables,
-        playerSeasons: playerSeasonsResult.rows.map((s: any) => ({
-          season: Number(s.season),
-          playerCount: Number(s.player_count) || 0,
-          totalGoals: Number(s.total_goals) || 0,
-          totalAssists: Number(s.total_assists) || 0,
-          earliestUpdate: s.earliest_update ? new Date(s.earliest_update).toISOString() : new Date().toISOString(),
-          latestUpdate: s.latest_update ? new Date(s.latest_update).toISOString() : new Date().toISOString()
+        tables: Object.entries(stats).map(([tableName, data]: [string, any]) => ({
+          tableName,
+          recordCount: data.count,
+          earliestDate: data.earliestDate,
+          latestDate: data.latestDate
         })),
-        lastApiUpdate: null,
-        dataSource: 'historical' as const
+        playerSeasons,
+        allTeams,
+        allSeasons,
+        allLeagues,
+        lastApiUpdate: new Date().toISOString(),
+        dataSource: 'historical'
       });
     } catch (error: any) {
       console.error('Error fetching database status:', error);
       res.status(500).json({ error: "Failed to fetch database status" });
+    }
+  });
+
+  // Get all players in database
+  app.get("/api/database/players", async (req, res) => {
+    try {
+      const { teamId, season } = req.query;
+
+      let query = db.select({
+        id: footballPlayers.id,
+        name: footballPlayers.name,
+        teamId: footballPlayers.team_id
+      }).from(footballPlayers);
+
+      if (teamId) {
+        query = query.where(eq(footballPlayers.team_id, parseInt(teamId as string)));
+      }
+
+      const players = await query.orderBy(footballPlayers.name).limit(500);
+
+      res.json({ players });
+    } catch (error) {
+      console.error('Error fetching players:', error);
+      res.status(500).json({ error: 'Failed to fetch players' });
     }
   });
 
