@@ -64,6 +64,15 @@ Integrates football data from multiple live sources with **dynamic season handli
 - **Manual Refresh**: Admin dashboard provides manual update buttons for immediate data refresh
 - **Scheduled Updates**: Automatic twice-weekly updates (Wednesday and Saturday at 3 AM) for all football data
 
+**Database Status Page:**
+A comprehensive data management interface for monitoring football statistics and database health. Located at `/database-status` and serves as the application homepage. Key features include:
+- **League Names Display**: Properly displays league names (Premier League, Champions League, FA Cup, etc.) from `football_leagues` table instead of numeric IDs
+- **Advanced Filtering System**: Multi-dimensional filters for Team, Season, and League with real-time player data updates
+- **Filtered Players View**: Dynamic player card grid showing individual player statistics when filters are applied (photos, names, positions, nationalities, goals, assists, appearances)
+- **Historical Season Analytics**: Displays Liverpool FC aggregated statistics by season (2020-2025) with player counts, total goals, and total assists
+- **Smart Conditional Rendering**: Filtered Players section only appears when specific filters are applied (not "All"), providing clear data exploration UX
+- **Database Schema Alignment**: Fixed player queries to work with current schema (removed non-existent `team_id` column from `football_players`, uses `player_season_statistics` for filtered queries)
+
 #### RSS Intelligence System
 A comprehensive RSS feed management and analysis platform for monitoring Liverpool FC news and media coverage. Features a PostgreSQL database schema, automated fetching with sentiment analysis, advanced filtering, and dashboard analytics. Integrated with Live Presentation for RSS ticker overlays.
 

@@ -40,7 +40,7 @@ import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplat
 import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
 import { db, pool } from "./db";
-import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, library_items, scenes, rssArticles } from "@shared/schema";
+import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, football_leagues, library_items, scenes, rssArticles } from "@shared/schema";
 import { desc, eq, and, gte, lte, or, inArray, sql } from "drizzle-orm";
 import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
 import { addRenderJob } from "./video/renderQueue";
@@ -1176,21 +1176,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ];
       }
 
-      // Get all leagues from fixtures
+      // Get all leagues from database
       let allLeagues: any[] = [];
       try {
-        const leaguesResult = await db
+        allLeagues = await db
           .select({
-            id: footballFixtures.league_id
+            id: football_leagues.id,
+            name: football_leagues.name
           })
-          .from(footballFixtures)
-          .groupBy(footballFixtures.league_id)
-          .orderBy(footballFixtures.league_id);
-
-        allLeagues = leaguesResult.map(l => ({ 
-          id: l.id, 
-          name: `League ${l.id}` 
-        }));
+          .from(football_leagues)
+          .orderBy(football_leagues.name);
       } catch (error) {
         console.warn('Could not fetch leagues:', error);
         // Fallback to static leagues
@@ -1239,25 +1234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get database players with filters
-  app.get("/api/database/players", async (req, res) => {
-    try {
-      const { teamId, season } = req.query;
-
-      let query = db.select().from(footballPlayers);
-
-      if (teamId && teamId !== "all") {
-        query = query.where(eq(footballPlayers.teamId, parseInt(teamId as string)));
-      }
-
-      const players = await query;
-
-      res.json({ players });
-    } catch (error) {
-      console.error('Error fetching database players:', error);
-      res.status(500).json({ error: "Failed to fetch players" });
-    }
-  });
+  // Get database players with filters - REMOVED DUPLICATE (see line 6083 for working version)
 
   // Get all teams with their current form from database
   app.get("/api/football/teams/all-forms", async (req, res) => {
@@ -6079,22 +6056,61 @@ Return ONLY a JSON object with this structure:
     }
   });
 
-  // Get all players in database
+  // Get all players in database with optional filters
   app.get("/api/database/players", async (req, res) => {
     try {
-      const { teamId, season } = req.query;
+      const { teamId, season, leagueId } = req.query;
 
-      let query = db.select({
-        id: footballPlayers.id,
-        name: footballPlayers.name,
-        teamId: footballPlayers.team_id
-      }).from(footballPlayers);
-
-      if (teamId) {
-        query = query.where(eq(footballPlayers.team_id, parseInt(teamId as string)));
+      // If no filters, get all players
+      if ((!teamId || teamId === "all") && (!season || season === "all") && (!leagueId || leagueId === "all")) {
+        const allPlayers = await db
+          .select({
+            id: footballPlayers.id,
+            name: footballPlayers.name,
+            photo: footballPlayers.photo,
+            position: footballPlayers.position,
+            nationality: footballPlayers.nationality
+          })
+          .from(footballPlayers)
+          .orderBy(footballPlayers.name)
+          .limit(500);
+        
+        return res.json({ players: allPlayers });
       }
 
-      const players = await query.orderBy(footballPlayers.name).limit(500);
+      // Build filtered query using player_season_statistics
+      let conditions: any[] = [];
+      
+      if (teamId && teamId !== "all") {
+        conditions.push(eq(playerSeasonStatistics.team_id, parseInt(teamId as string)));
+      }
+      
+      if (season && season !== "all") {
+        conditions.push(eq(playerSeasonStatistics.season, parseInt(season as string)));
+      }
+      
+      if (leagueId && leagueId !== "all") {
+        conditions.push(eq(playerSeasonStatistics.league_id, parseInt(leagueId as string)));
+      }
+
+      const players = await db
+        .selectDistinct({
+          id: footballPlayers.id,
+          name: footballPlayers.name,
+          photo: footballPlayers.photo,
+          position: footballPlayers.position,
+          nationality: footballPlayers.nationality,
+          teamId: playerSeasonStatistics.team_id,
+          season: playerSeasonStatistics.season,
+          goals: playerSeasonStatistics.goals,
+          assists: playerSeasonStatistics.assists,
+          appearances: playerSeasonStatistics.appearances
+        })
+        .from(playerSeasonStatistics)
+        .innerJoin(footballPlayers, eq(playerSeasonStatistics.player_id, footballPlayers.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(footballPlayers.name)
+        .limit(500);
 
       res.json({ players });
     } catch (error) {

@@ -26,6 +26,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={DatabaseStatus} />
+      <Route path="/database-status" component={DatabaseStatus} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/frameworks" component={FrameworkDirectory} />
       <Route path="/frameworks/create" component={CreateFramework} />
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/overlay-templates" component={OverlayTemplateBuilder} />
       <Route path="/analytics" component={AnalyticsDashboard} />
       <Route path="/teams-forms" component={TeamFormsList} />
+      <Route path="/video-editor" component={VideoEditor} />
       <Route component={NotFound} />
     </Switch>
   );

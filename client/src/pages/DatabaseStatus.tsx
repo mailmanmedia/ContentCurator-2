@@ -56,11 +56,12 @@ export default function DatabaseStatus() {
   });
 
   const { data: playersData } = useQuery({
-    queryKey: ['/api/database/players', selectedTeam, selectedSeason],
+    queryKey: ['/api/database/players', selectedTeam, selectedSeason, selectedLeague],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedTeam !== "all") params.append("teamId", selectedTeam);
       if (selectedSeason !== "all") params.append("season", selectedSeason);
+      if (selectedLeague !== "all") params.append("leagueId", selectedLeague);
       
       const res = await fetch(`/api/database/players?${params}`);
       return res.json();
@@ -194,6 +195,59 @@ export default function DatabaseStatus() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Filtered Players List */}
+        {playersData?.players && playersData.players.length > 0 && (selectedTeam !== "all" || selectedSeason !== "all" || selectedLeague !== "all") && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Filtered Players ({playersData.players.length})
+              </CardTitle>
+              <CardDescription>
+                {selectedTeam !== "all" && data?.allTeams.find(t => t.id.toString() === selectedTeam)?.name}
+                {selectedTeam !== "all" && selectedSeason !== "all" && " • "}
+                {selectedSeason !== "all" && `${parseInt(selectedSeason) - 1}/${selectedSeason.slice(-2)} Season`}
+                {(selectedTeam !== "all" || selectedSeason !== "all") && selectedLeague !== "all" && " • "}
+                {selectedLeague !== "all" && data?.allLeagues.find(l => l.id.toString() === selectedLeague)?.name}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {playersData.players.map((player: any) => (
+                  <div 
+                    key={player.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover-elevate"
+                    data-testid={`player-row-${player.id}`}
+                  >
+                    <img 
+                      src={player.photo || '/placeholder-player.png'} 
+                      alt={player.name}
+                      className="w-12 h-12 rounded-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/placeholder-player.png';
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{player.name}</p>
+                      <div className="flex gap-2 text-xs text-muted-foreground">
+                        {player.position && <span>{player.position}</span>}
+                        {player.nationality && <span>• {player.nationality}</span>}
+                      </div>
+                      {(player.goals !== undefined || player.assists !== undefined || player.appearances !== undefined) && (
+                        <div className="flex gap-3 mt-1 text-xs">
+                          {player.goals !== undefined && <span className="text-green-600 dark:text-green-400">{player.goals}G</span>}
+                          {player.assists !== undefined && <span className="text-blue-600 dark:text-blue-400">{player.assists}A</span>}
+                          {player.appearances !== undefined && <span className="text-muted-foreground">{player.appearances} apps</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Player Season Statistics */}
         <Card className="mb-6">
