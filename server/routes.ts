@@ -1132,38 +1132,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(playerSeasonStatistics.season));
 
       // Get all teams
-      const allTeams = await db
-        .select({
-          id: footballTeams.id,
-          name: footballTeams.name
-        })
-        .from(footballTeams)
-        .orderBy(footballTeams.name);
+      let allTeams: any[] = [];
+      try {
+        allTeams = await db
+          .select({
+            id: footballTeams.id,
+            name: footballTeams.name
+          })
+          .from(footballTeams)
+          .orderBy(footballTeams.name);
+      } catch (error) {
+        console.warn('Could not fetch teams:', error);
+      }
 
       // Get all seasons from player statistics
-      const seasonsResult = await db
-        .select({
-          season: playerSeasonStatistics.season
-        })
-        .from(playerSeasonStatistics)
-        .groupBy(playerSeasonStatistics.season)
-        .orderBy(desc(playerSeasonStatistics.season));
+      let allSeasons: any[] = [];
+      try {
+        const seasonsResult = await db
+          .select({
+            season: playerSeasonStatistics.season
+          })
+          .from(playerSeasonStatistics)
+          .groupBy(playerSeasonStatistics.season)
+          .orderBy(desc(playerSeasonStatistics.season));
 
-      const allSeasons = seasonsResult.map(s => ({ season: s.season }));
+        allSeasons = seasonsResult.map(s => ({ season: s.season }));
+      } catch (error) {
+        console.warn('Could not fetch seasons:', error);
+        // Fallback to static seasons
+        allSeasons = [
+          { season: '2025' },
+          { season: '2024' },
+          { season: '2023' },
+          { season: '2022' },
+          { season: '2021' },
+          { season: '2020' }
+        ];
+      }
 
       // Get all leagues from fixtures
-      const leaguesResult = await db
-        .select({
-          id: footballFixtures.leagueId
-        })
-        .from(footballFixtures)
-        .groupBy(footballFixtures.leagueId)
-        .orderBy(footballFixtures.leagueId);
+      let allLeagues: any[] = [];
+      try {
+        const leaguesResult = await db
+          .select({
+            id: footballFixtures.leagueId
+          })
+          .from(footballFixtures)
+          .groupBy(footballFixtures.leagueId)
+          .orderBy(footballFixtures.leagueId);
 
-      const allLeagues = leaguesResult.map(l => ({ 
-        id: l.id, 
-        name: `League ${l.id}` 
-      }));
+        allLeagues = leaguesResult.map(l => ({ 
+          id: l.id, 
+          name: `League ${l.id}` 
+        }));
+      } catch (error) {
+        console.warn('Could not fetch leagues:', error);
+        // Fallback to static leagues
+        allLeagues = [
+          { id: 39, name: 'Premier League' },
+          { id: 2, name: 'Champions League' },
+          { id: 3, name: 'Europa League' },
+          { id: 45, name: 'FA Cup' },
+          { id: 48, name: 'League Cup' }
+        ];
+      }
 
       // Get last API update from data_sync_logs
       let lastApiUpdate = null;
