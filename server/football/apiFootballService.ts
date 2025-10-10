@@ -705,6 +705,44 @@ class APIFootballService {
     });
   }
 
+  /**
+   * Fetch all available seasons from API Football
+   * Returns an array of season years (e.g., [2020, 2021, 2022, 2023, 2024, 2025])
+   */
+  async fetchAvailableSeasons(): Promise<number[]> {
+    try {
+      const seasons = await this.makeRequest<number[]>('/leagues/seasons', {}, {
+        cacheTTL: this.cacheTTL.leagues  // Cache for 24 hours like leagues
+      });
+      
+      // Filter out any invalid values and ensure all are numbers
+      return seasons.filter(season => typeof season === 'number' && season >= 2000);
+    } catch (error) {
+      console.warn('Failed to fetch available seasons from API, using fallback logic:', error);
+      // Fallback: return 2020 to current year
+      const currentYear = new Date().getFullYear();
+      const fallbackSeasons = [];
+      for (let year = 2020; year <= currentYear; year++) {
+        fallbackSeasons.push(year);
+      }
+      return fallbackSeasons;
+    }
+  }
+
+  /**
+   * Get dynamic season range from start year to current year
+   * @param startYear Starting year (default: 2020)
+   * @returns Array of season years
+   */
+  getDynamicSeasonRange(startYear: number = 2020): number[] {
+    const currentYear = new Date().getFullYear();
+    const seasons = [];
+    for (let year = startYear; year <= currentYear; year++) {
+      seasons.push(year);
+    }
+    return seasons;
+  }
+
   async fetchTeams(league: number, season: number): Promise<Team[]> {
     return this.makeRequest<Team[]>('/teams', {
       league,

@@ -55,7 +55,7 @@ interface BootstrapReport {
 class HistoricalDataBootstrap {
   private apiService: APIFootballService;
   private leagues: number[] = [39, 2]; // Premier League, Champions League
-  private seasons: number[] = [2020, 2021, 2022, 2023, 2024, 2025];
+  private seasons: number[] = [];  // Will be populated dynamically
   private batchSize: number = 100;
   private delayMs: number = 1000;
   private skipExisting: boolean = false;
@@ -66,7 +66,12 @@ class HistoricalDataBootstrap {
     this.apiService = new APIFootballService();
     
     if (options?.leagues) this.leagues = options.leagues;
-    if (options?.seasons) this.seasons = options.seasons;
+    if (options?.seasons) {
+      this.seasons = options.seasons;
+    } else {
+      // Use dynamic season range from 2020 to current year
+      this.seasons = this.apiService.getDynamicSeasonRange(2020);
+    }
     if (options?.batchSize) this.batchSize = options.batchSize;
     if (options?.delayMs) this.delayMs = options.delayMs;
     if (options?.skipExisting !== undefined) this.skipExisting = options.skipExisting;

@@ -38,9 +38,22 @@ class ScheduledUpdateService {
   // Configuration
   private readonly PREMIER_LEAGUE_ID = 39;
   private readonly CHAMPIONS_LEAGUE_ID = 2;
-  private readonly CURRENT_SEASON = 2025;
   private readonly MAX_HISTORY_SIZE = 100;
   private readonly UPDATE_SCHEDULE = '0 3 * * 3,6'; // Wednesdays and Saturdays at 3 AM
+  
+  /**
+   * Get current season dynamically based on current date
+   * Football seasons typically run from August to May
+   */
+  private getCurrentSeason(): number {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // getMonth() is 0-indexed
+    
+    // If it's January to July, the season is the previous year
+    // If it's August to December, the season is the current year
+    return currentMonth < 8 ? currentYear - 1 : currentYear;
+  }
   
   /**
    * Initialize the scheduled update service
@@ -209,7 +222,7 @@ class ScheduledUpdateService {
       // Get fixtures for Premier League
       const plFixtures = await apiFootballService.getFixtures({
         league: this.PREMIER_LEAGUE_ID,
-        season: this.CURRENT_SEASON,
+        season: this.getCurrentSeason(),
         from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 30 days
         to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]   // Next 30 days
       });
@@ -217,7 +230,7 @@ class ScheduledUpdateService {
       // Get fixtures for Champions League
       const clFixtures = await apiFootballService.getFixtures({
         league: this.CHAMPIONS_LEAGUE_ID,
-        season: this.CURRENT_SEASON,
+        season: this.getCurrentSeason(),
         from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       });
@@ -309,13 +322,13 @@ class ScheduledUpdateService {
       // Get Premier League standings
       const plStandings = await apiFootballService.getStandings({
         league: this.PREMIER_LEAGUE_ID,
-        season: this.CURRENT_SEASON
+        season: this.getCurrentSeason()
       });
       
       // Get Champions League standings
       const clStandings = await apiFootballService.getStandings({
         league: this.CHAMPIONS_LEAGUE_ID,
-        season: this.CURRENT_SEASON
+        season: this.getCurrentSeason()
       });
       
       const allStandings = [...plStandings, ...clStandings];
@@ -415,7 +428,7 @@ class ScheduledUpdateService {
           // Get team statistics for Premier League
           const plStats = await apiFootballService.getTeamStatistics({
             team: team.id,
-            season: this.CURRENT_SEASON,
+            season: this.getCurrentSeason(),
             league: this.PREMIER_LEAGUE_ID
           });
           
@@ -424,7 +437,7 @@ class ScheduledUpdateService {
               .values({
                 team_id: team.id,
                 competition_id: this.PREMIER_LEAGUE_ID,
-                season: this.CURRENT_SEASON.toString(),
+                season: this.getCurrentSeason().toString(),
                 matches_played: plStats.fixtures.played.total,
                 wins: plStats.fixtures.wins.total,
                 draws: plStats.fixtures.draws.total,
@@ -502,7 +515,7 @@ class ScheduledUpdateService {
         try {
           const playerStats = await apiFootballService.getPlayerStatistics({
             id: player.id,
-            season: this.CURRENT_SEASON
+            season: this.getCurrentSeason()
           });
           
           if (playerStats && playerStats.length > 0) {
@@ -514,7 +527,7 @@ class ScheduledUpdateService {
                   player_id: player.id,
                   team_id: stats.team.id,
                   competition_id: stats.league.id,
-                  season: this.CURRENT_SEASON.toString(),
+                  season: this.getCurrentSeason().toString(),
                   appearances: stats.games.appearances || 0,
                   lineups: stats.games.lineups || 0,
                   minutes: stats.games.minutes || 0,
