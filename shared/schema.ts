@@ -1006,9 +1006,3 @@ export const sourceTemplates = source_templates;
 export const setTemplates = set_templates;
 export const textOverlays = text_overlays;
 export const renderJobs = render_jobs;
-
-// Type aliases for backward compatibility
-export type FootballCompetition = typeof football_competitions.$inferSelect;
-export type FootballTeam = typeof football_teams.$inferSelect;
-export type FootballPlayer = typeof football_players.$inferSelect;
-export type FootballFixture = typeof football_fixtures.$inferSelect;
