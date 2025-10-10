@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Home, Menu, Folder, Rss, Users, Archive, Radio, Palette, Settings, Layers, BarChart, Film, Database } from "lucide-react";
+import { Home, Menu, Folder, Rss, Users, Archive, Radio, Palette, Settings, Layers, BarChart, Film, Database, Upload, Shield } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import mailmanLogo from "@assets/mailman-logo.png";
@@ -160,6 +160,26 @@ export default function Header() {
               <Database className="w-5 h-5" />
             </Button>
           </Link>
+          <Link href="/data-admin">
+            <Button 
+              variant="ghost"
+              size="icon" 
+              className={`text-[#1B365D] ${location === "/data-admin" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+              data-testid="button-data-admin"
+            >
+              <Upload className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link href="/admin">
+            <Button 
+              variant="ghost"
+              size="icon" 
+              className={`text-[#1B365D] ${location === "/admin" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+              data-testid="button-admin"
+            >
+              <Shield className="w-5 h-5" />
+            </Button>
+          </Link>
           
           <div className="ml-2 pl-2 border-l-2 border-[#1B365D]/20">
             <Badge className="bg-[#C8102E] text-white border-0 font-league-spartan font-semibold uppercase text-xs">
@@ -316,6 +336,28 @@ export default function Header() {
               >
                 <Database className="w-5 h-5 mr-3" />
                 Database Status
+              </Button>
+            </Link>
+            <Link href="/data-admin">
+              <Button 
+                variant="ghost"
+                className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/data-admin" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+                data-testid="button-data-admin-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Upload className="w-5 h-5 mr-3" />
+                Data Import/Export
+              </Button>
+            </Link>
+            <Link href="/admin">
+              <Button 
+                variant="ghost"
+                className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/admin" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
+                data-testid="button-admin-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Shield className="w-5 h-5 mr-3" />
+                Admin Dashboard
               </Button>
             </Link>
             
