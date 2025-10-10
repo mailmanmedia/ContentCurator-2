@@ -759,10 +759,10 @@ export class MemStorage implements IStorage {
           {id: '3', type: 'text', zone: 'title', position: {x: 10, y: 5, width: 80, height: 10}, content: 'TACTICAL ANALYSIS'},
           {id: '4', type: 'graphic', zone: 'ticker', position: {x: 0, y: 92, width: 100, height: 8}}
         ],
-        backgroundConfig: {type: 'color', value: '#000000'},
-        transitionConfig: {effect: 'wipe', duration: 700},
-        aspectRatio: '16:9',
-        isTemplate: true,
+        background_config: {type: 'color', value: '#000000'},
+        transition_config: {effect: 'wipe', duration: 700},
+        aspect_ratio: '16:9',
+        is_template: true,
         tags: ['tactical', 'formation', 'analysis', 'heatmap']
       },
       {
@@ -776,10 +776,10 @@ export class MemStorage implements IStorage {
           {id: '4', type: 'text', zone: 'breaking', position: {x: 10, y: 5, width: 30, height: 8}, content: 'BREAKING NEWS'},
           {id: '5', type: 'graphic', zone: 'ticker', position: {x: 0, y: 92, width: 100, height: 8}}
         ],
-        backgroundConfig: {type: 'color', value: '#000000'},
-        transitionConfig: {effect: 'slide', duration: 800},
-        aspectRatio: '16:9',
-        isTemplate: true,
+        background_config: {type: 'color', value: '#000000'},
+        transition_config: {effect: 'slide', duration: 800},
+        aspect_ratio: '16:9',
+        is_template: true,
         tags: ['transfer', 'news', 'player', 'breaking']
       }
     ];
@@ -1186,12 +1186,12 @@ export class MemStorage implements IStorage {
   }
 
   async getRssSourceByUrl(feedUrl: string): Promise<RssSource | undefined> {
-    const results = await db.select().from(rssSourcesTable).where(eq(rssSourcesTable.feedUrl, feedUrl));
+    const results = await db.select().from(rssSourcesTable).where(eq(rssSourcesTable.feed_url, feedUrl));
     return results[0];
   }
 
   async getActiveRssSources(): Promise<RssSource[]> {
-    const results = await db.select().from(rssSourcesTable).where(eq(rssSourcesTable.isActive, true));
+    const results = await db.select().from(rssSourcesTable).where(eq(rssSourcesTable.is_active, true));
     return results;
   }
 
@@ -1565,7 +1565,21 @@ export class MemStorage implements IStorage {
   }
 
   async createScene(insertScene: InsertScene): Promise<Scene> {
-    const results = await db.insert(scenesTable).values(insertScene).returning();
+    // Ensure JSON fields are properly stringified
+    const sceneData = {
+      ...insertScene,
+      elements: typeof insertScene.elements === 'string' 
+        ? insertScene.elements 
+        : JSON.stringify(insertScene.elements || []),
+      background_config: typeof insertScene.background_config === 'string'
+        ? insertScene.background_config
+        : JSON.stringify(insertScene.background_config || {}),
+      transition_config: typeof insertScene.transition_config === 'string'
+        ? insertScene.transition_config
+        : JSON.stringify(insertScene.transition_config || {})
+    };
+    
+    const results = await db.insert(scenesTable).values(sceneData).returning();
     return results[0];
   }
 

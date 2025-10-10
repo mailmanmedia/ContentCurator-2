@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
 import { CameraStreamProvider } from "@/contexts/CameraStreamContext";
 import { PiPProvider } from "@/contexts/PictureInPictureContext";
-import VisualAssistant from "@/pages/VisualAssistant";
 import FrameworkDirectory from "@/pages/FrameworkDirectory";
 import CreateFramework from "@/pages/CreateFramework";
 import RssIntelligence from "@/pages/RssIntelligence";
@@ -25,7 +24,7 @@ import NotFound from "@/pages/not-found";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={VisualAssistant} />
+      <Route path="/" component={DatabaseStatus} />
       <Route path="/frameworks" component={FrameworkDirectory} />
       <Route path="/frameworks/create" component={CreateFramework} />
       <Route path="/rss" component={RssIntelligence} />

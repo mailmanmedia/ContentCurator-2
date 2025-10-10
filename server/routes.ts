@@ -2844,6 +2844,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Manual Football Data Update Endpoints ==========
+  // Import the scheduled update service
+  const { scheduledUpdateService } = await import('./football/scheduledUpdateService');
+  
+  // Manual update: Fixtures
+  app.post("/api/admin/update/fixtures", async (req, res) => {
+    try {
+      console.log('📊 Manual update requested: fixtures');
+      const result = await scheduledUpdateService.manualUpdate('fixtures');
+      res.json({ 
+        success: result.success,
+        recordsUpdated: result.recordsUpdated,
+        error: result.error,
+        timestamp: result.timestamp
+      });
+    } catch (error: any) {
+      console.error('Error updating fixtures:', error);
+      res.status(500).json({ error: error.message || "Failed to update fixtures" });
+    }
+  });
+  
+  // Manual update: Standings
+  app.post("/api/admin/update/standings", async (req, res) => {
+    try {
+      console.log('📊 Manual update requested: standings');
+      const result = await scheduledUpdateService.manualUpdate('standings');
+      res.json({ 
+        success: result.success,
+        recordsUpdated: result.recordsUpdated,
+        error: result.error,
+        timestamp: result.timestamp
+      });
+    } catch (error: any) {
+      console.error('Error updating standings:', error);
+      res.status(500).json({ error: error.message || "Failed to update standings" });
+    }
+  });
+  
+  // Manual update: Team Statistics
+  app.post("/api/admin/update/teams", async (req, res) => {
+    try {
+      console.log('📊 Manual update requested: team statistics');
+      const result = await scheduledUpdateService.manualUpdate('teams');
+      res.json({ 
+        success: result.success,
+        recordsUpdated: result.recordsUpdated,
+        error: result.error,
+        timestamp: result.timestamp
+      });
+    } catch (error: any) {
+      console.error('Error updating team statistics:', error);
+      res.status(500).json({ error: error.message || "Failed to update team statistics" });
+    }
+  });
+  
+  // Manual update: Player Statistics
+  app.post("/api/admin/update/players", async (req, res) => {
+    try {
+      console.log('📊 Manual update requested: player statistics');
+      const result = await scheduledUpdateService.manualUpdate('players');
+      res.json({ 
+        success: result.success,
+        recordsUpdated: result.recordsUpdated,
+        error: result.error,
+        timestamp: result.timestamp
+      });
+    } catch (error: any) {
+      console.error('Error updating player statistics:', error);
+      res.status(500).json({ error: error.message || "Failed to update player statistics" });
+    }
+  });
+  
+  // Manual update: All Data
+  app.post("/api/admin/update/all", async (req, res) => {
+    try {
+      console.log('📊 Manual update requested: all data');
+      const result = await scheduledUpdateService.manualUpdate('all');
+      res.json({ 
+        success: result.success,
+        recordsUpdated: result.recordsUpdated,
+        error: result.error,
+        timestamp: result.timestamp
+      });
+    } catch (error: any) {
+      console.error('Error updating all data:', error);
+      res.status(500).json({ error: error.message || "Failed to update all data" });
+    }
+  });
+  
+  // Get Update Status
+  app.get("/api/admin/update/status", async (req, res) => {
+    try {
+      const status = scheduledUpdateService.getStatus();
+      res.json({
+        isUpdating: status.isUpdating,
+        lastUpdate: status.lastUpdate,
+        nextScheduledUpdate: status.nextScheduledUpdate,
+        currentOperation: status.currentOperation,
+        updateHistory: status.updateHistory
+      });
+    } catch (error: any) {
+      console.error('Error fetching update status:', error);
+      res.status(500).json({ error: error.message || "Failed to fetch update status" });
+    }
+  });
+
   // Get default overlay templates
   app.get("/api/overlays/default-templates", async (req, res) => {
     try {

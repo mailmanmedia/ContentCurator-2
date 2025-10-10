@@ -519,11 +519,14 @@ export type DataUpdateSchedule = typeof data_update_schedule.$inferSelect;
 export const rss_sources = pgTable('rss_sources', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
-  url: text('url').notNull(),
+  feed_url: text('feed_url').notNull(),
+  description: text('description'),
   category: varchar('category', { length: 100 }),
   is_active: boolean('is_active').default(true),
-  last_fetched: timestamp('last_fetched'),
-  created_at: timestamp('created_at').defaultNow()
+  is_verified: boolean('is_verified').default(false),
+  last_fetched_at: timestamp('last_fetched_at'),
+  created_at: timestamp('created_at').defaultNow(),
+  updated_at: timestamp('updated_at').defaultNow()
 });
 
 export const insertRssSourceSchema = createInsertSchema(rss_sources).omit({ id: true, created_at: true });
@@ -600,10 +603,14 @@ export type LibraryItem = typeof library_items.$inferSelect;
 export const scenes = pgTable('scenes', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
-  type: varchar('type', { length: 50 }),
-  layers: text('layers'),
-  settings: text('settings'),
-  is_active: boolean('is_active').default(false),
+  description: text('description'),
+  layout: text('layout'),
+  elements: text('elements'),
+  background_config: text('background_config'),
+  transition_config: text('transition_config'),
+  aspect_ratio: text('aspect_ratio'),
+  is_template: boolean('is_template').default(false),
+  tags: text('tags').array(),
   created_at: timestamp('created_at').defaultNow(),
   updated_at: timestamp('updated_at').defaultNow()
 });
