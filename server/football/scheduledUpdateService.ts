@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { apiFootballService } from './apiFootballService';
+import { historicalDataService } from '../services/historicalDataService';
 import { db } from '../db';
 import { toSafeDate, toSafeDateRequired, convertTimestampFields } from '../utils/dateUtils';
 import {
@@ -175,6 +176,15 @@ class ScheduledUpdateService {
       totalRecordsUpdated += liveMatchesResult.recordsUpdated;
       if (!liveMatchesResult.success && liveMatchesResult.error) {
         errors.push(`Live Matches: ${liveMatchesResult.error}`);
+      }
+      
+      // Update head-to-head data
+      console.log('📊 Updating head-to-head data...');
+      this.currentOperation = 'head-to-head';
+      const h2hResult = await historicalDataService.updateAllH2HData();
+      totalRecordsUpdated += h2hResult.recordsUpdated;
+      if (!h2hResult.success && h2hResult.error) {
+        errors.push(`H2H Data: ${h2hResult.error}`);
       }
       
       const result: UpdateResult = {

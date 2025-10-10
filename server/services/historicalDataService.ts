@@ -423,6 +423,41 @@ class HistoricalDataService {
   }
 
   /**
+   * Fetch and update H2H data for all Premier League teams
+   * Used for scheduled updates
+   */
+  async updateAllH2HData(): Promise<{ success: boolean; recordsUpdated: number; error?: string }> {
+    const LIVERPOOL_ID = 40;
+    const premierLeagueTeams = [33, 42, 47, 49, 50, 34, 48, 35, 36, 51, 52, 41, 39, 38, 46, 45, 44, 55, 63, 62];
+    
+    let totalRecordsUpdated = 0;
+    const errors: string[] = [];
+    
+    try {
+      for (const teamId of premierLeagueTeams) {
+        if (teamId === LIVERPOOL_ID) continue; // Skip Liverpool itself
+        
+        console.log(`Fetching H2H data: Liverpool vs Team ${teamId}`);
+        const matches = await this.fetchAndStoreH2HFromAPI(LIVERPOOL_ID, teamId);
+        totalRecordsUpdated += matches.length;
+      }
+      
+      return {
+        success: errors.length === 0,
+        recordsUpdated: totalRecordsUpdated,
+        error: errors.length > 0 ? errors.join('; ') : undefined
+      };
+    } catch (error: any) {
+      console.error('Error updating H2H data:', error);
+      return {
+        success: false,
+        recordsUpdated: totalRecordsUpdated,
+        error: error.message || 'Failed to update H2H data'
+      };
+    }
+  }
+
+  /**
    * Get head-to-head data for two teams
    * Fetches from API if data is stale, then returns from database
    */

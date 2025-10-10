@@ -45,6 +45,7 @@ import { desc, eq, and, gte, lte, or, inArray } from "drizzle-orm";
 import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
 import { addRenderJob } from "./video/renderQueue";
 import { insertVideoProjectSchema, insertVideoClipSchema } from "@shared/schema";
+import { historicalDataService } from "./services/historicalDataService";
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -2931,6 +2932,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error updating all data:', error);
       res.status(500).json({ error: error.message || "Failed to update all data" });
+    }
+  });
+  
+  // Manual update: Head-to-Head Data
+  app.post("/api/admin/update/head-to-head", async (req, res) => {
+    try {
+      console.log('📊 Manual update requested: head-to-head data');
+      const result = await historicalDataService.updateAllH2HData();
+      
+      // Update last H2H update timestamp in database
+      if (result.success) {
+        await db.update(historicalHeadToHead)
+          .set({ lastUpdated: new Date() });
+      }
+      
+      res.json({ 
+        success: result.success,
+        recordsUpdated: result.recordsUpdated,
+        error: result.error,
+        timestamp: new Date()
+      });
+    } catch (error: any) {
+      console.error('Error updating head-to-head data:', error);
+      res.status(500).json({ error: error.message || "Failed to update head-to-head data" });
     }
   });
   
@@ -5955,14 +5980,20 @@ Return ONLY a JSON object with this structure:
       let h2hResult = { rows: [] };
       try {
         h2hResult = await db.execute(
-          `SELECT COUNT(*) as count, MIN(date) as earliest, MAX(date) as latest FROM historical_head_to_head`
+          `SELECT 
+            COUNT(*) as count, 
+            MIN(date) as earliest, 
+            MAX(date) as latest,
+            MAX(last_updated) as last_updated,
+            SUM(CASE WHEN is_fallback = true THEN 1 ELSE 0 END) as fallback_count
+          FROM historical_head_to_head`
         );
       } catch (error: any) {
         console.warn('Warning: Could not fetch historical head-to-head data:', error.message);
         h2hResult = { rows: [] };
       }
 
-      const h2hData = h2hResult.rows[0] || { count: 0, earliest: null, latest: null };
+      const h2hData = h2hResult.rows[0] || { count: 0, earliest: null, latest: null, last_updated: null, fallback_count: 0 };
 
       // Helper function to safely get dates from articles
       const getArticleDates = (articles: typeof rssArticles) => {
@@ -6014,7 +6045,9 @@ Return ONLY a JSON object with this structure:
           tableName: 'Historical Head-to-Head',
           recordCount: Number(h2hData.count) || 0,
           earliestDate: h2hData.earliest ? new Date(String(h2hData.earliest)).toISOString() : null,
-          latestDate: h2hData.latest ? new Date(String(h2hData.latest)).toISOString() : null
+          latestDate: h2hData.latest ? new Date(String(h2hData.latest)).toISOString() : null,
+          lastUpdated: h2hData.last_updated ? new Date(String(h2hData.last_updated)).toISOString() : null,
+          fallbackCount: Number(h2hData.fallback_count) || 0
         },
         {
           tableName: 'Video Projects',

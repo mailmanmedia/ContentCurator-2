@@ -60,6 +60,8 @@ interface DatabaseStatus {
     recordCount: number;
     earliestDate?: string | null;
     latestDate?: string | null;
+    lastUpdated?: string | null;
+    fallbackCount?: number;
   }>;
   playerSeasonStatistics?: Array<{
     season: string;
@@ -207,6 +209,22 @@ export default function AdminDashboard() {
       toast({ 
         title: "Error", 
         description: error.message || "Failed to update all data",
+        variant: "destructive"
+      });
+    },
+  });
+
+  const updateHeadToHead = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/admin/update/head-to-head'),
+    onSuccess: () => {
+      toast({ title: "Success", description: "Head-to-head data updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/database-status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/update/status'] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to update head-to-head data",
         variant: "destructive"
       });
     },
@@ -488,9 +506,18 @@ export default function AdminDashboard() {
                   {dbStatus?.tables.map((table) => {
                     const status = getTableStatus(table);
                     const StatusIcon = status.icon;
+                    const isH2HTable = table.tableName === 'Historical Head-to-Head';
+                    
                     return (
                       <TableRow key={table.tableName}>
-                        <TableCell className="font-medium">{table.tableName}</TableCell>
+                        <TableCell className="font-medium">
+                          {table.tableName}
+                          {isH2HTable && table.fallbackCount && table.fallbackCount > 0 && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {table.fallbackCount} fallback
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">{table.recordCount.toLocaleString()}</TableCell>
                         <TableCell>
                           {table.earliestDate 
@@ -503,9 +530,16 @@ export default function AdminDashboard() {
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          <div className={`flex items-center gap-1 ${status.color}`}>
-                            <StatusIcon className="h-4 w-4" />
-                            <span className="text-sm">{status.status}</span>
+                          <div className={`flex flex-col gap-1`}>
+                            <div className={`flex items-center gap-1 ${status.color}`}>
+                              <StatusIcon className="h-4 w-4" />
+                              <span className="text-sm">{status.status}</span>
+                            </div>
+                            {isH2HTable && table.lastUpdated && (
+                              <span className="text-xs text-muted-foreground">
+                                Updated {formatDistanceToNow(new Date(table.lastUpdated), { addSuffix: true })}
+                              </span>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -701,6 +735,38 @@ export default function AdminDashboard() {
                         <>
                           <RefreshCcw className="mr-2 h-4 w-4" />
                           Update Players
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover-elevate">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      Head-to-Head
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      onClick={() => {
+                        setActiveOperation('head-to-head');
+                        updateHeadToHead.mutate();
+                      }}
+                      disabled={updateHeadToHead.isPending || updateStatus?.isUpdating}
+                      className="w-full"
+                      data-testid="button-update-head-to-head"
+                    >
+                      {updateHeadToHead.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCcw className="mr-2 h-4 w-4" />
+                          Update H2H Data
                         </>
                       )}
                     </Button>
