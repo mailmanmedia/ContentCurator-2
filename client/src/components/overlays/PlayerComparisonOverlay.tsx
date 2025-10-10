@@ -1,17 +1,15 @@
-
 /**
  * NOTE FOR FUTURE CODERS:
- * The overlay used to render as a flat navy block because the topscorer feed
- * ships wildly inconsistent shapes (sometimes `{ player: {...}, statistics: [...] }`,
- * other times a flattened `{ id, goals, assists }`, and occasionally nothing for the
- * ids we were asked to compare). We now normalise every payload, merge in curated
- * Mailman Media fallbacks, and gracefully degrade to the strongest available data
- * so the UI always has branded content to draw.
+ * Vite's "Missing semicolon" error came from checking in a git diff blob
+ * instead of real TypeScript. This rebuild restores a proper component and
+ * tightens the responsive math so the comparison never collapses into an
+ * empty navy box on compact canvases.
  */
 
 import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp, Award } from "lucide-react";
+import { TrendingUp } from "lucide-react";
+
 import { useTopScorers } from "@/hooks/useFootballData";
 import {
   OverlayLoadingSkeleton,
@@ -21,173 +19,80 @@ import {
 } from "./OverlayStates";
 import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
 
+type ViewMode = "sideBySide" | "radar" | "bars";
+
 interface PlayerComparisonOverlayProps {
   player1Id: number;
   player2Id: number;
   width: number;
   height: number;
   opacity?: number;
-  statCategories?: string[];
-  viewMode?: "sideBySide" | "radar" | "bars";
+  statCategories?: (StatKey | string)[];
+  viewMode?: ViewMode;
   colorPalette?: ColorPaletteKey;
 }
 
-interface RawTopScorerEntry {
-  id?: number;
-  player?: {
-    id?: number;
-    name?: string;
-    firstname?: string;
-    lastname?: string;
-    photo?: string;
-    nationality?: string;
-    age?: number;
-  };
-  statistics?: Array<{
-    team?: { id?: number; name?: string };
-    league?: { name?: string };
-    games?: { appearences?: number; minutes?: number; position?: string; rating?: string };
-    goals?: { total?: number; assists?: number };
-    assists?: number;
-    shots?: { total?: number; on?: number };
-    passes?: { total?: number; key?: number };
-  }>;
-  name?: string;
-  photo?: string;
-  goals?: number;
-  assists?: number;
-  appearances?: number;
-  minutes?: number;
-  rating?: string | number;
-  team?: string;
-  position?: string;
-  nationality?: string;
-  age?: number;
-  source?: string;
-}
+type RawEntry = Record<string, unknown>;
 
 interface NormalisedPlayer {
   id: number;
   name: string;
-  photo?: string;
   team?: string;
-  competition?: string;
-  position?: string;
-  nationality?: string;
-  age?: number;
+  photo?: string;
   goals: number;
   assists: number;
   appearances: number;
   minutes: number;
-  goalsPer90: number;
-  assistsPer90: number;
-  shotsOnTarget: number;
-  keyPasses: number;
   rating?: number;
-  source?: string;
+  keyPasses?: number;
+  shotsOnTarget?: number;
 }
 
-const numberOr = (value: unknown, fallback = 0): number => {
-  const parsed = typeof value === "string" ? Number.parseFloat(value) : Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
+type StatKey =
+  | "goals"
+  | "assists"
+  | "appearances"
+  | "minutes"
+  | "goalsPer90"
+  | "assistsPer90"
+  | "keyPasses"
+  | "shotsOnTarget"
+  | "rating";
+
+type StatDefinition = {
+  label: string;
+  accessor: (player: NormalisedPlayer) => number;
+  formatter?: (value: number) => string;
 };
 
-const FALLBACK_PLAYERS: Record<number, NormalisedPlayer> = {
-  44: {
-    id: 44,
-    name: "Mohamed Salah",
-    photo: "https://assets.mailman-media.com/players/salah.png",
-    team: "Liverpool",
-    competition: "Premier League",
-    position: "RW",
-    nationality: "Egypt",
-    age: 31,
-    goals: 25,
-    assists: 13,
-    appearances: 35,
-    minutes: 2920,
-    goalsPer90: 0.77,
-    assistsPer90: 0.40,
-    shotsOnTarget: 46,
-    keyPasses: 68,
-    rating: 7.62,
-    source: "Mailman Media performance archive",
-  },
-  337: {
-    id: 337,
-    name: "Erling Haaland",
-    photo: "https://assets.mailman-media.com/players/haaland.png",
-    team: "Manchester City",
-    competition: "Premier League",
-    position: "ST",
-    nationality: "Norway",
-    age: 23,
-    goals: 27,
-    assists: 5,
-    appearances: 31,
-    minutes: 2645,
-    goalsPer90: 0.92,
-    assistsPer90: 0.17,
-    shotsOnTarget: 52,
-    keyPasses: 24,
-    rating: 7.54,
-    source: "Mailman Media performance archive",
-  },
-  734: {
-    id: 734,
-    name: "Bukayo Saka",
-    photo: "https://assets.mailman-media.com/players/saka.png",
-    team: "Arsenal",
-    competition: "Premier League",
-    position: "RW",
-    nationality: "England",
-    age: 22,
-    goals: 19,
-    assists: 11,
-    appearances: 37,
-    minutes: 3130,
-    goalsPer90: 0.55,
-    assistsPer90: 0.32,
-    shotsOnTarget: 41,
-    keyPasses: 65,
-    rating: 7.48,
-    source: "Mailman Media performance archive",
-  },
-  154: {
-    id: 154,
-    name: "Son Heung-min",
-    photo: "https://assets.mailman-media.com/players/son.png",
-    team: "Tottenham Hotspur",
-    competition: "Premier League",
-    position: "LW",
-    nationality: "South Korea",
-    age: 31,
-    goals: 17,
-    assists: 9,
-    appearances: 34,
-    minutes: 2890,
-    goalsPer90: 0.53,
-    assistsPer90: 0.28,
-    shotsOnTarget: 38,
-    keyPasses: 59,
-    rating: 7.34,
-    source: "Mailman Media performance archive",
-  },
-};
+const DEFAULT_STATS: StatKey[] = ["goals", "assists", "appearances", "minutes"];
 
-const FALLBACK_BY_NAME = Object.values(FALLBACK_PLAYERS).reduce<Record<string, NormalisedPlayer>>((acc, player) => {
-  acc[player.name.toLowerCase()] = player;
-  return acc;
-}, {});
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const STAT_DEFINITIONS: Record<
-  string,
-  {
-    label: string;
-    accessor: (player: NormalisedPlayer) => number;
-    formatter?: (value: number) => string;
+const toNumber = (value: unknown, fallback = 0) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value.replace(/[^0-9.\-]/g, ""));
+    if (Number.isFinite(parsed)) return parsed;
   }
-> = {
+  return fallback;
+};
+
+const toStringValue = (value: unknown) => (typeof value === "string" ? value : "");
+
+const minutesSafe = (player: NormalisedPlayer) => {
+  if (player.minutes > 0) return player.minutes;
+  if (player.appearances > 0) return player.appearances * 90;
+  return 0;
+};
+
+const per90 = (player: NormalisedPlayer, stat: number) => {
+  const minutes = minutesSafe(player);
+  if (!minutes) return 0;
+  return (stat / minutes) * 90;
+};
+
+const STAT_DEFINITIONS: Record<StatKey, StatDefinition> = {
   goals: {
     label: "Goals",
     accessor: (player) => player.goals,
@@ -197,127 +102,146 @@ const STAT_DEFINITIONS: Record<
     accessor: (player) => player.assists,
   },
   appearances: {
-    label: "Apps",
+    label: "Appearances",
     accessor: (player) => player.appearances,
   },
   minutes: {
     label: "Minutes",
     accessor: (player) => player.minutes,
+    formatter: (value) => Math.round(value).toLocaleString(),
   },
   goalsPer90: {
     label: "Goals / 90",
-    accessor: (player) => player.goalsPer90,
+    accessor: (player) => per90(player, player.goals),
     formatter: (value) => value.toFixed(2),
   },
   assistsPer90: {
     label: "Assists / 90",
-    accessor: (player) => player.assistsPer90,
+    accessor: (player) => per90(player, player.assists),
     formatter: (value) => value.toFixed(2),
-  },
-  shotsOnTarget: {
-    label: "Shots on Target",
-    accessor: (player) => player.shotsOnTarget,
   },
   keyPasses: {
     label: "Key Passes",
-    accessor: (player) => player.keyPasses,
+    accessor: (player) => player.keyPasses ?? 0,
+  },
+  shotsOnTarget: {
+    label: "Shots on Target",
+    accessor: (player) => player.shotsOnTarget ?? 0,
   },
   rating: {
-    label: "Rating",
+    label: "Average Rating",
     accessor: (player) => player.rating ?? 0,
-    formatter: (value) => value.toFixed(2),
-  },
-  goalInvolvements: {
-    label: "G + A",
-    accessor: (player) => player.goals + player.assists,
+    formatter: (value) => (value ? value.toFixed(2) : "—"),
   },
 };
 
-const DEFAULT_STATS = ["goals", "assists", "goalInvolvements", "minutes", "goalsPer90", "assistsPer90"];
-
-const normaliseEntry = (entry: RawTopScorerEntry): NormalisedPlayer | null => {
+const normaliseEntry = (entry: RawEntry | undefined): NormalisedPlayer | null => {
   if (!entry) return null;
 
-  const rawId = entry.id ?? entry.player?.id;
-  const fallback = rawId ? FALLBACK_PLAYERS[rawId] : entry.name ? FALLBACK_BY_NAME[entry.name.toLowerCase()] : undefined;
+  const playerBlock =
+    entry.player && typeof entry.player === "object"
+      ? (entry.player as Record<string, unknown>)
+      : entry;
 
-  const id = rawId ?? fallback?.id;
-  const primaryName = entry.name ?? entry.player?.name ?? [entry.player?.firstname, entry.player?.lastname].filter(Boolean).join(" ");
-  const name = primaryName && primaryName.trim().length > 0 ? primaryName : fallback?.name;
+  const statisticsBlock = Array.isArray(entry.statistics)
+    ? entry.statistics[0]
+    : typeof entry.statistics === "object"
+    ? (entry.statistics as Record<string, unknown>)
+    : entry;
 
-  if (!id || !name) {
-    return null;
-  }
+  const stats = (statisticsBlock ?? {}) as Record<string, any>;
+  const games = (stats.games ?? {}) as Record<string, any>;
+  const goals = (stats.goals ?? {}) as Record<string, any>;
+  const passes = (stats.passes ?? {}) as Record<string, any>;
+  const shots = (stats.shots ?? {}) as Record<string, any>;
+  const teamBlock =
+    (playerBlock.team && typeof playerBlock.team === "object"
+      ? (playerBlock.team as Record<string, unknown>)
+      : stats.team && typeof stats.team === "object"
+      ? (stats.team as Record<string, unknown>)
+      : entry.team && typeof entry.team === "object"
+      ? (entry.team as Record<string, unknown>)
+      : undefined) ?? {};
 
-  const stats = Array.isArray(entry.statistics) ? entry.statistics[0] : undefined;
-  const goals = numberOr(entry.goals ?? stats?.goals?.total, fallback?.goals ?? 0);
-  const assists = numberOr(entry.assists ?? stats?.goals?.assists, fallback?.assists ?? 0);
-  const appearances = numberOr(entry.appearances ?? stats?.games?.appearences, fallback?.appearances ?? 0);
-  const minutes = numberOr(entry.minutes ?? stats?.games?.minutes, fallback?.minutes ?? 0);
-  const shotsOnTarget = numberOr(stats?.shots?.on, fallback?.shotsOnTarget ?? 0);
-  const keyPasses = numberOr(stats?.passes?.key, fallback?.keyPasses ?? 0);
+  const id = toNumber(playerBlock.id ?? entry.id, NaN);
+  const name = toStringValue(playerBlock.name ?? entry.name);
+  const first = toStringValue(playerBlock.firstname);
+  const last = toStringValue(playerBlock.lastname);
+  const resolvedName = (name || `${first} ${last}`.trim()).trim();
 
-  const safeMinutes = minutes > 0 ? minutes : fallback?.minutes ?? 0;
-  const ninetyFactor = safeMinutes > 0 ? safeMinutes / 90 : 0;
-  const goalsPer90 = ninetyFactor > 0 ? goals / ninetyFactor : fallback?.goalsPer90 ?? 0;
-  const assistsPer90 = ninetyFactor > 0 ? assists / ninetyFactor : fallback?.assistsPer90 ?? 0;
-
-  const rating = (() => {
-    const raw = entry.rating ?? stats?.games?.rating ?? fallback?.rating;
-    return raw !== undefined ? numberOr(raw, fallback?.rating ?? 0) : undefined;
-  })();
+  if (!Number.isFinite(id) || !resolvedName) return null;
 
   return {
     id,
-    name,
-    photo: entry.photo ?? entry.player?.photo ?? fallback?.photo,
-    team: entry.team ?? stats?.team?.name ?? fallback?.team,
-    competition: stats?.league?.name ?? fallback?.competition,
-    position: entry.position ?? stats?.games?.position ?? fallback?.position,
-    nationality: entry.nationality ?? entry.player?.nationality ?? fallback?.nationality,
-    age: entry.age ?? entry.player?.age ?? fallback?.age,
-    goals,
-    assists,
-    appearances,
-    minutes,
-    goalsPer90,
-    assistsPer90,
-    shotsOnTarget,
-    keyPasses,
-    rating,
-    source: entry.source ?? fallback?.source,
+    name: resolvedName,
+    team: toStringValue(teamBlock.name ?? entry.team) || undefined,
+    photo: toStringValue(playerBlock.photo ?? entry.photo) || undefined,
+    goals: toNumber(goals.total ?? stats.goals ?? entry.goals, 0),
+    assists: toNumber(goals.assists ?? stats.assists ?? entry.assists, 0),
+    appearances: toNumber(
+      games.appearances ?? games.appearences ?? stats.appearances ?? entry.appearances,
+      0,
+    ),
+    minutes: toNumber(games.minutes ?? stats.minutes ?? entry.minutes, 0),
+    rating: (() => {
+      const rating = toNumber(games.rating ?? stats.rating ?? entry.rating, NaN);
+      return Number.isFinite(rating) ? rating : undefined;
+    })(),
+    keyPasses: (() => {
+      const value = toNumber(passes.key ?? entry.keyPasses, NaN);
+      return Number.isFinite(value) ? value : undefined;
+    })(),
+    shotsOnTarget: (() => {
+      const value = toNumber(shots.on ?? entry.shotsOnTarget, NaN);
+      return Number.isFinite(value) ? value : undefined;
+    })(),
   };
 };
 
-const buildPlayerDictionary = (payload?: RawTopScorerEntry[]): Map<number, NormalisedPlayer> => {
-  const dictionary = new Map<number, NormalisedPlayer>();
-  if (Array.isArray(payload)) {
-    payload
-      .map(normaliseEntry)
-      .filter((player): player is NormalisedPlayer => Boolean(player))
-      .forEach((player) => {
-        const existing = dictionary.get(player.id);
-        dictionary.set(player.id, existing ? { ...existing, ...player } : player);
-      });
+const buildScaleHelpers = (width: number, height: number) => {
+  if (!width || !height) {
+    return {
+      scale: 1,
+      px: (value: number, bounds?: { min?: number; max?: number }) =>
+        clamp(value, bounds?.min ?? value * 0.6, bounds?.max ?? value * 1.4),
+    };
   }
 
-  Object.values(FALLBACK_PLAYERS).forEach((player) => {
-    if (!dictionary.has(player.id)) {
-      dictionary.set(player.id, player);
-    } else {
-      dictionary.set(player.id, { ...player, ...dictionary.get(player.id)! });
-    }
-  });
+  const baseWidth = 440;
+  const baseHeight = 320;
+  const computed = clamp(Math.min(width / baseWidth, height / baseHeight), 0.5, 1.75);
 
-  return dictionary;
+  const px = (value: number, bounds?: { min?: number; max?: number }) =>
+    clamp(value * computed, bounds?.min ?? value * 0.45, bounds?.max ?? value * 1.8);
+
+  return { scale: computed, px };
 };
+
+const compareWinner = (
+  stat: StatKey,
+  playerA: NormalisedPlayer,
+  playerB: NormalisedPlayer,
+): "player1" | "player2" | "draw" => {
+  const valueA = STAT_DEFINITIONS[stat].accessor(playerA);
+  const valueB = STAT_DEFINITIONS[stat].accessor(playerB);
+  if (valueA > valueB) return "player1";
+  if (valueB > valueA) return "player2";
+  return "draw";
+};
+
+const formatValue = (definition: StatDefinition, raw: number) => {
+  if (definition.formatter) return definition.formatter(raw);
+  return Number.isFinite(raw) ? raw.toString() : "—";
+};
+
+const totalGoalInvolvements = (player: NormalisedPlayer) => player.goals + player.assists;
 
 export default function PlayerComparisonOverlay({
   player1Id,
   player2Id,
   width,
   height,
-  opacity = 0.9,
+  opacity = 0.92,
   statCategories = DEFAULT_STATS,
   viewMode = "sideBySide",
   colorPalette = "classic",
@@ -341,10 +265,7 @@ export default function PlayerComparisonOverlay({
     );
   }
 
-  const dictionary = useMemo(() => buildPlayerDictionary(data?.data as RawTopScorerEntry[]), [data]);
-  const availablePlayers = Array.from(dictionary.values());
-
-  if (availablePlayers.length === 0) {
+  if (!data?.data || !Array.isArray(data.data)) {
     return (
       <OverlayEmptyState
         message="No player data available for comparison"
@@ -354,184 +275,173 @@ export default function PlayerComparisonOverlay({
     );
   }
 
-  const resolvedPlayer1 = dictionary.get(player1Id) ?? availablePlayers[0];
-  const resolvedPlayer2 = dictionary.get(player2Id) ?? availablePlayers.find((player) => player.id !== resolvedPlayer1.id) ?? availablePlayers[0];
+  const players = useMemo(() => {
+    return data.data
+      .map((entry) => normaliseEntry(entry as RawEntry))
+      .filter((player): player is NormalisedPlayer => Boolean(player));
+  }, [data.data]);
 
-  if (!resolvedPlayer1 || !resolvedPlayer2) {
+  const lookup = useMemo(() => {
+    const map = new Map<number, NormalisedPlayer>();
+    for (const player of players) {
+      if (!map.has(player.id)) {
+        map.set(player.id, player);
+      }
+    }
+    return map;
+  }, [players]);
+
+  const player1 = lookup.get(player1Id) ?? players[0];
+  const player2 = lookup.get(player2Id) ?? players.find((player) => player.id !== player1?.id);
+
+  if (!player1 || !player2) {
+    const missing: number[] = [];
+    if (!player1) missing.push(player1Id);
+    if (!player2) missing.push(player2Id);
     return (
       <OverlayEmptyState
-        message="Unable to resolve the requested players"
+        message={`Player data missing (ID${missing.length > 1 ? "s" : ""}: ${missing.join(", ")})`}
         width={`${width}%`}
         height={`${height}px`}
       />
     );
   }
 
-  const resolvedStats = useMemo(() => {
-    const filtered = (statCategories.length ? statCategories : DEFAULT_STATS).filter((stat) => Boolean(STAT_DEFINITIONS[stat]));
-    return filtered.length ? filtered : DEFAULT_STATS;
-  }, [statCategories]);
+  const statKeys = statCategories.filter((key): key is StatKey => key in STAT_DEFINITIONS);
+  const statsToRender = statKeys.length ? statKeys : DEFAULT_STATS;
 
-  const getStatValue = (player: NormalisedPlayer, stat: string): number => {
-    const definition = STAT_DEFINITIONS[stat];
-    return definition ? definition.accessor(player) : 0;
-  };
+  const { scale, px } = useMemo(() => buildScaleHelpers(width, height), [width, height]);
+  const compactHeight = height * scale < 280;
+  const narrowWidth = width * scale < 360;
+  const stackCards = narrowWidth || compactHeight;
 
-  const getStatLabel = (stat: string): string => {
-    return STAT_DEFINITIONS[stat]?.label ?? stat;
-  };
+  const cardPadding = px(16, { min: 10, max: 28 });
+  const gap = px(16, { min: 8, max: 26 });
+  const borderRadius = px(14, { min: 8, max: 24 });
+  const headerSize = px(20, { min: 14, max: 28 });
+  const subHeaderSize = px(14, { min: 11, max: 20 });
+  const statLabelSize = px(12, { min: 10, max: 16 });
+  const badgeSize = px(56, { min: 40, max: 74 });
 
-  const formatStatValue = (stat: string, value: number): string => {
-    const formatter = STAT_DEFINITIONS[stat]?.formatter;
-    return formatter ? formatter(value) : value.toString();
-  };
+  const total1 = totalGoalInvolvements(player1);
+  const total2 = totalGoalInvolvements(player2);
+  const leader = total1 === total2 ? null : total1 > total2 ? player1 : player2;
+  const leadDiff = Math.abs(total1 - total2);
+  const headline = leader
+    ? `${leader.name.split(" ")[0]} leads by ${leadDiff} goal involvement${leadDiff === 1 ? "" : "s"}`
+    : "Level on goal involvements";
 
-  const compareStats = (stat: string): "player1" | "player2" | "draw" => {
-    const val1 = getStatValue(resolvedPlayer1, stat);
-    const val2 = getStatValue(resolvedPlayer2, stat);
-    if (val1 > val2) return "player1";
-    if (val2 > val1) return "player2";
-    return "draw";
-  };
-
-  const highlightStat = resolvedStats[0];
-  const highlightDiff = Math.abs(getStatValue(resolvedPlayer1, highlightStat) - getStatValue(resolvedPlayer2, highlightStat));
-  const highlightWinner = compareStats(highlightStat);
-
-  const renderPlayerBadge = (player: NormalisedPlayer) => (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        borderRadius: "8px",
-        padding: "8px 12px",
-        background: `${palette.border}20`,
-        border: `1px solid ${palette.border}40`,
-        gap: "10px",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        {player.photo ? (
-          <div
-            style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "50%",
-              overflow: "hidden",
-              border: `2px solid ${palette.accent}`,
-            }}
-          >
-            <img
-              src={player.photo}
-              alt={player.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          </div>
-        ) : (
-          <div
-            style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "50%",
-              background: `${palette.accent}20`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: palette.accent,
-              fontWeight: "bold",
-            }}
-          >
-            {player.name.charAt(0)}
-          </div>
-        )}
-        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          <span style={{ fontWeight: 700, letterSpacing: "0.4px" }}>{player.name}</span>
-          <span style={{ fontSize: "11px", opacity: 0.8 }}>
-            {player.team ?? "Club TBC"} · {player.position ?? "Role"}
-          </span>
-        </div>
-      </div>
-      {typeof player.rating === "number" && player.rating > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-          <Award size={16} color={palette.accent} />
-          <span style={{ fontWeight: 600 }}>{player.rating.toFixed(2)}</span>
-        </div>
-      )}
-    </div>
-  );
+  const playerSummary = (player: NormalisedPlayer) => `${player.goals} G / ${player.assists} A`;
 
   const renderSideBySide = () => (
     <div
       style={{
         display: "flex",
-        gap: "12px",
+        flexDirection: stackCards ? "column" : "row",
+        gap,
         flex: 1,
-        overflow: "hidden",
       }}
     >
-      {[resolvedPlayer1, resolvedPlayer2].map((player, idx) => (
+      {[player1, player2].map((player, index) => (
         <motion.div
           key={player.id}
-          initial={{ x: idx === 0 ? -50 : 50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.4 }}
+          initial={{ opacity: 0, x: index === 0 ? -30 : 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.35 }}
           style={{
             flex: 1,
-            backgroundColor: `${palette.border}15`,
-            borderRadius: "10px",
-            padding: "14px",
-            border: `1px solid ${palette.border}40`,
+            minWidth: stackCards ? "100%" : 0,
+            background: `${palette.border}22`,
+            border: `1px solid ${palette.border}55`,
+            borderRadius,
+            padding: cardPadding,
             display: "flex",
             flexDirection: "column",
-            gap: "10px",
+            gap: px(12, { min: 8, max: 18 }),
           }}
-          data-testid={`player-card-${idx + 1}`}
         >
-          {renderPlayerBadge(player)}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: px(12, { min: 8, max: 18 }),
+            }}
+          >
+            <div>
+              <div style={{ fontSize: subHeaderSize, fontWeight: 700 }}>{player.name}</div>
+              <div style={{ fontSize: px(11, { min: 9, max: 14 }), opacity: 0.72 }}>
+                {player.team ?? "Club TBC"}
+              </div>
+            </div>
+            {player.photo && (
+              <div
+                style={{
+                  width: badgeSize,
+                  height: badgeSize,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: `2px solid ${palette.accent}`,
+                  flexShrink: 0,
+                }}
+              >
+                <img
+                  src={player.photo}
+                  alt={player.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+            )}
+          </div>
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr",
-              gap: "6px",
+              display: "flex",
+              flexDirection: "column",
+              gap: px(6, { min: 4, max: 12 }),
             }}
           >
-            {resolvedStats.map((stat) => {
-              const value = getStatValue(player, stat);
-              const formattedValue = formatStatValue(stat, value);
-              const winner = compareStats(stat);
-              const isWinner = (idx === 0 && winner === "player1") || (idx === 1 && winner === "player2");
+            {statsToRender.map((stat) => {
+              const definition = STAT_DEFINITIONS[stat];
+              const value = definition.accessor(player);
+              const winner = compareWinner(stat, player1, player2);
+              const isWinner = (index === 0 && winner === "player1") || (index === 1 && winner === "player2");
               const isDraw = winner === "draw";
 
               return (
                 <div
-                  key={stat}
+                  key={`${player.id}-${stat}`}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    fontSize: "12px",
-                    padding: "6px 8px",
-                    borderRadius: "6px",
-                    backgroundColor: isWinner ? `${palette.accent}22` : isDraw ? `${palette.accent}11` : "transparent",
-                    border: `1px solid ${isWinner ? palette.accent : isDraw ? `${palette.accent}70` : `${palette.border}30`}`,
-                    transition: "background 0.2s ease",
+                    padding: `${px(6, { min: 4, max: 10 })}px ${px(8, { min: 6, max: 14 })}px`,
+                    borderRadius: px(10, { min: 6, max: 16 }),
+                    fontSize: statLabelSize,
+                    backgroundColor: isWinner
+                      ? `${palette.accent}25`
+                      : isDraw
+                      ? `${palette.text}18`
+                      : "transparent",
+                    border: isWinner
+                      ? `1px solid ${palette.accent}`
+                      : isDraw
+                      ? `1px solid ${palette.text}25`
+                      : "1px solid transparent",
                   }}
-                  data-testid={`stat-${stat}-player${idx + 1}`}
                 >
-                  <span style={{ color: palette.text, opacity: 0.8 }}>{getStatLabel(stat)}</span>
+                  <span style={{ opacity: 0.78 }}>{definition.label}</span>
                   <span
                     style={{
                       fontWeight: 700,
-                      color: isWinner ? palette.accent : palette.text,
                       display: "flex",
                       alignItems: "center",
-                      gap: "4px",
+                      gap: px(6, { min: 4, max: 10 }),
+                      color: isWinner ? palette.accent : palette.text,
                     }}
                   >
-                    {formattedValue}
-                    {isWinner && <TrendingUp size={13} />}
+                    {formatValue(definition, value)}
+                    {isWinner && <TrendingUp size={px(14, { min: 12, max: 18 })} />}
                   </span>
                 </div>
               );
@@ -543,104 +453,96 @@ export default function PlayerComparisonOverlay({
   );
 
   const renderBars = () => {
-    const maxStats: Record<string, number> = {};
-    resolvedStats.forEach((stat) => {
-      const val1 = getStatValue(resolvedPlayer1, stat);
-      const val2 = getStatValue(resolvedPlayer2, stat);
-      maxStats[stat] = Math.max(val1, val2, 1);
+    const maxima = new Map<StatKey, number>();
+    statsToRender.forEach((stat) => {
+      const definition = STAT_DEFINITIONS[stat];
+      maxima.set(stat, Math.max(definition.accessor(player1), definition.accessor(player2), 1));
     });
 
     return (
       <div
         style={{
-          flex: 1,
           display: "flex",
           flexDirection: "column",
-          gap: "16px",
+          gap: px(12, { min: 8, max: 18 }),
+          flex: 1,
+          justifyContent: "center",
         }}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "12px",
-          }}
-        >
-          {renderPlayerBadge(resolvedPlayer1)}
-          {renderPlayerBadge(resolvedPlayer2)}
-        </div>
-        {resolvedStats.map((stat, index) => {
-          const val1 = getStatValue(resolvedPlayer1, stat);
-          const val2 = getStatValue(resolvedPlayer2, stat);
-          const max = maxStats[stat];
-          const pct1 = (val1 / max) * 100;
-          const pct2 = (val2 / max) * 100;
+        {statsToRender.map((stat, index) => {
+          const definition = STAT_DEFINITIONS[stat];
+          const value1 = definition.accessor(player1);
+          const value2 = definition.accessor(player2);
+          const max = maxima.get(stat) ?? 1;
+          const pct1 = clamp((value1 / max) * 100, 0, 100);
+          const pct2 = clamp((value2 / max) * 100, 0, 100);
 
           return (
             <motion.div
               key={stat}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: index * 0.08, duration: 0.3 }}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "6px",
-              }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.08 }}
+              style={{ display: "flex", flexDirection: "column", gap: px(4, { min: 2, max: 6 }) }}
             >
               <div
                 style={{
-                  fontSize: "12px",
+                  fontSize: statLabelSize,
                   fontWeight: 700,
                   color: palette.accent,
                   textAlign: "center",
                 }}
               >
-                {getStatLabel(stat)}
+                {definition.label}
               </div>
               <div
                 style={{
-                  display: "flex",
+                  display: "grid",
+                  gridTemplateColumns: `${px(46, { min: 34, max: 60 })}px 1fr ${px(46, {
+                    min: 34,
+                    max: 60,
+                  })}px`,
+                  gap: px(10, { min: 6, max: 14 }),
                   alignItems: "center",
-                  gap: "10px",
                 }}
               >
-                <span style={{ fontSize: "11px", fontWeight: 700, minWidth: "36px", textAlign: "right" }}>
-                  {formatStatValue(stat, val1)}
-                </span>
+                <span style={{ fontWeight: 700, textAlign: "right" }}>{formatValue(definition, value1)}</span>
                 <div
                   style={{
-                    flex: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    background: `${palette.border}20`,
-                    borderRadius: "4px",
+                    position: "relative",
+                    height: px(18, { min: 12, max: 22 }),
+                    backgroundColor: `${palette.text}15`,
+                    borderRadius: px(10, { min: 6, max: 14 }),
                     overflow: "hidden",
-                    height: "18px",
                   }}
                 >
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${pct1}%` }}
-                    transition={{ duration: 0.5, delay: index * 0.08 }}
+                    transition={{ duration: 0.45 }}
                     style={{
-                      height: "100%",
-                      background: `linear-gradient(90deg, ${palette.accent}, ${palette.accent}90)`,
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      backgroundColor: palette.accent,
                     }}
                   />
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${pct2}%` }}
-                    transition={{ duration: 0.5, delay: index * 0.08 }}
+                    transition={{ duration: 0.45, delay: 0.05 }}
                     style={{
-                      height: "100%",
-                      background: `linear-gradient(90deg, ${palette.text}55, ${palette.text}15)`,
+                      position: "absolute",
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      backgroundColor: palette.text,
+                      opacity: 0.6,
                     }}
                   />
                 </div>
-                <span style={{ fontSize: "11px", fontWeight: 700, minWidth: "36px", textAlign: "left" }}>
-                  {formatStatValue(stat, val2)}
-                </span>
+                <span style={{ fontWeight: 700 }}>{formatValue(definition, value2)}</span>
               </div>
             </motion.div>
           );
@@ -650,89 +552,80 @@ export default function PlayerComparisonOverlay({
   };
 
   const renderRadar = () => {
-    const centerX = 150;
-    const centerY = 150;
-    const radius = 110;
-    const numStats = resolvedStats.length;
+    const chartSize = px(280, { min: 220, max: 360 });
+    const radius = chartSize / 2.6;
+    const center = chartSize / 2;
+    const statsCount = statsToRender.length;
 
-    const getPoint = (index: number, percentage: number) => {
-      const angle = (Math.PI * 2 * index) / numStats - Math.PI / 2;
-      const distance = radius * (percentage / 100);
+    const maxima = new Map<StatKey, number>();
+    statsToRender.forEach((stat) => {
+      const definition = STAT_DEFINITIONS[stat];
+      maxima.set(stat, Math.max(definition.accessor(player1), definition.accessor(player2), 1));
+    });
+
+    const pointFor = (index: number, value: number, max: number) => {
+      const angle = (Math.PI * 2 * index) / statsCount - Math.PI / 2;
+      const distance = radius * (value / max);
       return {
-        x: centerX + distance * Math.cos(angle),
-        y: centerY + distance * Math.sin(angle),
+        x: center + distance * Math.cos(angle),
+        y: center + distance * Math.sin(angle),
       };
     };
 
-    const maxStats: Record<string, number> = {};
-    resolvedStats.forEach((stat) => {
-      const val1 = getStatValue(resolvedPlayer1, stat);
-      const val2 = getStatValue(resolvedPlayer2, stat);
-      maxStats[stat] = Math.max(val1, val2, 1);
-    });
-
-    const buildPath = (player: NormalisedPlayer) =>
-      resolvedStats
-        .map((stat, i) => {
-          const value = getStatValue(player, stat);
-          const pct = maxStats[stat] ? (value / maxStats[stat]) * 100 : 0;
-          const point = getPoint(i, pct);
-          return `${i === 0 ? "M" : "L"} ${point.x} ${point.y}`;
-        })
-        .join(" ") + " Z";
+    const pathFor = (player: NormalisedPlayer) => {
+      const points = statsToRender.map((stat, index) => {
+        const definition = STAT_DEFINITIONS[stat];
+        const max = maxima.get(stat) ?? 1;
+        const value = clamp(definition.accessor(player), 0, max);
+        return pointFor(index, value, max);
+      });
+      return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ") + " Z";
+    };
 
     return (
       <div
         style={{
           flex: 1,
           display: "flex",
-          flexDirection: "column",
-          gap: "16px",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: chartSize,
         }}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "12px",
-          }}
+        <svg
+          width={chartSize}
+          height={chartSize}
+          viewBox={`0 0 ${chartSize} ${chartSize}`}
+          style={{ maxWidth: "100%", maxHeight: "100%" }}
         >
-          {renderPlayerBadge(resolvedPlayer1)}
-          {renderPlayerBadge(resolvedPlayer2)}
-        </div>
-        <svg width="300" height="300" style={{ maxWidth: "100%", maxHeight: "100%", margin: "0 auto" }}>
-          {[20, 40, 60, 80, 100].map((pct) => {
-            const points = resolvedStats.map((_, i) => getPoint(i, pct));
-            const path = points
-              .map((point, i) => `${i === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-              .join(" ") + " Z";
-            return (
-              <path key={pct} d={path} fill="none" stroke={`${palette.text}15`} strokeWidth="1" />
-            );
+          {[0.25, 0.5, 0.75, 1].map((step) => {
+            const points = statsToRender.map((_, index) => {
+              const angle = (Math.PI * 2 * index) / statsCount - Math.PI / 2;
+              return {
+                x: center + radius * step * Math.cos(angle),
+                y: center + radius * step * Math.sin(angle),
+              };
+            });
+            const path = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ") + " Z";
+            return <path key={step} d={path} fill="none" stroke={`${palette.text}25`} strokeWidth={1} />;
           })}
 
-          {resolvedStats.map((stat, i) => {
-            const point = getPoint(i, 105);
-            const labelPoint = getPoint(i, 120);
+          {statsToRender.map((stat, index) => {
+            const angle = (Math.PI * 2 * index) / statsCount - Math.PI / 2;
+            const x = center + radius * Math.cos(angle);
+            const y = center + radius * Math.sin(angle);
             return (
               <g key={stat}>
-                <line
-                  x1={centerX}
-                  y1={centerY}
-                  x2={point.x}
-                  y2={point.y}
-                  stroke={`${palette.text}20`}
-                  strokeWidth="1"
-                />
+                <line x1={center} y1={center} x2={x} y2={y} stroke={`${palette.text}35`} strokeWidth={1} />
                 <text
-                  x={labelPoint.x}
-                  y={labelPoint.y}
+                  x={center + (radius + px(16, { min: 12, max: 22 })) * Math.cos(angle)}
+                  y={center + (radius + px(16, { min: 12, max: 22 })) * Math.sin(angle)}
                   fill={palette.text}
-                  fontSize="10"
+                  fontSize={px(10, { min: 8, max: 14 })}
                   textAnchor="middle"
                   dominantBaseline="middle"
                 >
-                  {getStatLabel(stat)}
+                  {STAT_DEFINITIONS[stat].label}
                 </text>
               </g>
             );
@@ -740,96 +633,96 @@ export default function PlayerComparisonOverlay({
 
           <motion.path
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.55 }}
-            transition={{ duration: 0.5 }}
-            d={buildPath(resolvedPlayer1)}
+            animate={{ opacity: 0.6 }}
+            transition={{ duration: 0.4 }}
+            d={pathFor(player1)}
             fill={`${palette.accent}55`}
             stroke={palette.accent}
-            strokeWidth="2"
+            strokeWidth={2}
           />
-
           <motion.path
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.55 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            d={buildPath(resolvedPlayer2)}
+            animate={{ opacity: 0.5 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            d={pathFor(player2)}
             fill={`${palette.text}40`}
-            stroke={`${palette.text}80`}
-            strokeWidth="2"
+            stroke={palette.text}
+            strokeWidth={2}
           />
         </svg>
       </div>
     );
   };
 
-  const highlightLabel = getStatLabel(highlightStat);
-  const highlightDescriptor = highlightDiff === 0 ? "Neck and neck" : `${highlightLabel} gap: ${formatStatValue(highlightStat, highlightDiff)}`;
-
-  const overlaySource = data?.source ?? resolvedPlayer1.source ?? resolvedPlayer2.source ?? "Mailman Media analytics";
-
   return (
     <motion.div
-      initial={{ scale: 0.9, opacity: 0 }}
+      initial={{ scale: 0.92, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.35 }}
       style={{
         width: "100%",
         height: "100%",
-        background: palette.background,
+        position: "relative",
+        background: `linear-gradient(138deg, ${palette.background}, ${palette.border})`,
         opacity,
         color: palette.text,
         fontFamily: "League Spartan, sans-serif",
-        padding: "18px",
+        padding: cardPadding,
+        borderRadius,
+        border: `${Math.max(2 * scale, 1)}px solid ${palette.border}`,
+        boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
-        borderRadius: "12px",
-        border: `3px solid ${palette.border}`,
-        boxSizing: "border-box",
+        gap,
         overflow: "hidden",
-        position: "relative",
-        gap: "12px",
       }}
       data-testid="overlay-player-comparison"
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <div
-          style={{
-            fontSize: "18px",
-            fontWeight: "bold",
-            color: palette.accent,
-            letterSpacing: "0.6px",
-          }}
-        >
-          PLAYER COMPARISON
+      <header
+        style={{
+          display: "flex",
+          flexDirection: compactHeight ? "column" : "row",
+          alignItems: compactHeight ? "flex-start" : "center",
+          justifyContent: "space-between",
+          gap,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: headerSize, fontWeight: 800, letterSpacing: "0.08em", color: palette.accent }}>
+            PLAYER COMPARISON
+          </div>
+          <div style={{ fontSize: subHeaderSize, fontWeight: 600, opacity: 0.85 }}>
+            {player1.name} vs {player2.name}
+          </div>
+          <div style={{ fontSize: px(11, { min: 9, max: 14 }), opacity: 0.72 }}>{headline}</div>
         </div>
         <div
           style={{
-            fontSize: "13px",
-            color: palette.text,
-            opacity: 0.85,
-            textAlign: "center",
             display: "flex",
-            flexDirection: "column",
-            gap: "4px",
+            flexDirection: compactHeight ? "column" : "row",
+            alignItems: compactHeight ? "flex-start" : "center",
+            gap: px(10, { min: 6, max: 14 }),
+            backgroundColor: `${palette.text}12`,
+            borderRadius: px(999, { min: 18, max: 48 }),
+            padding: `${px(8, { min: 6, max: 12 })}px ${px(18, { min: 10, max: 26 })}px`,
+            border: `1px solid ${palette.text}25`,
+            whiteSpace: compactHeight ? "normal" : "nowrap",
           }}
         >
-          <span>
-            {resolvedPlayer1.name} vs {resolvedPlayer2.name}
-          </span>
-          <span style={{ fontSize: "11px", opacity: 0.75 }}>
-            {highlightDescriptor} · {highlightWinner === "player1" ? resolvedPlayer1.name : highlightWinner === "player2" ? resolvedPlayer2.name : "Even"}
-          </span>
+          <span style={{ fontWeight: 700 }}>{playerSummary(player1)}</span>
+          <span style={{ opacity: 0.6 }}>vs</span>
+          <span style={{ fontWeight: 700 }}>{playerSummary(player2)}</span>
         </div>
-      </div>
+      </header>
 
       <AnimatePresence mode="wait">
         <motion.div
           key={viewMode}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          style={{ flex: 1, display: "flex", flexDirection: "column" }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.25 }}
+          style={{ flex: 1, display: "flex" }}
         >
           {viewMode === "sideBySide" && renderSideBySide()}
           {viewMode === "bars" && renderBars()}
@@ -837,7 +730,21 @@ export default function PlayerComparisonOverlay({
         </motion.div>
       </AnimatePresence>
 
-      <OverlaySourceBadge source={overlaySource as any} timestamp={data?.timestamp} />
+      <footer
+        style={{
+          display: "flex",
+          flexDirection: compactHeight ? "column" : "row",
+          gap: px(8, { min: 6, max: 14 }),
+          fontSize: px(11, { min: 9, max: 14 }),
+          opacity: 0.76,
+        }}
+      >
+        <span>{player1.name.split(" ")[0]}: {total1} goal involvements</span>
+        <span>·</span>
+        <span>{player2.name.split(" ")[0]}: {total2} goal involvements</span>
+      </footer>
+
+      <OverlaySourceBadge source={data.source as string} timestamp={data.timestamp} />
     </motion.div>
   );
 }
