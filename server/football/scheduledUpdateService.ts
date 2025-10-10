@@ -239,20 +239,20 @@ class ScheduledUpdateService {
     
     try {
       // Get fixtures for Premier League
-      const plFixtures = await apiFootballService.getFixtures({
-        league: this.PREMIER_LEAGUE_ID,
-        season: this.getCurrentSeason(),
-        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 30 days
-        to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]   // Next 30 days
-      });
+      const plFixtures = await apiFootballService.fetchFixtures(
+        this.PREMIER_LEAGUE_ID,
+        this.getCurrentSeason(),
+        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 30 days
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]   // Next 30 days
+      );
       
       // Get fixtures for Champions League
-      const clFixtures = await apiFootballService.getFixtures({
-        league: this.CHAMPIONS_LEAGUE_ID,
-        season: this.getCurrentSeason(),
-        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      });
+      const clFixtures = await apiFootballService.fetchFixtures(
+        this.CHAMPIONS_LEAGUE_ID,
+        this.getCurrentSeason(),
+        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      );
       
       const allFixtures = [...plFixtures, ...clFixtures];
       
@@ -621,9 +621,7 @@ class ScheduledUpdateService {
     
     try {
       // Get live matches
-      const liveMatches = await apiFootballService.getFixtures({
-        live: 'all'
-      });
+      const liveMatches = await apiFootballService.fetchLiveFixtures('all');
       
       for (const match of liveMatches) {
         await db.update(footballFixtures)

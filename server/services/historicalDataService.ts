@@ -222,7 +222,7 @@ class HistoricalDataService {
         console.log(`📊 Fetching H2H data for teams ${team1Id} vs ${team2Id} - Season ${season}`);
         
         try {
-          const fixtures = await apiFootballService.getFixtures({
+          const fixtures = await apiFootballService.fetchFixturesByTeam({
             season,
             team: team1Id,
             status: 'FT' // Only finished matches

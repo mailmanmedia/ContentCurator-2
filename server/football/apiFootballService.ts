@@ -790,6 +790,51 @@ class APIFootballService {
     return this.processFixtures(fixtures);
   }
 
+  /**
+   * Fetch fixtures by team for a specific season
+   * This method is used for fetching team-specific fixtures including H2H data
+   */
+  async fetchFixturesByTeam(params: {
+    season: number;
+    team?: number;
+    status?: string;
+    league?: number;
+    from?: string;
+    to?: string;
+  }): Promise<Fixture[]> {
+    const requestParams: Record<string, any> = { season: params.season };
+    
+    if (params.team) requestParams.team = params.team;
+    if (params.status) requestParams.status = params.status;
+    if (params.league) requestParams.league = params.league;
+    if (params.from) requestParams.from = params.from;
+    if (params.to) requestParams.to = params.to;
+
+    const fixtures = await this.makeRequest<Fixture[]>('/fixtures', requestParams, {
+      cacheTTL: this.cacheTTL.fixtures
+    });
+    
+    // Process fixtures to convert timestamps
+    return this.processFixtures(fixtures);
+  }
+
+  /**
+   * Fetch live fixtures
+   * @param live - 'all' to get all live matches
+   * @returns Array of live fixtures
+   */
+  async fetchLiveFixtures(live: string = 'all'): Promise<Fixture[]> {
+    const fixtures = await this.makeRequest<Fixture[]>('/fixtures', {
+      live
+    }, {
+      cacheTTL: this.cacheTTL.events, // Short cache for live data
+      useCache: false // Don't cache live data
+    });
+    
+    // Process fixtures to convert timestamps
+    return this.processFixtures(fixtures);
+  }
+
   async fetchStandings(league: number, season: number): Promise<{
     league: any;
     standings: Standing[][];
