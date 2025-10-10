@@ -19,12 +19,14 @@ import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
 import VideoEditor from "@/pages/VideoEditor";
 import DatabaseStatus from "@/pages/DatabaseStatus";
 import TeamFormsList from "@/pages/TeamFormsList";
+import AdminDashboard from "@/pages/AdminDashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={DatabaseStatus} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/frameworks" component={FrameworkDirectory} />
       <Route path="/frameworks/create" component={CreateFramework} />
       <Route path="/rss" component={RssIntelligence} />

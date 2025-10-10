@@ -2950,6 +2950,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Sync Logs
+  app.get("/api/admin/sync/logs", async (req, res) => {
+    try {
+      const { status, limit = 100, offset = 0 } = req.query;
+      const { data_sync_logs } = await import('@shared/schema');
+      
+      let query = db.select().from(data_sync_logs);
+      
+      if (status && status !== 'all') {
+        query = query.where(eq(data_sync_logs.status, status as string));
+      }
+      
+      const logs = await query
+        .orderBy(desc(data_sync_logs.started_at))
+        .limit(Number(limit))
+        .offset(Number(offset));
+      
+      // Transform to match frontend expectations
+      const transformedLogs = logs.map(log => ({
+        id: log.id,
+        resource_type: log.resource_type,
+        league: log.league_id?.toString(),
+        season: log.season,
+        sync_status: log.status || 'unknown',
+        records_processed: log.records_processed,
+        error_message: log.error_message,
+        started_at: log.started_at,
+        completed_at: log.completed_at,
+        duration_seconds: log.completed_at && log.started_at 
+          ? Math.floor((new Date(log.completed_at).getTime() - new Date(log.started_at).getTime()) / 1000)
+          : null
+      }));
+      
+      res.json(transformedLogs);
+    } catch (error: any) {
+      console.error('Error fetching sync logs:', error);
+      res.status(500).json({ error: error.message || "Failed to fetch sync logs" });
+    }
+  });
+
+  // Get Sync Status
+  app.get("/api/admin/sync/status", async (req, res) => {
+    try {
+      const { data_sync_status } = await import('@shared/schema');
+      
+      const statuses = await db
+        .select()
+        .from(data_sync_status)
+        .orderBy(desc(data_sync_status.updated_at))
+        .limit(10);
+      
+      res.json(statuses);
+    } catch (error: any) {
+      console.error('Error fetching sync status:', error);
+      res.status(500).json({ error: error.message || "Failed to fetch sync status" });
+    }
+  });
+
+  // Bootstrap Historical Data
+  app.post("/api/admin/bootstrap", async (req, res) => {
+    try {
+      const { leagues = ['39'], seasons = ['2025'], skipExisting = true } = req.body;
+      
+      // Import bootstrap module dynamically
+      const { HistoricalDataBootstrap } = await import('./football/historicalDataBootstrap');
+      
+      // Create bootstrap instance
+      const bootstrap = new HistoricalDataBootstrap({
+        leagues,
+        seasons,
+        skipExisting,
+        batchSize: 10
+      });
+      
+      // Start bootstrap process (async, don't wait)
+      bootstrap.bootstrapAll().then(report => {
+        console.log('Bootstrap completed:', report);
+      }).catch(error => {
+        console.error('Bootstrap failed:', error);
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Bootstrap process initiated",
+        leagues,
+        seasons
+      });
+    } catch (error: any) {
+      console.error('Error initiating bootstrap:', error);
+      res.status(500).json({ error: error.message || "Failed to initiate bootstrap" });
+    }
+  });
+
+  // Export Data Endpoints
+  app.get("/api/admin/export/:tableName", async (req, res) => {
+    try {
+      const { tableName } = req.params;
+      const { format = 'json' } = req.query;
+      
+      let data: any[] = [];
+      
+      // Map table names to actual data
+      switch(tableName) {
+        case 'Football Players':
+          data = await db.select().from(footballPlayers);
+          break;
+        case 'Football Teams':
+          data = await db.select().from(footballTeams);
+          break;
+        case 'Football Fixtures':
+          data = await db.select().from(footballFixtures);
+          break;
+        case 'Football Standings':
+          const { football_standings } = await import('@shared/schema');
+          data = await db.select().from(football_standings);
+          break;
+        default:
+          return res.status(404).json({ error: "Table not found" });
+      }
+      
+      if (format === 'csv') {
+        // Convert to CSV
+        if (data.length === 0) {
+          return res.type('text/csv').send('');
+        }
+        
+        const headers = Object.keys(data[0]).join(',');
+        const rows = data.map(row => 
+          Object.values(row).map(val => 
+            typeof val === 'string' && val.includes(',') ? `"${val}"` : val
+          ).join(',')
+        );
+        
+        const csv = [headers, ...rows].join('\n');
+        res.type('text/csv').send(csv);
+      } else {
+        res.json(data);
+      }
+    } catch (error: any) {
+      console.error('Error exporting data:', error);
+      res.status(500).json({ error: error.message || "Failed to export data" });
+    }
+  });
+
+  // Export All Data
+  app.get("/api/admin/export/all", async (req, res) => {
+    try {
+      const { format = 'json' } = req.query;
+      
+      const allData = {
+        players: await db.select().from(footballPlayers),
+        teams: await db.select().from(footballTeams),
+        fixtures: await db.select().from(footballFixtures),
+        playerStats: await db.select().from(playerSeasonStatistics),
+        teamStats: await db.select().from(teamSeasonStatistics)
+      };
+      
+      if (format === 'csv') {
+        // For CSV, we'd typically create a ZIP file with multiple CSVs
+        // For simplicity, returning JSON
+        res.json({ 
+          message: "Bulk CSV export would create a ZIP file. Use individual table exports for CSV.", 
+          tables: Object.keys(allData) 
+        });
+      } else {
+        res.json(allData);
+      }
+    } catch (error: any) {
+      console.error('Error exporting all data:', error);
+      res.status(500).json({ error: error.message || "Failed to export all data" });
+    }
+  });
+
   // Get default overlay templates
   app.get("/api/overlays/default-templates", async (req, res) => {
     try {
