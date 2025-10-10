@@ -1224,7 +1224,7 @@ export class MemStorage implements IStorage {
 
   // RSS Article methods
   async getRssArticles(): Promise<RssArticle[]> {
-    const results = await db.select().from(rssArticlesTable).orderBy(desc(rssArticlesTable.publishedAt));
+    const results = await db.select().from(rssArticlesTable).orderBy(desc(rssArticlesTable.published_at));
     return results;
   }
 
@@ -1236,7 +1236,7 @@ export class MemStorage implements IStorage {
   async getRssArticlesBySource(sourceId: string): Promise<RssArticle[]> {
     const results = await db.select().from(rssArticlesTable)
       .where(eq(rssArticlesTable.sourceId, sourceId))
-      .orderBy(desc(rssArticlesTable.publishedAt));
+      .orderBy(desc(rssArticlesTable.published_at));
     return results;
   }
 
@@ -1252,7 +1252,7 @@ export class MemStorage implements IStorage {
 
   async getRecentRssArticles(limit: number = 50): Promise<RssArticle[]> {
     const results = await db.select().from(rssArticlesTable)
-      .orderBy(desc(rssArticlesTable.publishedAt))
+      .orderBy(desc(rssArticlesTable.published_at))
       .limit(limit);
     return results;
   }
@@ -1261,11 +1261,11 @@ export class MemStorage implements IStorage {
     const results = await db.select().from(rssArticlesTable)
       .where(
         and(
-          gte(rssArticlesTable.publishedAt, startDate),
-          lte(rssArticlesTable.publishedAt, endDate)
+          gte(rssArticlesTable.published_at, startDate),
+          lte(rssArticlesTable.published_at, endDate)
         )
       )
-      .orderBy(desc(rssArticlesTable.publishedAt));
+      .orderBy(desc(rssArticlesTable.published_at));
     return results;
   }
 
@@ -1279,7 +1279,7 @@ export class MemStorage implements IStorage {
           ilike(rssArticlesTable.author, `%${query}%`)
         )
       )
-      .orderBy(desc(rssArticlesTable.publishedAt));
+      .orderBy(desc(rssArticlesTable.published_at));
     return results;
   }
 
@@ -1294,7 +1294,7 @@ export class MemStorage implements IStorage {
     if (source) {
       await this.updateRssSource(insertArticle.sourceId, { 
         totalArticles: source.totalArticles + 1,
-        lastArticleDate: insertArticle.publishedAt || new Date()
+        lastArticleDate: insertArticle.published_at || new Date()
       });
     }
     
@@ -2014,7 +2014,7 @@ export class MemStorage implements IStorage {
 
   // Live State methods
   async getLiveState(): Promise<LiveState | undefined> {
-    const results = await db.select().from(liveStatesTable).where(eq(liveStatesTable.id, 'default'));
+    const results = await db.select().from(liveStatesTable).where(eq(liveStatesTable.key, 'default'));
     return results[0];
   }
 
@@ -2022,13 +2022,13 @@ export class MemStorage implements IStorage {
     const existing = await this.getLiveState();
     if (existing) {
       const results = await db.update(liveStatesTable)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(liveStatesTable.id, 'default'))
+        .set({ ...updates, updated_at: new Date() })
+        .where(eq(liveStatesTable.key, 'default'))
         .returning();
       return results[0];
     } else {
       const results = await db.insert(liveStatesTable)
-        .values({ id: 'default', ...updates })
+        .values({ key: 'default', ...updates })
         .returning();
       return results[0];
     }

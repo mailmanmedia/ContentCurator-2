@@ -540,7 +540,7 @@ export const rss_articles = pgTable('rss_articles', {
   title: text('title').notNull(),
   link: text('link'),
   description: text('description'),
-  pub_date: timestamp('pub_date'),
+  published_at: timestamp('published_at'),
   guid: text('guid'),
   author: varchar('author', { length: 255 }),
   categories: text('categories').array(),

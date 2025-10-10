@@ -2957,16 +2957,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { status, limit = 100, offset = 0 } = req.query;
       const { data_sync_logs } = await import('@shared/schema');
       
-      let query = db.select().from(data_sync_logs);
-      
-      if (status && status !== 'all') {
-        query = query.where(eq(data_sync_logs.status, status as string));
+      let logs = [];
+      try {
+        let query = db.select().from(data_sync_logs);
+        
+        if (status && status !== 'all') {
+          query = query.where(eq(data_sync_logs.status, status as string));
+        }
+        
+        logs = await query
+          .orderBy(desc(data_sync_logs.started_at))
+          .limit(Number(limit))
+          .offset(Number(offset));
+      } catch (dbError: any) {
+        // If table doesn't exist or there's a DB error, return empty array
+        console.warn('Warning: Could not fetch sync logs (table might not exist):', dbError.message);
+        // Return empty array instead of throwing error
+        return res.json([]);
       }
-      
-      const logs = await query
-        .orderBy(desc(data_sync_logs.started_at))
-        .limit(Number(limit))
-        .offset(Number(offset));
       
       // Transform to match frontend expectations
       const transformedLogs = logs.map(log => ({
@@ -2996,11 +3004,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { data_sync_status } = await import('@shared/schema');
       
-      const statuses = await db
-        .select()
-        .from(data_sync_status)
-        .orderBy(desc(data_sync_status.updated_at))
-        .limit(10);
+      let statuses = [];
+      try {
+        statuses = await db
+          .select()
+          .from(data_sync_status)
+          .orderBy(desc(data_sync_status.updated_at))
+          .limit(10);
+      } catch (dbError: any) {
+        // If table doesn't exist or there's a DB error, return empty array
+        console.warn('Warning: Could not fetch sync status (table might not exist):', dbError.message);
+        // Return empty array instead of throwing error
+        return res.json([]);
+      }
       
       res.json(statuses);
     } catch (error: any) {
@@ -5874,31 +5890,77 @@ Return ONLY a JSON object with this structure:
   // Get database status and data availability
   app.get("/api/database-status", async (req, res) => {
     try {
-      // Get player season statistics using raw SQL
-      const playerSeasonsResult = await db.execute(
-        `SELECT 
-          season,
-          COUNT(*) as player_count,
-          SUM(goals) as total_goals,
-          SUM(assists) as total_assists,
-          MIN(last_updated) as earliest_update,
-          MAX(last_updated) as latest_update
-        FROM player_season_statistics
-        GROUP BY season
-        ORDER BY season DESC`
-      );
+      // Get player season statistics using raw SQL - defensive
+      let playerSeasonsResult = { rows: [] };
+      try {
+        playerSeasonsResult = await db.execute(
+          `SELECT 
+            season,
+            COUNT(*) as player_count,
+            SUM(goals) as total_goals,
+            SUM(assists) as total_assists,
+            MIN(last_updated) as earliest_update,
+            MAX(last_updated) as latest_update
+          FROM player_season_statistics
+          GROUP BY season
+          ORDER BY season DESC`
+        );
+      } catch (dbError: any) {
+        console.warn('Warning: Could not fetch player season statistics (table might not exist):', dbError.message);
+        playerSeasonsResult = { rows: [] };
+      }
 
-      // Get other table stats
-      const rssArticles = await storage.getRssArticles();
-      const players = await db.select().from(footballPlayers);
-      const teamStats = await db.select().from(teamSeasonStatistics);
-      const recordings = await storage.getRecordings();
-      const videoProjects = await storage.getVideoProjects();
+      // Get other table stats - all defensive with try-catch
+      let rssArticles: any[] = [];
+      try {
+        rssArticles = await storage.getRssArticles();
+      } catch (error: any) {
+        console.warn('Warning: Could not fetch RSS articles:', error.message);
+        rssArticles = [];
+      }
 
-      // Get historical head to head data
-      const h2hResult = await db.execute(
-        `SELECT COUNT(*) as count, MIN(date) as earliest, MAX(date) as latest FROM historical_head_to_head`
-      );
+      let players: any[] = [];
+      try {
+        players = await db.select().from(footballPlayers);
+      } catch (error: any) {
+        console.warn('Warning: Could not fetch football players:', error.message);
+        players = [];
+      }
+
+      let teamStats: any[] = [];
+      try {
+        teamStats = await db.select().from(teamSeasonStatistics);
+      } catch (error: any) {
+        console.warn('Warning: Could not fetch team season statistics:', error.message);
+        teamStats = [];
+      }
+
+      let recordings: any[] = [];
+      try {
+        recordings = await storage.getRecordings();
+      } catch (error: any) {
+        console.warn('Warning: Could not fetch recordings:', error.message);
+        recordings = [];
+      }
+
+      let videoProjects: any[] = [];
+      try {
+        videoProjects = await storage.getVideoProjects();
+      } catch (error: any) {
+        console.warn('Warning: Could not fetch video projects:', error.message);
+        videoProjects = [];
+      }
+
+      // Get historical head to head data - defensive
+      let h2hResult = { rows: [] };
+      try {
+        h2hResult = await db.execute(
+          `SELECT COUNT(*) as count, MIN(date) as earliest, MAX(date) as latest FROM historical_head_to_head`
+        );
+      } catch (error: any) {
+        console.warn('Warning: Could not fetch historical head-to-head data:', error.message);
+        h2hResult = { rows: [] };
+      }
 
       const h2hData = h2hResult.rows[0] || { count: 0, earliest: null, latest: null };
 

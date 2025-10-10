@@ -1,0 +1,46 @@
+our H2H JSON is stuck at 2024 because it’s using static fallback data or because API-based fetching/saving is broken or disconnected. Your mission is to ensure our system always serves the most up-to-date head-to-head match data—never hand-typed or cached statically beyond the scheduled refresh period.
+
+Instructions for Agent/Developer:
+
+Always Fetch Latest Data from API or DB:
+
+Replace any direct use of static fallback JSON with a fetcher that calls the API-FOOTBALL /fixtures/headtohead endpoint (or your latest-match database table) at least twice a week (or whenever manually refreshed).
+
+The fetch parameters must dynamically include the present season and current date.
+
+Automate File/DB Updates:
+
+After a successful fetch, overwrite historical_h2h.json (or the relevant DB table) with new results, including all matches up to and including today. Do not retain any static/mocked data unless the API is not reachable and the user has accepted fallback mode.
+
+Update Timestamps:
+
+Set the top-level "lastUpdated" field and each match "date" field to reflect the real, current API/database results every time you fetch and save.
+
+Fallbacks ONLY When Required:
+
+Only use fallback data if:
+
+The API is down/unreachable,
+
+The API key is missing,
+
+Or a hard error prevents real fetch.
+
+ALWAYS set an overt "fallback": true and "fallbackReason" field so users/QA can see the warning, and log to the admin/errors dashboard.
+
+Test and Validate:
+
+Test with a real trigger (run the fetch/updater): Check that new matches (e.g., from 2025 season) appear on the next update, with correct "date" and "lastUpdated".
+
+Confirm the code/service never displays a "most recent" match that is not, in fact, the actual most recent.
+
+Manual Refresh Support:
+
+Add a manual refresh trigger in the admin/data UI so the current data file/table can be regenerated on demand and validated in the app.
+
+Never Ship Hardcoded Dates in Production:
+
+Any code or file (JSON, DB field) used in production must be automatically regenerated, except in explicit offline/fallback mode.
+
+Summary:
+Only deliver current H2H data from a live, automated fetch (never static hand-edited data), and always update "lastUpdated" and match "date". If static fallback is used, it must be flagged as such and shown as "NOT LIVE" in the user/admin UI, with the fallback error documented and correct last refresh date.Prompt for Developer/Agent to Fix Stale H2H Dates:
