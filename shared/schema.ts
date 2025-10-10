@@ -49,6 +49,7 @@ export type FootballTeam = typeof football_teams.$inferSelect;
 // Football Players Table
 export const football_players = pgTable('football_players', {
   id: serial('id').primaryKey(),
+  player_id: integer('player_id'),
   name: varchar('name', { length: 255 }).notNull(),
   firstname: varchar('firstname', { length: 100 }),
   lastname: varchar('lastname', { length: 100 }),
@@ -66,7 +67,8 @@ export const football_players = pgTable('football_players', {
   last_updated: timestamp('last_updated').defaultNow()
 }, (table) => ({
   nameIdx: index('idx_football_players_name').on(table.name),
-  positionIdx: index('idx_football_players_position').on(table.position)
+  positionIdx: index('idx_football_players_position').on(table.position),
+  playerIdIdx: uniqueIndex('idx_football_players_player_id').on(table.player_id)
 }));
 
 export const insertFootballPlayerSchema = createInsertSchema(football_players).omit({ id: true, last_updated: true });
