@@ -117,7 +117,12 @@ export default function FormGuideOverlay({
     queryFn: async () => {
       const response = await fetch(`/api/football/teams/${teamId}/fixtures?last=${matchLimit}&season=2025`);
       if (!response.ok) throw new Error('Failed to fetch fixtures');
-      return response.json();
+      const data = await response.json();
+      // Handle both array and object responses
+      if (Array.isArray(data)) {
+        return { fixtures: data };
+      }
+      return data;
     },
     enabled: !!teamId,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -127,9 +132,39 @@ export default function FormGuideOverlay({
   const error = statsError || fixturesError;
 
   const { teamName, matches, sequence, record, competition, source } = useMemo(() => {
-    if (!fixturesData?.fixtures || fixturesData.fixtures.length === 0) {
+    // Extract team name from stats data
+    const teamNameFromStats = teamStatsData?.team?.name || teamStatsData?.statistics?.team?.name || "Team";
+    
+    // Check if we have fixtures data
+    const hasFixtures = fixturesData?.fixtures && Array.isArray(fixturesData.fixtures) && fixturesData.fixtures.length > 0;
+    
+    if (!hasFixtures) {
+      // Try to use form data from team statistics if available
+      const formString = teamStatsData?.statistics?.form || teamStatsData?.form;
+      if (formString && typeof formString === 'string') {
+        const formArray = formString.split('').slice(0, matchLimit);
+        const formRecord = formArray.reduce(
+          (acc: any, result: string) => {
+            if (result === 'W' || result === 'D' || result === 'L') {
+              acc[result] = (acc[result] || 0) + 1;
+            }
+            return acc;
+          },
+          { W: 0, D: 0, L: 0 }
+        );
+        
+        return {
+          teamName: teamNameFromStats,
+          matches: [],
+          sequence: formArray,
+          record: formRecord,
+          competition: "Premier League",
+          source: "Team Statistics"
+        };
+      }
+      
       return {
-        teamName: teamStatsData?.team?.name || "Team",
+        teamName: teamNameFromStats,
         matches: [],
         sequence: [],
         record: { W: 0, D: 0, L: 0 },
@@ -138,7 +173,7 @@ export default function FormGuideOverlay({
       };
     }
 
-    const fixtures = Array.isArray(fixturesData.fixtures) ? fixturesData.fixtures : [];
+    const fixtures = fixturesData.fixtures;
     
     const processedMatches = fixtures
       .filter((f: any) => f.status?.short === 'FT' && f.goals?.home !== null && f.goals?.away !== null)
@@ -179,7 +214,7 @@ export default function FormGuideOverlay({
     );
 
     return {
-      teamName: teamStatsData?.team?.name || fixturesData.team?.name || "Team",
+      teamName: teamNameFromStats,
       matches: processedMatches,
       sequence: formSequence,
       record: tally,
@@ -263,8 +298,8 @@ export default function FormGuideOverlay({
     return <OverlayErrorState width={width} height={height} error={error as Error} />;
   }
 
-  if (!sequence.length || matches.length === 0) {
-    console.warn('[FormGuideOverlay] No matches found for team:', teamId);
+  if (!sequence.length) {
+    console.warn('[FormGuideOverlay] No form data found for team:', teamId);
     return <OverlayEmptyState width={width} height={height} message={`No recent form data available for ${teamName}`} />;
   }
 
