@@ -1,0 +1,47 @@
+The file client/src/components/overlays/FormGuideOverlay.tsx is currently broken for two reasons:
+
+Incorrect Format: The file contains git diff metadata and lines with + markers, not valid TypeScript and React code.
+
+Responsiveness Issue: The overlay content does not adapt responsively to changes in overlay dimensions.
+
+Please perform only the following actions:
+
+1. Fix File Format:
+
+Remove all git diff headers (lines starting with diff --git, index, ---, +++, etc.).
+
+Delete any leading + characters on code lines.
+
+Ensure the file is valid TypeScript/React and represents a functional React component, not just hardcoded data.
+
+2. Make Overlay Responsive:
+
+Refactor the overlay so that all layout and style calculations are based on the actual overlay container size (width/height props or context).
+
+Replace any fixed pixel values for sizing, spacing, font size, etc., with relative units or dynamic calculations that adapt to the overlay’s container dimensions.
+
+Use CSS Flexbox/Grid, clamp(), or container queries as appropriate so the overlay content (text, match circles, headings, etc.) always fits, without overflow or clipping, across all sizes.
+
+3. Follow Component Best Practices:
+
+Ensure this overlay passes valid props and uses them correctly for all rendering and sizing computations.
+
+If context or hooks are used for sizing, verify correct linkage with LivePresentation and VideoCompositor components.
+
+Add clear comments so it’s obvious what sizes/layouts are dynamic.
+
+4. Validity Check:
+
+After cleaning and updating the file, confirm that the component mounts successfully and responds visually to changes in overlay size from the UI controls.
+
+If you see any errors, halt and report; DO NOT revert to a generic placeholder or delete major logic.
+
+Do NOT:
+
+Do not overwrite unrelated files, business logic, or component structure outside this overlay.
+
+Do not hardcode one fixed size for anything; all content must respond to the overlay’s live width/height or container.
+
+Do not add or remove overlay features not described above.
+
+Summary: You must deliver a valid, TypeScript/React FormGuideOverlay component that is fully responsive to overlay dimensions, with all formatting and layout computed dynamically—not static/hardcoded.
