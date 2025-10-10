@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,11 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   RefreshCw,
-  XCircle
+  XCircle,
+  Wand2
 } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface DuplicatePlayer {
   name: string;
@@ -76,6 +78,8 @@ interface DataAuditResponse {
 }
 
 export default function DataAudit() {
+  const { toast } = useToast();
+  
   const { data, isLoading, refetch, isFetching } = useQuery<DataAuditResponse>({
     queryKey: ['/api/admin/data-audit'],
     refetchOnWindowFocus: false
@@ -85,6 +89,56 @@ export default function DataAudit() {
     queryClient.invalidateQueries({ queryKey: ['/api/admin/data-audit'] });
     refetch();
   };
+
+  // Mutation for cleaning player IDs
+  const cleanPlayerIdsMutation = useMutation({
+    mutationFn: async (season?: number) => {
+      const url = season 
+        ? `/api/admin/clean-player-ids?season=${season}` 
+        : '/api/admin/clean-player-ids';
+      const res = await apiRequest('POST', url);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Processing Started",
+        description: `Cleaning ${data.totalPlayers || 0} players in progress. Refresh page to see updates.`,
+        variant: "default"
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error Starting Player ID Cleaning",
+        description: error.message || "Failed to start player ID cleaning",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation for fixing photos
+  const fixPhotosMutation = useMutation({
+    mutationFn: async (season?: number) => {
+      const url = season 
+        ? `/api/admin/fix-photos?season=${season}` 
+        : '/api/admin/fix-photos';
+      const res = await apiRequest('POST', url);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Processing Started",
+        description: `Fixing photos for ${data.totalPlayers || 0} players in progress. Refresh page to see updates.`,
+        variant: "default"
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error Starting Photo Fixing",
+        description: error.message || "Failed to start photo fixing",
+        variant: "destructive"
+      });
+    }
+  });
 
   if (isLoading) {
     return (
@@ -223,15 +277,36 @@ export default function DataAudit() {
 
           {/* Missing Player IDs Card */}
           <Card data-testid="card-missing-player-ids">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LinkIcon className="w-5 h-5" />
-                Missing Player IDs
-                <Badge variant={data?.missingPlayerIds.count ? 'destructive' : 'secondary'} data-testid="badge-missing-ids-count">
-                  {data?.missingPlayerIds.count || 0}
-                </Badge>
-              </CardTitle>
-              <CardDescription>Players without external player_id</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <div className="flex flex-col gap-1">
+                <CardTitle className="flex items-center gap-2">
+                  <LinkIcon className="w-5 h-5" />
+                  Missing Player IDs
+                  <Badge variant={data?.missingPlayerIds.count ? 'destructive' : 'secondary'} data-testid="badge-missing-ids-count">
+                    {data?.missingPlayerIds.count || 0}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>Players without external player_id</CardDescription>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => cleanPlayerIdsMutation.mutate(undefined)}
+                disabled={!data?.missingPlayerIds.count || cleanPlayerIdsMutation.isPending}
+                data-testid="button-clean-player-ids"
+              >
+                {cleanPlayerIdsMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Cleaning...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Clean Player IDs
+                  </>
+                )}
+              </Button>
             </CardHeader>
             <CardContent>
               {data?.missingPlayerIds.records && data.missingPlayerIds.records.length > 0 ? (
@@ -272,15 +347,36 @@ export default function DataAudit() {
 
           {/* Missing Photos Card */}
           <Card data-testid="card-missing-photos">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ImageIcon className="w-5 h-5" />
-                Missing Photos
-                <Badge variant={data?.missingPhotos.count ? 'destructive' : 'secondary'} data-testid="badge-missing-photos-count">
-                  {data?.missingPhotos.count || 0}
-                </Badge>
-              </CardTitle>
-              <CardDescription>Players with NULL or empty photo URLs</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <div className="flex flex-col gap-1">
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5" />
+                  Missing Photos
+                  <Badge variant={data?.missingPhotos.count ? 'destructive' : 'secondary'} data-testid="badge-missing-photos-count">
+                    {data?.missingPhotos.count || 0}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>Players with NULL or empty photo URLs</CardDescription>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => fixPhotosMutation.mutate(undefined)}
+                disabled={!data?.missingPhotos.count || fixPhotosMutation.isPending}
+                data-testid="button-fix-photos"
+              >
+                {fixPhotosMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Fixing...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Fix Photos
+                  </>
+                )}
+              </Button>
             </CardHeader>
             <CardContent>
               {data?.missingPhotos.records && data.missingPhotos.records.length > 0 ? (

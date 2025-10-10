@@ -568,6 +568,7 @@ class HistoricalDataBootstrap {
             for (const item of response) {
               if (item.player) {
                 players.push({
+                  player_id: item.player.id || null,
                   name: item.player.name,
                   firstname: item.player.firstname || null,
                   lastname: item.player.lastname || null,
@@ -581,20 +582,20 @@ class HistoricalDataBootstrap {
                   photo: item.player.photo || null,
                   position: item.statistics?.[0]?.games?.position || null,
                   jersey_number: item.statistics?.[0]?.games?.number || null,
-                  team_id: team.id
+                  injured: item.player.injured || false
                 });
               }
             }
 
             if (players.length > 0) {
-              await this.batchInsert(
+              const { inserted, updated } = await this.batchInsert(
                 football_players,
                 players,
-                ['name', 'team_id']
+                ['player_id']
               );
               
-              this.report.resourcesSynced.players += players.length;
-              console.log(`    ✓ Saved ${players.length} players`);
+              this.report.resourcesSynced.players += inserted;
+              console.log(`    ✓ Saved ${players.length} players (${inserted} new, ${updated} updated)`);
             }
           }
 
@@ -616,18 +617,18 @@ class HistoricalDataBootstrap {
     console.log('  ⚠️ Player statistics fetching is resource-intensive and may take a long time...');
     console.log('  ⚠️ Consider running this in smaller batches or during off-peak hours.');
 
-    // Get all players with their teams
+    // Get all players
     const players = await db
       .select()
       .from(football_players)
-      .where(sql`${football_players.team_id} IS NOT NULL`)
+      .where(sql`${football_players.player_id} IS NOT NULL`)
       .limit(1000); // Process in chunks to avoid memory issues
 
     let processedCount = 0;
     const totalPlayers = players.length;
 
     for (const player of players) {
-      if (!player.team_id) continue;
+      if (!player.player_id) continue;
 
       for (const season of this.seasons) {
         try {
@@ -712,7 +713,10 @@ class HistoricalDataBootstrap {
 
   // Helper: Batch insert with upsert
   private async batchInsert(table: any, data: any[], conflictColumns: string[]) {
-    if (!data || data.length === 0) return;
+    if (!data || data.length === 0) return { inserted: 0, updated: 0 };
+
+    let insertedCount = 0;
+    let updatedCount = 0;
 
     const chunks = [];
     for (let i = 0; i < data.length; i += this.batchSize) {
@@ -722,12 +726,50 @@ class HistoricalDataBootstrap {
     for (const chunk of chunks) {
       await db.transaction(async (tx) => {
         for (const item of chunk) {
-          await tx.insert(table)
-            .values(item)
-            .onConflictDoNothing();
+          // Build the conflict target from column names
+          const conflictTarget = conflictColumns.map(col => table[col]);
+          
+          // Create a set object with all fields except the conflict columns
+          const updateSet: any = {};
+          const entries = Object.entries(item);
+          for (let i = 0; i < entries.length; i++) {
+            const [key, value] = entries[i];
+            if (!conflictColumns.includes(key)) {
+              updateSet[key] = value;
+            }
+          }
+          
+          // Check if record exists
+          let whereClause = conflictColumns.length > 1 
+            ? and(...conflictColumns.map(col => eq(table[col], item[col])))
+            : eq(table[conflictColumns[0]], item[conflictColumns[0]]);
+          
+          const existing = await tx.select().from(table).where(whereClause).limit(1);
+          
+          if (existing.length > 0) {
+            // Update existing record
+            await tx.insert(table)
+              .values(item)
+              .onConflictDoUpdate({
+                target: conflictTarget,
+                set: updateSet
+              });
+            updatedCount++;
+          } else {
+            // Insert new record
+            await tx.insert(table)
+              .values(item)
+              .onConflictDoUpdate({
+                target: conflictTarget,
+                set: updateSet
+              });
+            insertedCount++;
+          }
         }
       });
     }
+
+    return { inserted: insertedCount, updated: updatedCount };
   }
 
   // Helper: Update sync status
@@ -838,7 +880,9 @@ class HistoricalDataBootstrap {
 
     console.log(`  → Retrying ${totalFailed} failed items...`);
 
-    for (const [key, item] of this.failedItems.entries()) {
+    const entries = Array.from(this.failedItems.entries());
+    for (let i = 0; i < entries.length; i++) {
+      const [key, item] = entries[i];
       try {
         console.log(`    → Retrying ${item.resource} with context:`, item.context);
         

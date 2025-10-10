@@ -1,14 +1,18 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Header from "@/components/Header";
-import { Database, Calendar, AlertCircle, CheckCircle, Clock, Users, Trophy, Shield } from "lucide-react";
+import { Database, Calendar, AlertCircle, CheckCircle, Clock, Users, Trophy, Shield, Wand2, ExternalLink, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
+import { Link } from "wouter";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface TableStats {
   tableName: string;
@@ -46,13 +50,32 @@ interface DatabaseStatusData {
   dataSource: 'api' | 'historical';
 }
 
+interface DataAuditSummary {
+  totalPlayers: number;
+  totalPlayerStats: number;
+  duplicatePlayersCount: number;
+  missingPlayerIdCount: number;
+  missingPhotosCount: number;
+  orphanedStatsCount: number;
+}
+
+interface DataAuditResponse {
+  summary: DataAuditSummary;
+}
+
 export default function DatabaseStatus() {
+  const { toast } = useToast();
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [selectedSeason, setSelectedSeason] = useState<string>("all");
   const [selectedLeague, setSelectedLeague] = useState<string>("all");
 
   const { data, isLoading } = useQuery<DatabaseStatusData>({
     queryKey: ['/api/database-status']
+  });
+
+  const { data: auditData } = useQuery<DataAuditResponse>({
+    queryKey: ['/api/admin/data-audit'],
+    refetchOnWindowFocus: false
   });
 
   const { data: playersData } = useQuery({
@@ -68,6 +91,41 @@ export default function DatabaseStatus() {
     },
     enabled: !!data
   });
+
+  const cleanPlayerIdsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/admin/clean-player-ids');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/data-audit'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/database-status'] });
+      toast({
+        title: "Data cleaning started",
+        description: "Refresh to see results.",
+        variant: "default"
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error Starting Player ID Cleaning",
+        description: error.message || "Failed to start player ID cleaning",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const getBadgeVariant = (count: number) => {
+    if (count === 0) return 'default';
+    if (count <= 10) return 'secondary';
+    return 'destructive';
+  };
+
+  const getBadgeColor = (count: number) => {
+    if (count === 0) return 'text-green-600 dark:text-green-400';
+    if (count <= 10) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-600 dark:text-red-400';
+  };
 
   if (isLoading) {
     return (
@@ -193,6 +251,127 @@ export default function DatabaseStatus() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Data Quality Section */}
+        <Card className="mb-6" data-testid="card-data-quality">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Data Quality
+            </CardTitle>
+            <CardDescription>
+              Monitor database integrity and data issues
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Duplicate Players */}
+              <div 
+                className="flex flex-col gap-2 p-4 rounded-lg border bg-card"
+                data-testid="metric-duplicate-players"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Duplicate Players</span>
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold" data-testid="count-duplicate-players">
+                    {auditData?.summary.duplicatePlayersCount ?? 0}
+                  </span>
+                  <Badge 
+                    variant={getBadgeVariant(auditData?.summary.duplicatePlayersCount ?? 0)}
+                    className={getBadgeColor(auditData?.summary.duplicatePlayersCount ?? 0)}
+                    data-testid="badge-duplicate-players"
+                  >
+                    {(auditData?.summary.duplicatePlayersCount ?? 0) === 0 ? 'Clear' : 'Issues'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Missing Player IDs */}
+              <div 
+                className="flex flex-col gap-2 p-4 rounded-lg border bg-card"
+                data-testid="metric-missing-player-ids"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Missing Player IDs</span>
+                  <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold" data-testid="count-missing-player-ids">
+                    {auditData?.summary.missingPlayerIdCount ?? 0}
+                  </span>
+                  <Badge 
+                    variant={getBadgeVariant(auditData?.summary.missingPlayerIdCount ?? 0)}
+                    className={getBadgeColor(auditData?.summary.missingPlayerIdCount ?? 0)}
+                    data-testid="badge-missing-player-ids"
+                  >
+                    {(auditData?.summary.missingPlayerIdCount ?? 0) === 0 ? 'Clear' : 'Issues'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Missing Photos */}
+              <div 
+                className="flex flex-col gap-2 p-4 rounded-lg border bg-card"
+                data-testid="metric-missing-photos"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Missing Photos</span>
+                  <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold" data-testid="count-missing-photos">
+                    {auditData?.summary.missingPhotosCount ?? 0}
+                  </span>
+                  <Badge 
+                    variant={getBadgeVariant(auditData?.summary.missingPhotosCount ?? 0)}
+                    className={getBadgeColor(auditData?.summary.missingPhotosCount ?? 0)}
+                    data-testid="badge-missing-photos"
+                  >
+                    {(auditData?.summary.missingPhotosCount ?? 0) === 0 ? 'Clear' : 'Issues'}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Link href="/data-audit">
+                <Button variant="outline" data-testid="button-view-full-audit">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Full Audit
+                </Button>
+              </Link>
+              <Button
+                variant="default"
+                onClick={() => cleanPlayerIdsMutation.mutate()}
+                disabled={cleanPlayerIdsMutation.isPending || (auditData?.summary.missingPlayerIdCount ?? 0) === 0}
+                data-testid="button-quick-clean"
+              >
+                {cleanPlayerIdsMutation.isPending ? (
+                  <>
+                    <Clock className="w-4 h-4 mr-2 animate-spin" />
+                    Cleaning...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Quick Clean
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Last Check Timestamp */}
+            {data?.lastApiUpdate && (
+              <div className="text-sm text-muted-foreground" data-testid="text-last-check">
+                Last quality check: {formatDistanceToNow(new Date(data.lastApiUpdate), { addSuffix: true })}
+              </div>
+            )}
           </CardContent>
         </Card>
 

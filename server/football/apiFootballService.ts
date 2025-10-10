@@ -1023,6 +1023,41 @@ class APIFootballService {
       }
     }
   }
+
+  /**
+   * Search for players by name
+   * @param name Player name to search for
+   * @param season Season year
+   * @returns Array of matching players
+   */
+  async searchPlayersByName(name: string, season: number): Promise<Player[]> {
+    const players = await this.makeRequest<Player[]>('/players', {
+      search: name,
+      season
+    }, {
+      cacheTTL: this.cacheTTL.players
+    });
+    
+    return this.processPlayers(players);
+  }
+
+  /**
+   * Search for a player by their ID
+   * @param playerId Player ID from API Football
+   * @param season Season year
+   * @returns Player data or null if not found
+   */
+  async searchPlayerById(playerId: number, season: number): Promise<Player | null> {
+    const players = await this.makeRequest<Player[]>('/players', {
+      id: playerId,
+      season
+    }, {
+      cacheTTL: this.cacheTTL.players
+    });
+    
+    const processedPlayers = this.processPlayers(players);
+    return processedPlayers.length > 0 ? processedPlayers[0] : null;
+  }
 }
 
 // Export singleton instance

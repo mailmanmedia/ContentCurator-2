@@ -40,8 +40,8 @@ import { getAllSceneTemplates, getSceneTemplate } from "./templates/sceneTemplat
 import { renderOBSScene } from "./obs/obsRenderer";
 import { registerAnalyticsRoutes } from "./routes/analytics";
 import { db, pool } from "./db";
-import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, football_leagues, library_items, scenes, rssArticles } from "@shared/schema";
-import { desc, eq, and, gte, lte, or, inArray, sql } from "drizzle-orm";
+import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, football_leagues, library_items, scenes, rssArticles, football_players } from "@shared/schema";
+import { desc, eq, and, gte, lte, or, inArray, sql, isNull } from "drizzle-orm";
 import { analyzeCutPoints, optimizePacing } from "./video/autoCutter";
 import { addRenderJob } from "./video/renderQueue";
 import { insertVideoProjectSchema, insertVideoClipSchema } from "@shared/schema";
@@ -3093,6 +3093,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error updating head-to-head data:', error);
       res.status(500).json({ error: error.message || "Failed to update head-to-head data" });
+    }
+  });
+
+  // Data Cleaning: Populate missing player_id values (async)
+  app.post("/api/admin/clean-player-ids", async (req, res) => {
+    try {
+      console.log('🧹 Data cleaning requested: populate player IDs');
+      const { dataCleaningService } = await import('./football/dataCleaningService');
+      const season = req.body.season || 2025;
+      const teamId = req.body.teamId || 40;
+      
+      // Count players that need updating
+      const playersWithoutId = await db
+        .select()
+        .from(football_players)
+        .where(isNull(football_players.player_id));
+      
+      const totalPlayers = playersWithoutId.length;
+      
+      // Run cleaning in background (don't await)
+      dataCleaningService.fetchAndUpdatePlayerIds(season, teamId)
+        .then(result => {
+          console.log(`✅ Background cleaning complete: ${result.playersUpdated} players updated, ${result.photosFixed} photos fixed, ${result.errors.length} errors`);
+        })
+        .catch(error => {
+          console.error('❌ Background cleaning failed:', error);
+        });
+      
+      // Return immediate response
+      res.json({
+        success: true,
+        message: "Processing started",
+        totalPlayers,
+        timestamp: new Date()
+      });
+    } catch (error: any) {
+      console.error('Error starting player ID cleaning:', error);
+      res.status(500).json({ 
+        success: false,
+        error: error.message || "Failed to start player ID cleaning",
+        timestamp: new Date()
+      });
+    }
+  });
+
+  // Data Cleaning: Fix player photos (async)
+  app.post("/api/admin/fix-photos", async (req, res) => {
+    try {
+      console.log('🖼️ Data cleaning requested: fix player photos');
+      const { dataCleaningService } = await import('./football/dataCleaningService');
+      const season = req.body.season || 2025;
+      const teamId = req.body.teamId || 40;
+      
+      // Count players that need photo fixes
+      const playersWithoutPhotos = await db
+        .select()
+        .from(football_players)
+        .where(
+          or(
+            isNull(football_players.photo),
+            eq(football_players.photo, '')
+          )
+        );
+      
+      const totalPlayers = playersWithoutPhotos.length;
+      
+      // Run photo fixing in background (don't await)
+      dataCleaningService.validateAndFixPhotos(season, teamId)
+        .then(result => {
+          console.log(`✅ Background photo fixing complete: ${result.photosFixed} photos fixed, ${result.errors.length} errors`);
+        })
+        .catch(error => {
+          console.error('❌ Background photo fixing failed:', error);
+        });
+      
+      // Return immediate response
+      res.json({
+        success: true,
+        message: "Processing started",
+        totalPlayers,
+        timestamp: new Date()
+      });
+    } catch (error: any) {
+      console.error('Error starting photo fixing:', error);
+      res.status(500).json({ 
+        success: false,
+        error: error.message || "Failed to start photo fixing",
+        timestamp: new Date()
+      });
     }
   });
 
