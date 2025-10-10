@@ -105,20 +105,24 @@ export default function FormGuideOverlay({
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Define leagueId and season as constants or derive them from props/context if needed
+  // Define leagueId and dynamically calculate current season
   const leagueId = 39; 
-  const season = 2025;
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1;
+  // Football season starts in August, so if we're before August, we're in the previous season
+  const season = currentMonth >= 8 ? currentYear : currentYear - 1;
 
-  // Fetch team statistics from database with retry logic
+  // Fetch team statistics from database with retry logic (most recent data)
   const { 
     data: teamStatsData, 
     isLoading: isLoadingStats,
     error: statsError,
     refetch: refetchStats
   } = useQuery({
-    queryKey: ['database-team-stats', teamId, leagueId, season],
+    queryKey: ['database-team-stats', teamId, leagueId],
     queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}&season=${season}`);
+      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}`);
       if (!response.ok) throw new Error('Failed to fetch team stats');
       return response.json();
     },
@@ -128,16 +132,16 @@ export default function FormGuideOverlay({
     retryDelay: 1000, // Wait 1 second between retries
   });
 
-  // Fetch team fixtures from database with retry logic
+  // Fetch team fixtures from database with retry logic (most recent data)
   const { 
     data: fixturesData, 
     isLoading: isLoadingFixtures,
     error: fixturesError,
     refetch: refetchFixtures
   } = useQuery({
-    queryKey: ['database-team-fixtures', teamId, matchLimit, season],
+    queryKey: ['database-team-fixtures', teamId, matchLimit],
     queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}&season=${season}`);
+      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}`);
       if (!response.ok) throw new Error('Failed to fetch fixtures');
       return response.json();
     },

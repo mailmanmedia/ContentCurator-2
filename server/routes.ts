@@ -3185,7 +3185,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const teamId = parseInt(req.params.teamId);
       const leagueId = parseInt(req.query.leagueId as string) || 39;
-      const season = parseInt(req.query.season as string) || 2025;
 
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
@@ -3197,20 +3196,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(footballTeams.id, teamId))
         .limit(1);
 
-      // Get team statistics from teamSeasonStatistics table
+      // Get most recent team statistics regardless of season
       const [stats] = await db.select()
         .from(teamSeasonStatistics)
         .where(
           and(
             eq(teamSeasonStatistics.teamId, teamId),
-            eq(teamSeasonStatistics.season, season.toString()),
-            eq(teamSeasonStatistics.competition, 'Premier League')
+            eq(teamSeasonStatistics.leagueId, leagueId)
           )
         )
-        .orderBy(desc(teamSeasonStatistics.updatedAt))
+        .orderBy(desc(teamSeasonStatistics.lastUpdated))
         .limit(1);
 
-      // Get recent form from fixtures
+      // Get recent form from fixtures (most recent completed matches regardless of season)
       const recentFixtures = await db.select()
         .from(footballFixtures)
         .where(
@@ -3219,8 +3217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(footballFixtures.homeTeamId, teamId),
               eq(footballFixtures.awayTeamId, teamId)
             ),
-            eq(footballFixtures.statusShort, 'FT'),
-            eq(footballFixtures.season, season.toString())
+            eq(footballFixtures.statusShort, 'FT')
           )
         )
         .orderBy(desc(footballFixtures.timestamp))
@@ -3246,7 +3243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: leagueId,
             name: "Premier League",
             country: "England",
-            season: season
+            season: stats?.season ? parseInt(stats.season) : new Date().getFullYear()
           },
           team: {
             id: teamId,
@@ -3316,12 +3313,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const teamId = parseInt(req.params.teamId);
       const last = parseInt(req.query.last as string) || 5;
-      const season = parseInt(req.query.season as string) || 2025;
 
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
       }
 
+      // Get most recent completed fixtures regardless of season
       const fixtures = await db.select()
         .from(footballFixtures)
         .where(
@@ -3330,8 +3327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(footballFixtures.homeTeamId, teamId),
               eq(footballFixtures.awayTeamId, teamId)
             ),
-            eq(footballFixtures.statusShort, 'FT'),
-            eq(footballFixtures.season, season.toString())
+            eq(footballFixtures.statusShort, 'FT')
           )
         )
         .orderBy(desc(footballFixtures.timestamp))
