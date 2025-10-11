@@ -9,7 +9,6 @@ import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
   OverlayEmptyState,
-  OverlaySourceBadge,
 } from "./OverlayStates";
 
 export const COLOR_PALETTES = {
@@ -105,14 +104,12 @@ export default function FormGuideOverlay({
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Define leagueId and dynamically calculate current season
   const leagueId = 39; 
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
   const season = currentMonth >= 8 ? currentYear : currentYear - 1;
 
-  // Fetch team statistics from database
   const { 
     data: teamStatsData, 
     isLoading: isLoadingStats,
@@ -131,7 +128,6 @@ export default function FormGuideOverlay({
     retryDelay: 1000,
   });
 
-  // Fetch team fixtures from database
   const { 
     data: fixturesData, 
     isLoading: isLoadingFixtures,
@@ -150,7 +146,6 @@ export default function FormGuideOverlay({
     retryDelay: 1000,
   });
 
-  // Handle refresh of data
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -280,7 +275,7 @@ export default function FormGuideOverlay({
     };
   }, [teamStatsData, fixturesData, teamId, matchLimit]);
 
-  // Improved dynamic scaling system with better padding calculations
+  // FIXED: Removed Math.max() constraints to allow proper scaling
   const { scale, px } = useMemo(() => {
     if (!width || !height) {
       return {
@@ -289,19 +284,15 @@ export default function FormGuideOverlay({
       };
     }
 
-    // Base dimensions for 16:9 aspect ratio
     const baseWidth = 480;
     const baseHeight = 270;
     const widthScale = width / baseWidth;
     const heightScale = height / baseHeight;
 
-    // Use the smaller scale to ensure everything fits
     const computed = clamp(Math.min(widthScale, heightScale), 0.3, 2.0);
 
-    // Proportional scaling function with better handling of small values
     const px = (value: number) => {
       const scaled = value * computed;
-      // For very small values, ensure they don't scale to zero
       if (value > 0 && scaled < 1) return 1;
       return Math.round(scaled);
     };
@@ -309,31 +300,28 @@ export default function FormGuideOverlay({
     return { scale: computed, px };
   }, [width, height]);
 
-  // Responsive layout thresholds
   const isCompact = width < 400 || height < 250;
   const isVeryCompact = width < 320 || height < 200;
   const isMini = width < 240 || height < 150;
   const isStacked = layout === "vertical" || isCompact;
 
-  // More aggressive scaling for small sizes with minimum readable sizes
-  const circlePx = Math.max(px(isMini ? 20 : isVeryCompact ? 28 : isCompact ? 36 : circleSize), 20);
-  const titlePx = Math.max(px(isMini ? 11 : isVeryCompact ? 13 : titleSize), 11);
-  const subtitlePx = Math.max(px(isMini ? 9 : isVeryCompact ? 10 : 13), 9);
-  const labelPx = Math.max(px(isMini ? 7 : isVeryCompact ? 8 : labelSize), 7);
-  const textPx = Math.max(px(isMini ? 8 : isVeryCompact ? 9 : 12), 8);
-  const smallTextPx = Math.max(px(isMini ? 6 : isVeryCompact ? 7 : 10), 6);
-  
-  // Limit matches shown at small sizes
+  // FIXED: Removed Math.max() - now scales properly at all sizes
+  const circlePx = px(isMini ? 24 : isVeryCompact ? 32 : isCompact ? 40 : circleSize);
+  const titlePx = px(isMini ? 12 : isVeryCompact ? 14 : titleSize);
+  const subtitlePx = px(isMini ? 10 : isVeryCompact ? 11 : 14);
+  const labelPx = px(isMini ? 8 : isVeryCompact ? 9 : labelSize);
+  const textPx = px(isMini ? 9 : isVeryCompact ? 10 : 13);
+  const smallTextPx = px(isMini ? 7 : isVeryCompact ? 8 : 11);
+
+  // FIXED: Actually use this variable
   const maxMatchesShown = isMini ? 2 : isVeryCompact ? 3 : matchLimit;
 
-  // More aggressive padding reduction at small sizes
   const spacing = px(isMini ? 4 : isVeryCompact ? 6 : isCompact ? 10 : 16);
   const smallSpacing = px(isMini ? 2 : isVeryCompact ? 3 : isCompact ? 5 : 8);
   const padding = px(isMini ? 6 : isVeryCompact ? 8 : isCompact ? 12 : 20);
   const borderRadius = px(isMini ? 4 : isVeryCompact ? 6 : 10);
   const borderWidth = isMini ? 1 : Math.max(Math.round(2 * scale), 1);
 
-  // Streak analysis
   const streakType = matches[0]?.result;
   let streakLabel = "";
   if (streakType) {
@@ -382,12 +370,11 @@ export default function FormGuideOverlay({
         padding,
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
         borderRadius,
         border: `${borderWidth}px solid ${palette.border}`,
         boxSizing: "border-box",
-        position: "relative",
         overflow: "hidden",
+        gap: smallSpacing,
       }}
       data-testid="form-guide-overlay"
     >
@@ -396,17 +383,15 @@ export default function FormGuideOverlay({
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: isStacked ? "flex-start" : "center",
+          alignItems: "flex-start",
           gap: smallSpacing,
-          marginBottom: smallSpacing,
-          flexWrap: isVeryCompact ? "wrap" : "nowrap",
           flexShrink: 0,
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontSize: `${titlePx}px`,
+              fontSize: titlePx,
               fontWeight: 700,
               letterSpacing: "0.05em",
               color: palette.accent,
@@ -416,11 +401,11 @@ export default function FormGuideOverlay({
               lineHeight: 1.1,
             }}
           >
-            RECENT FORM
+            {isMini ? "FORM" : "RECENT FORM"}
           </div>
           <div
             style={{
-              fontSize: `${subtitlePx}px`,
+              fontSize: subtitlePx,
               fontWeight: 600,
               color: palette.text,
               opacity: 0.9,
@@ -433,10 +418,10 @@ export default function FormGuideOverlay({
           >
             {teamName.toUpperCase()}
           </div>
-          {!isMini && !isVeryCompact && (
+          {!isMini && !isVeryCompact && streakLabel && (
             <div
               style={{
-                fontSize: `${smallTextPx}px`,
+                fontSize: smallTextPx,
                 color: palette.muted,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -457,7 +442,7 @@ export default function FormGuideOverlay({
               border: `1px solid ${palette.accent}55`,
               borderRadius: px(20),
               padding: `${px(4)}px ${px(10)}px`,
-              fontSize: `${textPx}px`,
+              fontSize: textPx,
               fontWeight: 600,
               display: "flex",
               alignItems: "center",
@@ -465,7 +450,7 @@ export default function FormGuideOverlay({
               color: palette.text,
               whiteSpace: "nowrap",
               flexShrink: 0,
-              lineHeight: 1.2,
+              lineHeight: 1,
             }}
           >
             <span style={{ opacity: 0.75 }}>Record:</span> {badgeText}
@@ -482,7 +467,7 @@ export default function FormGuideOverlay({
           flex: 1,
           minHeight: 0,
           overflow: "hidden",
-          alignItems: isStacked ? "stretch" : "flex-start",
+          alignItems: "stretch",
         }}
       >
         {/* Form Circles */}
@@ -498,7 +483,7 @@ export default function FormGuideOverlay({
             flexShrink: 0,
           }}
         >
-          {sequence.map((result: string, index: number) => (
+          {sequence.slice(0, maxMatchesShown).map((result: string, index: number) => (
             <motion.div
               key={`${result}-${index}`}
               initial={{ opacity: 0, scale: 0.8 }}
@@ -522,7 +507,7 @@ export default function FormGuideOverlay({
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 800,
-                  fontSize: `${px(isMini ? 12 : isVeryCompact ? 14 : 18)}px`,
+                  fontSize: px(isMini ? 12 : isVeryCompact ? 14 : 18),
                   border: `${Math.max(Math.round(2 * scale), 1)}px solid rgba(0,0,0,0.12)`,
                   flexShrink: 0,
                   lineHeight: 1,
@@ -533,7 +518,7 @@ export default function FormGuideOverlay({
               {!isMini && !isVeryCompact && matches[index] && (
                 <div
                   style={{
-                    fontSize: `${labelPx}px`,
+                    fontSize: labelPx,
                     letterSpacing: "0.03em",
                     color: palette.muted,
                     whiteSpace: "nowrap",
@@ -565,14 +550,14 @@ export default function FormGuideOverlay({
               overflowX: "hidden",
             }}
           >
-            {matches.slice(0, isVeryCompact ? 3 : matchLimit).map((match: any, index: number) => (
+            {matches.slice(0, maxMatchesShown).map((match: any, index: number) => (
               <div
                 key={`${match.date}-${match.opponent}`}
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  gap: spacing,
-                  fontSize: `${textPx}px`,
+                  gap: px(4),
+                  fontSize: textPx,
                   color: palette.text,
                   opacity: index === 0 ? 1 : 0.85,
                   lineHeight: 1.3,
@@ -596,7 +581,7 @@ export default function FormGuideOverlay({
                   {!isVeryCompact && (
                     <span style={{ 
                       color: palette.muted, 
-                      fontSize: `${smallTextPx}px`,
+                      fontSize: smallTextPx,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -610,7 +595,7 @@ export default function FormGuideOverlay({
                   <span style={{ fontWeight: 700 }}>{match.score}</span>
                   {!isVeryCompact && (
                     <div style={{
-                      fontSize: `${smallTextPx}px`,
+                      fontSize: smallTextPx,
                       color: palette.muted,
                       whiteSpace: "nowrap",
                       lineHeight: 1.2,
@@ -629,9 +614,8 @@ export default function FormGuideOverlay({
       {!isMini && (
         <footer
           style={{
-            marginTop: smallSpacing,
             paddingTop: px(6),
-            borderTop: `${Math.max(Math.round(1.5 * scale), 1)}px solid ${palette.text}20`,
+            borderTop: `1px solid ${palette.text}20`,
             display: "flex",
             flexDirection: isVeryCompact ? "column" : "row",
             justifyContent: "space-between",
@@ -644,7 +628,7 @@ export default function FormGuideOverlay({
             style={{
               display: "flex",
               gap: px(isVeryCompact ? 6 : 10),
-              fontSize: `${smallTextPx}px`,
+              fontSize: smallTextPx,
               color: palette.muted,
               flexWrap: "wrap",
               lineHeight: 1.2,
@@ -660,7 +644,7 @@ export default function FormGuideOverlay({
               display: "flex",
               alignItems: "center",
               gap: px(4),
-              fontSize: `${smallTextPx}px`,
+              fontSize: smallTextPx,
               color: palette.muted,
               lineHeight: 1.2,
             }}

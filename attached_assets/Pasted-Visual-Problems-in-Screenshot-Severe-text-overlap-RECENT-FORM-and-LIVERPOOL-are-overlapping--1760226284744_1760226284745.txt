@@ -1,0 +1,61 @@
+Visual Problems in Screenshot:
+
+Severe text overlap - "RECENT FORM" and "LIVERPOOL" are overlapping the form circles
+Content bleeding outside borders - The gradient background extends beyond what should be the container
+Poor spacing - Everything is too cramped and elements are colliding
+Circles are too small - The W/W circles (green) are tiny relative to the container
+Match details section missing - The right side detail panel isn't visible
+Footer is cut off - Can barely see the W/D/L stats at bottom
+Overall layout is broken - Content doesn't fill the available space properly
+
+Code Issues Found:
+🚨 CRITICAL: Minimum Size Enforcement is Breaking Layout
+javascript// ❌ PROBLEM: Math.max() creates minimum sizes that don't scale down
+const circlePx = Math.max(px(isMini ? 20 : isVeryCompact ? 28 : isCompact ? 36 : circleSize), 20);
+const titlePx = Math.max(px(isMini ? 11 : isVeryCompact ? 13 : titleSize), 11);
+This means: Even if px() calculates 5px for a mini overlay, Math.max() forces it to be 11px+, preventing proper scaling.
+Other Issues:
+
+maxMatchesShown variable defined but never used - Still showing matchLimit matches
+Excessive use of Math.max() - Prevents elements from shrinking properly at small sizes
+Missing proper container constraints - No max-width logic for very large containers
+Gradient might be causing visual bleed - The gradient background isn't accounting for borders
+Header could be wrapping at wrong breakpoints
+
+Recommended Fixes:Form Guide Overlay - Final FixInteractive artifact The artifact system doesn't allow the date-fns import, but that's fine - your actual app supports it. Here are the key changes I made to fix the visual issues:
+Critical Fixes:
+1. Removed Math.max() constraints ✅
+javascript// ❌ OLD - Prevented proper scaling
+const circlePx = Math.max(px(...), 20);
+
+// ✅ NEW - Scales properly
+const circlePx = px(isMini ? 24 : isVeryCompact ? 32 : ...);
+2. Actually use maxMatchesShown ✅
+javascript// Changed from:
+{sequence.map((result, index) => ...)}
+{matches.slice(0, matchLimit).map(...)}
+
+// To:
+{sequence.slice(0, maxMatchesShown).map(...)}
+{matches.slice(0, maxMatchesShown).map(...)}
+3. Fixed layout structure ✅
+
+Changed justifyContent: "space-between" to use gap: smallSpacing
+Removed marginBottom from header in favor of container gap
+Changed header alignment from conditional to always "flex-start"
+
+4. Better title shortening ✅
+javascript{isMini ? "FORM" : "RECENT FORM"}
+5. Improved main content alignment ✅
+javascriptalignItems: "stretch" // instead of conditional
+6. Footer improvements ✅
+
+Removed marginTop in favor of container gap
+Changed border to 1px instead of scaled value for consistency
+
+Summary of What Was Breaking:
+
+Math.max() enforcing minimum sizes - Prevented circles/text from shrinking
+maxMatchesShown not being used - Showed too many items at small sizes
+justifyContent: "space-between" - Created awkward spacing
+Inconsistent use of margins vs gaps - Caused overlap
