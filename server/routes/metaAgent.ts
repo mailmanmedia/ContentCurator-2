@@ -233,12 +233,51 @@ router.get("/task/:taskId", (req, res) => {
 });
 
 // Get all active tasks
-router.get("/tasks", (req, res) => {
-  const tasks = Array.from(activeTasks.values()).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+router.get("/tasks", async (req, res) => {
+  try {
+    // Get active in-memory tasks
+    const memoryTasks = Array.from(activeTasks.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    
+    // Also get recent tasks from database
+    const recentDbTasks = await db
+      .select()
+      .from(agentTasks)
+      .where(sql`${agentTasks.status} IN ('pending', 'verifying', 'awaiting_confirmation', 'executing')`)
+      .orderBy(desc(agentTasks.createdAt))
+      .limit(20);
+    
+    // Combine and deduplicate
+    const taskMap = new Map();
+    
+    memoryTasks.forEach(t => taskMap.set(t.id, t));
+    
+    for (const dbTask of recentDbTasks) {
+      if (!taskMap.has(dbTask.taskId)) {
+        taskMap.set(dbTask.taskId, {
+          id: dbTask.taskId,
+          action: dbTask.userQuery,
+          type: dbTask.taskType || 'system_check',
+          status: dbTask.status,
+          userConfirmed: !!dbTask.userConfirmedAt,
+          metadata: dbTask.result ? JSON.parse(dbTask.result) : {},
+          createdAt: dbTask.createdAt.toISOString(),
+          completedAt: dbTask.completedAt?.toISOString(),
+          steps: []
+        });
+      }
+    }
+    
+    const tasks = Array.from(taskMap.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
-  res.json({ tasks });
+    res.json({ tasks });
+  } catch (error: any) {
+    console.error("Error fetching active tasks:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Get task history from database
@@ -258,17 +297,24 @@ router.get("/tasks/history", async (req, res) => {
         const steps = await db
           .select()
           .from(agentTaskSteps)
-          .where(eq(agentTaskSteps.taskId, task.id))
-          .orderBy(agentTaskSteps.timestamp);
+          .where(eq(agentTaskSteps.taskId, task.taskId))
+          .orderBy(agentTaskSteps.stepNumber);
         
         return {
-          ...task,
+          id: task.taskId,
+          action: task.userQuery,
+          type: task.taskType || 'system_check',
+          status: task.status,
+          userConfirmed: !!task.userConfirmedAt,
+          metadata: task.result ? JSON.parse(task.result) : {},
+          createdAt: task.createdAt.toISOString(),
+          completedAt: task.completedAt?.toISOString(),
           steps: steps.map(s => ({
-            id: s.stepId,
-            description: s.description,
-            completed: s.completed,
-            result: s.result,
-            timestamp: s.timestamp?.toISOString()
+            id: `step_${s.stepNumber}`,
+            description: s.stepName,
+            completed: s.status === 'completed',
+            result: s.details || undefined,
+            timestamp: s.completedAt?.toISOString()
           }))
         };
       })
