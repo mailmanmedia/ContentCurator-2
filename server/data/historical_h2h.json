@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2025-10-11T00:15:42.194Z",
+  "lastUpdated": "2025-10-11T00:22:41.521Z",
   "team": {
     "id": 40,
     "name": "Liverpool",
@@ -8,6 +8,188 @@
   },
   "headToHead": [],
   "currentSquad": [
+    {
+      "id": 24760,
+      "name": "G. Mamardashvili",
+      "photo": "https://media.api-sports.io/football/players/24760.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 1,
+        "minutes": 90,
+        "rating": "7.2"
+      }
+    },
+    {
+      "id": 452685,
+      "name": "R. Ngumoha",
+      "photo": "https://media.api-sports.io/football/players/452685.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 1,
+        "assists": 0,
+        "appearances": 3,
+        "minutes": 34,
+        "rating": "6.87"
+      }
+    },
+    {
+      "id": 542,
+      "name": "R. Gravenberch",
+      "photo": "https://media.api-sports.io/football/players/542.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 2,
+        "assists": 1,
+        "appearances": 6,
+        "minutes": 540,
+        "rating": "7.37"
+      }
+    },
+    {
+      "id": 409047,
+      "name": "G. Leoni",
+      "photo": "https://media.api-sports.io/football/players/409047.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 0,
+        "minutes": 0,
+        "rating": null
+      }
+    },
+    {
+      "id": 2864,
+      "name": "A. Isak",
+      "photo": "https://media.api-sports.io/football/players/2864.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 1,
+        "appearances": 3,
+        "minutes": 181,
+        "rating": "6.23"
+      }
+    },
+    {
+      "id": 152654,
+      "name": "J. Frimpong",
+      "photo": "https://media.api-sports.io/football/players/152654.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 3,
+        "minutes": 86,
+        "rating": "6.6"
+      }
+    },
+    {
+      "id": 1145,
+      "name": "I. Konaté",
+      "photo": "https://media.api-sports.io/football/players/1145.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 7,
+        "minutes": 566,
+        "rating": "6.96"
+      }
+    },
+    {
+      "id": 206254,
+      "name": "M. Kerkez",
+      "photo": "https://media.api-sports.io/football/players/206254.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 7,
+        "minutes": 513,
+        "rating": "6.66"
+      }
+    },
+    {
+      "id": 1096,
+      "name": "D. Szoboszlai",
+      "photo": "https://media.api-sports.io/football/players/1096.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 1,
+        "assists": 0,
+        "appearances": 7,
+        "minutes": 630,
+        "rating": "7.01"
+      }
+    },
+    {
+      "id": 306,
+      "name": "Mohamed Salah",
+      "photo": "https://media.api-sports.io/football/players/306.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 2,
+        "assists": 2,
+        "appearances": 7,
+        "minutes": 629,
+        "rating": "6.66"
+      }
+    },
+    {
+      "id": 203224,
+      "name": "F. Wirtz",
+      "photo": "https://media.api-sports.io/football/players/203224.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 7,
+        "minutes": 486,
+        "rating": "6.4"
+      }
+    },
+    {
+      "id": 174565,
+      "name": "H. Ekitike",
+      "photo": "https://media.api-sports.io/football/players/174565.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 3,
+        "assists": 1,
+        "appearances": 6,
+        "minutes": 386,
+        "rating": "7.13"
+      }
+    },
+    {
+      "id": 289,
+      "name": "A. Robertson",
+      "photo": "https://media.api-sports.io/football/players/289.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 3,
+        "minutes": 118,
+        "rating": "6.6"
+      }
+    },
+    {
+      "id": 284,
+      "name": "J. Gomez",
+      "photo": "https://media.api-sports.io/football/players/284.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 2,
+        "minutes": 30,
+        "rating": "6.75"
+      }
+    },
     {
       "id": 293,
       "name": "C. Jones",
@@ -35,32 +217,6 @@
       }
     },
     {
-      "id": 397997,
-      "name": "T. Nyoni",
-      "photo": "https://media.api-sports.io/football/players/397997.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 0,
-        "minutes": 0,
-        "rating": null
-      }
-    },
-    {
-      "id": 542,
-      "name": "R. Gravenberch",
-      "photo": "https://media.api-sports.io/football/players/542.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 2,
-        "assists": 1,
-        "appearances": 6,
-        "minutes": 540,
-        "rating": "7.37"
-      }
-    },
-    {
       "id": 180317,
       "name": "C. Bradley",
       "photo": "https://media.api-sports.io/football/players/180317.png",
@@ -71,19 +227,6 @@
         "appearances": 5,
         "minutes": 235,
         "rating": "6.3"
-      }
-    },
-    {
-      "id": 2864,
-      "name": "A. Isak",
-      "photo": "https://media.api-sports.io/football/players/2864.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 1,
-        "appearances": 3,
-        "minutes": 181,
-        "rating": "6.23"
       }
     },
     {
@@ -113,19 +256,6 @@
       }
     },
     {
-      "id": 1145,
-      "name": "I. Konaté",
-      "photo": "https://media.api-sports.io/football/players/1145.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 7,
-        "minutes": 566,
-        "rating": "6.96"
-      }
-    },
-    {
       "id": 290,
       "name": "V. van Dijk",
       "photo": "https://media.api-sports.io/football/players/290.png",
@@ -136,19 +266,6 @@
         "appearances": 7,
         "minutes": 630,
         "rating": "7.33"
-      }
-    },
-    {
-      "id": 1096,
-      "name": "D. Szoboszlai",
-      "photo": "https://media.api-sports.io/football/players/1096.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 1,
-        "assists": 0,
-        "appearances": 7,
-        "minutes": 630,
-        "rating": "7.01"
       }
     },
     {
@@ -165,19 +282,6 @@
       }
     },
     {
-      "id": 203224,
-      "name": "F. Wirtz",
-      "photo": "https://media.api-sports.io/football/players/203224.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 7,
-        "minutes": 486,
-        "rating": "6.4"
-      }
-    },
-    {
       "id": 247,
       "name": "C. Gakpo",
       "photo": "https://media.api-sports.io/football/players/247.png",
@@ -188,19 +292,6 @@
         "appearances": 7,
         "minutes": 555,
         "rating": "7.23"
-      }
-    },
-    {
-      "id": 289,
-      "name": "A. Robertson",
-      "photo": "https://media.api-sports.io/football/players/289.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 3,
-        "minutes": 118,
-        "rating": "6.6"
       }
     },
     {
@@ -230,35 +321,9 @@
       }
     },
     {
-      "id": 24760,
-      "name": "G. Mamardashvili",
-      "photo": "https://media.api-sports.io/football/players/24760.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 1,
-        "minutes": 90,
-        "rating": "7.2"
-      }
-    },
-    {
-      "id": 452685,
-      "name": "R. Ngumoha",
-      "photo": "https://media.api-sports.io/football/players/452685.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 1,
-        "assists": 0,
-        "appearances": 3,
-        "minutes": 34,
-        "rating": "6.87"
-      }
-    },
-    {
-      "id": 409047,
-      "name": "G. Leoni",
-      "photo": "https://media.api-sports.io/football/players/409047.png",
+      "id": 397997,
+      "name": "T. Nyoni",
+      "photo": "https://media.api-sports.io/football/players/397997.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
@@ -266,71 +331,6 @@
         "appearances": 0,
         "minutes": 0,
         "rating": null
-      }
-    },
-    {
-      "id": 152654,
-      "name": "J. Frimpong",
-      "photo": "https://media.api-sports.io/football/players/152654.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 3,
-        "minutes": 86,
-        "rating": "6.6"
-      }
-    },
-    {
-      "id": 206254,
-      "name": "M. Kerkez",
-      "photo": "https://media.api-sports.io/football/players/206254.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 7,
-        "minutes": 513,
-        "rating": "6.66"
-      }
-    },
-    {
-      "id": 306,
-      "name": "Mohamed Salah",
-      "photo": "https://media.api-sports.io/football/players/306.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 2,
-        "assists": 2,
-        "appearances": 7,
-        "minutes": 629,
-        "rating": "6.66"
-      }
-    },
-    {
-      "id": 174565,
-      "name": "H. Ekitike",
-      "photo": "https://media.api-sports.io/football/players/174565.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 3,
-        "assists": 1,
-        "appearances": 6,
-        "minutes": 386,
-        "rating": "7.13"
-      }
-    },
-    {
-      "id": 284,
-      "name": "J. Gomez",
-      "photo": "https://media.api-sports.io/football/players/284.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 2,
-        "minutes": 30,
-        "rating": "6.75"
       }
     }
   ]
