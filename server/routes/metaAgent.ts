@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { db } from "../db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { 
   footballPlayers as players, 
   footballFixtures as matches, 
