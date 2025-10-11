@@ -102,6 +102,18 @@ export default function MetaAgentDashboard() {
     refetchInterval: 30000,
   });
 
+  // Fetch Meta-Agent task history
+  const { data: taskHistory, refetch: refetchTaskHistory } = useQuery({
+    queryKey: ['/api/meta-agent/tasks/history', { limit: 50 }],
+    refetchInterval: 10000,
+  });
+
+  // Fetch Meta-Agent health
+  const { data: agentHealth } = useQuery({
+    queryKey: ['/api/meta-agent/health'],
+    refetchInterval: 15000,
+  });
+
   // Calculate system health
   const systemHealth: SystemHealth = {
     database: {
@@ -392,6 +404,26 @@ export default function MetaAgentDashboard() {
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 Quality checks active
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Cpu className="w-4 h-4" />
+                Meta-Agent
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-bold">{agentHealth?.activeTasks || 0}</span>
+                <Badge variant={agentHealth?.status === 'healthy' ? 'default' : 'destructive'}>
+                  {agentHealth?.status || 'Unknown'}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {agentHealth?.sseConnections || 0} live connections
               </p>
             </CardContent>
           </Card>
@@ -752,22 +784,56 @@ export default function MetaAgentDashboard() {
                   </div>
                 </ScrollArea>
 
-                <div className="flex gap-2">
-                  <Textarea
-                    placeholder="Try: 'Update player statistics' or 'Create overlay for next match'"
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    className="flex-1"
-                  />
-                  <Button onClick={handleSendMessage} disabled={isProcessing || !userInput.trim()}>
-                    <Send className="w-4 h-4" />
-                  </Button>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge
+                      variant="outline"
+                      className="cursor-pointer hover:bg-accent"
+                      onClick={() => setUserInput("Check system health and database status")}
+                    >
+                      System Health
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="cursor-pointer hover:bg-accent"
+                      onClick={() => setUserInput("Show Liverpool's upcoming fixtures")}
+                    >
+                      Fixtures
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="cursor-pointer hover:bg-accent"
+                      onClick={() => setUserInput("Analyze Mohamed Salah's performance this season")}
+                    >
+                      Player Stats
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="cursor-pointer hover:bg-accent"
+                      onClick={() => setUserInput("Compare Liverpool vs Manchester City recent form")}
+                    >
+                      Team Analysis
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Textarea
+                      placeholder="Try: 'Update player statistics' or 'Create overlay for next match'"
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      className="flex-1"
+                      rows={3}
+                    />
+                    <Button onClick={handleSendMessage} disabled={isProcessing || !userInput.trim()}>
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -892,6 +958,86 @@ export default function MetaAgentDashboard() {
           {/* Logs Tab */}
           <TabsContent value="logs" className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
+              {/* Meta-Agent Task History */}
+              <Card className="border-2 border-[#C8102E]">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Cpu className="w-5 h-5 text-[#C8102E]" />
+                    Meta-Agent Task History
+                  </CardTitle>
+                  <CardDescription>Recently executed agent tasks with verification steps</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-3">
+                      {taskHistory?.tasks && taskHistory.tasks.length > 0 ? (
+                        taskHistory.tasks.map((task: any) => (
+                          <Card key={task.id} className="border">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={
+                                      task.status === 'completed' ? 'default' :
+                                      task.status === 'failed' ? 'destructive' :
+                                      'secondary'
+                                    }>
+                                      {task.status}
+                                    </Badge>
+                                    <Badge variant="outline">{task.type.replace('_', ' ')}</Badge>
+                                  </div>
+                                  <p className="text-sm font-medium mt-2">{task.action}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Started: {new Date(task.createdAt).toLocaleString()}
+                                  </p>
+                                </div>
+                                {task.status === 'completed' && (
+                                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                )}
+                                {task.status === 'failed' && (
+                                  <XCircle className="w-5 h-5 text-red-500" />
+                                )}
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <div className="space-y-1">
+                                {task.steps?.map((step: any, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-2 text-xs">
+                                    {step.completed ? (
+                                      <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                    ) : (
+                                      <Clock className="w-3 h-3 text-muted-foreground" />
+                                    )}
+                                    <span className="text-muted-foreground">{step.description}</span>
+                                    {step.result && (
+                                      <Badge variant="outline" className="ml-auto text-xs">
+                                        {step.result}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                              {task.completedAt && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Completed: {new Date(task.completedAt).toLocaleString()}
+                                </p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <Cpu className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                          <p className="text-sm text-muted-foreground">No agent tasks executed yet</p>
+                          <p className="text-xs text-muted-foreground">Use the AI Agent tab to create tasks</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* System Logs */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
