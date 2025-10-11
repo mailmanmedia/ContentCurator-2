@@ -670,6 +670,29 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
+CREATE TABLE "agent_tasks" (
+	"id" text PRIMARY KEY NOT NULL,
+	"action" text NOT NULL,
+	"type" text NOT NULL,
+	"status" text NOT NULL,
+	"user_confirmed" boolean DEFAULT false,
+	"metadata" jsonb,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"completed_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE "agent_task_steps" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"task_id" text NOT NULL,
+	"step_id" text NOT NULL,
+	"description" text NOT NULL,
+	"completed" boolean DEFAULT false,
+	"result" text,
+	"timestamp" timestamp
+);
+--> statement-breakpoint
+ALTER TABLE "agent_task_steps" ADD CONSTRAINT "agent_task_steps_task_id_agent_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."agent_tasks"("id") ON DELETE no action ON UPDATE no action;
+--> statement-breakpoint
 CREATE TABLE "video_clips" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"project_id" integer,

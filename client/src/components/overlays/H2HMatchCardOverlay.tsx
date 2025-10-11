@@ -1,14 +1,12 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
   OverlayEmptyState,
-  OverlaySourceBadge,
 } from "./OverlayStates";
 
 interface H2HMatchCardOverlayProps {
@@ -36,6 +34,8 @@ interface TeamInfo {
   code?: string;
 }
 
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
 function useTeamBadge(teamId?: number) {
   return useQuery<TeamInfo>({
     queryKey: ['teamBadge', teamId],
@@ -60,7 +60,7 @@ export default function H2HMatchCardOverlay({
 }: H2HMatchCardOverlayProps) {
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Fetch H2H data from database
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['h2h-db', homeTeamId, awayTeamId],
@@ -70,23 +70,51 @@ export default function H2HMatchCardOverlay({
       return response.json();
     },
     enabled: !!homeTeamId && !!awayTeamId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000,
   });
-  
+
   const { data: homeTeam } = useTeamBadge(homeTeamId);
   const { data: awayTeam } = useTeamBadge(awayTeamId);
-  
+
+  // Scaling system similar to Form Guide
+  const { scale, px } = useMemo(() => {
+    if (!width || !height) {
+      return {
+        scale: 1,
+        px: (value: number) => value,
+      };
+    }
+
+    const baseWidth = 600;
+    const baseHeight = 800;
+    const widthScale = width / baseWidth;
+    const heightScale = height / baseHeight;
+
+    const computed = clamp(Math.min(widthScale, heightScale), 0.3, 2.0);
+
+    const px = (value: number) => {
+      const scaled = value * computed;
+      if (value > 0 && scaled < 1) return 1;
+      return Math.round(scaled);
+    };
+
+    return { scale: computed, px };
+  }, [width, height]);
+
+  // Responsive breakpoints
+  const isCompact = width < 400 || height < 500;
+  const isVeryCompact = width < 320 || height < 400;
+  const isMini = width < 240 || height < 300;
+
   // Handle refresh of data
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // Trigger database update for these teams
       const response = await fetch(`/api/admin/update/all`, { 
         method: 'POST' 
       });
-      
+
       if (response.ok) {
-        // Refetch data after successful update
         await refetch();
         toast({
           title: "Data refreshed",
@@ -152,17 +180,15 @@ export default function H2HMatchCardOverlay({
   const colors = palettes[colorPalette];
 
   if (isLoading) {
-    return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;
+    return <OverlayLoadingSkeleton width={width} height={height} />;
   }
 
   if (error) {
     return (
       <OverlayErrorState
-        error={error}
-        onRetry={refetch}
-        width={`${width}%`}
-        height={`${height}px`}
-        source="Head-to-head data"
+        error={error as Error}
+        width={width}
+        height={height}
       />
     );
   }
@@ -171,23 +197,20 @@ export default function H2HMatchCardOverlay({
     return (
       <OverlayEmptyState
         message="No head-to-head data available"
-        width={`${width}%`}
-        height={`${height}px`}
+        width={width}
+        height={height}
       />
     );
   }
 
-  // Extract fixtures from database response
   const h2hData = data.data;
   const allMatches: H2HMatch[] = h2hData?.fixtures || h2hData || [];
   const lastUpdated = data.lastUpdated || new Date().toISOString();
 
-  // Sort matches by date (most recent first)
   const sortedMatches = [...allMatches].sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  // Filter out upcoming/unplayed matches (only include completed matches)
   const completedMatches = sortedMatches.filter(
     m => m.homeScore != null && m.awayScore != null
   );
@@ -196,13 +219,12 @@ export default function H2HMatchCardOverlay({
     return (
       <OverlayEmptyState
         message="No previous matches found between these teams"
-        width={`${width}%`}
-        height={`${height}px`}
+        width={width}
+        height={height}
       />
     );
   }
 
-  // Calculate W-D-L stats from completed matches only
   let homeWins = 0;
   let awayWins = 0;
   let draws = 0;
@@ -218,7 +240,7 @@ export default function H2HMatchCardOverlay({
   });
 
   const totalMatches = completedMatches.length;
-  const recentMatches = completedMatches.slice(0, 5);
+  const recentMatches = completedMatches.slice(0, isVeryCompact ? 3 : isMini ? 2 : 5);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -226,39 +248,56 @@ export default function H2HMatchCardOverlay({
     return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   };
 
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const then = new Date(timestamp);
+    const diffMs = now.getTime() - then.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
   };
+
+  // Scaled sizes
+  const padding = px(isMini ? 8 : isVeryCompact ? 12 : isCompact ? 16 : 24);
+  const spacing = px(isMini ? 6 : isVeryCompact ? 8 : isCompact ? 12 : 16);
+  const smallSpacing = px(isMini ? 3 : isVeryCompact ? 4 : 6);
+  const borderRadius = px(isMini ? 4 : isVeryCompact ? 6 : 8);
+  const borderWidth = isMini ? 1 : px(3);
+
+  const titleSize = px(isMini ? 14 : isVeryCompact ? 18 : isCompact ? 22 : 28);
+  const textSize = px(isMini ? 9 : isVeryCompact ? 11 : isCompact ? 13 : 16);
+  const smallTextSize = px(isMini ? 7 : isVeryCompact ? 8 : isCompact ? 10 : 11);
+  const badgeSize = px(isMini ? 50 : isVeryCompact ? 60 : isCompact ? 80 : 100);
+  const vsSize = px(isMini ? 30 : isVeryCompact ? 40 : isCompact ? 50 : 60);
+  const wdlSize = px(isMini ? 28 : isVeryCompact ? 35 : isCompact ? 45 : 55);
 
   const TeamBadge = ({ team, teamId, side }: { team?: TeamInfo; teamId: number; side: 'home' | 'away' }) => {
     const initials = team?.name?.substring(0, 2).toUpperCase() || (side === 'home' ? 'H' : 'A');
-    
+
     return (
       <div style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '8px',
+        gap: px(6),
         flex: 1,
       }}>
         <div style={{
-          width: 'clamp(80px, 12vw, 120px)',
-          height: 'clamp(80px, 12vw, 120px)',
+          width: badgeSize,
+          height: badgeSize,
           backgroundColor: colors.cardBg,
-          borderRadius: '8px',
-          border: `2px solid ${colors.border}`,
+          borderRadius: px(6),
+          border: `${Math.max(1, px(2))}px solid ${colors.border}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
+          flexShrink: 0,
         }}>
           {team?.badge ? (
             <img
@@ -271,8 +310,9 @@ export default function H2HMatchCardOverlay({
               }}
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
-                if (e.currentTarget.nextSibling) {
-                  (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                const parent = e.currentTarget.parentElement;
+                if (parent && parent.lastChild) {
+                  (parent.lastChild as HTMLElement).style.display = 'flex';
                 }
               }}
               data-testid={`team-badge-${side}`}
@@ -280,25 +320,28 @@ export default function H2HMatchCardOverlay({
           ) : null}
           <div style={{
             display: team?.badge ? 'none' : 'flex',
-            fontSize: 'clamp(32px, 5vw, 48px)',
+            fontSize: px(isMini ? 20 : isVeryCompact ? 28 : 36),
             fontWeight: 'bold',
             color: colors.text,
           }}>
             {initials}
           </div>
         </div>
-        <div style={{
-          fontSize: 'clamp(12px, 1.8vw, 16px)',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          color: colors.text,
-          maxWidth: '140px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }} data-testid={`team-name-${side}`}>
-          {team?.name || `Team ${teamId}`}
-        </div>
+        {!isMini && (
+          <div style={{
+            fontSize: textSize,
+            fontWeight: 'bold',
+            textAlign: 'center',
+            color: colors.text,
+            maxWidth: px(120),
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: 1.2,
+          }} data-testid={`team-name-${side}`}>
+            {team?.name || `Team ${teamId}`}
+          </div>
+        )}
       </div>
     );
   };
@@ -309,36 +352,41 @@ export default function H2HMatchCardOverlay({
       D: '#F6EB61',
       L: '#FF4444',
     };
-    
+
     return (
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
+        gap: px(6),
+        flexDirection: isMini ? 'column' : 'row',
       }}>
         <div style={{
-          width: 'clamp(40px, 6vw, 60px)',
-          height: 'clamp(40px, 6vw, 60px)',
+          width: wdlSize,
+          height: wdlSize,
           borderRadius: '50%',
           backgroundColor: colorMap[type],
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 'clamp(18px, 3vw, 28px)',
+          fontSize: px(isMini ? 14 : isVeryCompact ? 18 : 24),
           fontWeight: 'bold',
           color: '#000',
           boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          flexShrink: 0,
         }} data-testid={`wdl-badge-${type.toLowerCase()}`}>
           {count}
         </div>
-        <div style={{
-          fontSize: 'clamp(12px, 1.8vw, 16px)',
-          fontWeight: 'bold',
-          color: colors.text,
-          letterSpacing: '0.5px',
-        }}>
-          {type === 'W' ? 'WINS' : type === 'D' ? 'DRAWS' : 'LOSSES'}
-        </div>
+        {!isMini && (
+          <div style={{
+            fontSize: smallTextSize,
+            fontWeight: 'bold',
+            color: colors.text,
+            letterSpacing: '0.5px',
+            lineHeight: 1,
+          }}>
+            {type === 'W' ? 'WINS' : type === 'D' ? 'DRAWS' : 'LOSSES'}
+          </div>
+        )}
       </div>
     );
   };
@@ -346,20 +394,21 @@ export default function H2HMatchCardOverlay({
   const MatchHistoryCard = ({ match, index }: { match: H2HMatch; index: number }) => {
     const isHomeWin = match.homeScore > match.awayScore;
     const isAwayWin = match.awayScore > match.homeScore;
-    
+
     return (
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: index * 0.1 }}
+        transition={{ delay: index * 0.05 }}
         style={{
           backgroundColor: colors.cardBg,
-          borderRadius: '6px',
-          padding: 'clamp(8px, 1.5vw, 12px)',
+          borderRadius: px(4),
+          padding: px(isMini ? 6 : 10),
           border: `1px solid ${colors.border}`,
           display: 'flex',
           flexDirection: 'column',
-          gap: '6px',
+          gap: px(4),
+          flexShrink: 0,
         }}
         data-testid={`match-history-${index}`}
       >
@@ -367,71 +416,78 @@ export default function H2HMatchCardOverlay({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '8px',
+          gap: px(6),
         }}>
           <div style={{
             flex: 1,
-            fontSize: 'clamp(11px, 1.5vw, 13px)',
+            fontSize: smallTextSize,
             color: colors.text,
             fontWeight: isHomeWin ? 'bold' : 'normal',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
+            lineHeight: 1.2,
           }}>
             {match.homeTeam}
           </div>
-          
+
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '4px 12px',
+            gap: px(4),
+            padding: `${px(3)}px ${px(8)}px`,
             backgroundColor: isHomeWin ? 'rgba(0, 255, 135, 0.15)' : isAwayWin ? 'rgba(255, 68, 68, 0.15)' : 'rgba(246, 235, 97, 0.15)',
-            borderRadius: '4px',
-            fontSize: 'clamp(13px, 2vw, 16px)',
+            borderRadius: px(3),
+            fontSize: textSize,
             fontWeight: 'bold',
             color: colors.text,
+            flexShrink: 0,
+            lineHeight: 1,
           }}>
             <span>{match.homeScore}</span>
             <span style={{ opacity: 0.5 }}>-</span>
             <span>{match.awayScore}</span>
           </div>
-          
+
           <div style={{
             flex: 1,
-            fontSize: 'clamp(11px, 1.5vw, 13px)',
+            fontSize: smallTextSize,
             color: colors.text,
             fontWeight: isAwayWin ? 'bold' : 'normal',
             textAlign: 'right',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
+            lineHeight: 1.2,
           }}>
             {match.awayTeam}
           </div>
         </div>
-        
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: 'clamp(9px, 1.2vw, 11px)',
-          color: colors.textSecondary,
-          gap: '8px',
-        }}>
-          <span>{formatDate(match.date)}</span>
-          {match.competition && (
-            <div style={{
-              backgroundColor: `${colors.secondary}30`,
-              padding: '2px 6px',
-              borderRadius: '3px',
-              fontWeight: 'bold',
-              fontSize: 'clamp(8px, 1.1vw, 10px)',
-            }}>
-              {match.competition}
-            </div>
-          )}
-        </div>
+
+        {!isMini && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: px(8),
+            color: colors.textSecondary,
+            gap: px(6),
+            lineHeight: 1.2,
+          }}>
+            <span>{formatDate(match.date)}</span>
+            {match.competition && !isVeryCompact && (
+              <div style={{
+                backgroundColor: `${colors.secondary}30`,
+                padding: `${px(2)}px ${px(4)}px`,
+                borderRadius: px(2),
+                fontWeight: 'bold',
+                fontSize: px(7),
+              }}>
+                {match.competition}
+              </div>
+            )}
+          </div>
+        )}
       </motion.div>
     );
   };
@@ -447,13 +503,14 @@ export default function H2HMatchCardOverlay({
         backgroundColor: colors.background,
         color: colors.text,
         fontFamily: 'League Spartan, sans-serif',
-        padding: 'clamp(16px, 3vw, 24px)',
+        padding,
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        borderRadius: '8px',
-        border: `3px solid ${colors.primary}`,
+        borderRadius,
+        border: `${borderWidth}px solid ${colors.primary}`,
+        boxSizing: 'border-box',
       }}
       data-testid="overlay-h2h"
     >
@@ -461,37 +518,48 @@ export default function H2HMatchCardOverlay({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 'clamp(12px, 2vw, 16px)',
+        marginBottom: spacing,
+        gap: smallSpacing,
+        flexShrink: 0,
       }}>
         <div style={{
-          fontSize: 'clamp(18px, 3.5vw, 28px)',
+          fontSize: titleSize,
           fontWeight: 'bold',
           textTransform: 'uppercase',
           letterSpacing: '1px',
           color: colors.accent,
+          lineHeight: 1.1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: isMini ? 'nowrap' : 'normal',
         }} data-testid="overlay-title">
-          HEAD-TO-HEAD RECORD
+          {isMini ? 'H2H' : isVeryCompact ? 'HEAD-TO-HEAD' : 'HEAD-TO-HEAD RECORD'}
         </div>
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: px(4),
+          flexShrink: 0,
         }}>
-          <div style={{
-            fontSize: 'clamp(8px, 1.1vw, 10px)',
-            color: colors.textSecondary,
-            textAlign: 'right',
-          }} data-testid="last-updated">
-            Data as of {formatDistanceToNow(new Date(lastUpdated))} ago
-          </div>
+          {!isMini && (
+            <div style={{
+              fontSize: px(8),
+              color: colors.textSecondary,
+              textAlign: 'right',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.2,
+            }} data-testid="last-updated">
+              {formatTimeAgo(lastUpdated)}
+            </div>
+          )}
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
             style={{
               backgroundColor: 'transparent',
               border: `1px solid ${colors.border}`,
-              borderRadius: '4px',
-              padding: 'clamp(4px, 0.8vw, 6px)',
+              borderRadius: px(3),
+              padding: px(4),
               cursor: isRefreshing ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -503,7 +571,7 @@ export default function H2HMatchCardOverlay({
             data-testid="button-refresh-h2h"
           >
             <RefreshCw
-              size={parseInt('clamp(12px, 2vw, 16px)'.match(/\d+/)?.[0] || '14')}
+              size={px(isMini ? 10 : 14)}
               style={{
                 animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
               }}
@@ -522,24 +590,27 @@ export default function H2HMatchCardOverlay({
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 'clamp(20px, 4vw, 40px)',
-        marginBottom: 'clamp(16px, 2.5vw, 20px)',
-        padding: 'clamp(12px, 2vw, 16px) 0',
+        gap: spacing,
+        marginBottom: spacing,
+        padding: `${px(8)}px 0`,
+        flexShrink: 0,
       }}>
         <TeamBadge team={homeTeam} teamId={homeTeamId} side="home" />
-        
+
         <div style={{
-          width: 'clamp(50px, 8vw, 70px)',
-          height: 'clamp(50px, 8vw, 70px)',
+          width: vsSize,
+          height: vsSize,
           backgroundColor: colors.secondary,
           borderRadius: '50%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 'clamp(16px, 2.5vw, 22px)',
+          fontSize: px(isMini ? 12 : isVeryCompact ? 16 : 20),
           fontWeight: 'bold',
           color: colors.text,
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          flexShrink: 0,
+          lineHeight: 1,
         }}>
           VS
         </div>
@@ -551,55 +622,63 @@ export default function H2HMatchCardOverlay({
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'center',
-        gap: 'clamp(12px, 2vw, 16px)',
-        marginBottom: 'clamp(16px, 2.5vw, 20px)',
-        padding: 'clamp(12px, 2vw, 16px)',
+        gap: smallSpacing,
+        marginBottom: spacing,
+        padding: px(isMini ? 6 : 12),
         backgroundColor: colors.cardBg,
-        borderRadius: '8px',
+        borderRadius: px(6),
         border: `1px solid ${colors.border}`,
+        flexShrink: 0,
       }}>
         <WDLIndicator type="W" count={homeWins} />
         <WDLIndicator type="D" count={draws} />
         <WDLIndicator type="L" count={awayWins} />
       </div>
 
-      <div style={{
-        marginBottom: 'clamp(8px, 1.5vw, 12px)',
-      }}>
+      {!isMini && (
         <div style={{
-          fontSize: 'clamp(13px, 2vw, 16px)',
-          fontWeight: 'bold',
-          color: colors.accent,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          marginBottom: '8px',
+          marginBottom: px(6),
+          flexShrink: 0,
         }}>
-          Recent Matches
+          <div style={{
+            fontSize: textSize,
+            fontWeight: 'bold',
+            color: colors.accent,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            lineHeight: 1.2,
+          }}>
+            Recent Matches
+          </div>
         </div>
-      </div>
+      )}
 
       <div style={{
         flex: 1,
         overflowY: 'auto',
+        overflowX: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        gap: 'clamp(6px, 1vw, 8px)',
+        gap: px(isMini ? 4 : 6),
+        minHeight: 0,
       }}>
         {recentMatches.map((match, index) => (
-          <MatchHistoryCard key={index} match={match} index={index} />
+          <MatchHistoryCard key={`${match.date}-${index}`} match={match} index={index} />
         ))}
       </div>
 
-      {totalMatches > 5 && (
+      {!isMini && totalMatches > 5 && (
         <div style={{
-          marginTop: 'clamp(8px, 1.5vw, 12px)',
-          paddingTop: 'clamp(8px, 1.5vw, 12px)',
+          marginTop: spacing,
+          paddingTop: px(6),
           borderTop: `1px solid ${colors.border}`,
-          fontSize: 'clamp(9px, 1.2vw, 11px)',
+          fontSize: px(8),
           color: colors.textSecondary,
           textAlign: 'center',
+          flexShrink: 0,
+          lineHeight: 1.2,
         }}>
-          Showing 5 of {totalMatches} total matches
+          Showing {recentMatches.length} of {totalMatches} total matches
         </div>
       )}
     </motion.div>
