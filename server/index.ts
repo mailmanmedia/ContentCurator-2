@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { initializeStatsScheduler } from "./football/statsScheduler";
 import { scheduledUpdateService } from "./football/scheduledUpdateService";
 import { initializeH2HExportScheduler } from './scripts/scheduledH2HExport';
+import { logDateValidation, validateCurrentDate } from './utils/dateValidator';
 
 const app = express();
 app.use(express.json());
@@ -41,6 +42,18 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // Display comprehensive date/time validation on startup
+  console.log('\n' + '='.repeat(70));
+  console.log('🚀 FOOTBALL API - DATE/TIME VALIDATION');
+  console.log('='.repeat(70));
+  const validation = validateCurrentDate();
+  console.log(validation.validationMessage);
+  if (validation.warnings.length > 0) {
+    console.log('\n⚠️  Warnings:');
+    validation.warnings.forEach(warning => console.log(`   ${warning}`));
+  }
+  console.log('='.repeat(70) + '\n');
 
   initializeStatsScheduler();
 

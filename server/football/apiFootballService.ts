@@ -1,5 +1,12 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { toSafeDate, toSafeDateRequired, convertTimestampFields } from '../utils/dateUtils';
+import { 
+  validateCurrentDate, 
+  buildDateContext, 
+  getSeasonForStats, 
+  getSeasonForFixtures,
+  logDateValidation 
+} from '../utils/dateValidator';
 
 interface RateLimitState {
   requestsThisMinute: number;
@@ -424,6 +431,15 @@ class APIFootballService {
       backoffMs = 1000
     } = options;
 
+    // Validate and log date/time context for API request
+    const dateContext = buildDateContext();
+    console.log(`\n🔍 API Football Service - Request: ${endpoint}`);
+    console.log(`📅 Current Date/Time: ${dateContext.currentDateTimeString}`);
+    console.log(`⚽ Current Season: ${dateContext.currentSeason}`);
+    if (params.season) {
+      console.log(`📊 Requesting season: ${params.season}`);
+    }
+
     // Generate cache key
     const cacheKey = `${endpoint}_${JSON.stringify(params)}`;
 
@@ -431,7 +447,7 @@ class APIFootballService {
     if (useCache) {
       const cached = this.getFromCache<T>(cacheKey);
       if (cached !== null) {
-        console.log(`Cache hit for ${endpoint}`);
+        console.log(`✅ Cache hit for ${endpoint}`);
         return cached;
       }
     }
