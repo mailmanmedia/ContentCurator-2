@@ -110,10 +110,9 @@ export default function FormGuideOverlay({
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
-  // Football season starts in August, so if we're before August, we're in the previous season
   const season = currentMonth >= 8 ? currentYear : currentYear - 1;
 
-  // Fetch team statistics from database with retry logic (most recent data)
+  // Fetch team statistics from database
   const { 
     data: teamStatsData, 
     isLoading: isLoadingStats,
@@ -127,12 +126,12 @@ export default function FormGuideOverlay({
       return response.json();
     },
     enabled: !!teamId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2, // Retry failed requests twice
-    retryDelay: 1000, // Wait 1 second between retries
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+    retryDelay: 1000,
   });
 
-  // Fetch team fixtures from database with retry logic (most recent data)
+  // Fetch team fixtures from database
   const { 
     data: fixturesData, 
     isLoading: isLoadingFixtures,
@@ -155,13 +154,11 @@ export default function FormGuideOverlay({
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // Trigger database update for this team
       const response = await fetch(`/api/admin/update/team/${teamId}`, { 
         method: 'POST' 
       });
 
       if (response.ok) {
-        // Refetch data after successful update
         await Promise.all([refetchStats(), refetchFixtures()]);
         toast({
           title: "Data refreshed",
@@ -185,23 +182,18 @@ export default function FormGuideOverlay({
   const error = statsError || fixturesError;
 
   const { teamName, matches, sequence, record, competition, source, lastUpdated } = useMemo(() => {
-    // Extract data from database responses
     const statsDbData = teamStatsData?.data?.statistics || teamStatsData?.data;
     const fixturesDbData = fixturesData?.data?.fixtures || fixturesData?.data;
 
-    // Get last updated timestamp
     const statsLastUpdated = teamStatsData?.lastUpdated;
     const fixturesLastUpdated = fixturesData?.lastUpdated;
     const mostRecentUpdate = statsLastUpdated || fixturesLastUpdated || new Date().toISOString();
 
-    // Extract team name from stats data
     const teamNameFromStats = statsDbData?.team?.name || "Liverpool";
 
-    // Check if we have fixtures data
     const hasFixtures = fixturesDbData && Array.isArray(fixturesDbData) && fixturesDbData.length > 0;
 
     if (!hasFixtures) {
-      // Try to use form data from team statistics if available
       const formString = statsDbData?.form;
       if (formString && typeof formString === 'string') {
         const formArray = formString.split('').slice(0, matchLimit);
@@ -288,42 +280,48 @@ export default function FormGuideOverlay({
     };
   }, [teamStatsData, fixturesData, teamId, matchLimit]);
 
-  // Dynamic scaling based on container dimensions
+  // Improved dynamic scaling system
   const { scale, px } = useMemo(() => {
     if (!width || !height) {
       return {
         scale: 1,
-        px: (value: number, options?: { min?: number; max?: number }) =>
-          clamp(value, options?.min ?? value * 0.6, options?.max ?? value * 1.4),
+        px: (value: number) => value,
       };
     }
 
-    const baseWidth = 420;
-    const baseHeight = 260;
+    // Base dimensions for 16:9 aspect ratio
+    const baseWidth = 480;
+    const baseHeight = 270;
     const widthScale = width / baseWidth;
     const heightScale = height / baseHeight;
-    const computed = clamp(Math.min(widthScale, heightScale), 0.4, 1.6);
+    
+    // Use the smaller scale to ensure everything fits
+    const computed = clamp(Math.min(widthScale, heightScale), 0.3, 2.0);
 
-    const px = (value: number, options?: { min?: number; max?: number }) =>
-      clamp(value * computed, options?.min ?? value * 0.5, options?.max ?? value * 1.6);
+    // Proportional scaling function with smoother limits
+    const px = (value: number) => Math.round(value * computed);
 
     return { scale: computed, px };
   }, [width, height]);
 
-  // Responsive layout decisions
-  const isStacked = layout === "vertical" || width < 360 || height < 220 || scale < 0.75;
-  const isUltraCompact = width < 280 || height < 180 || scale < 0.6;
+  // Responsive layout thresholds
+  const isCompact = width < 400 || height < 250;
+  const isVeryCompact = width < 320 || height < 200;
+  const isMini = width < 240 || height < 150;
+  const isStacked = layout === "vertical" || isCompact;
 
-  // Dynamic pixel calculations
-  const circlePx = px(isUltraCompact ? circleSize * 0.7 : isStacked ? circleSize * 0.82 : circleSize, {
-    min: 24,
-    max: 88,
-  });
-  const titlePx = px(titleSize, { min: 13, max: 30 });
-  const labelPx = px(isUltraCompact ? labelSize * 0.78 : labelSize, { min: 9, max: 18 });
-  const spacing = px(isStacked ? 12 : 18, { min: 6, max: 28 });
-  const padding = px(isUltraCompact ? 14 : 18, { min: 10, max: 28 });
-  const borderRadius = px(12, { min: 8, max: 22 });
+  // Proportionally scaled dimensions
+  const circlePx = px(isMini ? 28 : isVeryCompact ? 36 : isCompact ? 44 : circleSize);
+  const titlePx = px(isMini ? 14 : isVeryCompact ? 16 : titleSize);
+  const subtitlePx = px(isMini ? 11 : isVeryCompact ? 12 : 14);
+  const labelPx = px(isMini ? 9 : isVeryCompact ? 10 : labelSize);
+  const textPx = px(isMini ? 10 : isVeryCompact ? 11 : 13);
+  const smallTextPx = px(isMini ? 8 : isVeryCompact ? 9 : 11);
+  const spacing = px(isVeryCompact ? 8 : isCompact ? 12 : 16);
+  const smallSpacing = px(isVeryCompact ? 4 : isCompact ? 6 : 8);
+  const padding = px(isVeryCompact ? 10 : isCompact ? 14 : 20);
+  const borderRadius = px(isMini ? 6 : isVeryCompact ? 8 : 10);
+  const borderWidth = Math.max(Math.round(2 * scale), 1);
 
   // Streak analysis
   const streakType = matches[0]?.result;
@@ -341,30 +339,21 @@ export default function FormGuideOverlay({
       const noun = streakType === "W" ? "winning" : streakType === "L" ? "losing" : "unbeaten";
       streakLabel = `${count}-match ${noun} streak`;
     } else {
-      streakLabel = streakType === "W" ? "Won last match" : streakType === "L" ? "Lost last match" : "Drew last match";
+      streakLabel = streakType === "W" ? "Won last" : streakType === "L" ? "Lost last" : "Drew last";
     }
   }
 
   const badgeText = `${record.W}W-${record.D}D-${record.L}L`;
-
-  // Debug logging
-  console.log('[FormGuideOverlay] Team ID:', teamId);
-  console.log('[FormGuideOverlay] Loading states:', { isLoadingStats, isLoadingFixtures });
-  console.log('[FormGuideOverlay] Fixtures data:', fixturesData);
-  console.log('[FormGuideOverlay] Team stats data:', teamStatsData);
-  console.log('[FormGuideOverlay] Processed data:', { teamName, matches, sequence, record });
 
   if (isLoading) {
     return <OverlayLoadingSkeleton width={width} height={height} />;
   }
 
   if (error) {
-    console.error('[FormGuideOverlay] Error:', error);
     return <OverlayErrorState width={width} height={height} error={error as Error} />;
   }
 
   if (!sequence.length) {
-    console.warn('[FormGuideOverlay] No form data found for team:', teamId);
     return <OverlayEmptyState width={width} height={height} message={`No recent form data available for ${teamName}`} />;
   }
 
@@ -385,100 +374,111 @@ export default function FormGuideOverlay({
         flexDirection: "column",
         justifyContent: "space-between",
         borderRadius,
-        border: `${Math.max(2 * scale, 1)}px solid ${palette.border}`,
+        border: `${borderWidth}px solid ${palette.border}`,
         boxSizing: "border-box",
         position: "relative",
         overflow: "hidden",
       }}
+      data-testid="form-guide-overlay"
     >
+      {/* Header */}
       <header
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: isStacked ? "flex-start" : "baseline",
-          gap: px(12, { min: 6, max: 20 }),
+          alignItems: isStacked ? "flex-start" : "center",
+          gap: spacing,
           marginBottom: spacing,
-          flexWrap: "wrap",
+          flexWrap: isVeryCompact ? "wrap" : "nowrap",
         }}
       >
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               fontSize: `${titlePx}px`,
               fontWeight: 700,
-              letterSpacing: "0.08em",
+              letterSpacing: "0.05em",
               color: palette.accent,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             RECENT FORM
           </div>
           <div
             style={{
-              fontSize: `${px(14, { min: 10, max: 18 })}px`,
+              fontSize: `${subtitlePx}px`,
               fontWeight: 600,
               color: palette.text,
-              opacity: 0.85,
+              opacity: 0.9,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              marginTop: px(2),
             }}
           >
             {teamName.toUpperCase()}
           </div>
+          {!isMini && (
+            <div
+              style={{
+                fontSize: `${smallTextPx}px`,
+                color: palette.muted,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                marginTop: px(2),
+              }}
+            >
+              {competition} · {streakLabel}
+            </div>
+          )}
+        </div>
+        
+        {!isMini && (
           <div
             style={{
-              fontSize: `${px(11, { min: 9, max: 14 })}px`,
-              color: palette.muted,
+              backgroundColor: `${palette.accent}22`,
+              border: `1px solid ${palette.accent}55`,
+              borderRadius: px(20),
+              padding: `${px(5)}px ${px(12)}px`,
+              fontSize: `${textPx}px`,
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: px(6),
+              color: palette.text,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
-            {competition} · {streakLabel}
+            <span style={{ opacity: 0.75 }}>Record:</span> {badgeText}
           </div>
-        </div>
-        <div
-          style={{
-            backgroundColor: `${palette.accent}22`,
-            border: `1px solid ${palette.accent}55`,
-            borderRadius: px(999, { min: 18, max: 48 }),
-            padding: `${px(6, { min: 4, max: 10 })}px ${px(14, { min: 8, max: 18 })}px`,
-            fontSize: `${px(13, { min: 10, max: 16 })}px`,
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            gap: px(8, { min: 4, max: 12 }),
-            color: palette.text,
-            whiteSpace: "nowrap",
-            marginLeft: isStacked ? 0 : "auto",
-          }}
-        >
-          <span style={{ opacity: 0.75 }}>Record:</span> {badgeText}
-        </div>
-
-        {/* Data Source Badge */}
-        {source && lastUpdated && (
-          <OverlaySourceBadge 
-            source={source as any} 
-            timestamp={new Date(lastUpdated).getTime()} 
-          />
         )}
       </header>
 
+      {/* Main Content */}
       <div
         style={{
           display: "flex",
           flexDirection: isStacked ? "column" : "row",
-          justifyContent: isStacked ? "flex-start" : "space-between",
-          alignItems: isStacked ? "stretch" : "flex-end",
           gap: spacing,
           flex: 1,
+          minHeight: 0,
+          alignItems: isStacked ? "stretch" : "flex-start",
         }}
       >
+        {/* Form Circles */}
         <div
           style={{
             display: "flex",
             flexDirection: "row",
-            gap: px(12, { min: 6, max: 20 }),
+            gap: px(isVeryCompact ? 8 : 12),
             flexWrap: "wrap",
             justifyContent: isStacked ? "center" : "flex-start",
-            alignItems: "center",
-            rowGap: px(isStacked ? 10 : 14, { min: 6, max: 18 }),
-            minHeight: circlePx + px(20, { min: 6, max: 16 }),
+            alignItems: "flex-start",
+            alignContent: "flex-start",
           }}
         >
           {sequence.map((result: string, index: number) => (
@@ -487,7 +487,12 @@ export default function FormGuideOverlay({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.05, type: "spring", stiffness: 220, damping: 18 }}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: px(6, { min: 3, max: 10 }) }}
+              style={{ 
+                display: "flex", 
+                flexDirection: "column", 
+                alignItems: "center", 
+                gap: px(4),
+              }}
             >
               <div
                 style={{
@@ -500,136 +505,172 @@ export default function FormGuideOverlay({
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 800,
-                  fontSize: `${px(18, { min: 12, max: 28 })}px`,
-                  border: `2px solid rgba(0,0,0,0.12)`
+                  fontSize: `${px(isMini ? 14 : 18)}px`,
+                  border: `${Math.max(Math.round(2 * scale), 1)}px solid rgba(0,0,0,0.12)`,
+                  flexShrink: 0,
                 }}
               >
                 {result}
               </div>
-              <div
-                style={{
-                  fontSize: `${labelPx}px`,
-                  letterSpacing: "0.05em",
-                  color: palette.muted,
-                }}
-              >
-                {formatDate(matches[index].date)}
-              </div>
+              {!isMini && matches[index] && (
+                <div
+                  style={{
+                    fontSize: `${labelPx}px`,
+                    letterSpacing: "0.03em",
+                    color: palette.muted,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {formatDate(matches[index].date)}
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
 
-        <div
-          style={{
-            flex: 1,
-            backgroundColor: `${palette.text}0F`,
-            borderRadius: px(10, { min: 8, max: 18 }),
-            border: `1px solid ${palette.text}18`,
-            padding: `${px(12, { min: 8, max: 16 })}px ${px(14, { min: 10, max: 20 })}px`,
-            display: "flex",
-            flexDirection: "column",
-            gap: px(10, { min: 6, max: 16 }),
-            maxHeight: isStacked ? px(220, { min: isUltraCompact ? 110 : 140, max: 280 }) : "100%",
-            overflowY: isStacked ? "auto" : "hidden",
-            width: "100%",
-          }}
-        >
-          {matches.map((match: any, index: number) => (
-            <div
-              key={`${match.date}-${match.opponent}`}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: px(12, { min: 6, max: 18 }),
-                fontSize: `${px(12, { min: 10, max: 16 })}px`,
-                color: palette.text,
-                opacity: index === 0 ? 1 : 0.86,
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: px(2, { min: 1, max: 4 }) }}>
-                <span style={{ fontWeight: 600 }}>{match.opponent}</span>
-                <span style={{ color: palette.muted, fontSize: `${px(11, { min: 9, max: 14 })}px` }}>
-                  {match.competition} · {venueLabel(match.venue)}
-                </span>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <span style={{ fontWeight: 700 }}>{match.score}</span>
-                <div style={{
-                  fontSize: `${px(11, { min: 9, max: 14 })}px`,
-                  color: palette.muted,
-                }}>
-                  {formatDate(match.date)}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <footer
-        style={{
-          marginTop: spacing,
-          paddingTop: px(12, { min: 8, max: 16 }),
-          borderTop: `${px(1.5, { min: 1, max: 2 })}px solid ${palette.text}20`,
-          display: "flex",
-          flexDirection: isStacked ? "column" : "row",
-          justifyContent: isStacked ? "flex-start" : "space-between",
-          alignItems: isStacked ? "flex-start" : "center",
-          gap: px(12, { min: 6, max: 18 }),
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: px(14, { min: 8, max: 18 }),
-            fontSize: `${px(11, { min: 9, max: 14 })}px`,
-            color: palette.muted,
-            flexWrap: "wrap",
-            rowGap: px(6, { min: 4, max: 10 }),
-          }}
-        >
-          <span>Wins: {record.W}</span>
-          <span>Draws: {record.D}</span>
-          <span>Losses: {record.L}</span>
-          {streakLabel && <span>{streakLabel}</span>}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: px(8, { min: 4, max: 12 }),
-            fontSize: `${px(11, { min: 9, max: 14 })}px`,
-            color: palette.muted,
-          }}
-        >
-          <span>
-            Data as of {formatDistanceToNow(new Date(lastUpdated))} ago
-          </span>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
+        {/* Match Details */}
+        {!isMini && matches.length > 0 && (
+          <div
             style={{
-              width: px(24, { min: 20, max: 32 }),
-              height: px(24, { min: 20, max: 32 }),
-              padding: 0,
-              background: `${palette.text}10`,
-              border: `1px solid ${palette.text}20`,
+              flex: 1,
+              backgroundColor: `${palette.text}0F`,
+              borderRadius: px(8),
+              border: `1px solid ${palette.text}18`,
+              padding: `${px(10)}px ${px(12)}px`,
+              display: "flex",
+              flexDirection: "column",
+              gap: px(8),
+              minHeight: 0,
+              overflowY: "auto",
+              overflowX: "hidden",
             }}
           >
-            <RefreshCw 
-              className={isRefreshing ? "animate-spin" : ""} 
-              style={{ 
-                width: px(14, { min: 12, max: 18 }), 
-                height: px(14, { min: 12, max: 18 }),
-                color: palette.text
-              }} 
-            />
-          </Button>
-        </div>
-      </footer>
+            {matches.slice(0, isVeryCompact ? 3 : matchLimit).map((match: any, index: number) => (
+              <div
+                key={`${match.date}-${match.opponent}`}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: spacing,
+                  fontSize: `${textPx}px`,
+                  color: palette.text,
+                  opacity: index === 0 ? 1 : 0.85,
+                }}
+              >
+                <div style={{ 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  gap: px(2),
+                  flex: 1,
+                  minWidth: 0,
+                }}>
+                  <span style={{ 
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}>
+                    {match.opponent}
+                  </span>
+                  {!isVeryCompact && (
+                    <span style={{ 
+                      color: palette.muted, 
+                      fontSize: `${smallTextPx}px`,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}>
+                      {match.competition} · {venueLabel(match.venue)}
+                    </span>
+                  )}
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <span style={{ fontWeight: 700 }}>{match.score}</span>
+                  {!isVeryCompact && (
+                    <div style={{
+                      fontSize: `${smallTextPx}px`,
+                      color: palette.muted,
+                      whiteSpace: "nowrap",
+                    }}>
+                      {formatDate(match.date)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      {!isMini && (
+        <footer
+          style={{
+            marginTop: spacing,
+            paddingTop: px(10),
+            borderTop: `${Math.max(Math.round(1.5 * scale), 1)}px solid ${palette.text}20`,
+            display: "flex",
+            flexDirection: isVeryCompact ? "column" : "row",
+            justifyContent: "space-between",
+            alignItems: isVeryCompact ? "flex-start" : "center",
+            gap: smallSpacing,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: px(isVeryCompact ? 10 : 14),
+              fontSize: `${smallTextPx}px`,
+              color: palette.muted,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>W: {record.W}</span>
+            <span>D: {record.D}</span>
+            <span>L: {record.L}</span>
+            {!isVeryCompact && streakLabel && <span>• {streakLabel}</span>}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: px(6),
+              fontSize: `${smallTextPx}px`,
+              color: palette.muted,
+            }}
+          >
+            {!isVeryCompact && (
+              <span style={{ whiteSpace: "nowrap" }}>
+                {formatDistanceToNow(new Date(lastUpdated))} ago
+              </span>
+            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              data-testid="button-refresh-form"
+              style={{
+                width: px(24),
+                height: px(24),
+                padding: 0,
+                background: `${palette.text}10`,
+                border: `1px solid ${palette.text}20`,
+                flexShrink: 0,
+              }}
+            >
+              <RefreshCw 
+                className={isRefreshing ? "animate-spin" : ""} 
+                style={{ 
+                  width: px(14), 
+                  height: px(14),
+                  color: palette.text
+                }} 
+              />
+            </Button>
+          </div>
+        </footer>
+      )}
     </motion.div>
   );
 }
