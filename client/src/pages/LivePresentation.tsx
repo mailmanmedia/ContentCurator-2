@@ -2328,6 +2328,23 @@ export default function LivePresentation() {
     });
   };
 
+  // Helper function to map overlay types and metric types to components
+  const getOverlayComponent = (type: OverlayConfig['overlayType'], metricType?: OverlayConfig['metricType']) => {
+    switch (type) {
+      case 'rss':
+        return RssTickerEnhancedOverlay;
+      case 'metric':
+        // Determine which metric overlay based on metricType
+        if (metricType === 'upcoming-fixtures') return UpcomingFixturesOverlay;
+        if (metricType === 'player-comparison') return PlayerComparisonOverlay;
+        if (metricType === 'form-guide') return FormGuideOverlay;
+        // Add other metric component returns here if they exist
+        return null; 
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -2686,31 +2703,8 @@ export default function LivePresentation() {
 
                   {/* Render overlays directly or via components */}
                   {overlays.filter(o => o.visible).map((overlay) => {
-                    // Map overlay types to components
-                    const getOverlayComponent = (type: string) => {
-                      switch (type) {
-                        case 'text':
-                          return null; // Text overlays are rendered separately
-                        case 'rss':
-                          return overlay.overlayType === 'rss' ? RssTickerEnhancedOverlay : null;
-                        case 'image':
-                          return null; // Image overlays are rendered as img tags
-                        case 'metric':
-                          // Determine which metric overlay based on metricType
-                          const metricType = overlay.metricType;
-                          if (metricType === 'upcoming-fixtures') return UpcomingFixturesOverlay;
-                          if (metricType === 'player-comparison') return PlayerComparisonOverlay;
-                          if (metricType === 'form-guide') return FormGuideOverlay;
-                          if (metricType === 'league-table') return null; // Add when component exists
-                          if (metricType === 'h2h-card') return null; // Add when component exists
-                          if (metricType === 'player-stats') return null; // Add when component exists
-                          return null;
-                        default:
-                          return null;
-                      }
-                    };
+                    const OverlayComponent = getOverlayComponent(overlay.overlayType, overlay.metricType);
 
-                    const OverlayComponent = getOverlayComponent(overlay.overlayType);
                     if (!OverlayComponent) {
                       // Render non-component overlays (text, images)
                       if (overlay.overlayType === 'text') {
@@ -4879,7 +4873,7 @@ export default function LivePresentation() {
             >
               {/* Render active overlays */}
               {overlays.map((overlay) => {
-                const OverlayComponent = getOverlayComponent(overlay.overlayType);
+                const OverlayComponent = getOverlayComponent(overlay.overlayType, overlay.metricType);
                 if (!OverlayComponent) {
                   // Render non-component overlays (text, images)
                   if (overlay.overlayType === 'text') {
