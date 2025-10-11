@@ -2217,6 +2217,22 @@ export default function LivePresentation() {
     return Math.max(min, snapped);
   };
 
+  const constrainOverlayPosition = (x: number, y: number, width: number, height: number) => {
+    // Calculate overlay dimensions in pixels
+    const overlayWidthPx = (width / 100) * outputResolution.width;
+    const overlayHeightPx = height;
+
+    // Calculate maximum allowed positions to keep overlay within bounds
+    const maxX = outputResolution.width - overlayWidthPx;
+    const maxY = outputResolution.height - overlayHeightPx;
+
+    // Constrain and snap to grid
+    const constrainedX = snapToGrid(x, 20, 0, maxX);
+    const constrainedY = snapToGrid(y, 20, 0, maxY);
+
+    return { x: constrainedX, y: constrainedY };
+  };
+
   const handleOpenPositionEditor = (overlayId: string) => {
     const overlay = overlays.find(o => o.id === overlayId);
     if (overlay) {
@@ -2235,18 +2251,16 @@ export default function LivePresentation() {
     const rawX = (e.clientX - rect.left) * scaleX;
     const rawY = (e.clientY - rect.top) * scaleY;
 
-    // Use current slider state values for dimensions
-    const overlayWidthPx = (overlayWidth / 100) * outputResolution.width;
-    const overlayHeightPx = overlayHeight;
+    // Use constrained positioning to keep overlay within bounds
+    const { x: constrainedX, y: constrainedY } = constrainOverlayPosition(
+      rawX,
+      rawY,
+      overlayWidth,
+      overlayHeight
+    );
 
-    const maxX = outputResolution.width - overlayWidthPx;
-    const maxY = outputResolution.height - overlayHeightPx;
-
-    const snappedX = snapToGrid(rawX, 20, 0, maxX);
-    const snappedY = snapToGrid(rawY, 20, 0, maxY);
-
-    setOverlayX(snappedX);
-    setOverlayY(snappedY);
+    setOverlayX(constrainedX);
+    setOverlayY(constrainedY);
   };
 
   const handleUpdatePosition = () => {
@@ -2254,24 +2268,25 @@ export default function LivePresentation() {
 
     // Get overlay dimensions to calculate max boundaries
     const editingOverlay = overlays.find(o => o.id === editingPositionOverlayId);
-    const overlayWidth = editingOverlay ? (editingOverlay.width / 100) * outputResolution.width : 0;
-    const overlayHeight = editingOverlay ? editingOverlay.height : 0;
+    if (!editingOverlay) return;
 
-    const maxX = outputResolution.width - overlayWidth;
-    const maxY = outputResolution.height - overlayHeight;
-
-    const snappedX = snapToGrid(overlayX, 20, 0, maxX);
-    const snappedY = snapToGrid(overlayY, 20, 0, maxY);
+    // Use constrained positioning to keep overlay within bounds
+    const { x: constrainedX, y: constrainedY } = constrainOverlayPosition(
+      overlayX,
+      overlayY,
+      editingOverlay.width,
+      editingOverlay.height
+    );
 
     setOverlays(prev => prev.map(overlay =>
       overlay.id === editingPositionOverlayId
-        ? { ...overlay, x: snappedX, y: snappedY }
+        ? { ...overlay, x: constrainedX, y: constrainedY }
         : overlay
     ));
 
     toast({
       title: 'Position updated',
-      description: `Overlay positioned at (${snappedX}, ${snappedY})`
+      description: `Overlay positioned at (${constrainedX}, ${constrainedY})`
     });
 
     setIsPositionEditorOpen(false);
@@ -2280,11 +2295,22 @@ export default function LivePresentation() {
 
   const handlePositionInputChange = (axis: 'x' | 'y', value: string) => {
     const numValue = parseInt(value) || 0;
-    const clampedValue = Math.max(0, Math.min(numValue, axis === 'x' ? outputResolution.width : outputResolution.height));
+    
+    // Get current overlay being edited to check dimensions
+    const editingOverlay = overlays.find(o => o.id === editingPositionOverlayId);
+    if (!editingOverlay) return;
+
+    const overlayWidthPx = (editingOverlay.width / 100) * outputResolution.width;
+    const overlayHeightPx = editingOverlay.height;
+
+    const maxX = outputResolution.width - overlayWidthPx;
+    const maxY = outputResolution.height - overlayHeightPx;
 
     if (axis === 'x') {
+      const clampedValue = Math.max(0, Math.min(numValue, maxX));
       setOverlayX(clampedValue);
     } else {
+      const clampedValue = Math.max(0, Math.min(numValue, maxY));
       setOverlayY(clampedValue);
     }
   };
