@@ -1409,16 +1409,16 @@ class FootballService {
         .where(
           or(
             and(
-              eq(footballFixtures.homeTeamId, homeTeamId),
-              eq(footballFixtures.awayTeamId, awayTeamId)
+              eq(footballFixtures.home_team_id, homeTeamId),
+              eq(footballFixtures.away_team_id, awayTeamId)
             ),
             and(
-              eq(footballFixtures.homeTeamId, awayTeamId),
-              eq(footballFixtures.awayTeamId, homeTeamId)
+              eq(footballFixtures.home_team_id, awayTeamId),
+              eq(footballFixtures.away_team_id, homeTeamId)
             )
           )
         )
-        .orderBy(desc(footballFixtures.date))
+        .orderBy(desc(footballFixtures.timestamp))
         .limit(last);
 
       if (dbFixtures.length > 0) {

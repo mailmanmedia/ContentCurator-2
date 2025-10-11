@@ -1,4 +1,3 @@
-
 import fs from 'fs/promises';
 import path from 'path';
 import { db } from '../db';
@@ -70,7 +69,7 @@ function getCurrentSeason(): number {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
-  
+
   if (currentMonth < 7) {
     return currentYear - 1;
   } else {
@@ -93,7 +92,7 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
       console.warn(`Opponent ${opponentId} not found`);
       return null;
     }
-    
+
     const opponent = opponents[0];
 
     // Fetch matches from database (all seasons, all competitions)
@@ -121,7 +120,7 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
       try {
         const currentSeason = getCurrentSeason();
         const seasons = [currentSeason, currentSeason - 1, currentSeason - 2, currentSeason - 3];
-        
+
         for (const season of seasons) {
           const apiFixtures = await apiFootballService.fetchFixturesByTeam({
             season,
@@ -220,7 +219,7 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
 
     matches.forEach(match => {
       if (match.homeScore === null || match.awayScore === null) return;
-      
+
       const isLiverpoolHome = match.homeTeamId === liverpoolId;
       const liverpoolScore = isLiverpoolHome ? match.homeScore : match.awayScore;
       const opponentScore = isLiverpoolHome ? match.awayScore : match.homeScore;
@@ -248,7 +247,7 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
  */
 async function fetchLiverpoolSquad(liverpoolId: number): Promise<PlayerData[]> {
   const currentSeason = getCurrentSeason();
-  
+
   try {
     // Get all players (football_players table doesn't have teamId, so get all and filter via stats)
     const allPlayers = await db.select()
@@ -263,7 +262,7 @@ async function fetchLiverpoolSquad(liverpoolId: number): Promise<PlayerData[]> {
           eq(playerSeasonStatistics.season, currentSeason)
         )
       );
-    
+
     // Create map of player_id to stats
     const statsMap = new Map();
     liverpoolStats.forEach(stat => {
@@ -303,7 +302,7 @@ async function fetchLiverpoolSquad(liverpoolId: number): Promise<PlayerData[]> {
  */
 async function exportH2HJson() {
   console.log('🚀 Starting H2H JSON export...');
-  
+
   const LIVERPOOL_ID = 40;
   const PREMIER_LEAGUE_OPPONENTS = [
     33, 50, 42, 49, 47, 34, 66, 48, 35, 36, 
@@ -330,7 +329,7 @@ async function exportH2HJson() {
       exportData.headToHead.push(h2hData);
       console.log(`✓ Fetched ${h2hData.matches.length} matches vs ${h2hData.opponentName}`);
     }
-    
+
     // Rate limit delay
     await new Promise(resolve => setTimeout(resolve, 500));
   }

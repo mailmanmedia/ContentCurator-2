@@ -50,6 +50,14 @@ app.use((req, res, next) => {
   // Initialize H2H export scheduler
   initializeH2HExportScheduler();
 
+  // Initialize incremental sync scheduler
+  try {
+    const { startIncrementalSyncSchedule } = await import('./football/scheduledIncrementalSync');
+    startIncrementalSyncSchedule();
+  } catch (error) {
+    log('Warning: Could not start incremental sync scheduler', error);
+  }
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

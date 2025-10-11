@@ -1140,7 +1140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         UNION ALL
         SELECT 'Scenes', count(*)::int FROM scenes
       `);
-      
+
       const tableStats = tablesResult.rows.map((row: any) => ({
         tableName: row.tableName,
         recordCount: row.recordCount,
@@ -1238,7 +1238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(data_sync_logs)
           .orderBy(desc(data_sync_logs.completedAt))
           .limit(1);
-        
+
         lastApiUpdate = lastSync[0]?.timestamp || null;
       } catch (error) {
         console.warn('Could not fetch last API update time:', error);
@@ -1266,46 +1266,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get database players with filters - REMOVED DUPLICATE (see line 6083 for working version)
-
-  // Get all teams with their current form from database
-  app.get("/api/football/teams/all-forms", async (req, res) => {
+  // Get database status for DatabaseStatus page
+  app.get("/api/database-status", async (req, res) => {
     try {
-      const season = parseInt(req.query.season as string) || 2025;
-      const leagueId = parseInt(req.query.leagueId as string) || 39; // Default to Premier League
+      // Get counts from football-related tables
+      const tablesResult = await pool.query(`
+        SELECT 
+          'Leagues' as "type", COUNT(*) as count FROM football_leagues
+        UNION ALL SELECT 'Teams', COUNT(*) FROM football_teams
+        UNION ALL SELECT 'Players', COUNT(*) FROM football_players
+        UNION ALL SELECT 'Fixtures', COUNT(*) FROM football_fixtures
+        UNION ALL SELECT 'Standings', COUNT(*) FROM football_standings;
+      `);
 
-      const teamsWithForm = await db
-        .select({
-          teamId: teamSeasonStatistics.teamId,
-          teamName: footballTeams.name,
-          form: teamSeasonStatistics.form,
-          matchesPlayed: teamSeasonStatistics.matchesPlayed,
-          wins: teamSeasonStatistics.wins,
-          draws: teamSeasonStatistics.draws,
-          losses: teamSeasonStatistics.losses,
-          goalsFor: teamSeasonStatistics.goalsFor,
-          goalsAgainst: teamSeasonStatistics.goalsAgainst,
-          lastUpdated: teamSeasonStatistics.lastUpdated,
-        })
-        .from(teamSeasonStatistics)
-        .innerJoin(footballTeams, eq(teamSeasonStatistics.teamId, footballTeams.id))
-        .where(
-          and(
-            eq(teamSeasonStatistics.leagueId, leagueId),
-            eq(teamSeasonStatistics.season, season)
-          )
-        )
-        .orderBy(footballTeams.name);
+      const tableStats = tablesResult.rows.map((row: any) => ({
+        type: row.type,
+        count: row.count
+      }));
 
-      res.json({ 
-        teams: teamsWithForm,
-        season,
-        leagueId,
-        count: teamsWithForm.length
-      });
+      res.json({ tableStats });
     } catch (error) {
-      console.error('Error fetching all teams with form:', error);
-      res.status(500).json({ error: "Failed to fetch teams with form data" });
+      console.error('Error fetching database status:', error);
+      res.status(500).json({ error: 'Failed to fetch database status' });
+    }
+  });
+
+  // Run incremental data sync (only fetch new/updated data)
+  app.post("/api/football/sync/incremental", async (req, res) => {
+    try {
+      const { incrementalSyncService } = await import('./football/incrementalSyncService');
+      const results = await incrementalSyncService.runIncrementalSync();
+
+      const summary = {
+        totalApiCalls: results.reduce((sum, r) => sum + r.apiCalls, 0),
+        totalNewRecords: results.reduce((sum, r) => sum + r.newRecords, 0),
+        totalUpdatedRecords: results.reduce((sum, r) => sum + r.updatedRecords, 0),
+        results
+      };
+
+      res.json(summary);
+    } catch (error) {
+      console.error('Error running incremental sync:', error);
+      res.status(500).json({ error: 'Failed to run incremental sync' });
     }
   });
 
@@ -3135,15 +3137,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { dataCleaningService } = await import('./football/dataCleaningService');
       const season = req.body.season || 2025;
       const teamId = req.body.teamId || 40;
-      
+
       // Count players that need updating
       const playersWithoutId = await db
         .select()
         .from(football_players)
         .where(isNull(football_players.player_id));
-      
+
       const totalPlayers = playersWithoutId.length;
-      
+
       // Run cleaning in background (don't await)
       dataCleaningService.fetchAndUpdatePlayerIds(season, teamId)
         .then(result => {
@@ -3152,7 +3154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .catch(error => {
           console.error('❌ Background cleaning failed:', error);
         });
-      
+
       // Return immediate response
       res.json({
         success: true,
@@ -3177,7 +3179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { dataCleaningService } = await import('./football/dataCleaningService');
       const season = req.body.season || 2025;
       const teamId = req.body.teamId || 40;
-      
+
       // Count players that need photo fixes
       const playersWithoutPhotos = await db
         .select()
@@ -3185,12 +3187,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           or(
             isNull(football_players.photo),
-            eq(football_players.photo, '')
+            eq(football_players.photo, ''),
+            eq(football_players.photo, 'null')
           )
         );
-      
+
       const totalPlayers = playersWithoutPhotos.length;
-      
+
       // Run photo fixing in background (don't await)
       dataCleaningService.validateAndFixPhotos(season, teamId)
         .then(result => {
@@ -3199,7 +3202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .catch(error => {
           console.error('❌ Background photo fixing failed:', error);
         });
-      
+
       // Return immediate response
       res.json({
         success: true,
@@ -3341,7 +3344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })
             .from(footballPlayers)
             .where(eq(footballPlayers.name, dup.name));
-          
+
           return {
             name: dup.name,
             count: dup.count,
@@ -3374,7 +3377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(footballPlayers)
         .where(
           or(
-            sql`${footballPlayers.photo} IS NULL`,
+            isNull(footballPlayers.photo),
             eq(footballPlayers.photo, ''),
             eq(footballPlayers.photo, 'null')
           )
@@ -3392,7 +3395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(footballPlayers)
         .where(
           or(
-            sql`${footballPlayers.photo} IS NULL`,
+            isNull(footballPlayers.photo),
             eq(footballPlayers.photo, ''),
             eq(footballPlayers.photo, 'null')
           )
@@ -3530,7 +3533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.type('text/csv').send('');
         }
 
-        const headers = Object.keys(data[0]).join(',');
+        const headers = Object.keys(data[0]);
         const rows = data.map(row => 
           Object.values(row).map(val => 
             typeof val === 'string' && val.includes(',') ? `"${val}"` : val
@@ -6349,21 +6352,21 @@ Return ONLY a JSON object with this structure:
           .from(footballPlayers)
           .orderBy(footballPlayers.name)
           .limit(500);
-        
+
         return res.json({ players: allPlayers });
       }
 
       // Build filtered query using player_season_statistics
       let conditions: any[] = [];
-      
+
       if (teamId && teamId !== "all") {
         conditions.push(eq(playerSeasonStatistics.team_id, parseInt(teamId as string)));
       }
-      
+
       if (season && season !== "all") {
         conditions.push(eq(playerSeasonStatistics.season, parseInt(season as string)));
       }
-      
+
       if (leagueId && leagueId !== "all") {
         conditions.push(eq(playerSeasonStatistics.league_id, parseInt(leagueId as string)));
       }
@@ -6607,7 +6610,7 @@ Return ONLY a JSON object with this structure:
         const worksheet = XLSX.utils.json_to_sheet(data);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, tableName);
-        
+
         fileContent = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
         filename = `${tableName}_export_${Date.now()}.xlsx`;
         contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
