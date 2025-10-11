@@ -287,6 +287,28 @@ router.get("/tasks/history", async (req, res) => {
   }
 });
 
+// System health check endpoint
+router.get("/health", async (req, res) => {
+  try {
+    const health = {
+      status: 'healthy',
+      database: await checkDatabaseHealth(),
+      activeTasks: activeTasks.size,
+      sseConnections: sseClients.size,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(health);
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message
+    });
+  }
+});
+
 // SSE endpoint for real-time updates
 router.get("/stream/:taskId", (req, res) => {
   const { taskId } = req.params;
@@ -295,6 +317,7 @@ router.get("/stream/:taskId", (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
 
   // Store client
   sseClients.set(taskId, res);
@@ -302,9 +325,19 @@ router.get("/stream/:taskId", (req, res) => {
   // Send initial connection message
   res.write(`data: ${JSON.stringify({ type: 'connected', taskId })}\n\n`);
 
+  // Send heartbeat every 30 seconds to keep connection alive
+  const heartbeat = setInterval(() => {
+    if (sseClients.has(taskId)) {
+      res.write(`data: ${JSON.stringify({ type: 'heartbeat' })}\n\n`);
+    } else {
+      clearInterval(heartbeat);
+    }
+  }, 30000);
+
   // Clean up on disconnect
   req.on('close', () => {
     sseClients.delete(taskId);
+    clearInterval(heartbeat);
   });
 });
 

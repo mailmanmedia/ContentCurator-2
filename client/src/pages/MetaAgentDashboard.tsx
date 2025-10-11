@@ -151,13 +151,23 @@ export default function MetaAgentDashboard() {
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-        if (data.type === 'step_completed') {
+        if (data.type === 'connected') {
+          console.log('✅ SSE connected for task:', task.id);
+        } else if (data.type === 'step_completed') {
           setVerificationProgress(data.progress);
           setCurrentTask(data.task);
+        } else if (data.type === 'heartbeat') {
+          // Connection is alive
         }
       };
 
-      eventSource.onerror = () => {
+      eventSource.onerror = (error) => {
+        console.error('SSE connection error:', error);
+        eventSource.close();
+      };
+
+      // Clean up on unmount
+      return () => {
         eventSource.close();
       };
 
