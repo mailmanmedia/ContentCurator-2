@@ -1029,3 +1029,26 @@ export const sourceTemplates = source_templates;
 export const setTemplates = set_templates;
 export const textOverlays = text_overlays;
 export const renderJobs = render_jobs;
+
+
+// Meta-Agent Task History
+export const agentTasks = pgTable("agent_tasks", {
+  id: text("id").primaryKey(),
+  action: text("action").notNull(),
+  type: text("type").notNull(),
+  status: text("status").notNull(),
+  userConfirmed: boolean("user_confirmed").default(false),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const agentTaskSteps = pgTable("agent_task_steps", {
+  id: serial("id").primaryKey(),
+  taskId: text("task_id").references(() => agentTasks.id).notNull(),
+  stepId: text("step_id").notNull(),
+  description: text("description").notNull(),
+  completed: boolean("completed").default(false),
+  result: text("result"),
+  timestamp: timestamp("timestamp"),
+});

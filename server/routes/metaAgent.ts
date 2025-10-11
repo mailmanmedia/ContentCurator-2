@@ -9,7 +9,9 @@ import {
   playerSeasonStatistics as playerStats, 
   teamSeasonStatistics as teamStats,
   football_standings as standings,
-  rssArticles
+  rssArticles,
+  agentTasks,
+  agentTaskSteps
 } from "@shared/schema";
 
 const router = Router();
@@ -21,6 +23,9 @@ interface VerificationStep {
   result?: string;
   timestamp?: string;
 }
+
+// SSE clients map
+const sseClients: Map<string, Response> = new Map();
 
 interface AgentTask {
   id: string;
@@ -36,6 +41,44 @@ interface AgentTask {
 
 // In-memory task storage (in production, use database)
 const activeTasks: Map<string, AgentTask> = new Map();
+
+// Helper: Save task to database
+async function saveTaskToDatabase(task: AgentTask) {
+  try {
+    await db.insert(agentTasks).values({
+      id: task.id,
+      action: task.action,
+      type: task.type,
+      status: task.status,
+      userConfirmed: task.userConfirmed,
+      metadata: task.metadata,
+      createdAt: new Date(task.createdAt),
+      completedAt: task.completedAt ? new Date(task.completedAt) : null,
+    }).onConflictDoUpdate({
+      target: agentTasks.id,
+      set: {
+        status: task.status,
+        userConfirmed: task.userConfirmed,
+        metadata: task.metadata,
+        completedAt: task.completedAt ? new Date(task.completedAt) : null,
+      }
+    });
+
+    // Save steps
+    for (const step of task.steps) {
+      await db.insert(agentTaskSteps).values({
+        taskId: task.id,
+        stepId: step.id,
+        description: step.description,
+        completed: step.completed,
+        result: step.result,
+        timestamp: step.timestamp ? new Date(step.timestamp) : null,
+      }).onConflictDoNothing();
+    }
+  } catch (error) {
+    console.error('Error saving task to database:', error);
+  }
+}
 
 // Process natural language query and determine action
 router.post("/parse-query", async (req, res) => {
@@ -71,6 +114,7 @@ router.post("/parse-query", async (req, res) => {
     };
 
     activeTasks.set(task.id, task);
+    await saveTaskToDatabase(task);
 
     res.json({
       success: true,
@@ -115,6 +159,14 @@ router.post("/verify-task/:taskId", async (req, res) => {
 
       // Send progress update
       activeTasks.set(taskId, task);
+      
+      // Broadcast real-time update via SSE
+      broadcastTaskUpdate(taskId, {
+        type: 'step_completed',
+        step: step.id,
+        progress: ((i + 1) / task.steps.length) * 100,
+        task
+      });
     }
 
     if (task.status !== 'failed') {
@@ -188,6 +240,35 @@ router.get("/tasks", (req, res) => {
 
   res.json({ tasks });
 });
+
+// SSE endpoint for real-time updates
+router.get("/stream/:taskId", (req, res) => {
+  const { taskId } = req.params;
+
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  // Store client
+  sseClients.set(taskId, res);
+
+  // Send initial connection message
+  res.write(`data: ${JSON.stringify({ type: 'connected', taskId })}\n\n`);
+
+  // Clean up on disconnect
+  req.on('close', () => {
+    sseClients.delete(taskId);
+  });
+});
+
+// Helper to broadcast task updates
+function broadcastTaskUpdate(taskId: string, update: any) {
+  const client = sseClients.get(taskId);
+  if (client) {
+    client.write(`data: ${JSON.stringify(update)}\n\n`);
+  }
+}
 
 // Helper: Get verification steps based on task type
 function getVerificationSteps(type: AgentTask['type']): VerificationStep[] {

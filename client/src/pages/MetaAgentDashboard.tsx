@@ -146,6 +146,22 @@ export default function MetaAgentDashboard() {
       const { task } = await parseResponse.json();
       setCurrentTask(task);
 
+      // Set up SSE connection for real-time updates
+      const eventSource = new EventSource(`/api/meta-agent/stream/${task.id}`);
+      
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'step_completed') {
+          setVerificationProgress(data.progress);
+          setCurrentTask(data.task);
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+      };
+
       // Execute verification steps
       const verifyResponse = await fetch(`/api/meta-agent/verify-task/${task.id}`, {
         method: 'POST',
