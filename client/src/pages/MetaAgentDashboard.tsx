@@ -135,55 +135,86 @@ export default function MetaAgentDashboard() {
     setUserInput("");
     setIsProcessing(true);
 
-    // Create verification task
-    const task: AgentTask = {
-      id: `task_${Date.now()}`,
-      action: userInput,
-      steps: [
-        { id: 'analyze', description: 'Analyzing request', completed: false },
-        { id: 'validate', description: 'Validating data sources', completed: false },
-        { id: 'preview', description: 'Generating preview', completed: false },
-        { id: 'confirm', description: 'Awaiting user confirmation', completed: false }
-      ],
-      status: 'verifying',
-      userConfirmed: false
-    };
+    try {
+      // Parse the query and create task
+      const parseResponse = await fetch('/api/meta-agent/parse-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: userInput }),
+      });
 
-    setCurrentTask(task);
+      const { task } = await parseResponse.json();
+      setCurrentTask(task);
 
-    // Simulate multi-step verification
-    for (let i = 0; i < task.steps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      task.steps[i].completed = true;
-      task.steps[i].result = 'Success';
-      setVerificationProgress(((i + 1) / task.steps.length) * 100);
-      setCurrentTask({ ...task });
+      // Execute verification steps
+      const verifyResponse = await fetch(`/api/meta-agent/verify-task/${task.id}`, {
+        method: 'POST',
+      });
+
+      const { task: verifiedTask } = await verifyResponse.json();
+      
+      // Simulate progress updates for UX
+      for (let i = 0; i < verifiedTask.steps.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+        setVerificationProgress(((i + 1) / verifiedTask.steps.length) * 100);
+        setCurrentTask({ ...verifiedTask });
+      }
+
+      const response: AgentMessage = {
+        role: 'assistant',
+        content: `I've analyzed your request: "${userInput}". Task type: ${task.type.replace('_', ' ')}. All verification steps completed successfully. Please review and confirm to execute.`,
+        timestamp: new Date(),
+        requiresConfirmation: true
+      };
+
+      setChatMessages(prev => [...prev, response]);
+    } catch (error: any) {
+      const errorMessage: AgentMessage = {
+        role: 'system',
+        content: `Error: ${error.message}`,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsProcessing(false);
     }
-
-    const response: AgentMessage = {
-      role: 'assistant',
-      content: `I've analyzed your request: "${userInput}". This action will require verification. Please review the steps above and confirm to proceed.`,
-      timestamp: new Date(),
-      requiresConfirmation: true
-    };
-
-    setChatMessages(prev => [...prev, response]);
-    setIsProcessing(false);
   };
 
-  const handleConfirmTask = () => {
+  const handleConfirmTask = async () => {
     if (!currentTask) return;
 
-    const systemMessage: AgentMessage = {
-      role: 'system',
-      content: `✓ Task confirmed and executed: ${currentTask.action}`,
-      timestamp: new Date(),
-      verified: true
-    };
+    setIsProcessing(true);
 
-    setChatMessages(prev => [...prev, systemMessage]);
-    setCurrentTask(null);
-    setVerificationProgress(0);
+    try {
+      const executeResponse = await fetch(`/api/meta-agent/execute-task/${currentTask.id}`, {
+        method: 'POST',
+      });
+
+      const { task, result } = await executeResponse.json();
+
+      const systemMessage: AgentMessage = {
+        role: 'system',
+        content: `✓ Task executed successfully: ${result.message}`,
+        timestamp: new Date(),
+        verified: true
+      };
+
+      setChatMessages(prev => [...prev, systemMessage]);
+      setCurrentTask(null);
+      setVerificationProgress(0);
+
+      // Refresh data if needed
+      await handleRefreshAll();
+    } catch (error: any) {
+      const errorMessage: AgentMessage = {
+        role: 'system',
+        content: `✗ Execution failed: ${error.message}`,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleRefreshAll = async () => {
