@@ -275,7 +275,6 @@ export default function FormGuideOverlay({
     };
   }, [teamStatsData, fixturesData, teamId, matchLimit]);
 
-  // FIXED: Removed Math.max() constraints to allow proper scaling
   const { scale, px } = useMemo(() => {
     if (!width || !height) {
       return {
@@ -305,7 +304,7 @@ export default function FormGuideOverlay({
   const isMini = width < 240 || height < 150;
   const isStacked = layout === "vertical" || isCompact;
 
-  // FIXED: Removed Math.max() - now scales properly at all sizes
+  // Scale values without Math.max() constraints
   const circlePx = px(isMini ? 24 : isVeryCompact ? 32 : isCompact ? 40 : circleSize);
   const titlePx = px(isMini ? 12 : isVeryCompact ? 14 : titleSize);
   const subtitlePx = px(isMini ? 10 : isVeryCompact ? 11 : 14);
@@ -313,7 +312,6 @@ export default function FormGuideOverlay({
   const textPx = px(isMini ? 9 : isVeryCompact ? 10 : 13);
   const smallTextPx = px(isMini ? 7 : isVeryCompact ? 8 : 11);
 
-  // FIXED: Actually use this variable
   const maxMatchesShown = isMini ? 2 : isVeryCompact ? 3 : matchLimit;
 
   const spacing = px(isMini ? 4 : isVeryCompact ? 6 : isCompact ? 10 : 16);
@@ -384,7 +382,7 @@ export default function FormGuideOverlay({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          gap: smallSpacing,
+          gap: spacing,
           flexShrink: 0,
         }}
       >
@@ -614,8 +612,8 @@ export default function FormGuideOverlay({
       {!isMini && (
         <footer
           style={{
-            paddingTop: px(6),
             borderTop: `1px solid ${palette.text}20`,
+            paddingTop: smallSpacing,
             display: "flex",
             flexDirection: isVeryCompact ? "column" : "row",
             justifyContent: "space-between",
