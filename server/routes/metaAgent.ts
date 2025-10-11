@@ -24,8 +24,8 @@ interface VerificationStep {
   timestamp?: string;
 }
 
-// SSE clients map
-const sseClients: Map<string, Response> = new Map();
+// SSE clients map (using any type for Express Response with SSE methods)
+const sseClients: Map<string, any> = new Map();
 
 interface AgentTask {
   id: string;
@@ -173,6 +173,9 @@ router.post("/verify-task/:taskId", async (req, res) => {
       task.status = 'awaiting_confirmation';
     }
 
+    // Save to database
+    await saveTaskToDatabase(task);
+
     res.json({
       success: true,
       task,
@@ -208,6 +211,9 @@ router.post("/execute-task/:taskId", async (req, res) => {
     task.metadata = { ...task.metadata, executionResult: result };
 
     activeTasks.set(taskId, task);
+    
+    // Persist to database
+    await saveTaskToDatabase(task);
 
     res.json({
       success: true,
@@ -239,6 +245,46 @@ router.get("/tasks", (req, res) => {
   );
 
   res.json({ tasks });
+});
+
+// Get task history from database
+router.get("/tasks/history", async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    
+    const tasks = await db
+      .select()
+      .from(agentTasks)
+      .orderBy(desc(agentTasks.createdAt))
+      .limit(limit);
+    
+    // Get steps for each task
+    const tasksWithSteps = await Promise.all(
+      tasks.map(async (task) => {
+        const steps = await db
+          .select()
+          .from(agentTaskSteps)
+          .where(eq(agentTaskSteps.taskId, task.id))
+          .orderBy(agentTaskSteps.timestamp);
+        
+        return {
+          ...task,
+          steps: steps.map(s => ({
+            id: s.stepId,
+            description: s.description,
+            completed: s.completed,
+            result: s.result,
+            timestamp: s.timestamp?.toISOString()
+          }))
+        };
+      })
+    );
+
+    res.json({ tasks: tasksWithSteps });
+  } catch (error: any) {
+    console.error("Error fetching task history:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // SSE endpoint for real-time updates

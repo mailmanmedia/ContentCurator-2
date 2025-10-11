@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -148,10 +147,10 @@ export default function MetaAgentDashboard() {
 
       // Set up SSE connection for real-time updates
       const eventSource = new EventSource(`/api/meta-agent/stream/${task.id}`);
-      
+
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        
+
         if (data.type === 'step_completed') {
           setVerificationProgress(data.progress);
           setCurrentTask(data.task);
@@ -168,7 +167,7 @@ export default function MetaAgentDashboard() {
       });
 
       const { task: verifiedTask } = await verifyResponse.json();
-      
+
       // Simulate progress updates for UX
       for (let i = 0; i < verifiedTask.steps.length; i++) {
         await new Promise(resolve => setTimeout(resolve, 400));
@@ -262,7 +261,7 @@ export default function MetaAgentDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Header Section */}
         <div className="flex items-center justify-between">
@@ -374,7 +373,7 @@ export default function MetaAgentDashboard() {
             <CardContent>
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-bold">
-                  {(auditData?.summary.duplicatePlayersCount || 0) + 
+                  {(auditData?.summary.duplicatePlayersCount || 0) +
                    (auditData?.summary.missingPlayerIdCount || 0)}
                 </span>
                 <Badge variant={(auditData?.summary.duplicatePlayersCount || 0) > 0 ? 'destructive' : 'default'}>
@@ -437,7 +436,7 @@ export default function MetaAgentDashboard() {
                   </Link>
                   <Link href="/live-presentation">
                     <Button variant="outline" className="w-full justify-start">
-                      <PlayCircle className="w-4 h-4 mr-2" />
+                      <Video className="w-4 h-4 mr-2" />
                       Live Presentation
                     </Button>
                   </Link>
@@ -714,8 +713,8 @@ export default function MetaAgentDashboard() {
                     {chatMessages.map((msg, idx) => (
                       <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] rounded-lg p-3 ${
-                          msg.role === 'user' 
-                            ? 'bg-[#1B365D] text-white' 
+                          msg.role === 'user'
+                            ? 'bg-[#1B365D] text-white'
                             : msg.role === 'system'
                             ? 'bg-green-500/10 border border-green-500/50'
                             : 'bg-muted'
@@ -882,48 +881,50 @@ export default function MetaAgentDashboard() {
 
           {/* Logs Tab */}
           <TabsContent value="logs" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Terminal className="w-5 h-5" />
-                  System Logs
-                </CardTitle>
-                <CardDescription>Recent sync operations and data updates</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-2">
-                    {syncLogs && syncLogs.length > 0 ? (
-                      syncLogs.map((log: any) => (
-                        <div key={log.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                          {log.sync_status === 'success' ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
-                          ) : log.sync_status === 'error' ? (
-                            <XCircle className="w-4 h-4 text-red-500 mt-0.5" />
-                          ) : (
-                            <Loader2 className="w-4 h-4 text-blue-500 mt-0.5 animate-spin" />
-                          )}
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{log.resource_type}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {log.records_processed} records • {new Date(log.started_at).toLocaleString()}
-                            </p>
-                            {log.error_message && (
-                              <p className="text-xs text-red-500 mt-1">{log.error_message}</p>
+            <div className="grid grid-cols-1 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Terminal className="w-5 h-5" />
+                    System Logs
+                  </CardTitle>
+                  <CardDescription>Recent sync operations and data updates</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-2">
+                      {syncLogs && syncLogs.length > 0 ? (
+                        syncLogs.map((log: any) => (
+                          <div key={log.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                            {log.sync_status === 'success' ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
+                            ) : log.sync_status === 'error' ? (
+                              <XCircle className="w-4 h-4 text-red-500 mt-0.5" />
+                            ) : (
+                              <Loader2 className="w-4 h-4 text-blue-500 mt-0.5 animate-spin" />
                             )}
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{log.resource_type}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {log.records_processed} records • {new Date(log.started_at).toLocaleString()}
+                              </p>
+                              {log.error_message && (
+                                <p className="text-xs text-red-500 mt-1">{log.error_message}</p>
+                              )}
+                            </div>
+                            <Badge variant={log.sync_status === 'success' ? 'default' : 'destructive'}>
+                              {log.sync_status}
+                            </Badge>
                           </div>
-                          <Badge variant={log.sync_status === 'success' ? 'default' : 'destructive'}>
-                            {log.sync_status}
-                          </Badge>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-8">No logs available</p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-8">No logs available</p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
