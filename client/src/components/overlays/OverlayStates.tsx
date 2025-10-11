@@ -185,10 +185,15 @@ export function OverlaySourceBadge({ source, timestamp }: OverlaySourceBadgeProp
       label: 'Cache',
       color: 'bg-amber-500/20 border-amber-500/50 text-amber-600 dark:text-amber-400',
       dotColor: 'bg-amber-500'
+    },
+    database: {
+      label: 'Database',
+      color: 'bg-purple-500/20 border-purple-500/50 text-purple-600 dark:text-purple-400',
+      dotColor: 'bg-purple-500'
     }
   };
 
-  const config = sourceConfig[source];
+  const config = sourceConfig[source] || sourceConfig['database'];
   const timeAgo = timestamp ? formatDistanceToNow(new Date(timestamp), { addSuffix: true }) : null;
 
   return (

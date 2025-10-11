@@ -47,7 +47,14 @@ Integrates GPU-accelerated CSS transforms for animations and visual effects.
 A system for creating and executing analytical content templates with integrated AI. It uses AI (Claude/OpenAI) to convert documents into structured frameworks, which can then access various APIs (PostgreSQL, Perplexity, Claude, OpenAI, Football APIs) via a secure executor service. Features include version control and an AI-powered document upload UI.
 
 #### Overlay Customization Enhancements
-Includes an advanced data filtering system for metric overlays (competition, season, match limits, venue), an advanced styling system (typography, gradients, borders, shadows), and new overlay types such as Upcoming Fixtures, Player Comparison, and an Enhanced RSS Ticker with sentiment analysis.
+Includes an advanced data filtering system for metric overlays (competition, season, match limits, venue), an advanced styling system (typography, gradients, borders, shadows), and new overlay types such as Upcoming Fixtures (database-connected, fully functional), Player Comparison, and an Enhanced RSS Ticker with sentiment analysis.
+
+**Upcoming Fixtures Overlay** (✅ Fully Operational):
+- **Database Endpoint**: `GET /api/database/fixtures/upcoming` - Uses raw SQL query for reliable data fetching from `football_fixtures` table with team name joins
+- **Template**: Registered in `overlayTemplates.ts` as 'upcoming-fixtures' (match category, 35% width × 280px height)
+- **Features**: Displays next 3-7 Liverpool matches with dates, venues, countdown timers, home/away indicators, and opponent information
+- **Data Source**: Purple "Database" badge indicates PostgreSQL backend with real-time fixture data
+- **Integration**: Fully wired through VideoCompositor → LivePresentation → UpcomingFixturesOverlay component chain
 
 ## External Dependencies
 

@@ -110,6 +110,28 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     metricType: 'league-table',
     templateStyle: 'banner',
   },
+
+  'upcoming-fixtures': {
+    id: 'upcoming-fixtures',
+    name: 'Upcoming Fixtures',
+    description: 'Next matches with dates, venues, and countdown',
+    category: 'match',
+    overlayType: 'metric',
+    width: 35,
+    height: 280,
+    position: 'bottom',
+    zIndex: 130,
+    opacity: 0.9,
+    backgroundColor: '#002147',
+    textColor: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'League Spartan',
+    animationType: 'static',
+    isBold: true,
+    isItalic: false,
+    metricType: 'upcoming-fixtures',
+    templateStyle: 'banner',
+  },
   
   'metric-ticker': {
     id: 'metric-ticker',

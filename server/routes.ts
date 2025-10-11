@@ -3946,43 +3946,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get upcoming fixtures from database for UpcomingFixturesOverlay
+  // Get upcoming fixtures from database for UpcomingFixturesOverlay (using raw SQL)
   app.get("/api/database/fixtures/upcoming", async (req, res) => {
     try {
       const teamId = parseInt(req.query.teamId as string) || 40; // Liverpool
       const limit = parseInt(req.query.limit as string) || 5;
+      const nowTimestamp = Math.floor(Date.now() / 1000);
 
-      const fixtures = await db.select()
-        .from(footballFixtures)
-        .where(
-          and(
-            or(
-              eq(footballFixtures.homeTeamId, teamId),
-              eq(footballFixtures.awayTeamId, teamId)
-            ),
-            gte(footballFixtures.timestamp, new Date()),
-            or(
-              eq(footballFixtures.statusShort, 'NS'),
-              eq(footballFixtures.statusShort, 'TBD')
-            )
-          )
-        )
-        .orderBy(footballFixtures.timestamp)
-        .limit(limit);
+      // Use raw SQL query to bypass Drizzle issues
+      const result = await pool.query(`
+        SELECT 
+          f.id,
+          f.timestamp,
+          f.date,
+          f.home_team_id,
+          f.away_team_id,
+          f.venue,
+          ht.name as home_team_name,
+          at.name as away_team_name
+        FROM football_fixtures f
+        LEFT JOIN football_teams ht ON f.home_team_id = ht.id
+        LEFT JOIN football_teams at ON f.away_team_id = at.id
+        WHERE (f.home_team_id = $1 OR f.away_team_id = $1)
+          AND f.timestamp >= $2
+          AND (f.status_short = 'NS' OR f.status_short = 'TBD')
+        ORDER BY f.timestamp
+        LIMIT $3
+      `, [teamId, nowTimestamp, limit]);
 
-      const transformedFixtures = fixtures.map(f => ({
-        id: f.id,
-        date: f.timestamp?.toISOString() || new Date().toISOString(),
-        homeTeam: f.homeTeamName || `Team ${f.homeTeamId}`,
-        awayTeam: f.awayTeamName || `Team ${f.awayTeamId}`,
-        league: "Premier League",
-        venue: f.venueName,
-        isHome: f.homeTeamId === teamId
-      }));
+      const transformedFixtures = result.rows.map(f => {
+        let venueName = 'Unknown Venue';
+        if (f.venue) {
+          try {
+            const venueData = typeof f.venue === 'string' ? JSON.parse(f.venue) : f.venue;
+            venueName = venueData?.name || venueName;
+          } catch (e) {
+            // Use default
+          }
+        }
+
+        const fixtureDate = f.timestamp 
+          ? new Date(f.timestamp * 1000).toISOString() 
+          : new Date(f.date).toISOString();
+
+        return {
+          id: f.id,
+          date: fixtureDate,
+          timestamp: f.timestamp,
+          homeTeam: f.home_team_name || `Team ${f.home_team_id}`,
+          awayTeam: f.away_team_name || `Team ${f.away_team_id}`,
+          league: "Premier League",
+          venue: venueName,
+          isHome: f.home_team_id === teamId
+        };
+      });
 
       res.json({
         data: { fixtures: transformedFixtures },
-        lastUpdated: fixtures[0]?.updatedAt || new Date(),
+        lastUpdated: new Date().toISOString(),
         source: "database"
       });
     } catch (error) {
