@@ -46,34 +46,28 @@ const activeTasks: Map<string, AgentTask> = new Map();
 async function saveTaskToDatabase(task: AgentTask) {
   try {
     await db.insert(agentTasks).values({
-      id: task.id,
-      action: task.action,
-      type: task.type,
+      taskId: task.id,
+      userQuery: task.action,
+      taskType: task.type,
       status: task.status,
-      userConfirmed: task.userConfirmed,
-      metadata: task.metadata,
+      result: task.metadata ? JSON.stringify(task.metadata) : null,
       createdAt: new Date(task.createdAt),
       completedAt: task.completedAt ? new Date(task.completedAt) : null,
-    }).onConflictDoUpdate({
-      target: agentTasks.id,
-      set: {
-        status: task.status,
-        userConfirmed: task.userConfirmed,
-        metadata: task.metadata,
-        completedAt: task.completedAt ? new Date(task.completedAt) : null,
-      }
+      userConfirmedAt: task.userConfirmed ? new Date() : null,
     });
 
     // Save steps
-    for (const step of task.steps) {
+    for (let i = 0; i < task.steps.length; i++) {
+      const step = task.steps[i];
       await db.insert(agentTaskSteps).values({
         taskId: task.id,
-        stepId: step.id,
-        description: step.description,
-        completed: step.completed,
-        result: step.result,
-        timestamp: step.timestamp ? new Date(step.timestamp) : null,
-      }).onConflictDoNothing();
+        stepNumber: i + 1,
+        stepName: step.description,
+        status: step.completed ? 'completed' : 'pending',
+        details: step.result,
+        createdAt: new Date(),
+        completedAt: step.completed && step.timestamp ? new Date(step.timestamp) : null,
+      });
     }
   } catch (error) {
     console.error('Error saving task to database:', error);
