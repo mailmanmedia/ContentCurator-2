@@ -250,38 +250,38 @@ async function fetchLiverpoolSquad(liverpoolId: number): Promise<PlayerData[]> {
   const currentSeason = getCurrentSeason();
   
   try {
-    // Get all Liverpool players
-    const players = await db.select()
-      .from(footballPlayers)
-      .where(eq(footballPlayers.teamId, liverpoolId));
+    // Get all players (football_players table doesn't have teamId, so get all and filter via stats)
+    const allPlayers = await db.select()
+      .from(footballPlayers);
 
-    // Get stats for these players
-    const playerIds = players.map(p => p.id);
+    // Get stats for Liverpool players (player_season_statistics has team_id)
+    const liverpoolStats = await db.select()
+      .from(playerSeasonStatistics)
+      .where(
+        and(
+          eq(playerSeasonStatistics.team_id, liverpoolId),
+          eq(playerSeasonStatistics.season, currentSeason)
+        )
+      );
     
-    let statsMap = new Map();
-    if (playerIds.length > 0) {
-      const stats = await db.select()
-        .from(playerSeasonStatistics)
-        .where(
-          and(
-            inArray(playerSeasonStatistics.playerId, playerIds),
-            eq(playerSeasonStatistics.season, currentSeason)
-          )
-        );
-      
-      stats.forEach(stat => {
-        statsMap.set(stat.playerId, stat);
-      });
-    }
+    // Create map of player_id to stats
+    const statsMap = new Map();
+    liverpoolStats.forEach(stat => {
+      statsMap.set(stat.player_id, stat);
+    });
 
-    return players.map(player => {
-      const stat = statsMap.get(player.id);
+    // Filter players who have Liverpool stats this season
+    const liverpoolPlayerIds = new Set(liverpoolStats.map(s => s.player_id));
+    const liverpoolPlayers = allPlayers.filter(p => p.player_id && liverpoolPlayerIds.has(p.player_id));
+
+    return liverpoolPlayers.map(player => {
+      const stat = player.player_id ? statsMap.get(player.player_id) : null;
       return {
-        id: player.id,
+        id: player.player_id || player.id,
         name: player.name,
         photo: player.photo || '',
         position: player.position || undefined,
-        number: player.number || undefined,
+        number: player.jersey_number || undefined,
         statistics: stat ? {
           season: currentSeason,
           goals: stat.goals || 0,
