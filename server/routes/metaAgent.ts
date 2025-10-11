@@ -3,12 +3,12 @@ import { Router } from "express";
 import { db } from "../db";
 import { eq, and, desc } from "drizzle-orm";
 import { 
-  players, 
-  matches, 
-  teams, 
-  playerStats, 
-  teamStats,
-  standings,
+  footballPlayers as players, 
+  footballFixtures as matches, 
+  footballTeams as teams, 
+  playerSeasonStatistics as playerStats, 
+  teamSeasonStatistics as teamStats,
+  football_standings as standings,
   rssArticles
 } from "@shared/schema";
 
