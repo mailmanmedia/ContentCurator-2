@@ -42,6 +42,49 @@ interface AgentTask {
 // In-memory task storage (in production, use database)
 const activeTasks: Map<string, AgentTask> = new Map();
 
+// Restore active tasks from database on startup
+async function restoreActiveTasks() {
+  try {
+    const activeDatabaseTasks = await db
+      .select()
+      .from(agentTasks)
+      .where(sql`${agentTasks.status} IN ('pending', 'verifying', 'awaiting_confirmation', 'executing')`);
+    
+    for (const dbTask of activeDatabaseTasks) {
+      const steps = await db
+        .select()
+        .from(agentTaskSteps)
+        .where(eq(agentTaskSteps.taskId, dbTask.taskId))
+        .orderBy(agentTaskSteps.stepNumber);
+      
+      activeTasks.set(dbTask.taskId, {
+        id: dbTask.taskId,
+        action: dbTask.userQuery,
+        type: (dbTask.taskType as AgentTask['type']) || 'system_check',
+        status: dbTask.status as AgentTask['status'],
+        userConfirmed: !!dbTask.userConfirmedAt,
+        metadata: dbTask.result ? JSON.parse(dbTask.result) : {},
+        createdAt: dbTask.createdAt.toISOString(),
+        completedAt: dbTask.completedAt?.toISOString(),
+        steps: steps.map(s => ({
+          id: `step_${s.stepNumber}`,
+          description: s.stepName,
+          completed: s.status === 'completed',
+          result: s.details || undefined,
+          timestamp: s.completedAt?.toISOString()
+        }))
+      });
+    }
+    
+    console.log(`✅ Restored ${activeTasks.size} active Meta-Agent tasks from database`);
+  } catch (error) {
+    console.error('❌ Error restoring active tasks:', error);
+  }
+}
+
+// Call on module load
+restoreActiveTasks();
+
 // Helper: Save task to database
 async function saveTaskToDatabase(task: AgentTask) {
   try {
@@ -206,8 +249,25 @@ router.post("/execute-task/:taskId", async (req, res) => {
 
     activeTasks.set(taskId, task);
     
+    // Broadcast final update
+    broadcastTaskUpdate(taskId, {
+      type: 'task_completed',
+      task,
+      result
+    });
+    
     // Persist to database
     await saveTaskToDatabase(task);
+    
+    // Clean up SSE connection after 5 seconds
+    setTimeout(() => {
+      const client = sseClients.get(taskId);
+      if (client) {
+        client.write(`data: ${JSON.stringify({ type: 'connection_closing' })}\n\n`);
+        client.end();
+        sseClients.delete(taskId);
+      }
+    }, 5000);
 
     res.json({
       success: true,
