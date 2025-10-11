@@ -22,6 +22,7 @@ import TeamFormsList from "@/pages/TeamFormsList";
 import AdminDashboard from "@/pages/AdminDashboard";
 import DataAudit from "@/pages/DataAudit";
 import DataImportExport from "@/pages/DataImportExport";
+import MetaAgentDashboard from "@/pages/MetaAgentDashboard";
 import VisualAssistant from "@/components/VisualAssistant";
 import NotFound from "@/pages/not-found";
 
@@ -29,6 +30,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={VisualAssistant} />
+      <Route path="/meta-agent" component={MetaAgentDashboard} />
       <Route path="/database-status" component={DatabaseStatus} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/data-audit" component={DataAudit} />

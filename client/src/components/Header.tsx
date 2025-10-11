@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Home, Menu, Folder, Rss, Users, Archive, Radio, Palette, Settings, Layers, BarChart, Film, Database, Upload, Shield } from "lucide-react";
+import { Home, Menu, Folder, Rss, Users, Archive, Radio, Palette, Settings, Layers, BarChart, Film, Database, Upload, Shield, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import mailmanLogo from "@assets/mailman-logo.png";
@@ -20,12 +20,12 @@ export default function Header() {
         <Link href="/">
           <div className="flex items-center gap-3 sm:gap-4 hover-elevate cursor-pointer rounded-lg px-2 py-1" data-testid="header-logo">
             {/* Logo - Responsive sizing */}
-            <img 
-              src={mailmanLogo} 
-              alt="Mailman Media" 
+            <img
+              src={mailmanLogo}
+              alt="Mailman Media"
               className="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-md"
             />
-            
+
             {/* Title - Hidden on smallest screens, shown on sm+ */}
             <div className="hidden sm:block">
               <h1 className="text-[#1B365D] font-league-spartan font-black text-lg lg:text-xl uppercase tracking-wide leading-tight">
@@ -41,19 +41,24 @@ export default function Header() {
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-1.5">
           <Link href="/">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-home"
             >
               <Home className="w-5 h-5" />
             </Button>
           </Link>
+          <Link href="/meta-agent">
+            <Button variant="ghost" size="icon" className={`text-[#C8102E] ${location === "/meta-agent" ? "bg-[#C8102E]/10" : ""}`} data-testid="button-meta-agent">
+              <Sparkles className="w-5 h-5" />
+            </Button>
+          </Link>
           <Link href="/team-matchup-studio">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/team-matchup-studio" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-team-matchup"
             >
@@ -61,9 +66,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/live-presentation">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/live-presentation" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-live-presentation"
             >
@@ -71,9 +76,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/content-library">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/content-library" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-content-library"
             >
@@ -81,9 +86,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/frameworks">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/frameworks" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-frameworks"
             >
@@ -91,9 +96,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/rss">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/rss" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-rss"
             >
@@ -101,9 +106,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/rss-control">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/rss-control" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-rss-control"
             >
@@ -111,9 +116,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/templates">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/templates" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-templates"
             >
@@ -121,9 +126,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/overlay-templates">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/overlay-templates" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-overlay-templates"
             >
@@ -131,9 +136,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/analytics">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/analytics" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-analytics"
             >
@@ -141,9 +146,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/video-editor">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/video-editor" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-video-editor"
             >
@@ -151,9 +156,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/database-status">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/database-status" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-database-status"
             >
@@ -161,9 +166,9 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/data-admin">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/data-admin" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-data-admin"
             >
@@ -171,16 +176,16 @@ export default function Header() {
             </Button>
           </Link>
           <Link href="/admin">
-            <Button 
+            <Button
               variant="ghost"
-              size="icon" 
+              size="icon"
               className={`text-[#1B365D] ${location === "/admin" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
               data-testid="button-admin"
             >
               <Shield className="w-5 h-5" />
             </Button>
           </Link>
-          
+
           <div className="ml-2 pl-2 border-l-2 border-[#1B365D]/20">
             <Badge className="bg-[#C8102E] text-white border-0 font-league-spartan font-semibold uppercase text-xs">
               Live
@@ -190,8 +195,8 @@ export default function Header() {
 
         {/* Mobile Menu Toggle */}
         <div className="lg:hidden">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="icon"
             onClick={toggleMobileMenu}
             className="text-[#1B365D]"
@@ -207,7 +212,7 @@ export default function Header() {
         <div className="lg:hidden mt-3 pb-3 border-t-2 border-[#1B365D]/20">
           <div className="flex flex-col gap-1.5 pt-3">
             <Link href="/">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-home-mobile"
@@ -217,8 +222,19 @@ export default function Header() {
                 Home
               </Button>
             </Link>
+            <Link href="/meta-agent">
+              <Button
+                variant="ghost"
+                className={`justify-start w-full font-libre-franklin text-[#C8102E] ${location === "/meta-agent" ? "bg-[#C8102E]/10" : ""}`}
+                data-testid="button-meta-agent-mobile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Sparkles className="w-5 h-5 mr-3" />
+                Meta-Agent Dashboard
+              </Button>
+            </Link>
             <Link href="/team-matchup-studio">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/team-matchup-studio" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-team-matchup-mobile"
@@ -229,7 +245,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/live-presentation">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/live-presentation" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-live-presentation-mobile"
@@ -240,7 +256,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/content-library">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/content-library" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-content-library-mobile"
@@ -251,7 +267,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/frameworks">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/frameworks" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-frameworks-mobile"
@@ -262,7 +278,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/rss">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/rss" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-rss-mobile"
@@ -273,7 +289,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/rss-control">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/rss-control" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-rss-control-mobile"
@@ -284,7 +300,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/templates">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/templates" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-templates-mobile"
@@ -295,7 +311,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/overlay-templates">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/overlay-templates" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-overlay-templates-mobile"
@@ -306,7 +322,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/analytics">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/analytics" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-analytics-mobile"
@@ -317,7 +333,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/video-editor">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/video-editor" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-video-editor-mobile"
@@ -328,7 +344,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/database-status">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/database-status" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-database-status-mobile"
@@ -339,7 +355,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/data-admin">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/data-admin" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-data-admin-mobile"
@@ -350,7 +366,7 @@ export default function Header() {
               </Button>
             </Link>
             <Link href="/admin">
-              <Button 
+              <Button
                 variant="ghost"
                 className={`justify-start w-full font-libre-franklin text-[#1B365D] ${location === "/admin" ? "bg-[#C8102E]/10 text-[#C8102E]" : ""}`}
                 data-testid="button-admin-mobile"
@@ -360,7 +376,7 @@ export default function Header() {
                 Admin Dashboard
               </Button>
             </Link>
-            
+
             <div className="mt-2 pt-2 border-t-2 border-[#1B365D]/20 flex justify-center">
               <Badge className="bg-[#C8102E] text-white border-0 font-league-spartan font-semibold uppercase text-xs">
                 Live Data
