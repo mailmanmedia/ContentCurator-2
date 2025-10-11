@@ -22,6 +22,15 @@ A platform for transforming broadcast recordings into polished YouTube content. 
 #### Football Data Integration
 Integrates football data from multiple live sources with dynamic season handling (2020-present) that automatically detects and includes current and future seasons. Data sources include the Liverpool FC Official Calendar (iCal), API Football, The Fishy (Premier League table scraping), and FBRef (player/team statistics). A centralized `footballDataService.ts` provides an authenticated 4-source fallback chain (API Football Pro Plan → The Fishy → FBRef → localStorage cache) ensuring authentic, verified statistics with Zod validation, error recovery, and consistent UI states. Includes automatic twice-weekly updates, timestamp tracking, and a comprehensive database status page for monitoring data freshness and quality.
 
+**Date/Time Validation System**: A comprehensive validation system (`server/utils/dateValidator.ts`) ensures the API always knows the accurate current date and uses correct season calculations. Features:
+- Real-time date/time awareness with timezone tracking
+- Intelligent season detection based on football calendar (August-May active, June-July off-season)
+- Separate season logic for historical stats (completed season) vs fixtures (current/upcoming season)
+- Critical off-season handling: June-July correctly returns upcoming season for fixtures (e.g., July 2025 → 2025/26)
+- Comprehensive logging on every API call showing current date/time, current season, and requested season
+- Server startup validation banner confirming date accuracy
+- Season phase detection (pre-season, active-season, off-season)
+
 #### Data Quality & Validation System
 A 5-pillar solution for ensuring authentic, deduplicated football data. It includes schema enhancements (unique `player_id`), an admin diagnostics page (`/data-audit`) for detecting duplicates and missing data, automated data cleaning services, import safeguards with idempotent operations, and monitoring tools integrated into the database status dashboard.
 
