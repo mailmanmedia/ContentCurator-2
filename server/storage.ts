@@ -50,8 +50,9 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
-import { db } from "./db";
-import { eq, ilike, or, and, gte, lte } from "drizzle-orm";
+import { db, pool } from "./db";
+import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, football_leagues, library_items, scenes, rssArticles, football_players, recordings as recordingsTable } from "@shared/schema";
+import { desc, eq, and, gte, lte, or, inArray, sql, isNull } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -60,7 +61,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Image methods
   getImages(): Promise<Image[]>;
   getImage(id: string): Promise<Image | undefined>;
@@ -316,11 +317,11 @@ export interface IStorage {
   deleteAudioTrack(id: string): Promise<boolean>;
 
   // Render Job methods
-  getRenderJobs(): Promise<import("@shared/schema").RenderJob[]>;
-  getRenderJob(id: string): Promise<import("@shared/schema").RenderJob | undefined>;
-  getProjectRenderJobs(projectId: string): Promise<import("@shared/schema").RenderJob[]>;
-  createRenderJob(job: import("@shared/schema").InsertRenderJob): Promise<import("@shared/schema").RenderJob>;
-  updateRenderJob(id: string, updates: Partial<import("@shared/schema").InsertRenderJob>): Promise<import("@shared/schema").RenderJob | undefined>;
+  getRenderJobs(): Promise<RenderJob[]>;
+  getRenderJob(id: string): Promise<RenderJob | undefined>;
+  getProjectRenderJobs(projectId: string): Promise<RenderJob[]>;
+  createRenderJob(job: InsertRenderJob): Promise<RenderJob>;
+  updateRenderJob(id: string, updates: Partial<InsertRenderJob>): Promise<RenderJob | undefined>;
   deleteRenderJob(id: string): Promise<boolean>;
 
   // Statistics methods
@@ -377,6 +378,9 @@ export class MemStorage implements IStorage {
     refreshInterval: number;
   };
   private liveState: LiveState;
+  // In-memory storage for recordings, as a fallback or for testing
+  private recordings: Map<string, Recording>;
+
 
   constructor() {
     this.users = new Map();
@@ -396,6 +400,7 @@ export class MemStorage implements IStorage {
     this.setTemplates = new Map();
     this.sourceNamePresets = new Map();
     this.templates = new Map();
+    this.recordings = new Map(); // Initialize in-memory recordings map
     this.tickerConfig = {
       speed: 50,
       activeFeeds: [],
@@ -423,7 +428,7 @@ export class MemStorage implements IStorage {
       }),
       updated_at: new Date()
     };
-    
+
     // Add some sample data
     this.seedData();
   }
@@ -622,7 +627,7 @@ export class MemStorage implements IStorage {
         size: 3250585
       }
     ];
-    
+
     for (const imageData of sampleImages) {
       await this.createImage(imageData);
     }
@@ -776,7 +781,7 @@ export class MemStorage implements IStorage {
   async updateImage(id: string, updates: Partial<InsertImage>): Promise<Image | undefined> {
     const existing = this.images.get(id);
     if (!existing) return undefined;
-    
+
     const updated: Image = { ...existing, ...updates, updated_at: new Date() };
     this.images.set(id, updated);
     return updated;
@@ -794,7 +799,7 @@ export class MemStorage implements IStorage {
   async searchImages(query: string): Promise<Image[]> {
     const allImages = await this.getImages();
     const lowerQuery = query.toLowerCase();
-    
+
     return allImages.filter(img => 
       (img.filename && img.filename.toLowerCase().includes(lowerQuery)) ||
       (img.category && img.category.toLowerCase().includes(lowerQuery)) ||
@@ -835,7 +840,7 @@ export class MemStorage implements IStorage {
   async updatePresentationStyle(id: string, updates: Partial<InsertPresentationStyle>): Promise<PresentationStyle | undefined> {
     const existing = this.presentationStyles.get(id);
     if (!existing) return undefined;
-    
+
     const updated: PresentationStyle = { ...existing, ...updates };
     this.presentationStyles.set(id, updated);
     return updated;
@@ -872,7 +877,7 @@ export class MemStorage implements IStorage {
   async updateReport(id: string, updates: Partial<InsertReport>): Promise<Report | undefined> {
     const existing = this.reports.get(id);
     if (!existing) return undefined;
-    
+
     const updated: Report = { 
       ...existing, 
       ...updates,
@@ -923,13 +928,13 @@ export class MemStorage implements IStorage {
     const renderingsToDelete = Array.from(this.reportRenderings.entries()).filter(
       ([_, rendering]) => rendering.reportId === reportId
     );
-    
+
     let deletedAny = false;
     for (const [id, _] of renderingsToDelete) {
       this.reportRenderings.delete(id);
       deletedAny = true;
     }
-    
+
     return deletedAny;
   }
 
@@ -958,7 +963,7 @@ export class MemStorage implements IStorage {
   async updateFrameworkCategory(id: string, updates: Partial<InsertFrameworkCategory>): Promise<FrameworkCategory | undefined> {
     const existing = this.frameworkCategories.get(id);
     if (!existing) return undefined;
-    
+
     const updated: FrameworkCategory = { ...existing, ...updates };
     this.frameworkCategories.set(id, updated);
     return updated;
@@ -1010,7 +1015,7 @@ export class MemStorage implements IStorage {
   async updateFramework(id: string, updates: Partial<InsertFramework>): Promise<Framework | undefined> {
     const existing = this.frameworks.get(id);
     if (!existing) return undefined;
-    
+
     const updated: Framework = { 
       ...existing, 
       ...updates,
@@ -1082,20 +1087,20 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.frameworkVersions.set(id, version);
-    
+
     // Update framework's current version if this is the first version
     const framework = await this.getFramework(insertVersion.frameworkId);
     if (framework && !framework.currentVersionId) {
       await this.updateFramework(insertVersion.frameworkId, { currentVersionId: id });
     }
-    
+
     return version;
   }
 
   async updateFrameworkVersion(id: string, updates: Partial<InsertFrameworkVersion>): Promise<FrameworkVersion | undefined> {
     const existing = this.frameworkVersions.get(id);
     if (!existing) return undefined;
-    
+
     const updated: FrameworkVersion = { ...existing, ...updates };
     this.frameworkVersions.set(id, updated);
     return updated;
@@ -1216,11 +1221,11 @@ export class MemStorage implements IStorage {
 
   async createRssArticle(insertArticle: InsertRssArticle): Promise<RssArticle | null> {
     const results = await db.insert(rssArticlesTable).values(insertArticle).onConflictDoNothing().returning();
-    
+
     if (results.length === 0) {
       return null;
     }
-    
+
     const source = await this.getRssSource(insertArticle.sourceId);
     if (source) {
       await this.updateRssSource(insertArticle.sourceId, { 
@@ -1228,7 +1233,7 @@ export class MemStorage implements IStorage {
         lastArticleDate: insertArticle.published_at || new Date()
       });
     }
-    
+
     return results[0];
   }
 
@@ -1368,7 +1373,7 @@ export class MemStorage implements IStorage {
     const { db } = await import('./db');
     const { teamSeasonStatistics } = await import('@shared/schema');
     const { eq, and } = await import('drizzle-orm');
-    
+
     const stats = await db
       .select()
       .from(teamSeasonStatistics)
@@ -1380,7 +1385,7 @@ export class MemStorage implements IStorage {
         )
       )
       .limit(1);
-    
+
     return stats.length > 0 ? stats[0] : null;
   }
 
@@ -1444,7 +1449,7 @@ export class MemStorage implements IStorage {
   async updateLibraryItem(id: string, updates: Partial<InsertLibraryItem>): Promise<LibraryItem | undefined> {
     const existing = this.libraryItems.get(id);
     if (!existing) return undefined;
-    
+
     const updated: LibraryItem = { 
       ...existing, 
       ...updates,
@@ -1509,7 +1514,7 @@ export class MemStorage implements IStorage {
         ? insertScene.transition_config
         : JSON.stringify(insertScene.transition_config || {})
     };
-    
+
     const results = await db.insert(scenesTable).values(sceneData).returning();
     return results[0];
   }
@@ -1534,7 +1539,7 @@ export class MemStorage implements IStorage {
     // Auto-assign video sources to video elements that don't have them
     const videoSources = await this.getVideoSources();
     const connectedSource = videoSources.find(s => s.isConnected && s.isActive);
-    
+
     const updatedElements = (original.elements as any[]).map((element: any) => {
       if (element.type === 'video' && !element.sourceId && connectedSource) {
         return {
@@ -1557,7 +1562,7 @@ export class MemStorage implements IStorage {
       isTemplate: false,
       tags: original.tags
     }).returning();
-    
+
     return duplicated[0];
   }
 
@@ -1640,7 +1645,7 @@ export class MemStorage implements IStorage {
   async updateTickerPlaylist(id: string, updates: Partial<InsertTickerPlaylist>): Promise<TickerPlaylist | undefined> {
     const existing = this.tickerPlaylists.get(id);
     if (!existing) return undefined;
-    
+
     const updated: TickerPlaylist = { 
       ...existing, 
       ...updates,
@@ -1710,7 +1715,7 @@ export class MemStorage implements IStorage {
       /youtube\.com\/embed\/([^&\n?#]+)/,
       /youtube\.com\/v\/([^&\n?#]+)/
     ];
-    
+
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match && match[1]) {
@@ -1875,7 +1880,7 @@ export class MemStorage implements IStorage {
   async updateTemplate(id: string, updates: Partial<InsertTemplate>): Promise<Template | undefined> {
     const existing = this.templates.get(id);
     if (!existing) return undefined;
-    
+
     const updated: Template = { 
       ...existing, 
       ...updates,
@@ -1925,7 +1930,7 @@ export class MemStorage implements IStorage {
         ...config.style
       };
     }
-    
+
     if (config.speed !== undefined) {
       this.tickerConfig.speed = config.speed;
     }
@@ -1946,11 +1951,20 @@ export class MemStorage implements IStorage {
   // Live State methods
   async getLiveState(): Promise<LiveState | undefined> {
     try {
-      const results = await db.select().from(liveStatesTable).where(eq(liveStatesTable.key, 'default'));
-      return results[0];
-    } catch (error: any) {
-      console.warn('Error fetching live state (table/column may not exist):', error.message);
-      return undefined;
+      const states = await db
+        .select()
+        .from(liveStatesTable)
+        .limit(1);
+
+      if (states.length > 0) {
+        return states[0];
+      }
+
+      // Return in-memory fallback if no database state
+      return this.liveState;
+    } catch (error) {
+      console.error('Error fetching live state from database:', error);
+      return this.liveState;
     }
   }
 
@@ -1983,8 +1997,19 @@ export class MemStorage implements IStorage {
 
   // Recording methods
   async getRecordings(): Promise<Recording[]> {
-    const results = await db.select().from(recordingsTable).orderBy(recordingsTable.createdAt.desc());
-    return results;
+    try {
+      const recordings = await db
+        .select()
+        .from(recordingsTable)
+        .orderBy(desc(recordingsTable.createdAt));
+      return recordings;
+    } catch (error) {
+      console.error('Error fetching recordings from database:', error);
+      // Fallback to in-memory if database fails
+      return Array.from(this.recordings.values()).sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
   }
 
   async getRecording(id: string): Promise<Recording | undefined> {
@@ -2221,9 +2246,9 @@ export class MemStorage implements IStorage {
     const presentationSets = this.presentationSets.size;
     const tickerPlaylists = this.tickerPlaylists.size;
     const reports = this.reports.size;
-    
+
     const totalContent = frameworks + images + rssArticles + libraryItems + scenes + presentationSets + tickerPlaylists + reports;
-    
+
     return {
       totalContent,
       frameworks,
@@ -2239,7 +2264,7 @@ export class MemStorage implements IStorage {
 
   async getDefaultOverlayTemplates(): Promise<any> {
     const currentSeason = new Date().getFullYear();
-    
+
     return {
       playerStats: {
         id: 'default-player-stats',

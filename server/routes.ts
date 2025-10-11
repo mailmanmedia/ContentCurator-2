@@ -579,7 +579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Return reliable fallback suggestions
       res.json({ 
-        results: `Found relevant image suggestions for ${query}. Check the suggestions below for specific source recommendations.`,
+        results: `Found image suggestions for ${query}. Check the suggestions below for specific source recommendations.`,
         suggestions: imageSuggestions,
         query 
       });
@@ -1127,143 +1127,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating framework:', error);
       res.status(500).json({ error: "Failed to create framework" });
-    }
-  });
-
-  // Get database status for DatabaseStatus page
-  app.get("/api/database-status", async (req, res) => {
-    try {
-      // Get simple counts using raw SQL to avoid Drizzle issues
-      const tablesResult = await pool.query(`
-        SELECT 'RSS Articles' as "tableName", count(*)::int as "recordCount" FROM rss_articles
-        UNION ALL
-        SELECT 'Library Items', count(*)::int FROM library_items
-        UNION ALL
-        SELECT 'Scenes', count(*)::int FROM scenes
-      `);
-
-      const tableStats = tablesResult.rows.map((row: any) => ({
-        tableName: row.tableName,
-        recordCount: row.recordCount,
-        earliestDate: null,
-        latestDate: null
-      }));
-
-      // Get player season statistics using raw SQL
-      let playerSeasons: any[] = [];
-      try {
-        const playerSeasonsResult = await pool.query(`
-          SELECT 
-            season,
-            count(distinct player_id)::int as "playerCount",
-            sum(goals)::int as "totalGoals",
-            sum(assists)::int as "totalAssists",
-            min(last_updated) as "earliestUpdate",
-            max(last_updated) as "latestUpdate"
-          FROM player_season_statistics
-          GROUP BY season
-          ORDER BY season DESC
-        `);
-        playerSeasons = playerSeasonsResult.rows;
-      } catch (err) {
-        console.error('Error fetching player seasons:', err);
-        playerSeasons = [];
-      }
-
-      // Get all teams
-      let allTeams: any[] = [];
-      try {
-        allTeams = await db
-          .select({
-            id: footballTeams.id,
-            name: footballTeams.name
-          })
-          .from(footballTeams)
-          .orderBy(footballTeams.name);
-      } catch (error) {
-        console.warn('Could not fetch teams:', error);
-      }
-
-      // Get all seasons from player statistics
-      let allSeasons: any[] = [];
-      try {
-        const seasonsResult = await db
-          .select({
-            season: playerSeasonStatistics.season
-          })
-          .from(playerSeasonStatistics)
-          .groupBy(playerSeasonStatistics.season)
-          .orderBy(desc(playerSeasonStatistics.season));
-
-        allSeasons = seasonsResult.map(s => ({ season: s.season }));
-      } catch (error) {
-        console.warn('Could not fetch seasons:', error);
-        // Fallback to static seasons
-        allSeasons = [
-          { season: '2025' },
-          { season: '2024' },
-          { season: '2023' },
-          { season: '2022' },
-          { season: '2021' },
-          { season: '2020' }
-        ];
-      }
-
-      // Get all leagues from database
-      let allLeagues: any[] = [];
-      try {
-        allLeagues = await db
-          .select({
-            id: football_leagues.id,
-            name: football_leagues.name
-          })
-          .from(football_leagues)
-          .orderBy(football_leagues.name);
-      } catch (error) {
-        console.warn('Could not fetch leagues:', error);
-        // Fallback to static leagues
-        allLeagues = [
-          { id: 39, name: 'Premier League' },
-          { id: 2, name: 'Champions League' },
-          { id: 3, name: 'Europa League' },
-          { id: 45, name: 'FA Cup' },
-          { id: 48, name: 'League Cup' }
-        ];
-      }
-
-      // Get last API update from data_sync_logs
-      let lastApiUpdate = null;
-      try {
-        const lastSync = await db
-          .select({ timestamp: data_sync_logs.completedAt })
-          .from(data_sync_logs)
-          .orderBy(desc(data_sync_logs.completedAt))
-          .limit(1);
-
-        lastApiUpdate = lastSync[0]?.timestamp || null;
-      } catch (error) {
-        console.warn('Could not fetch last API update time:', error);
-      }
-
-      res.json({
-        tables: tableStats,
-        playerSeasons: playerSeasons.map(ps => ({
-          season: ps.season,
-          playerCount: Number(ps.playerCount),
-          totalGoals: Number(ps.totalGoals || 0),
-          totalAssists: Number(ps.totalAssists || 0),
-          earliestUpdate: ps.earliestUpdate?.toISOString() || new Date().toISOString(),
-          latestUpdate: ps.latestUpdate?.toISOString() || new Date().toISOString()
-        })),
-        allTeams,
-        allSeasons,
-        allLeagues,
-        lastApiUpdate,
-        dataSource: 'historical'
-      });
-    } catch (error) {
-      console.error('Error fetching database status:', error);
-      res.status(500).json({ error: "Failed to fetch database status" });
     }
   });
 
@@ -4875,30 +4738,6 @@ Return ONLY a JSON object with this structure:
     }
   });
 
-  // Scene Template routes
-  app.get("/api/scene-templates", async (req, res) => {
-    try {
-      const templates = getAllSceneTemplates();
-      res.json({ templates });
-    } catch (error) {
-      console.error('Error fetching scene templates:', error);
-      res.status(500).json({ error: "Failed to fetch scene templates" });
-    }
-  });
-
-  app.get("/api/scene-templates/:templateId", async (req, res) => {
-    try {
-      const template = getSceneTemplate(req.params.templateId);
-      if (!template) {
-        return res.status(404).json({ error: "Scene template not found" });
-      }
-      res.json({ template });
-    } catch (error) {
-      console.error('Error fetching scene template:', error);
-      res.status(500).json({ error: "Failed to fetch scene template" });
-    }
-  });
-
   app.post("/api/scenes/from-template", async (req, res) => {
     try {
       const { templateId, name } = req.body;
@@ -5989,7 +5828,7 @@ Return ONLY a JSON object with this structure:
       res.json(project);
     } catch (error: any) {
       console.error('Error fetching video project:', error);
-      res.status(500).json({ error: "Failed to fetch video project" });
+      res.status.json({ error: "Failed to fetch video project" });
     }
   });
 
