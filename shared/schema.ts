@@ -78,37 +78,22 @@ export type FootballPlayer = typeof football_players.$inferSelect;
 // Football Fixtures Table
 export const football_fixtures = pgTable('football_fixtures', {
   id: serial('id').primaryKey(),
-  referee: varchar('referee', { length: 100 }),
-  timezone: varchar('timezone', { length: 50 }),
-  timestamp: timestamp('timestamp'),
-  venue_id: integer('venue_id'),
-  venue_name: varchar('venue_name', { length: 255 }),
-  venue_city: varchar('venue_city', { length: 100 }),
-  status_long: varchar('status_long', { length: 50 }),
-  status_short: varchar('status_short', { length: 10 }),
-  status_elapsed: integer('status_elapsed'),
-  league_id: integer('league_id').references(() => football_leagues.id),
-  season: varchar('season', { length: 10 }),
-  round: varchar('round', { length: 100 }),
-  home_team_id: integer('home_team_id').references(() => football_teams.id),
-  home_team_name: varchar('home_team_name', { length: 255 }),
-  home_team_logo: text('home_team_logo'),
-  home_team_winner: boolean('home_team_winner'),
-  away_team_id: integer('away_team_id').references(() => football_teams.id),
-  away_team_name: varchar('away_team_name', { length: 255 }),
-  away_team_logo: text('away_team_logo'),
-  away_team_winner: boolean('away_team_winner'),
-  goals_home: integer('goals_home'),
-  goals_away: integer('goals_away'),
-  score_halftime_home: integer('score_halftime_home'),
-  score_halftime_away: integer('score_halftime_away'),
-  score_fulltime_home: integer('score_fulltime_home'),
-  score_fulltime_away: integer('score_fulltime_away'),
-  score_extratime_home: integer('score_extratime_home'),
-  score_extratime_away: integer('score_extratime_away'),
-  score_penalty_home: integer('score_penalty_home'),
-  score_penalty_away: integer('score_penalty_away'),
-  updated_at: timestamp('updated_at').defaultNow()
+  referee: text('referee'),
+  timezone: text('timezone').notNull(),
+  date: timestamp('date').notNull(),
+  timestamp: integer('timestamp'),
+  periods: text('periods').$type<any>(),
+  venue: text('venue').$type<any>(),
+  status: text('status').$type<any>().notNull(),
+  league_id: integer('league_id').notNull(),
+  season: integer('season').notNull(),
+  round: text('round'),
+  home_team_id: integer('home_team_id').notNull(),
+  away_team_id: integer('away_team_id').notNull(),
+  goals: text('goals').$type<any>(),
+  score: text('score').$type<any>(),
+  last_updated: timestamp('last_updated').notNull().defaultNow(),
+  status_short: varchar('status_short', { length: 10 })
 }, (table) => ({
   leagueIdIdx: index('idx_football_fixtures_league_id').on(table.league_id),
   homeTeamIdIdx: index('idx_football_fixtures_home_team_id').on(table.home_team_id),
@@ -117,7 +102,7 @@ export const football_fixtures = pgTable('football_fixtures', {
   seasonIdx: index('idx_football_fixtures_season').on(table.season)
 }));
 
-export const insertFootballFixtureSchema = createInsertSchema(football_fixtures).omit({ id: true, updated_at: true });
+export const insertFootballFixtureSchema = createInsertSchema(football_fixtures).omit({ id: true, last_updated: true });
 export type InsertFootballFixture = z.infer<typeof insertFootballFixtureSchema>;
 export type FootballFixture = typeof football_fixtures.$inferSelect;
 

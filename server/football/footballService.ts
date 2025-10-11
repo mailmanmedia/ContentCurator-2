@@ -1442,38 +1442,47 @@ class FootballService {
 
       const fixtures: FootballFixture[] = [];
       for (const item of response.response) {
-        const fixture = {
+        const fixtureData = {
           id: item.fixture.id,
-          referee: item.fixture.referee,
-          timezone: item.fixture.timezone,
-          date: toSafeDateRequired(item.fixture.date),
-          timestamp: toSafeDateRequired(item.fixture.timestamp),
-          periods: item.fixture.periods,
-          venue: item.fixture.venue,
-          status: item.fixture.status,
-          leagueId: item.league.id,
+          referee: item.fixture.referee || null,
+          timezone: item.fixture.timezone || 'UTC',
+          date: new Date(item.fixture.date),
+          timestamp: item.fixture.timestamp || null,
+          periods: JSON.stringify(item.fixture.periods),
+          venue: JSON.stringify(item.fixture.venue),
+          status: JSON.stringify(item.fixture.status),
+          league_id: item.league.id,
           season: item.league.season,
-          round: item.league.round,
-          homeTeamId: item.teams.home.id,
-          awayTeamId: item.teams.away.id,
-          goals: item.goals,
-          score: item.score,
-          lastUpdated: toSafeDateRequired(Date.now())
+          round: item.league.round || null,
+          home_team_id: item.teams.home.id,
+          away_team_id: item.teams.away.id,
+          goals: JSON.stringify(item.goals),
+          score: JSON.stringify(item.score),
+          status_short: item.fixture.status?.short || null,
+          last_updated: new Date()
         };
 
         await db.insert(footballFixtures)
-          .values(fixture)
+          .values(fixtureData)
           .onConflictDoUpdate({
             target: footballFixtures.id,
             set: {
-              goals: fixture.goals,
-              score: fixture.score,
-              status: fixture.status,
-              lastUpdated: fixture.lastUpdated
+              goals: fixtureData.goals,
+              score: fixtureData.score,
+              status: fixtureData.status,
+              status_short: fixtureData.status_short,
+              last_updated: fixtureData.last_updated
             }
           });
 
-        fixtures.push(fixture);
+        const fixture = await db.select()
+          .from(footballFixtures)
+          .where(eq(footballFixtures.id, item.fixture.id))
+          .limit(1);
+        
+        if (fixture.length > 0) {
+          fixtures.push(fixture[0]);
+        }
       }
 
       return fixtures;

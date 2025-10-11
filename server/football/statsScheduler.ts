@@ -98,7 +98,15 @@ export async function updateAllPremierLeagueStats(): Promise<{ success: boolean;
   const premierLeagueTeamIds = [33, 34, 35, 36, 38, 39, 40, 41, 42, 45, 46, 47, 48, 49, 50, 51, 52, 55, 66, 71];
   const leagueId = 39; // Premier League
   const leagueName = "Premier League";
-  const currentSeason = new Date().getFullYear();
+  
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  
+  // Use most recent completed season
+  const currentSeason = (currentMonth >= 8 && currentMonth <= 10) ? currentYear - 1 : currentYear;
+  
+  console.log(`Fetching Premier League stats for season ${currentSeason}`);
   
   // Fetch team names from database
   const teams = await db
@@ -164,7 +172,12 @@ export async function updateAllPremierLeagueStats(): Promise<{ success: boolean;
 async function updateLiverpoolPlayerStats() {
   console.log('\n👥 Updating Liverpool player statistics...');
   
-  const currentSeason = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  
+  // Use most recent completed season for player stats
+  const currentSeason = (currentMonth >= 8 && currentMonth <= 10) ? currentYear - 1 : currentYear;
   
   try {
     // Try Sportmonks first if configured
@@ -231,12 +244,21 @@ async function updateLiverpoolStats() {
   console.log('\n⚽ Updating Liverpool statistics...');
   
   const liverpoolTeamId = 40;
-  const currentSeason = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  
+  // For statistics, use the most recent completed season
+  // If we're early in the season (Aug-Oct), use previous year's data
+  // as current season data may be incomplete
+  const statsSeason = (currentMonth >= 8 && currentMonth <= 10) ? currentYear - 1 : currentYear;
   
   const targetLeagues = [39, 2, 3, 45, 48];
   
+  console.log(`Fetching statistics for season ${statsSeason} (current date: ${now.toISOString().split('T')[0]})`);
+  
   for (const leagueId of targetLeagues) {
-    await updateTeamStatistics(liverpoolTeamId, leagueId, currentSeason);
+    await updateTeamStatistics(liverpoolTeamId, leagueId, statsSeason);
   }
   
   await updateLiverpoolPlayerStats();
@@ -258,8 +280,8 @@ async function schedulePostMatchUpdates() {
       .where(
         and(
           or(
-            eq(footballFixtures.homeTeamId, liverpoolTeamId),
-            eq(footballFixtures.awayTeamId, liverpoolTeamId)
+            eq(footballFixtures.home_team_id, liverpoolTeamId),
+            eq(footballFixtures.away_team_id, liverpoolTeamId)
           ),
           eq(footballFixtures.season, currentSeason),
           gte(footballFixtures.date, now),

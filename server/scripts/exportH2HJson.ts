@@ -139,34 +139,27 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
 
           // Add to database for future use
           for (const match of h2hApiMatches) {
+            const fixtureDate = new Date(match.fixture.date);
+            const timestampValue = match.fixture.timestamp || Math.floor(fixtureDate.getTime() / 1000);
+            
             await db.insert(footballFixtures).values({
               id: match.fixture.id,
-              referee: match.fixture.referee,
-              timezone: match.fixture.timezone,
-              timestamp: new Date(match.fixture.date),
-              venue_name: match.fixture.venue?.name || null,
-              venue_city: match.fixture.venue?.city || null,
-              status_long: match.fixture.status.long,
-              status_short: match.fixture.status.short,
-              status_elapsed: match.fixture.status.elapsed,
+              referee: match.fixture.referee || null,
+              timezone: match.fixture.timezone || 'UTC',
+              date: fixtureDate,
+              timestamp: timestampValue,
+              periods: JSON.stringify(match.fixture.periods || {}),
+              venue: JSON.stringify(match.fixture.venue || {}),
+              status: JSON.stringify(match.fixture.status || {}),
               league_id: match.league.id,
-              season: match.league.season.toString(),
-              round: match.league.round,
+              season: match.league.season,
+              round: match.league.round || null,
               home_team_id: match.teams.home.id,
-              home_team_name: match.teams.home.name,
-              home_team_logo: match.teams.home.logo,
-              home_team_winner: match.teams.home.winner,
               away_team_id: match.teams.away.id,
-              away_team_name: match.teams.away.name,
-              away_team_logo: match.teams.away.logo,
-              away_team_winner: match.teams.away.winner,
-              goals_home: match.goals.home,
-              goals_away: match.goals.away,
-              score_halftime_home: match.score.halftime?.home || null,
-              score_halftime_away: match.score.halftime?.away || null,
-              score_fulltime_home: match.score.fulltime?.home || null,
-              score_fulltime_away: match.score.fulltime?.away || null,
-              updated_at: new Date()
+              goals: JSON.stringify(match.goals || {}),
+              score: JSON.stringify(match.score || {}),
+              status_short: match.fixture.status?.short || null,
+              last_updated: new Date()
             }).onConflictDoNothing();
           }
         }
@@ -194,26 +187,44 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
     }
 
     // Transform to H2H format
-    const matches: H2HMatch[] = allMatches.map(match => ({
-      fixtureId: match.id,
-      date: match.timestamp?.toISOString() || new Date().toISOString(),
-      season: parseInt(match.season) || getCurrentSeason(),
-      competition: match.league_id === 39 ? 'Premier League' :
-                   match.league_id === 2 ? 'Champions League' :
-                   match.league_id === 3 ? 'Europa League' :
-                   match.league_id === 45 ? 'FA Cup' :
-                   match.league_id === 48 ? 'League Cup' : 'Unknown',
-      competitionId: match.league_id,
-      venue: match.venue_name || '', // Use venue_name from DB
-      homeTeamId: match.home_team_id,
-      homeTeamName: match.home_team_name || '',
-      awayTeamId: match.away_team_id,
-      awayTeamName: match.away_team_name || '',
-      homeScore: match.goals_home ?? null,
-      awayScore: match.goals_away ?? null,
-      status: match.status_short || 'NS',
-      round: match.round || undefined
-    }));
+    const matches: H2HMatch[] = allMatches.map(match => {
+      // Parse JSON fields safely - they might already be objects
+      let venueData = null;
+      let goalsData = null;
+      
+      try {
+        venueData = typeof match.venue === 'string' ? JSON.parse(match.venue) : match.venue;
+      } catch (e) {
+        venueData = null;
+      }
+      
+      try {
+        goalsData = typeof match.goals === 'string' ? JSON.parse(match.goals) : match.goals;
+      } catch (e) {
+        goalsData = null;
+      }
+      
+      return {
+        fixtureId: match.id,
+        date: match.date?.toISOString() || new Date().toISOString(),
+        season: match.season || getCurrentSeason(),
+        competition: match.league_id === 39 ? 'Premier League' :
+                     match.league_id === 2 ? 'Champions League' :
+                     match.league_id === 3 ? 'Europa League' :
+                     match.league_id === 45 ? 'FA Cup' :
+                     match.league_id === 48 ? 'League Cup' : 'Unknown',
+        competitionId: match.league_id,
+        venue: venueData?.name || '',
+        homeTeamId: match.home_team_id,
+        homeTeamName: 'Home Team',
+        awayTeamId: match.away_team_id,
+        awayTeamName: 'Away Team',
+        homeScore: goalsData?.home ?? null,
+        awayScore: goalsData?.away ?? null,
+        status: match.status_short || 'NS',
+        round: match.round || undefined
+      };
+    });
 
     // Calculate record (Liverpool's perspective)
     let wins = 0;

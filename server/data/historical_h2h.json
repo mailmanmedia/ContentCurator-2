@@ -1,43 +1,1392 @@
 {
   "version": "2.0",
-  "lastUpdated": "2025-10-11T00:31:08.113Z",
+  "lastUpdated": "2025-10-11T00:43:46.073Z",
   "team": {
     "id": 40,
     "name": "Liverpool",
     "logo": "https://media.api-sports.io/football/teams/40.png"
   },
-  "headToHead": [],
+  "headToHead": [
+    {
+      "opponentId": 33,
+      "opponentName": "Manchester United",
+      "opponentLogo": "https://media.api-sports.io/football/teams/33.png",
+      "matches": [
+        {
+          "fixtureId": 1208218,
+          "date": "2025-01-05T16:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 33,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 20"
+        },
+        {
+          "fixtureId": 1240008,
+          "date": "2024-09-01T16:00:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Old Trafford",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 3,
+          "status": "NS",
+          "round": "Regular Season - 3"
+        },
+        {
+          "fixtureId": 1208047,
+          "date": "2024-09-01T15:00:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Old Trafford",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 3,
+          "status": "FT",
+          "round": "Regular Season - 3"
+        },
+        {
+          "fixtureId": 1225638,
+          "date": "2024-08-03T23:45:00.000Z",
+          "season": 2024,
+          "competition": "Unknown",
+          "competitionId": 667,
+          "venue": "Williams Brice Stadium",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 3,
+          "status": "FT",
+          "round": "Club Friendlies 1"
+        },
+        {
+          "fixtureId": 1035490,
+          "date": "2024-04-07T14:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Old Trafford",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 32"
+        },
+        {
+          "fixtureId": 1240009,
+          "date": "2024-04-07T14:00:00.000Z",
+          "season": 2023,
+          "competition": "League Cup",
+          "competitionId": 48,
+          "venue": "Old Trafford",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 3,
+          "status": "NS",
+          "round": "Quarter Final"
+        },
+        {
+          "fixtureId": 1180025,
+          "date": "2024-03-17T15:30:00.000Z",
+          "season": 2023,
+          "competition": "FA Cup",
+          "competitionId": 45,
+          "venue": "Old Trafford",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 3,
+          "status": "AET",
+          "round": "Quarter-finals"
+        },
+        {
+          "fixtureId": 1035339,
+          "date": "2023-12-17T16:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 33,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Regular Season - 17"
+        },
+        {
+          "fixtureId": 868201,
+          "date": "2023-03-05T16:30:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 33,
+          "awayTeamName": "Away Team",
+          "homeScore": 7,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Regular Season - 26"
+        },
+        {
+          "fixtureId": 867972,
+          "date": "2022-08-22T19:00:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Old Trafford",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 3"
+        },
+        {
+          "fixtureId": 869514,
+          "date": "2022-07-12T13:00:00.000Z",
+          "season": 2022,
+          "competition": "Unknown",
+          "competitionId": 667,
+          "venue": "Rajamangala National Stadium",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Club Friendlies 1"
+        },
+        {
+          "fixtureId": 710849,
+          "date": "2022-04-19T19:00:00.000Z",
+          "season": 2021,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 33,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Regular Season - 30"
+        }
+      ],
+      "record": {
+        "wins": 5,
+        "draws": 3,
+        "losses": 4
+      }
+    },
+    {
+      "opponentId": 50,
+      "opponentName": "Manchester City",
+      "opponentLogo": "https://media.api-sports.io/football/teams/50.png",
+      "matches": [
+        {
+          "fixtureId": 1208280,
+          "date": "2025-02-23T16:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Etihad Stadium",
+          "homeTeamId": 50,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 26"
+        },
+        {
+          "fixtureId": 1208147,
+          "date": "2024-12-01T16:00:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 50,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Regular Season - 13"
+        },
+        {
+          "fixtureId": 1240004,
+          "date": "2024-12-01T16:00:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 50,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 0,
+          "status": "NS",
+          "round": "Regular Season - 13"
+        },
+        {
+          "fixtureId": 1250004,
+          "date": "2025-10-27T16:30:00.000Z",
+          "season": 2025,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Etihad Stadium",
+          "homeTeamId": 50,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": null,
+          "awayScore": null,
+          "status": "NS",
+          "round": "Regular Season - 11"
+        },
+        {
+          "fixtureId": 1035450,
+          "date": "2024-03-10T15:45:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 50,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 28"
+        },
+        {
+          "fixtureId": 1240005,
+          "date": "2024-03-10T15:00:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Etihad Stadium",
+          "homeTeamId": 50,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 1,
+          "status": "NS",
+          "round": "Regular Season - 28"
+        },
+        {
+          "fixtureId": 1035299,
+          "date": "2023-11-25T12:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Etihad Stadium",
+          "homeTeamId": 50,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 13"
+        },
+        {
+          "fixtureId": 868232,
+          "date": "2023-04-01T11:30:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Etihad Stadium",
+          "homeTeamId": 50,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 29"
+        },
+        {
+          "fixtureId": 972362,
+          "date": "2022-12-22T20:00:00.000Z",
+          "season": 2022,
+          "competition": "League Cup",
+          "competitionId": 48,
+          "venue": "Etihad Stadium",
+          "homeTeamId": 50,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 3,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Round of 16"
+        },
+        {
+          "fixtureId": 868051,
+          "date": "2022-10-16T15:30:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 50,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Regular Season - 11"
+        },
+        {
+          "fixtureId": 862929,
+          "date": "2022-07-30T16:00:00.000Z",
+          "season": 2022,
+          "competition": "Unknown",
+          "competitionId": 528,
+          "venue": "King Power Stadium",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 50,
+          "awayTeamName": "Away Team",
+          "homeScore": 3,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Final"
+        },
+        {
+          "fixtureId": 851977,
+          "date": "2022-04-16T14:30:00.000Z",
+          "season": 2021,
+          "competition": "FA Cup",
+          "competitionId": 45,
+          "venue": "Wembley Stadium",
+          "homeTeamId": 50,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 3,
+          "status": "FT",
+          "round": "Semi-finals"
+        },
+        {
+          "fixtureId": 710871,
+          "date": "2022-04-10T15:30:00.000Z",
+          "season": 2021,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Etihad Stadium",
+          "homeTeamId": 50,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 32"
+        }
+      ],
+      "record": {
+        "wins": 6,
+        "draws": 4,
+        "losses": 2
+      }
+    },
+    {
+      "opponentId": 42,
+      "opponentName": "Arsenal",
+      "opponentLogo": "https://media.api-sports.io/football/teams/42.png",
+      "matches": [
+        {
+          "fixtureId": 1378993,
+          "date": "2025-08-31T15:30:00.000Z",
+          "season": 2025,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 42,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Regular Season - 3"
+        },
+        {
+          "fixtureId": 1208376,
+          "date": "2025-05-11T15:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 42,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 36"
+        },
+        {
+          "fixtureId": 1240006,
+          "date": "2024-12-21T17:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 42,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 2,
+          "status": "NS",
+          "round": "Regular Season - 17"
+        },
+        {
+          "fixtureId": 1208103,
+          "date": "2024-10-27T15:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Emirates Stadium",
+          "homeTeamId": 42,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 9"
+        },
+        {
+          "fixtureId": 1250002,
+          "date": "2025-10-13T16:00:00.000Z",
+          "season": 2025,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Emirates Stadium",
+          "homeTeamId": 42,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": null,
+          "awayScore": null,
+          "status": "NS",
+          "round": "Regular Season - 9"
+        },
+        {
+          "fixtureId": 1219970,
+          "date": "2024-07-31T23:30:00.000Z",
+          "season": 2024,
+          "competition": "Unknown",
+          "competitionId": 667,
+          "venue": "Lincoln Financial Field",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 42,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Club Friendlies 1"
+        },
+        {
+          "fixtureId": 1035395,
+          "date": "2024-02-04T16:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Emirates Stadium",
+          "homeTeamId": 42,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 3,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 23"
+        },
+        {
+          "fixtureId": 1240007,
+          "date": "2024-02-04T16:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Emirates Stadium",
+          "homeTeamId": 42,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 3,
+          "awayScore": 1,
+          "status": "NS",
+          "round": "Regular Season - 23"
+        },
+        {
+          "fixtureId": 1145549,
+          "date": "2024-01-07T16:30:00.000Z",
+          "season": 2023,
+          "competition": "FA Cup",
+          "competitionId": 45,
+          "venue": "Emirates Stadium",
+          "homeTeamId": 42,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "3rd Round"
+        },
+        {
+          "fixtureId": 1035347,
+          "date": "2023-12-23T17:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 42,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 18"
+        },
+        {
+          "fixtureId": 868241,
+          "date": "2023-04-09T15:30:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 42,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 30"
+        },
+        {
+          "fixtureId": 868037,
+          "date": "2022-10-09T15:30:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Emirates Stadium",
+          "homeTeamId": 42,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 3,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 10"
+        },
+        {
+          "fixtureId": 710816,
+          "date": "2022-03-16T20:15:00.000Z",
+          "season": 2021,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Emirates Stadium",
+          "homeTeamId": 42,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 27"
+        }
+      ],
+      "record": {
+        "wins": 4,
+        "draws": 5,
+        "losses": 3
+      }
+    },
+    {
+      "opponentId": 49,
+      "opponentName": "Chelsea",
+      "opponentLogo": "https://media.api-sports.io/football/teams/49.png",
+      "matches": [
+        {
+          "fixtureId": 1379033,
+          "date": "2025-10-04T16:30:00.000Z",
+          "season": 2025,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Stamford Bridge",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 7"
+        },
+        {
+          "fixtureId": 1208367,
+          "date": "2025-05-04T15:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Stamford Bridge",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 3,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 35"
+        },
+        {
+          "fixtureId": 1240001,
+          "date": "2025-01-31T17:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 49,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 1,
+          "status": "NS",
+          "round": "Regular Season - 23"
+        },
+        {
+          "fixtureId": 1240026,
+          "date": "2024-10-20T16:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 49,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 1,
+          "status": "NS",
+          "round": "Regular Season - 8"
+        },
+        {
+          "fixtureId": 1208094,
+          "date": "2024-10-20T15:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 49,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 8"
+        },
+        {
+          "fixtureId": 1250001,
+          "date": "2025-10-06T19:30:00.000Z",
+          "season": 2025,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 49,
+          "awayTeamName": "Away Team",
+          "homeScore": null,
+          "awayScore": null,
+          "status": "NS",
+          "round": "Regular Season - 8"
+        },
+        {
+          "fixtureId": 1240002,
+          "date": "2024-08-18T16:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Stamford Bridge",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 2,
+          "status": "NS",
+          "round": "Regular Season - 2"
+        },
+        {
+          "fixtureId": 1168059,
+          "date": "2024-02-25T15:00:00.000Z",
+          "season": 2023,
+          "competition": "League Cup",
+          "competitionId": 48,
+          "venue": "Wembley Stadium",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Final"
+        },
+        {
+          "fixtureId": 1240003,
+          "date": "2024-02-25T14:00:00.000Z",
+          "season": 2023,
+          "competition": "League Cup",
+          "competitionId": 48,
+          "venue": "Stamford Bridge",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 1,
+          "status": "NS",
+          "round": "Final"
+        },
+        {
+          "fixtureId": 1035392,
+          "date": "2024-01-31T20:15:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 49,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 22"
+        },
+        {
+          "fixtureId": 1035045,
+          "date": "2023-08-13T15:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Stamford Bridge",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 1"
+        },
+        {
+          "fixtureId": 868019,
+          "date": "2023-04-04T19:00:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Stamford Bridge",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Regular Season - 8"
+        },
+        {
+          "fixtureId": 868152,
+          "date": "2023-01-21T12:30:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 49,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Regular Season - 21"
+        },
+        {
+          "fixtureId": 858021,
+          "date": "2022-05-14T15:45:00.000Z",
+          "season": 2021,
+          "competition": "FA Cup",
+          "competitionId": 45,
+          "venue": "Wembley Stadium",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 0,
+          "status": "PEN",
+          "round": "Final"
+        },
+        {
+          "fixtureId": 827495,
+          "date": "2022-02-27T16:30:00.000Z",
+          "season": 2021,
+          "competition": "League Cup",
+          "competitionId": 48,
+          "venue": "Wembley Stadium",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 0,
+          "status": "PEN",
+          "round": "Final"
+        }
+      ],
+      "record": {
+        "wins": 7,
+        "draws": 5,
+        "losses": 2
+      }
+    },
+    {
+      "opponentId": 47,
+      "opponentName": "Tottenham Hotspur",
+      "opponentLogo": "https://media.api-sports.io/football/teams/47.png",
+      "matches": [
+        {
+          "fixtureId": 1208357,
+          "date": "2025-04-27T15:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 47,
+          "awayTeamName": "Away Team",
+          "homeScore": 5,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 34"
+        },
+        {
+          "fixtureId": 1327991,
+          "date": "2025-02-06T20:00:00.000Z",
+          "season": 2024,
+          "competition": "League Cup",
+          "competitionId": 48,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 47,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Semi-finals"
+        },
+        {
+          "fixtureId": 1327990,
+          "date": "2025-01-08T20:00:00.000Z",
+          "season": 2024,
+          "competition": "League Cup",
+          "competitionId": 48,
+          "venue": "Tottenham Hotspur Stadium",
+          "homeTeamId": 47,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 0,
+          "status": "FT",
+          "round": "Semi-finals"
+        },
+        {
+          "fixtureId": 1208191,
+          "date": "2024-12-22T16:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Tottenham Hotspur Stadium",
+          "homeTeamId": 47,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 3,
+          "awayScore": 6,
+          "status": "FT",
+          "round": "Regular Season - 17"
+        },
+        {
+          "fixtureId": 1240010,
+          "date": "2024-05-05T16:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Tottenham Hotspur Stadium",
+          "homeTeamId": 47,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 4,
+          "status": "NS",
+          "round": "Regular Season - 36"
+        },
+        {
+          "fixtureId": 1035530,
+          "date": "2024-05-05T15:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 47,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 36"
+        },
+        {
+          "fixtureId": 1035104,
+          "date": "2023-09-30T16:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Tottenham Hotspur Stadium",
+          "homeTeamId": 47,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 7"
+        },
+        {
+          "fixtureId": 868283,
+          "date": "2023-04-30T15:30:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 47,
+          "awayTeamName": "Away Team",
+          "homeScore": 4,
+          "awayScore": 3,
+          "status": "FT",
+          "round": "Regular Season - 34"
+        },
+        {
+          "fixtureId": 868093,
+          "date": "2022-11-06T16:30:00.000Z",
+          "season": 2022,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Tottenham Hotspur Stadium",
+          "homeTeamId": 47,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 15"
+        },
+        {
+          "fixtureId": 710913,
+          "date": "2022-05-07T18:45:00.000Z",
+          "season": 2021,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 47,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 36"
+        },
+        {
+          "fixtureId": 710732,
+          "date": "2021-12-19T16:30:00.000Z",
+          "season": 2021,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Tottenham Hotspur Stadium",
+          "homeTeamId": 47,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 18"
+        }
+      ],
+      "record": {
+        "wins": 7,
+        "draws": 2,
+        "losses": 2
+      }
+    },
+    {
+      "opponentId": 34,
+      "opponentName": "Newcastle United",
+      "opponentLogo": "https://media.api-sports.io/football/teams/34.png",
+      "matches": [],
+      "record": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 66,
+      "opponentName": "Aston Villa",
+      "opponentLogo": "https://media.api-sports.io/football/teams/66.png",
+      "matches": [
+        {
+          "fixtureId": 1250005,
+          "date": "2025-11-03T19:00:00.000Z",
+          "season": 2025,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 66,
+          "awayTeamName": "Away Team",
+          "homeScore": null,
+          "awayScore": null,
+          "status": "NS",
+          "round": "Regular Season - 12"
+        }
+      ],
+      "record": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 48,
+      "opponentName": "West Ham United",
+      "opponentLogo": "https://media.api-sports.io/football/teams/48.png",
+      "matches": [],
+      "record": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 35,
+      "opponentName": "AFC Bournemouth",
+      "opponentLogo": "https://media.api-sports.io/football/teams/35.png",
+      "matches": [
+        {
+          "fixtureId": 1240023,
+          "date": "2024-09-21T15:00:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 35,
+          "awayTeamName": "Away Team",
+          "homeScore": 3,
+          "awayScore": 0,
+          "status": "NS",
+          "round": "Regular Season - 5"
+        }
+      ],
+      "record": {
+        "wins": 1,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 36,
+      "opponentName": "Fulham",
+      "opponentLogo": "https://media.api-sports.io/football/teams/36.png",
+      "matches": [],
+      "record": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 51,
+      "opponentName": "Brighton & Hove Albion",
+      "opponentLogo": "https://media.api-sports.io/football/teams/51.png",
+      "matches": [
+        {
+          "fixtureId": 1250003,
+          "date": "2025-10-20T14:00:00.000Z",
+          "season": 2025,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 51,
+          "awayTeamName": "Away Team",
+          "homeScore": null,
+          "awayScore": null,
+          "status": "NS",
+          "round": "Regular Season - 10"
+        }
+      ],
+      "record": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 52,
+      "opponentName": "Crystal Palace",
+      "opponentLogo": "https://media.api-sports.io/football/teams/52.png",
+      "matches": [
+        {
+          "fixtureId": 1240025,
+          "date": "2024-10-05T12:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Selhurst Park",
+          "homeTeamId": 52,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 1,
+          "status": "NS",
+          "round": "Regular Season - 7"
+        }
+      ],
+      "record": {
+        "wins": 1,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 39,
+      "opponentName": "Wolverhampton Wanderers",
+      "opponentLogo": "https://media.api-sports.io/football/teams/39.png",
+      "matches": [
+        {
+          "fixtureId": 1240024,
+          "date": "2024-09-28T17:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Molineux Stadium",
+          "homeTeamId": 39,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 1,
+          "awayScore": 2,
+          "status": "NS",
+          "round": "Regular Season - 6"
+        }
+      ],
+      "record": {
+        "wins": 1,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 41,
+      "opponentName": "Southampton",
+      "opponentLogo": "https://media.api-sports.io/football/teams/41.png",
+      "matches": [],
+      "record": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 46,
+      "opponentName": "Leicester City",
+      "opponentLogo": "https://media.api-sports.io/football/teams/46.png",
+      "matches": [],
+      "record": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 55,
+      "opponentName": "Brentford",
+      "opponentLogo": "https://media.api-sports.io/football/teams/55.png",
+      "matches": [
+        {
+          "fixtureId": 1240021,
+          "date": "2024-08-25T16:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 55,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 0,
+          "status": "NS",
+          "round": "Regular Season - 2"
+        }
+      ],
+      "record": {
+        "wins": 1,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 65,
+      "opponentName": "Nottingham Forest",
+      "opponentLogo": "https://media.api-sports.io/football/teams/65.png",
+      "matches": [
+        {
+          "fixtureId": 1240022,
+          "date": "2024-09-14T15:00:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 65,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 1,
+          "status": "NS",
+          "round": "Regular Season - 4"
+        }
+      ],
+      "record": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 1
+      }
+    },
+    {
+      "opponentId": 57,
+      "opponentName": "Ipswich Town",
+      "opponentLogo": "https://media.api-sports.io/football/teams/57.png",
+      "matches": [
+        {
+          "fixtureId": 1240020,
+          "date": "2024-08-17T12:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Portman Road",
+          "homeTeamId": 57,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 2,
+          "status": "NS",
+          "round": "Regular Season - 1"
+        }
+      ],
+      "record": {
+        "wins": 1,
+        "draws": 0,
+        "losses": 0
+      }
+    },
+    {
+      "opponentId": 45,
+      "opponentName": "Everton",
+      "opponentLogo": "https://media.api-sports.io/football/teams/45.png",
+      "matches": [],
+      "record": {
+        "wins": 0,
+        "draws": 0,
+        "losses": 0
+      }
+    }
+  ],
   "currentSquad": [
     {
-      "id": 542,
-      "name": "R. Gravenberch",
-      "photo": "https://media.api-sports.io/football/players/542.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 2,
-        "assists": 1,
-        "appearances": 6,
-        "minutes": 540,
-        "rating": "7.37"
-      }
-    },
-    {
-      "id": 2864,
-      "name": "A. Isak",
-      "photo": "https://media.api-sports.io/football/players/2864.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 1,
-        "appearances": 3,
-        "minutes": 181,
-        "rating": "6.23"
-      }
-    },
-    {
-      "id": 18889,
-      "name": "F. Woodman",
-      "photo": "https://media.api-sports.io/football/players/18889.png",
+      "id": 409047,
+      "name": "G. Leoni",
+      "photo": "https://media.api-sports.io/football/players/409047.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
@@ -45,19 +1394,6 @@
         "appearances": 0,
         "minutes": 0,
         "rating": null
-      }
-    },
-    {
-      "id": 280,
-      "name": "Alisson Becker",
-      "photo": "https://media.api-sports.io/football/players/280.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 6,
-        "minutes": 540,
-        "rating": "6.95"
       }
     },
     {
@@ -74,42 +1410,42 @@
       }
     },
     {
-      "id": 290,
-      "name": "V. van Dijk",
-      "photo": "https://media.api-sports.io/football/players/290.png",
+      "id": 293,
+      "name": "C. Jones",
+      "photo": "https://media.api-sports.io/football/players/293.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 6,
+        "minutes": 225,
+        "rating": "6.88"
+      }
+    },
+    {
+      "id": 206254,
+      "name": "M. Kerkez",
+      "photo": "https://media.api-sports.io/football/players/206254.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
         "appearances": 7,
-        "minutes": 630,
-        "rating": "7.33"
+        "minutes": 513,
+        "rating": "6.66"
       }
     },
     {
-      "id": 1096,
-      "name": "D. Szoboszlai",
-      "photo": "https://media.api-sports.io/football/players/1096.png",
+      "id": 452685,
+      "name": "R. Ngumoha",
+      "photo": "https://media.api-sports.io/football/players/452685.png",
       "statistics": {
         "season": 2025,
         "goals": 1,
         "assists": 0,
-        "appearances": 7,
-        "minutes": 630,
-        "rating": "7.01"
-      }
-    },
-    {
-      "id": 6716,
-      "name": "A. Mac Allister",
-      "photo": "https://media.api-sports.io/football/players/6716.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 1,
-        "appearances": 6,
-        "minutes": 390,
-        "rating": "6.67"
+        "appearances": 3,
+        "minutes": 34,
+        "rating": "6.87"
       }
     },
     {
@@ -126,6 +1462,84 @@
       }
     },
     {
+      "id": 174565,
+      "name": "H. Ekitike",
+      "photo": "https://media.api-sports.io/football/players/174565.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 3,
+        "assists": 1,
+        "appearances": 6,
+        "minutes": 386,
+        "rating": "7.13"
+      }
+    },
+    {
+      "id": 290,
+      "name": "V. van Dijk",
+      "photo": "https://media.api-sports.io/football/players/290.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 7,
+        "minutes": 630,
+        "rating": "7.33"
+      }
+    },
+    {
+      "id": 542,
+      "name": "R. Gravenberch",
+      "photo": "https://media.api-sports.io/football/players/542.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 2,
+        "assists": 1,
+        "appearances": 6,
+        "minutes": 540,
+        "rating": "7.37"
+      }
+    },
+    {
+      "id": 6716,
+      "name": "A. Mac Allister",
+      "photo": "https://media.api-sports.io/football/players/6716.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 1,
+        "appearances": 6,
+        "minutes": 390,
+        "rating": "6.67"
+      }
+    },
+    {
+      "id": 24760,
+      "name": "G. Mamardashvili",
+      "photo": "https://media.api-sports.io/football/players/24760.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 1,
+        "minutes": 90,
+        "rating": "7.2"
+      }
+    },
+    {
+      "id": 1096,
+      "name": "D. Szoboszlai",
+      "photo": "https://media.api-sports.io/football/players/1096.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 1,
+        "assists": 0,
+        "appearances": 7,
+        "minutes": 630,
+        "rating": "7.01"
+      }
+    },
+    {
       "id": 247,
       "name": "C. Gakpo",
       "photo": "https://media.api-sports.io/football/players/247.png",
@@ -136,19 +1550,6 @@
         "appearances": 7,
         "minutes": 555,
         "rating": "7.23"
-      }
-    },
-    {
-      "id": 289,
-      "name": "A. Robertson",
-      "photo": "https://media.api-sports.io/football/players/289.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 3,
-        "minutes": 118,
-        "rating": "6.6"
       }
     },
     {
@@ -165,29 +1566,29 @@
       }
     },
     {
-      "id": 293,
-      "name": "C. Jones",
-      "photo": "https://media.api-sports.io/football/players/293.png",
+      "id": 2864,
+      "name": "A. Isak",
+      "photo": "https://media.api-sports.io/football/players/2864.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 1,
+        "appearances": 3,
+        "minutes": 181,
+        "rating": "6.23"
+      }
+    },
+    {
+      "id": 397997,
+      "name": "T. Nyoni",
+      "photo": "https://media.api-sports.io/football/players/397997.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
-        "appearances": 6,
-        "minutes": 225,
-        "rating": "6.88"
-      }
-    },
-    {
-      "id": 30410,
-      "name": "F. Chiesa",
-      "photo": "https://media.api-sports.io/football/players/30410.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 2,
-        "assists": 0,
-        "appearances": 5,
-        "minutes": 64,
-        "rating": "6.82"
+        "appearances": 0,
+        "minutes": 0,
+        "rating": null
       }
     },
     {
@@ -204,9 +1605,48 @@
       }
     },
     {
-      "id": 397997,
-      "name": "T. Nyoni",
-      "photo": "https://media.api-sports.io/football/players/397997.png",
+      "id": 306,
+      "name": "Mohamed Salah",
+      "photo": "https://media.api-sports.io/football/players/306.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 2,
+        "assists": 2,
+        "appearances": 7,
+        "minutes": 629,
+        "rating": "6.66"
+      }
+    },
+    {
+      "id": 30410,
+      "name": "F. Chiesa",
+      "photo": "https://media.api-sports.io/football/players/30410.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 2,
+        "assists": 0,
+        "appearances": 5,
+        "minutes": 64,
+        "rating": "6.82"
+      }
+    },
+    {
+      "id": 152654,
+      "name": "J. Frimpong",
+      "photo": "https://media.api-sports.io/football/players/152654.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 3,
+        "minutes": 86,
+        "rating": "6.6"
+      }
+    },
+    {
+      "id": 18889,
+      "name": "F. Woodman",
+      "photo": "https://media.api-sports.io/football/players/18889.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
@@ -230,58 +1670,6 @@
       }
     },
     {
-      "id": 152654,
-      "name": "J. Frimpong",
-      "photo": "https://media.api-sports.io/football/players/152654.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 3,
-        "minutes": 86,
-        "rating": "6.6"
-      }
-    },
-    {
-      "id": 206254,
-      "name": "M. Kerkez",
-      "photo": "https://media.api-sports.io/football/players/206254.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 7,
-        "minutes": 513,
-        "rating": "6.66"
-      }
-    },
-    {
-      "id": 306,
-      "name": "Mohamed Salah",
-      "photo": "https://media.api-sports.io/football/players/306.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 2,
-        "assists": 2,
-        "appearances": 7,
-        "minutes": 629,
-        "rating": "6.66"
-      }
-    },
-    {
-      "id": 174565,
-      "name": "H. Ekitike",
-      "photo": "https://media.api-sports.io/football/players/174565.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 3,
-        "assists": 1,
-        "appearances": 6,
-        "minutes": 386,
-        "rating": "7.13"
-      }
-    },
-    {
       "id": 284,
       "name": "J. Gomez",
       "photo": "https://media.api-sports.io/football/players/284.png",
@@ -295,42 +1683,29 @@
       }
     },
     {
-      "id": 24760,
-      "name": "G. Mamardashvili",
-      "photo": "https://media.api-sports.io/football/players/24760.png",
+      "id": 289,
+      "name": "A. Robertson",
+      "photo": "https://media.api-sports.io/football/players/289.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
-        "assists": 0,
-        "appearances": 1,
-        "minutes": 90,
-        "rating": "7.2"
-      }
-    },
-    {
-      "id": 452685,
-      "name": "R. Ngumoha",
-      "photo": "https://media.api-sports.io/football/players/452685.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 1,
         "assists": 0,
         "appearances": 3,
-        "minutes": 34,
-        "rating": "6.87"
+        "minutes": 118,
+        "rating": "6.6"
       }
     },
     {
-      "id": 409047,
-      "name": "G. Leoni",
-      "photo": "https://media.api-sports.io/football/players/409047.png",
+      "id": 280,
+      "name": "Alisson Becker",
+      "photo": "https://media.api-sports.io/football/players/280.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
-        "appearances": 0,
-        "minutes": 0,
-        "rating": null
+        "appearances": 6,
+        "minutes": 540,
+        "rating": "6.95"
       }
     }
   ]
