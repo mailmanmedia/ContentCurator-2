@@ -5,8 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1760136721246,
+      "when": 1234567890,
       "tag": "0000_nappy_karma",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1760210000,
+      "tag": "0001_add_agent_tables",
       "breakpoints": true
     }
   ]
