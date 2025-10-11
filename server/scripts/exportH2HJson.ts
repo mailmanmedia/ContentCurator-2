@@ -70,6 +70,9 @@ function getCurrentSeason(): number {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
+  // If the current month is before July (month 7), the season is the previous year's
+  // For example, if it's June 2025, the season is 2024-25.
+  // If it's July 2025, the season is 2025-26.
   if (currentMonth < 7) {
     return currentYear - 1;
   } else {
@@ -116,16 +119,17 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
     // If insufficient database data, try API
     let allMatches = dbMatches;
     if (dbMatches.length < 10) {
-      console.log(`Fetching additional H2H data from API for Liverpool vs ${opponent[0].name}`);
+      console.log(`Fetching additional H2H data from API for Liverpool vs ${opponent.name}`);
       try {
         const currentSeason = getCurrentSeason();
-        const seasons = [currentSeason, currentSeason - 1, currentSeason - 2, currentSeason - 3];
+        // Fetch data for the current season and the 3 preceding seasons
+        const seasonsToFetch = [currentSeason, currentSeason - 1, currentSeason - 2, currentSeason - 3];
 
-        for (const season of seasons) {
+        for (const season of seasonsToFetch) {
           const apiFixtures = await apiFootballService.fetchFixturesByTeam({
             season,
             team: liverpoolId,
-            status: 'FT'
+            status: 'FT' // Fetch only finished fixtures
           });
 
           const h2hApiMatches = apiFixtures.filter((f: any) =>
@@ -140,7 +144,6 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
               referee: match.fixture.referee,
               timezone: match.fixture.timezone,
               timestamp: new Date(match.fixture.date),
-              venue_id: match.fixture.venue?.id || null,
               venue_name: match.fixture.venue?.name || null,
               venue_city: match.fixture.venue?.city || null,
               status_long: match.fixture.status.long,
@@ -168,25 +171,25 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
           }
         }
 
-        // Re-query database
+        // Re-query database after potential inserts
         allMatches = await db.select()
           .from(footballFixtures)
           .where(
             or(
               and(
-                eq(footballFixtures.homeTeamId, liverpoolId),
-                eq(footballFixtures.awayTeamId, opponentId)
+                eq(footballFixtures.home_team_id, liverpoolId),
+                eq(footballFixtures.away_team_id, opponentId)
               ),
               and(
-                eq(footballFixtures.homeTeamId, opponentId),
-                eq(footballFixtures.awayTeamId, liverpoolId)
+                eq(footballFixtures.home_team_id, opponentId),
+                eq(footballFixtures.away_team_id, liverpoolId)
               )
             )
           )
           .orderBy(desc(footballFixtures.timestamp))
           .limit(30);
       } catch (apiError) {
-        console.error(`API fetch failed for ${opponent[0].name}:`, apiError);
+        console.error(`API fetch failed for ${opponent.name}:`, apiError);
       }
     }
 
@@ -195,20 +198,20 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
       fixtureId: match.id,
       date: match.timestamp?.toISOString() || new Date().toISOString(),
       season: parseInt(match.season) || getCurrentSeason(),
-      competition: match.league_id === 39 ? 'Premier League' : 
+      competition: match.league_id === 39 ? 'Premier League' :
                    match.league_id === 2 ? 'Champions League' :
                    match.league_id === 3 ? 'Europa League' :
                    match.league_id === 45 ? 'FA Cup' :
                    match.league_id === 48 ? 'League Cup' : 'Unknown',
       competitionId: match.league_id,
-      venue: typeof match.venue === 'object' ? match.venue?.name || '' : match.venue || '',
+      venue: match.venue_name || '', // Use venue_name from DB
       homeTeamId: match.home_team_id,
       homeTeamName: match.home_team_name || '',
       awayTeamId: match.away_team_id,
       awayTeamName: match.away_team_name || '',
       homeScore: match.goals_home ?? null,
       awayScore: match.goals_away ?? null,
-      status: match.status?.short || 'NS',
+      status: match.status_short || 'NS',
       round: match.round || undefined
     }));
 
@@ -249,11 +252,11 @@ async function fetchLiverpoolSquad(liverpoolId: number): Promise<PlayerData[]> {
   const currentSeason = getCurrentSeason();
 
   try {
-    // Get all players (football_players table doesn't have teamId, so get all and filter via stats)
+    // Get all players
     const allPlayers = await db.select()
       .from(footballPlayers);
 
-    // Get stats for Liverpool players (player_season_statistics has team_id)
+    // Get stats for Liverpool players for the current season
     const liverpoolStats = await db.select()
       .from(playerSeasonStatistics)
       .where(
@@ -263,20 +266,22 @@ async function fetchLiverpoolSquad(liverpoolId: number): Promise<PlayerData[]> {
         )
       );
 
-    // Create map of player_id to stats
-    const statsMap = new Map();
+    // Create map of player_id to stats for quick lookup
+    const statsMap = new Map<number, typeof playerSeasonStatistics.$inferSelect>();
     liverpoolStats.forEach(stat => {
-      statsMap.set(stat.player_id, stat);
+      if (stat.player_id) {
+        statsMap.set(stat.player_id, stat);
+      }
     });
 
     // Filter players who have Liverpool stats this season
-    const liverpoolPlayerIds = new Set(liverpoolStats.map(s => s.player_id));
+    const liverpoolPlayerIds = new Set(liverpoolStats.map(s => s.player_id).filter((id): id is number => id !== null));
     const liverpoolPlayers = allPlayers.filter(p => p.player_id && liverpoolPlayerIds.has(p.player_id));
 
     return liverpoolPlayers.map(player => {
       const stat = player.player_id ? statsMap.get(player.player_id) : null;
       return {
-        id: player.player_id || player.id,
+        id: player.player_id || player.id, // Use player_id if available, otherwise fallback to id
         name: player.name,
         photo: player.photo || '',
         position: player.position || undefined,
@@ -304,8 +309,9 @@ async function exportH2HJson() {
   console.log('🚀 Starting H2H JSON export...');
 
   const LIVERPOOL_ID = 40;
+  // List of opponent team IDs for Premier League
   const PREMIER_LEAGUE_OPPONENTS = [
-    33, 50, 42, 49, 47, 34, 66, 48, 35, 36, 
+    33, 50, 42, 49, 47, 34, 66, 48, 35, 36,
     51, 52, 39, 41, 46, 55, 65, 57, 45
   ];
 
@@ -330,7 +336,7 @@ async function exportH2HJson() {
       console.log(`✓ Fetched ${h2hData.matches.length} matches vs ${h2hData.opponentName}`);
     }
 
-    // Rate limit delay
+    // Rate limit delay to avoid hitting API limits
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 

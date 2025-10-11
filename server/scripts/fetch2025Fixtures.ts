@@ -5,10 +5,10 @@ import { apiFootballService } from "../football/apiFootballService";
 import { eq, and } from "drizzle-orm";
 
 const LIVERPOOL_ID = 40;
-const CURRENT_SEASON = 2024; // 2024-25 season
+const CURRENT_SEASON = 2025; // 2025-26 season (Oct 2025)
 
 async function fetch2025Fixtures() {
-  console.log('🔄 Fetching Liverpool FC 2024-25 season fixtures...\n');
+  console.log('🔄 Fetching Liverpool FC 2025-26 season fixtures...\n');
   
   try {
     // Fetch fixtures for Liverpool in current season
@@ -17,7 +17,7 @@ async function fetch2025Fixtures() {
       team: LIVERPOOL_ID
     });
 
-    console.log(`📊 Found ${fixtures.length} fixtures for Liverpool in 2024-25 season\n`);
+    console.log(`📊 Found ${fixtures.length} fixtures for Liverpool in 2025-26 season\n`);
 
     let newCount = 0;
     let updatedCount = 0;
@@ -137,7 +137,7 @@ async function fetch2025Fixtures() {
     console.log(`  🔄 Fixtures updated: ${updatedCount}`);
     console.log(`  ❌ Fixtures skipped: ${skippedCount}`);
     console.log(`  📅 Total processed: ${fixtures.length}`);
-    console.log('\n✅ 2024-25 fixtures sync complete!');
+    console.log('\n✅ 2025-26 fixtures sync complete!');
 
   } catch (error) {
     console.error('❌ Error fetching 2025-26 fixtures:', error);
