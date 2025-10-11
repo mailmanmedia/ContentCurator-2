@@ -258,8 +258,16 @@ export default function MetaAgentDashboard() {
     await Promise.all([
       refetchDbStatus(),
       refetchStats(),
-      refetchAudit()
+      refetchAudit(),
+      refetchTaskHistory()
     ]);
+  };
+
+  // Prefetch task history when hovering over Logs tab
+  const handleTabHover = (tab: string) => {
+    if (tab === 'logs') {
+      queryClient.prefetchQuery({ queryKey: ['/api/meta-agent/tasks/history', { limit: 50 }] });
+    }
   };
 
   const getStatusColor = (status: string) => {

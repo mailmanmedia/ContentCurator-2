@@ -556,7 +556,7 @@ const SMART_TOOLKIT: SmartTool[] = [
     badge: "Pro",
     icon: Palette,
     defaultEnabled: true,
-    impact: "Consistent colour in seconds",
+    impact: "Consistent color in seconds",
   },
   {
     id: "story-assist",
@@ -900,11 +900,39 @@ Story beats: ${(selectedTemplate?.storyBeats.length ?? 0).toString()} segments.`
   };
 
   const handleClipDelete = (clipId: string) => {
+    const clip = clips?.find(c => c.id === clipId);
+    if (!clip) return;
+
     deleteClipMutation.mutate(clipId);
     setHasUnsavedChanges(true);
   };
 
   const handleSplitClip = (clipId: string, atTime: number) => {
+    const clip = clips?.find(c => c.id === clipId);
+    if (!clip) return;
+
+    // Validate split is within clip bounds
+    if (atTime <= clip.startTime || atTime >= clip.startTime + clip.duration) {
+      toast({
+        title: "Invalid Split",
+        description: "Split point must be within clip boundaries",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Minimum clip duration of 0.5 seconds
+    const firstClipDuration = atTime - clip.startTime;
+    const secondClipDuration = clip.duration - firstClipDuration;
+    if (firstClipDuration < 500 || secondClipDuration < 500) {
+      toast({
+        title: "Invalid Split",
+        description: "Resulting clips must be at least 0.5 seconds long",
+        variant: "destructive"
+      });
+      return;
+    }
+
     toast({
       title: "AI split scheduled",
       description: `Smart split at ${Math.round(atTime)}s queued for clip ${clipId}.`,
@@ -1196,7 +1224,7 @@ Story beats: ${(selectedTemplate?.storyBeats.length ?? 0).toString()} segments.`
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Render Queue</CardTitle>
+                  <CardTitle>Render Queue</CardTitle>
                   <CardDescription>Monitor export presets optimised for your blueprint.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

@@ -108,6 +108,22 @@ export class AnalyticsEngine {
   private readonly leagueAvgHAPD = 0.4;
 
   /**
+   * Calculate only specified metrics instead of all 35 formulas
+   * @param metrics - Array of metric names to calculate
+   * @param data - Input data
+   * @returns Object with only requested metrics
+   */
+  calculateSelective(metrics: string[], data: any): Record<string, any> {
+    const results: Record<string, any> = {};
+    for (const metric of metrics) {
+      if (typeof this[metric as keyof this] === 'function') {
+        results[metric] = (this[metric as keyof this] as Function).call(this, data);
+      }
+    }
+    return results;
+  }
+
+  /**
    * SECTION A: MAILMAN BRANDED METRICS
    */
 

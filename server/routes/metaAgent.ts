@@ -26,6 +26,7 @@ interface VerificationStep {
 
 // SSE clients map (using any type for Express Response with SSE methods)
 const sseClients: Map<string, any> = new Map();
+const sseCleanupTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
 interface AgentTask {
   id: string;
@@ -82,8 +83,10 @@ async function restoreActiveTasks() {
   }
 }
 
-// Call on module load
-restoreActiveTasks();
+// Call on module load (non-blocking)
+restoreActiveTasks().catch(error => {
+  console.error('Failed to restore active tasks on startup:', error);
+});
 
 // Helper: Save task to database
 async function saveTaskToDatabase(task: AgentTask) {
@@ -260,14 +263,16 @@ router.post("/execute-task/:taskId", async (req, res) => {
     await saveTaskToDatabase(task);
     
     // Clean up SSE connection after 5 seconds
-    setTimeout(() => {
+    const cleanupTimeout = setTimeout(() => {
       const client = sseClients.get(taskId);
       if (client) {
         client.write(`data: ${JSON.stringify({ type: 'connection_closing' })}\n\n`);
         client.end();
         sseClients.delete(taskId);
       }
+      sseCleanupTimeouts.delete(taskId);
     }, 5000);
+    sseCleanupTimeouts.set(taskId, cleanupTimeout);
 
     res.json({
       success: true,
@@ -438,6 +443,11 @@ router.get("/stream/:taskId", (req, res) => {
   req.on('close', () => {
     sseClients.delete(taskId);
     clearInterval(heartbeat);
+    const cleanupTimeout = sseCleanupTimeouts.get(taskId);
+    if (cleanupTimeout) {
+      clearTimeout(cleanupTimeout);
+      sseCleanupTimeouts.delete(taskId);
+    }
   });
 });
 

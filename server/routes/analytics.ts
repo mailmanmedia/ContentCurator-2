@@ -98,7 +98,7 @@ function aggregateTeamStats(matches: any[]): TeamStats {
   stats.form = formArray.slice(0, 5).join("");
   stats.possession = stats.possession! / matches.length;
   stats.corners = stats.corners! / matches.length;
-  
+
   return stats;
 }
 
@@ -154,11 +154,11 @@ async function getLiveLeagueTable() {
   try {
     const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/football/standings/39/2025`);
     const standingsData = await response.json();
-    
+
     if (!standingsData || !standingsData.standings) {
       throw new Error('Invalid standings data received from API');
     }
-    
+
     const standings = standingsData.standings.map((entry: any) => ({
       position: entry.position,
       team: {
@@ -176,7 +176,7 @@ async function getLiveLeagueTable() {
       points: entry.points,
       form: entry.form || ''
     }));
-    
+
     return { standings };
   } catch (error) {
     console.error('Error fetching live league table from API Football:', error);
@@ -315,7 +315,7 @@ export function registerAnalyticsRoutes(app: Express, storage: IStorage) {
           };
 
           const goalsPer90 = analyticsEngine.calculateGoalsPer90(playerStats);
-          
+
           const minutes90 = playerStats.minutesPlayed / 90;
           const assistsPer90 = {
             value: minutes90 > 0 ? parseFloat((playerStats.assists / minutes90).toFixed(2)) : 0,
@@ -333,7 +333,7 @@ export function registerAnalyticsRoutes(app: Express, storage: IStorage) {
           );
 
           const impactRating = analyticsEngine.calculateImpactRating(playerStats);
-          
+
           const creativityIndex = analyticsEngine.calculateCreativityIndex(playerStats);
 
           return {
@@ -824,7 +824,7 @@ export function registerAnalyticsRoutes(app: Express, storage: IStorage) {
           // Fetch real RSS articles from database
           const recentArticles = await storage.getRecentRssArticles(100);
           const rssSources = await storage.getRssSources();
-          
+
           // Create source credibility map (using verified status as proxy since credibility field doesn't exist yet)
           const sourceCredibilityMap = new Map(
             rssSources.map(source => [source.id, source.isVerified ? 0.9 : 0.7])
@@ -845,7 +845,7 @@ export function registerAnalyticsRoutes(app: Express, storage: IStorage) {
             .map(article => {
               const publishedAt = article.publishedAt ? new Date(article.publishedAt) : new Date();
               const ageInHours = (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60);
-              
+
               return {
                 sentiment: sentimentToNumber(article.sentiment),
                 sourceCredibility: sourceCredibilityMap.get(article.sourceId) ?? 0.7,

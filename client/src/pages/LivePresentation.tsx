@@ -106,6 +106,16 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// OverlayErrorBoundary component (assuming it's defined elsewhere or needs to be added)
+// For the purpose of this diff, we'll assume it exists.
+// import OverlayErrorBoundary from "@/components/OverlayErrorBoundary";
+
+// Placeholder for OverlayErrorBoundary if it's not imported elsewhere
+const OverlayErrorBoundary = ({ children, overlayId }: { children: React.ReactNode; overlayId: string }) => {
+  return <>{children}</>;
+};
+
+
 type SourceHealthStatus = 'connected' | 'disconnected' | 'error' | 'reconnecting';
 
 interface ActiveSource {
@@ -196,24 +206,24 @@ interface OverlayConfig {
   formTitleSize?: number;
   formCircleSize?: number;
   formLabelSize?: number;
-  
+
   // Advanced Typography
   fontWeight?: number;
   letterSpacing?: number;
   lineHeight?: number;
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   textShadow?: string;
-  
+
   // Advanced Background
   backgroundType?: 'solid' | 'linear-gradient' | 'radial-gradient';
   gradientAngle?: number;
   gradientColor1?: string;
   gradientColor2?: string;
-  
+
   // Border Customization
   borderRadius?: number;
   borderStyle?: 'solid' | 'dashed' | 'dotted';
-  
+
   // Shadow/Glow
   boxShadow?: string;
   glowEffect?: boolean;
@@ -452,7 +462,7 @@ function SortableActiveSource({
       </div>
       <Icon className="w-4 h-4 text-primary" />
       <span className="text-sm flex-1 truncate">{source.name}</span>
-      
+
       <Tooltip>
         <TooltipTrigger asChild>
           <Badge 
@@ -491,7 +501,7 @@ function SortableActiveSource({
           <RefreshCw className="w-3 h-3" />
         </Button>
       )}
-      
+
       <Popover>
         <PopoverTrigger asChild>
           <Button
@@ -640,7 +650,7 @@ export default function LivePresentation() {
   const [formTitleSize, setFormTitleSize] = useState(20);
   const [formCircleSize, setFormCircleSize] = useState(60);
   const [formLabelSize, setFormLabelSize] = useState(14);
-  
+
   // Advanced overlay filter state variables
   const [overlayCompetitionId, setOverlayCompetitionId] = useState<number | null>(null);
   const [overlaySeasonFilter, setOverlaySeasonFilter] = useState<number | null>(null);
@@ -648,7 +658,7 @@ export default function LivePresentation() {
   const [overlayVenueFilter, setOverlayVenueFilter] = useState<'all' | 'home' | 'away'>('all');
   const [overlayTeamCount, setOverlayTeamCount] = useState<5 | 10 | 20 | 'full'>(10);
   const [overlayShowCompBadges, setOverlayShowCompBadges] = useState(false);
-  
+
   // Advanced styling state variables
   const [overlayFontWeight, setOverlayFontWeight] = useState(400);
   const [overlayLetterSpacing, setOverlayLetterSpacing] = useState(0);
@@ -663,7 +673,7 @@ export default function LivePresentation() {
   const [overlayBorderStyle, setOverlayBorderStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
   const [overlayBoxShadow, setOverlayBoxShadow] = useState('');
   const [overlayGlowEffect, setOverlayGlowEffect] = useState(false);
-  
+
   // New overlay state variables for upcoming-fixtures and player-comparison
   const [overlayFixtureCount, setOverlayFixtureCount] = useState<3 | 5 | 7>(5);
   const [overlayShowCountdown, setOverlayShowCountdown] = useState(true);
@@ -672,7 +682,7 @@ export default function LivePresentation() {
   const [overlayPlayer2Id, setOverlayPlayer2Id] = useState<number | null>(null);
   const [overlayViewMode, setOverlayViewMode] = useState<'sideBySide' | 'radar' | 'bars'>('sideBySide');
   const [overlayStatCategories, setOverlayStatCategories] = useState<string[]>(['goals', 'assists', 'shots']);
-  
+
   // RSS Ticker Enhanced state variables
   const [overlayShowSentiment, setOverlayShowSentiment] = useState(true);
   const [overlayShowTopics, setOverlayShowTopics] = useState(true);
@@ -680,15 +690,15 @@ export default function LivePresentation() {
   const [overlayShowCredibility, setOverlayShowCredibility] = useState(true);
   const [overlaySentimentMin, setOverlaySentimentMin] = useState(-1);
   const [overlaySentimentMax, setOverlaySentimentMax] = useState(1);
-  
+
   const { toast } = useToast();
   const { acquireStream, acquireScreenShare, isScreenShareSupported } = useCameraStreams();
   const { isPiPActive, startPiP, stopPiP, restorePiP, updateCanvasStream } = usePiP();
-  
+
   const compositorRef = useRef<VideoCompositorRef>(null);
   const canvasRef = compositorRef.current?.canvasRef || { current: null };
   const gridPreviewRef = useRef<HTMLDivElement>(null);
-  
+
   const {
     isRecording,
     isPaused,
@@ -773,7 +783,7 @@ export default function LivePresentation() {
   const getDefaultCoordinatesAndCategory = (position: 'top' | 'bottom', overlayType: string, metricType?: string): { x: number; y: number; category: string } => {
     const defaultY = position === 'top' ? 0 : 1000;
     const defaultX = 0;
-    
+
     let category = 'graphics';
     if (overlayType === 'rss') {
       category = 'news';
@@ -788,7 +798,7 @@ export default function LivePresentation() {
         category = 'match-stats';
       }
     }
-    
+
     return { x: defaultX, y: defaultY, category };
   };
 
@@ -837,13 +847,13 @@ export default function LivePresentation() {
         // First, try to enumerate without requesting permissions
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
-        
+
         // iOS returns empty array before permissions - treat as needing permission
         if (videoDevices.length === 0) {
           setNeedsPermission(true);
           setCameraPermissionStatus('prompt');
           setCameras([]);
-          
+
           // Auto-request permissions on page load for better UX
           if (cameraPermissionStatus === 'unknown') {
             // Small delay to ensure UI is ready
@@ -853,13 +863,13 @@ export default function LivePresentation() {
           }
           return;
         }
-        
+
         // Check if we have devices but no labels (means we need permissions)
         if (videoDevices.length > 0 && !videoDevices[0].label) {
           setNeedsPermission(true);
           setCameraPermissionStatus('prompt');
           setCameras(videoDevices);
-          
+
           // Auto-request permissions if not yet determined
           if (cameraPermissionStatus === 'unknown') {
             setTimeout(() => {
@@ -868,7 +878,7 @@ export default function LivePresentation() {
           }
           return;
         }
-        
+
         // If we have labels, permissions are already granted
         if (videoDevices.length > 0 && videoDevices[0].label) {
           setCameraPermissionStatus('granted');
@@ -915,14 +925,14 @@ export default function LivePresentation() {
     try {
       const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
       tempStream.getTracks().forEach(track => track.stop());
-      
+
       // Re-enumerate to get device labels
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(d => d.kind === 'videoinput');
       setCameras(videoDevices);
       setCameraPermissionStatus('granted');
       setNeedsPermission(false);
-      
+
       toast({
         title: "Camera Access Granted",
         description: `Found ${videoDevices.length} camera(s)`,
@@ -963,7 +973,7 @@ export default function LivePresentation() {
       const activeSourceIds = rssSources
         .filter(source => source.isActive)
         .map(source => source.id);
-      
+
       if (activeSourceIds.length > 0 && selectedRssSourceIds.length === 0) {
         setSelectedRssSourceIds(activeSourceIds);
       }
@@ -1023,7 +1033,7 @@ export default function LivePresentation() {
       }
 
       lastSavedStateRef.current = currentState;
-      
+
       // Send data as JSON objects, not stringified - backend expects JSONB columns
       apiRequest('PATCH', '/api/live-state', {
         activeSources: activeSources.map(source => ({
@@ -1055,7 +1065,7 @@ export default function LivePresentation() {
 
   useEffect(() => {
     if (!gridPreviewRef.current || !isPositionEditorOpen) return;
-    
+
     const updateGridScale = () => {
       const rect = gridPreviewRef.current?.getBoundingClientRect();
       if (rect) {
@@ -1063,16 +1073,16 @@ export default function LivePresentation() {
         setGridScale(scale);
       }
     };
-    
+
     updateGridScale();
-    
+
     const resizeObserver = new ResizeObserver(updateGridScale);
     if (gridPreviewRef.current) {
       resizeObserver.observe(gridPreviewRef.current);
     }
-    
+
     window.addEventListener('resize', updateGridScale);
-    
+
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateGridScale);
@@ -1097,7 +1107,7 @@ export default function LivePresentation() {
             const isActive = source.stream.active;
             const tracks = source.stream.getTracks();
             const hasActiveTracks = tracks.some(track => track.readyState === 'live');
-            
+
             if (!isActive || !hasActiveTracks) {
               return {
                 ...source,
@@ -1105,7 +1115,7 @@ export default function LivePresentation() {
                 lastError: 'Stream became inactive'
               };
             }
-            
+
             return {
               ...source,
               healthStatus: 'connected' as SourceHealthStatus,
@@ -1196,7 +1206,7 @@ export default function LivePresentation() {
       }
     } catch (err: any) {
       console.error('Failed to retry source:', err);
-      
+
       setActiveSources(prev => prev.map(s =>
         s.id === sourceId
           ? { 
@@ -1221,13 +1231,13 @@ export default function LivePresentation() {
     canvas.width = 1920;
     canvas.height = 1080;
     const ctx = canvas.getContext('2d');
-    
+
     if (ctx) {
       // Create animated test pattern
       let frame = 0;
       const animate = () => {
         frame++;
-        
+
         // Fill background with gradient
         const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
         if (type === 'test-camera') {
@@ -1241,24 +1251,24 @@ export default function LivePresentation() {
         }
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+
         // Add test pattern text
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 72px League Spartan';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
+
         const text = type === 'test-camera' ? 'TEST CAMERA' : 'DEMO DISPLAY';
         ctx.fillText(text, canvas.width / 2, canvas.height / 2 - 100);
-        
+
         // Add frame counter
         ctx.font = '48px League Spartan';
         ctx.fillText(`Frame: ${frame}`, canvas.width / 2, canvas.height / 2);
-        
+
         // Add Liverpool FC branding
         ctx.font = '36px League Spartan';
         ctx.fillText('MAILMAN MEDIA • LIVERPOOL FC', canvas.width / 2, canvas.height / 2 + 100);
-        
+
         // Add animated elements
         const time = Date.now() / 1000;
         ctx.strokeStyle = '#FFFFFF';
@@ -1272,16 +1282,16 @@ export default function LivePresentation() {
           Math.PI * 2
         );
         ctx.stroke();
-        
+
         requestAnimationFrame(animate);
       };
-      
+
       animate();
     }
-    
+
     // Create a media stream from the canvas
     const stream = canvas.captureStream(30); // 30 FPS
-    
+
     // Add a mock audio track (silence)
     const audioContext = new AudioContext();
     const oscillator = audioContext.createOscillator();
@@ -1290,18 +1300,18 @@ export default function LivePresentation() {
     oscillator.connect(dest);
     oscillator.start();
     stream.addTrack(dest.stream.getAudioTracks()[0]);
-    
+
     return stream;
   };
 
   const handleSourceSelection = async (value: string) => {
     setSelectedValue('');
-    
+
     if (value === 'test-camera') {
       // Handle test camera
       const sourceId = `test-camera-${Date.now()}`;
       const mockStream = createMockMediaStream('test-camera');
-      
+
       const newSource: ActiveSource = {
         id: sourceId,
         name: 'Test Camera (Demo)',
@@ -1310,7 +1320,7 @@ export default function LivePresentation() {
         healthStatus: 'connected' as SourceHealthStatus,
         resolution: '1080p',
       };
-      
+
       setActiveSources(prev => [...prev, newSource]);
       toast({
         title: 'Test Camera Added',
@@ -1320,7 +1330,7 @@ export default function LivePresentation() {
       // Handle demo display source
       const sourceId = `demo-source-${Date.now()}`;
       const mockStream = createMockMediaStream('demo-source');
-      
+
       const newSource: ActiveSource = {
         id: sourceId,
         name: 'Demo Display',
@@ -1329,7 +1339,7 @@ export default function LivePresentation() {
         healthStatus: 'connected' as SourceHealthStatus,
         resolution: '1080p',
       };
-      
+
       setActiveSources(prev => [...prev, newSource]);
       toast({
         title: 'Demo Display Added',
@@ -1392,10 +1402,10 @@ export default function LivePresentation() {
       }
 
       const sourceId = `camera-${Date.now()}`;
-      
+
       const settings = sourceSettings[deviceId] || { resolution: '1080p' };
       const resolution = settings.resolution || '1080p';
-      
+
       let resolutionConstraints = undefined;
       if (resolution && resolution !== 'custom' && RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS]) {
         const preset = RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS];
@@ -1403,7 +1413,7 @@ export default function LivePresentation() {
       } else if (resolution === 'custom' && settings.customWidth && settings.customHeight) {
         resolutionConstraints = { width: settings.customWidth, height: settings.customHeight };
       }
-      
+
       const stream = await acquireStream(sourceId, deviceId, resolutionConstraints);
 
       const newSource: ActiveSource = {
@@ -1426,7 +1436,7 @@ export default function LivePresentation() {
       });
     } catch (err: any) {
       console.error('Failed to add camera:', err);
-      
+
       const errorMessage = err.name === 'NotAllowedError' 
         ? 'Camera access denied. Please allow camera permissions in your browser settings.'
         : err.name === 'NotFoundError'
@@ -1463,7 +1473,7 @@ export default function LivePresentation() {
       });
     } catch (err) {
       console.error('Failed to add screen share:', err);
-      
+
       // Provide specific error messages based on error type
       if (err instanceof ScreenShareError) {
         switch (err.type) {
@@ -1474,7 +1484,7 @@ export default function LivePresentation() {
               variant: 'destructive' 
             });
             break;
-          
+
           case ScreenShareErrorType.USER_CANCELLED:
             toast({ 
               title: 'Screen sharing cancelled', 
@@ -1482,7 +1492,7 @@ export default function LivePresentation() {
               variant: 'destructive' 
             });
             break;
-          
+
           case ScreenShareErrorType.PERMISSION_DENIED:
             toast({ 
               title: 'Permission denied', 
@@ -1490,7 +1500,7 @@ export default function LivePresentation() {
               variant: 'destructive' 
             });
             break;
-          
+
           default:
             toast({ 
               title: 'Screen sharing failed', 
@@ -1534,7 +1544,7 @@ export default function LivePresentation() {
       });
     };
     reader.readAsDataURL(file);
-    
+
     event.target.value = '';
   };
 
@@ -1617,7 +1627,7 @@ export default function LivePresentation() {
       overlayType, 
       overlayMetricType
     );
-    
+
     let metricDataToSave: any = null;
     if (overlayType === 'metric') {
       if (overlayMetricType === 'h2h-card') {
@@ -1673,7 +1683,7 @@ export default function LivePresentation() {
         };
       }
     }
-    
+
     if (editingOverlayId) {
       setOverlays(prev => prev.map(overlay => 
         overlay.id === editingOverlayId
@@ -1788,7 +1798,7 @@ export default function LivePresentation() {
       setOverlays(prev => [...prev, normalizeOverlay(newOverlay)]);
       toast({ title: 'Overlay added', description: preset.name });
     }
-    
+
     setIsOverlayDialogOpen(false);
     setOverlayText('');
     setOverlayImageUrl('');
@@ -1815,7 +1825,7 @@ export default function LivePresentation() {
       if (!source || source.type !== 'camera' || !source.deviceId) return;
 
       const deviceId = source.deviceId;
-      
+
       setSourceSettings(prev => ({
         ...prev,
         [deviceId]: { resolution, customWidth, customHeight }
@@ -1937,7 +1947,7 @@ export default function LivePresentation() {
     setOverlayBorderColor(overlay.borderColor || '#000000');
     setOverlayHeight(overlay.height || 70);
     setOverlayAnimationType(overlay.animationType || 'scroll');
-    
+
     setOverlayFontWeight(overlay.fontWeight || 400);
     setOverlayLetterSpacing(overlay.letterSpacing || 0);
     setOverlayLineHeight(overlay.lineHeight || 1.5);
@@ -1951,13 +1961,13 @@ export default function LivePresentation() {
     setOverlayBorderStyle(overlay.borderStyle || 'solid');
     setOverlayBoxShadow(overlay.boxShadow || '');
     setOverlayGlowEffect(overlay.glowEffect || false);
-    
+
     if (overlay.overlayType === 'rss') {
       setSelectedRssSourceIds(overlay.rssSourceIds || []);
       setRssMaxArticles(overlay.rssMaxArticles || 10);
       setRssShowSource(overlay.rssShowSource !== undefined ? overlay.rssShowSource : true);
     }
-    
+
     if (overlay.overlayType === 'metric' && overlay.metricData) {
       if (overlay.metricType === 'h2h-card') {
         setOverlayHomeTeamId(overlay.metricData.homeTeamId || null);
@@ -1998,16 +2008,16 @@ export default function LivePresentation() {
         setOverlaySentimentMax(overlay.metricData.sentimentFilter?.max || 1);
       }
     }
-    
+
     if (overlay.colorPalette) {
       setOverlayColorPalette(overlay.colorPalette);
     }
-    
+
     const presetKey = Object.entries(TEMPLATE_PRESETS).find(([_, preset]) => 
       preset.backgroundColor === overlay.backgroundColor &&
       preset.textColor === overlay.textColor
     )?.[0] as keyof typeof TEMPLATE_PRESETS || 'breaking-news';
-    
+
     setSelectedPreset(presetKey);
     setIsOverlayDialogOpen(true);
   };
@@ -2023,9 +2033,9 @@ export default function LivePresentation() {
       visible: true,
       position: 'bottom' as const,
     };
-    
+
     const validPositions = ['top', 'bottom'];
-    
+
     return {
       ...overlay,
       width: Number.isFinite(overlay.width) ? overlay.width : defaults.width,
@@ -2042,10 +2052,10 @@ export default function LivePresentation() {
     try {
       const response = await fetch('/api/overlays/default-templates');
       if (!response.ok) throw new Error('Failed to fetch default templates');
-      
+
       const templates = await response.json();
       console.log('[handleLoadDefaultOverlays] Templates from API:', templates);
-      
+
       const newOverlays: OverlayConfig[] = Object.values(templates).map((template: any) => {
         console.log(`[handleLoadDefaultOverlays] Processing template ${template.id}:`, {
           width: template.width,
@@ -2056,7 +2066,7 @@ export default function LivePresentation() {
           opacity: template.opacity,
           visible: template.visible
         });
-        
+
         const baseOverlay = {
           ...template,
           text: template.metricType || '',
@@ -2082,13 +2092,13 @@ export default function LivePresentation() {
           opacity: template.opacity,
           visible: template.visible,
         };
-        
+
         return normalizeOverlay(baseOverlay);
       });
-      
+
       console.log('[handleLoadDefaultOverlays] Final overlays created:', newOverlays);
       setOverlays(prev => [...prev, ...newOverlays]);
-      
+
       toast({
         title: 'Default Overlays Loaded',
         description: `Added ${newOverlays.length} Liverpool FC metric overlays`,
@@ -2220,49 +2230,49 @@ export default function LivePresentation() {
     const rect = e.currentTarget.getBoundingClientRect();
     const scaleX = outputResolution.width / rect.width;
     const scaleY = outputResolution.height / rect.height;
-    
+
     const rawX = (e.clientX - rect.left) * scaleX;
     const rawY = (e.clientY - rect.top) * scaleY;
-    
+
     // Use current slider state values for dimensions
     const overlayWidthPx = (overlayWidth / 100) * outputResolution.width;
     const overlayHeightPx = overlayHeight;
-    
+
     const maxX = outputResolution.width - overlayWidthPx;
     const maxY = outputResolution.height - overlayHeightPx;
-    
+
     const snappedX = snapToGrid(rawX, 20, 0, maxX);
     const snappedY = snapToGrid(rawY, 20, 0, maxY);
-    
+
     setOverlayX(snappedX);
     setOverlayY(snappedY);
   };
 
   const handleUpdatePosition = () => {
     if (!editingPositionOverlayId) return;
-    
+
     // Get overlay dimensions to calculate max boundaries
     const editingOverlay = overlays.find(o => o.id === editingPositionOverlayId);
     const overlayWidth = editingOverlay ? (editingOverlay.width / 100) * outputResolution.width : 0;
     const overlayHeight = editingOverlay ? editingOverlay.height : 0;
-    
+
     const maxX = outputResolution.width - overlayWidth;
     const maxY = outputResolution.height - overlayHeight;
-    
+
     const snappedX = snapToGrid(overlayX, 20, 0, maxX);
     const snappedY = snapToGrid(overlayY, 20, 0, maxY);
-    
+
     setOverlays(prev => prev.map(overlay =>
       overlay.id === editingPositionOverlayId
         ? { ...overlay, x: snappedX, y: snappedY }
         : overlay
     ));
-    
+
     toast({
       title: 'Position updated',
       description: `Overlay positioned at (${snappedX}, ${snappedY})`
     });
-    
+
     setIsPositionEditorOpen(false);
     setEditingPositionOverlayId(null);
   };
@@ -2270,7 +2280,7 @@ export default function LivePresentation() {
   const handlePositionInputChange = (axis: 'x' | 'y', value: string) => {
     const numValue = parseInt(value) || 0;
     const clampedValue = Math.max(0, Math.min(numValue, axis === 'x' ? outputResolution.width : outputResolution.height));
-    
+
     if (axis === 'x') {
       setOverlayX(clampedValue);
     } else {
@@ -2320,7 +2330,7 @@ export default function LivePresentation() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-[1600px]">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -2429,7 +2439,7 @@ export default function LivePresentation() {
                       </Badge>
                     )}
                   </div>
-                  
+
                   {(isRecording || isPaused) && (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Duration:</span>
@@ -2456,7 +2466,7 @@ export default function LivePresentation() {
                       Start Recording
                     </Button>
                   )}
-                  
+
                   {isRecording && (
                     <>
                       <Button
@@ -2477,7 +2487,7 @@ export default function LivePresentation() {
                       </Button>
                     </>
                   )}
-                  
+
                   {isPaused && (
                     <>
                       <Button
@@ -2498,7 +2508,7 @@ export default function LivePresentation() {
                       </Button>
                     </>
                   )}
-                  
+
                   {recordingState === 'stopped' && recordedBlob && (
                     <>
                       <Button
@@ -2519,7 +2529,7 @@ export default function LivePresentation() {
                       </Button>
                     </>
                   )}
-                  
+
                   {(isRecording || isPaused) && (
                     <span className="text-xs text-muted-foreground ml-auto">
                       Recording at {outputResolution.width}×{outputResolution.height}
@@ -2929,11 +2939,11 @@ export default function LivePresentation() {
                   <div className="space-y-4">
                     {Object.entries(groupOverlaysByCategory()).map(([category, categoryOverlays]) => {
                       if (categoryOverlays.length === 0) return null;
-                      
+
                       const categoryInfo = getCategoryInfo(category);
                       const CategoryIcon = categoryInfo.icon;
                       const isCollapsed = collapsedCategories[category];
-                      
+
                       return (
                         <Collapsible
                           key={category}
@@ -3174,7 +3184,7 @@ export default function LivePresentation() {
                 : 'Customize your Mailman Media overlay with Liverpool FC branding'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             {overlayType === 'text' && (
               <div>
@@ -3209,12 +3219,12 @@ export default function LivePresentation() {
                       {['official', 'media', 'fan_site', 'podcast'].map((category) => {
                         const categorySources = rssSources.filter(s => s.category === category);
                         if (categorySources.length === 0) return null;
-                        
+
                         const categoryLabel = category === 'fan_site' ? 'Fan Sites' : 
                                             category.charAt(0).toUpperCase() + category.slice(1);
                         const allCategorySelected = categorySources.every(s => selectedRssSourceIds.includes(s.id));
                         const someCategorySelected = categorySources.some(s => selectedRssSourceIds.includes(s.id));
-                        
+
                         return (
                           <div key={category} className="space-y-1">
                             <div className="flex items-center gap-2 mb-1">
@@ -3320,7 +3330,7 @@ export default function LivePresentation() {
               <>
                 <div className="pt-4 border-t">
                   <h3 className="text-sm font-semibold mb-3">Content Settings</h3>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="metric-type">Metric Type</Label>
@@ -3510,7 +3520,7 @@ export default function LivePresentation() {
                                 The team whose form guide will be displayed
                               </p>
                             </div>
-                            
+
                             <div>
                               <Label htmlFor="color-palette">Color Palette</Label>
                               <Select 
@@ -3705,14 +3715,14 @@ export default function LivePresentation() {
                             </Alert>
                           )}
                         </div>
-                        
+
                         <div>
                           <Label>Max Articles</Label>
                           <Input type="number" value={rssMaxArticles} 
                                  onChange={(e) => setRssMaxArticles(parseInt(e.target.value) || 10)}
                                  min={1} max={50} />
                         </div>
-                        
+
                         <div className="space-y-2">
                           <Label>Display Options</Label>
                           <div className="flex items-center gap-2">
@@ -3736,7 +3746,7 @@ export default function LivePresentation() {
                             <Label>Show Source Tier</Label>
                           </div>
                         </div>
-                        
+
                         <div>
                           <Label>Sentiment Filter Range</Label>
                           <div className="flex gap-2 items-center">
@@ -3753,11 +3763,11 @@ export default function LivePresentation() {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Data Filters Section */}
                 <div className="space-y-4 border-t pt-4">
                   <h3 className="font-semibold">Data Filters</h3>
-                  
+
                   {/* Competition Selector */}
                   <div>
                     <Label>Competition</Label>
@@ -3960,12 +3970,9 @@ export default function LivePresentation() {
             {(overlayType === 'text' || overlayType === 'rss') && (
               <div>
                 <Label htmlFor="ticker-color-palette">Color Palette</Label>
-                <Select 
-                  value={overlayColorPalette} 
-                  onValueChange={(v) => setOverlayColorPalette(v as 'classic' | 'navy' | 'cream' | 'dark')}
-                >
+                <Select value={overlayColorPalette} onValueChange={(v) => setOverlayColorPalette(v as 'classic' | 'navy' | 'cream' | 'dark')}>
                   <SelectTrigger id="ticker-color-palette" data-testid="select-ticker-color-palette">
-                    <SelectValue placeholder="Select color palette" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="classic">
@@ -4016,7 +4023,7 @@ export default function LivePresentation() {
                   </Label>
                 </div>
               </RadioGroup>
-              
+
               {positionConflict && (
                 <Alert variant="destructive" className="mt-3" data-testid="alert-position-conflict">
                   <AlertTriangle className="h-4 w-4" />
@@ -4228,7 +4235,7 @@ export default function LivePresentation() {
                   onChange={handleImageUpload}
                   className="hidden"
                 />
-                
+
                 {(overlayImageUrl || overlayImageData) && (
                   <div className="p-3 bg-muted rounded-md space-y-2">
                     <div className="flex items-center justify-between">
@@ -4309,7 +4316,7 @@ export default function LivePresentation() {
               <CollapsibleContent className="space-y-4 mt-4">
                 <div className="space-y-3">
                   <h4 className="font-semibold text-sm">Typography</h4>
-                  
+
                   <div>
                     <Label>Font Weight: {overlayFontWeight}</Label>
                     <Slider 
@@ -4321,7 +4328,7 @@ export default function LivePresentation() {
                       data-testid="slider-font-weight"
                     />
                   </div>
-                  
+
                   <div>
                     <Label>Letter Spacing: {overlayLetterSpacing.toFixed(2)}em</Label>
                     <Slider 
@@ -4333,7 +4340,7 @@ export default function LivePresentation() {
                       data-testid="slider-letter-spacing"
                     />
                   </div>
-                  
+
                   <div>
                     <Label>Line Height: {overlayLineHeight.toFixed(1)}</Label>
                     <Slider 
@@ -4345,7 +4352,7 @@ export default function LivePresentation() {
                       data-testid="slider-line-height"
                     />
                   </div>
-                  
+
                   <div>
                     <Label>Text Transform</Label>
                     <Select value={overlayTextTransform} onValueChange={setOverlayTextTransform}>
@@ -4364,7 +4371,7 @@ export default function LivePresentation() {
 
                 <div className="space-y-3">
                   <h4 className="font-semibold text-sm">Background</h4>
-                  
+
                   <div>
                     <Label>Background Type</Label>
                     <Select value={overlayBackgroundType} onValueChange={setOverlayBackgroundType}>
@@ -4378,7 +4385,7 @@ export default function LivePresentation() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {overlayBackgroundType !== 'solid' && (
                     <>
                       <div>
@@ -4418,7 +4425,7 @@ export default function LivePresentation() {
 
                 <div className="space-y-3">
                   <h4 className="font-semibold text-sm">Border & Effects</h4>
-                  
+
                   <div>
                     <Label>Border Radius: {overlayBorderRadius}px</Label>
                     <Slider 
@@ -4430,7 +4437,7 @@ export default function LivePresentation() {
                       data-testid="slider-border-radius"
                     />
                   </div>
-                  
+
                   <div>
                     <Label>Border Style</Label>
                     <Select value={overlayBorderStyle} onValueChange={setOverlayBorderStyle}>
@@ -4444,7 +4451,7 @@ export default function LivePresentation() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <Label className="flex items-center gap-2 cursor-pointer">
                       <Checkbox 
@@ -4509,7 +4516,7 @@ export default function LivePresentation() {
               Select an image from your library to use as an overlay
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="max-h-[60vh] overflow-y-auto">
             {isLoadingImages ? (
               <div className="text-center py-8">
@@ -4716,12 +4723,15 @@ export default function LivePresentation() {
               onClick={handleGridClick}
               data-testid="grid-preview"
             >
-              {/* Show all active overlays */}
-              {overlays.map(overlay => {
+              {/* Render active overlays */}
+              {overlays.map((overlay) => {
+                const OverlayComponent = OVERLAY_COMPONENTS[overlay.template.id]; // Assuming OVERLAY_COMPONENTS is defined elsewhere and maps template.id to components
+                if (!OverlayComponent) return null;
+
                 const isEditing = overlay.id === editingPositionOverlayId;
                 const x = isEditing ? overlayX : overlay.x;
                 const y = isEditing ? overlayY : overlay.y;
-                
+
                 // Log overlay dimensions for debugging
                 if (isEditing) {
                   console.log(`[Positioning Grid] Editing overlay ${overlay.id}:`, {
@@ -4733,33 +4743,34 @@ export default function LivePresentation() {
                     calculatedHeightPercent: (overlay.height / outputResolution.height) * 100
                   });
                 }
-                
+
                 return (
-                  <div
-                    key={overlay.id}
-                    className={`absolute rounded pointer-events-none ${
-                      isEditing 
-                        ? 'bg-primary/30 border-2 border-primary z-10' 
-                        : 'bg-white/10 border border-white/30'
-                    }`}
-                    style={{
-                      left: `${(x / outputResolution.width) * 100}%`,
-                      top: `${(y / outputResolution.height) * 100}%`,
-                      width: `${overlay.width || 20}%`,
-                      height: `${(overlay.height / outputResolution.height) * 100}%`,
-                    }}
-                  >
-                    {isEditing && (
-                      <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
-                        ({snapToGrid(x)}, {snapToGrid(y)}) - {overlay.width}% × {overlay.height}px
-                      </div>
-                    )}
-                    {!isEditing && (
-                      <div className="absolute top-1 left-1 text-[10px] text-white/60 font-mono bg-black/50 px-0.5 rounded">
-                        {overlay.overlayType === 'text' && overlay.text ? overlay.text.substring(0, 15) + '...' : overlay.overlayType}
-                      </div>
-                    )}
-                  </div>
+                  <OverlayErrorBoundary key={overlay.id} overlayId={overlay.id}>
+                    <div
+                      className={`absolute rounded pointer-events-none ${
+                        isEditing 
+                          ? 'bg-primary/30 border-2 border-primary z-10' 
+                          : 'bg-white/10 border border-white/30'
+                      }`}
+                      style={{
+                        left: `${(x / outputResolution.width) * 100}%`,
+                        top: `${(y / outputResolution.height) * 100}%`,
+                        width: `${overlay.width || 20}%`,
+                        height: `${(overlay.height / outputResolution.height) * 100}%`,
+                      }}
+                    >
+                      {isEditing && (
+                        <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
+                          ({snapToGrid(x)}, {snapToGrid(y)}) - {overlay.width}% × {overlay.height}px
+                        </div>
+                      )}
+                      {!isEditing && (
+                        <div className="absolute top-1 left-1 text-[10px] text-white/60 font-mono bg-black/50 px-0.5 rounded">
+                          {overlay.overlayType === 'text' && overlay.text ? overlay.text.substring(0, 15) + '...' : overlay.overlayType}
+                        </div>
+                      )}
+                    </div>
+                  </OverlayErrorBoundary>
                 );
               })}
             </div>

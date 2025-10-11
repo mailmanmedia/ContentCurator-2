@@ -46,7 +46,25 @@ export class RssService {
 
       console.log(`Fetching RSS feed from: ${source.feedUrl}`);
       
-      const feed = await this.parser.parseURL(source.feedUrl);
+      // Retry logic for network failures
+      let feed;
+      let lastError;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          feed = await this.parser.parseURL(source.feedUrl);
+          break;
+        } catch (error) {
+          lastError = error;
+          console.warn(`RSS fetch attempt ${attempt}/3 failed for ${source.name}:`, error);
+          if (attempt < 3) {
+            await this.delay(1000 * attempt); // Exponential backoff
+          }
+        }
+      }
+      
+      if (!feed) {
+        throw lastError || new Error('Failed to fetch RSS feed after 3 attempts');
+      }
       
       if (!feed.items) {
         return { success: false, articlesAdded: 0, error: 'No items found in feed' };

@@ -119,9 +119,9 @@ export default function FormGuideOverlay({
     error: statsError,
     refetch: refetchStats
   } = useQuery({
-    queryKey: ['database-team-stats', teamId, leagueId, season],
+    queryKey: ['database-team-stats', teamId, leagueId],
     queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}&season=${season}`);
+      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}`);
       if (!response.ok) throw new Error('Failed to fetch team stats');
       return response.json();
     },
@@ -138,9 +138,9 @@ export default function FormGuideOverlay({
     error: fixturesError,
     refetch: refetchFixtures
   } = useQuery({
-    queryKey: ['database-team-fixtures', teamId, matchLimit, season],
+    queryKey: ['database-team-fixtures', teamId, matchLimit],
     queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}&season=${season}`);
+      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}`);
       if (!response.ok) throw new Error('Failed to fetch fixtures');
       return response.json();
     },
@@ -315,13 +315,16 @@ export default function FormGuideOverlay({
   const isMini = width < 240 || height < 150;
   const isStacked = layout === "vertical" || isCompact;
 
-  // More aggressive scaling for small sizes
-  const circlePx = px(isMini ? 24 : isVeryCompact ? 32 : isCompact ? 40 : circleSize);
-  const titlePx = px(isMini ? 12 : isVeryCompact ? 14 : titleSize);
-  const subtitlePx = px(isMini ? 10 : isVeryCompact ? 11 : 14);
-  const labelPx = px(isMini ? 8 : isVeryCompact ? 9 : labelSize);
-  const textPx = px(isMini ? 9 : isVeryCompact ? 10 : 13);
-  const smallTextPx = px(isMini ? 7 : isVeryCompact ? 8 : 11);
+  // More aggressive scaling for small sizes with minimum readable sizes
+  const circlePx = Math.max(px(isMini ? 20 : isVeryCompact ? 28 : isCompact ? 36 : circleSize), 20);
+  const titlePx = Math.max(px(isMini ? 11 : isVeryCompact ? 13 : titleSize), 11);
+  const subtitlePx = Math.max(px(isMini ? 9 : isVeryCompact ? 10 : 13), 9);
+  const labelPx = Math.max(px(isMini ? 7 : isVeryCompact ? 8 : labelSize), 7);
+  const textPx = Math.max(px(isMini ? 8 : isVeryCompact ? 9 : 12), 8);
+  const smallTextPx = Math.max(px(isMini ? 6 : isVeryCompact ? 7 : 10), 6);
+  
+  // Limit matches shown at small sizes
+  const maxMatchesShown = isMini ? 2 : isVeryCompact ? 3 : matchLimit;
 
   // More aggressive padding reduction at small sizes
   const spacing = px(isMini ? 4 : isVeryCompact ? 6 : isCompact ? 10 : 16);
