@@ -6704,22 +6704,12 @@ Return ONLY a JSON object with this structure:
     }
   });
 
-  registerAnalyticsRoutes(app, storage);
-  registerMetaAgentRoutes(app); // Register Meta-Agent routes
-
-  const httpServer = createServer(app);
-
-  return httpServer;
-}
-</original>
-<changes>
-Register Meta-Agent routes
-Replacing
-<old_str>
-import analyticsRoutes from "./routes/analytics";
+  import analyticsRoutes from "./routes/analytics";
+import metaAgentRoutes from "./routes/metaAgent";
 
 export function registerRoutes(app: Express) {
   app.use("/api/analytics", analyticsRoutes);
+  app.use("/api/meta-agent", metaAgentRoutes);
 </old_str>
 with
 <new_str>
