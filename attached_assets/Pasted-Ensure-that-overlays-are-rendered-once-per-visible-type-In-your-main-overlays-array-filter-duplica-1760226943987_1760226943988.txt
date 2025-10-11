@@ -1,0 +1,54 @@
+Ensure that overlays are rendered once per visible type. In your main overlays array, filter duplicates or check that only one instance of each overlay type or ID exists at a time.
+
+B. Clean Up Overlay Exit Animations
+In your <motion.div>, add the exit prop:
+
+jsx
+<motion.div
+  initial={{ opacity: 0, scale: 0.9 }}
+  animate={{ opacity: 1, scale: 1 }}
+  exit={{ opacity: 0, scale: 0.97, filter: "blur(2px)" }}
+  transition={{ duration: 0.25 }}
+  ...
+>
+Ensure overlays are actually removed from React state so the exit transition can cleanly finish and unmount the component.
+
+C. Overlay Z-Index and Layering
+Explicitly set a zIndex on your overlay container:
+
+jsx
+style={{
+  zIndex: 1000, // large enough to always be on top if stacking overlays
+  ...
+}}
+Avoid placing overlays inside a stacking context where backgrounds or parents have lower z-index or transparency.
+
+3. Fixing Placement and Snap-To-Grid Bugs (from Audit)
+Overlay position bounding: Make sure your snap-to-grid logic constrains overlays so they cannot be dragged or programmatically placed outside of the presentation/canvas area.
+
+Use a “constrain position” function before saving or setting overlay coordinates.
+
+Example (pseudo-JS):
+
+js
+function constrainPosition(x, y, width, height, canvasWidth, canvasHeight) {
+  return [
+    Math.max(0, Math.min(x, canvasWidth - width)),
+    Math.max(0, Math.min(y, canvasHeight - height))
+  ];
+}
+And apply before updating overlay positions.
+
+What You Should Do Next
+Inspect the overlays rendering logic: Ensure only one FormGuideOverlay is mounted for a given state/location.
+
+Add or update the exit property on the main motion.div in FormGuideOverlay.
+
+Verify overlays state cleanup: Make sure overlays are fully unmounted on close/hide/remove.
+
+Update snap-to-grid to keep overlays inside the safe presentation area. Use the constrain function when setting overlay positions.
+
+In Summary
+Ghost overlays happen because of either duplicate React mounts, slow/unremoved exit animations, or bad stacking.
+
+To fix: de-duplicate overlays, fully unmount on remove, provide an exit prop to Framer Motion, and constrain overlay positions at the grid logic layer.
