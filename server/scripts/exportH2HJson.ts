@@ -102,12 +102,12 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
       .where(
         or(
           and(
-            eq(footballFixtures.homeTeamId, liverpoolId),
-            eq(footballFixtures.awayTeamId, opponentId)
+            eq(footballFixtures.home_team_id, liverpoolId),
+            eq(footballFixtures.away_team_id, opponentId)
           ),
           and(
-            eq(footballFixtures.homeTeamId, opponentId),
-            eq(footballFixtures.awayTeamId, liverpoolId)
+            eq(footballFixtures.home_team_id, opponentId),
+            eq(footballFixtures.away_team_id, liverpoolId)
           )
         )
       )
@@ -196,19 +196,19 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
       fixtureId: match.id,
       date: match.timestamp?.toISOString() || new Date().toISOString(),
       season: parseInt(match.season) || getCurrentSeason(),
-      competition: match.leagueId === 39 ? 'Premier League' : 
-                   match.leagueId === 2 ? 'Champions League' :
-                   match.leagueId === 3 ? 'Europa League' :
-                   match.leagueId === 45 ? 'FA Cup' :
-                   match.leagueId === 48 ? 'League Cup' : 'Unknown',
-      competitionId: match.leagueId,
+      competition: match.league_id === 39 ? 'Premier League' : 
+                   match.league_id === 2 ? 'Champions League' :
+                   match.league_id === 3 ? 'Europa League' :
+                   match.league_id === 45 ? 'FA Cup' :
+                   match.league_id === 48 ? 'League Cup' : 'Unknown',
+      competitionId: match.league_id,
       venue: typeof match.venue === 'object' ? match.venue?.name || '' : match.venue || '',
-      homeTeamId: match.homeTeamId,
-      homeTeamName: match.homeTeam?.name || '',
-      awayTeamId: match.awayTeamId,
-      awayTeamName: match.awayTeam?.name || '',
-      homeScore: match.goals?.home ?? null,
-      awayScore: match.goals?.away ?? null,
+      homeTeamId: match.home_team_id,
+      homeTeamName: match.home_team_name || '',
+      awayTeamId: match.away_team_id,
+      awayTeamName: match.away_team_name || '',
+      homeScore: match.goals_home ?? null,
+      awayScore: match.goals_away ?? null,
       status: match.status?.short || 'NS',
       round: match.round || undefined
     }));
@@ -265,7 +265,7 @@ async function fetchLiverpoolSquad(liverpoolId: number): Promise<PlayerData[]> {
         .where(
           and(
             inArray(playerSeasonStatistics.playerId, playerIds),
-            eq(playerSeasonStatistics.season, currentSeason.toString())
+            eq(playerSeasonStatistics.season, currentSeason)
           )
         );
       
