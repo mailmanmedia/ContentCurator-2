@@ -2295,7 +2295,7 @@ export default function LivePresentation() {
 
   const handlePositionInputChange = (axis: 'x' | 'y', value: string) => {
     const numValue = parseInt(value) || 0;
-    
+
     // Get current overlay being edited to check dimensions
     const editingOverlay = overlays.find(o => o.id === editingPositionOverlayId);
     if (!editingOverlay) return;
@@ -2355,15 +2355,15 @@ export default function LivePresentation() {
   };
 
   // Helper function to map overlay types and metric types to components
-  const getOverlayComponent = (type: OverlayConfig['overlayType'], metricType?: OverlayConfig['metricType']) => {
-    switch (type) {
+  const getOverlayComponent = (overlay: OverlayConfig) => {
+    switch (overlay.overlayType) {
       case 'rss':
         return RssTickerEnhancedOverlay;
       case 'metric':
         // Determine which metric overlay based on metricType
-        if (metricType === 'upcoming-fixtures') return UpcomingFixturesOverlay;
-        if (metricType === 'player-comparison') return PlayerComparisonOverlay;
-        if (metricType === 'form-guide') return FormGuideOverlay;
+        if (overlay.metricType === 'upcoming-fixtures') return UpcomingFixturesOverlay;
+        if (overlay.metricType === 'player-comparison') return PlayerComparisonOverlay;
+        if (overlay.metricType === 'form-guide') return FormGuideOverlay;
         // Add other metric component returns here if they exist
         return null; 
       default:
@@ -2728,134 +2728,136 @@ export default function LivePresentation() {
                   />
 
                   {/* Render overlays directly or via components */}
-                  {overlays.filter(o => o.visible).map((overlay) => {
-                    const OverlayComponent = getOverlayComponent(overlay.overlayType, overlay.metricType);
+                  {overlays
+                    .filter(overlay => overlay.visible)
+                    .map((overlay) => {
+                      const OverlayComponent = getOverlayComponent(overlay);
 
-                    if (!OverlayComponent) {
-                      // Render non-component overlays (text, images)
-                      if (overlay.overlayType === 'text') {
-                        return (
-                          <div
-                            key={overlay.id}
-                            data-overlay-id={overlay.id}
-                            style={{
-                              position: 'absolute',
-                              left: `${overlay.x}%`,
-                              top: `${overlay.y}px`,
-                              width: `${overlay.width}%`,
-                              height: `${overlay.height}px`,
-                              zIndex: overlay.zIndex,
-                              opacity: overlay.opacity,
-                              pointerEvents: 'none',
-                            }}
-                          >
+                      if (!OverlayComponent) {
+                        // Render non-component overlays (text, images)
+                        if (overlay.overlayType === 'text') {
+                          return (
                             <div
+                              key={overlay.id}
+                              data-overlay-id={overlay.id}
                               style={{
-                                width: '100%',
-                                height: '100%',
-                                backgroundColor: overlay.backgroundColor,
-                                color: overlay.textColor,
-                                fontSize: `${overlay.fontSize}px`,
-                                fontFamily: overlay.fontFamily,
-                                fontWeight: overlay.isBold ? 'bold' : 'normal',
-                                fontStyle: overlay.isItalic ? 'italic' : 'normal',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '10px',
-                                borderRadius: '8px',
-                                border: overlay.borderWidth ? `${overlay.borderWidth}px solid ${overlay.borderColor}` : 'none',
+                                position: 'absolute',
+                                left: `${overlay.x}%`,
+                                top: `${overlay.y}px`,
+                                width: `${overlay.width}%`,
+                                height: `${overlay.height}px`,
+                                zIndex: overlay.zIndex,
+                                opacity: overlay.opacity,
+                                pointerEvents: 'none',
                               }}
                             >
-                              {overlay.text}
+                              <div
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  backgroundColor: overlay.backgroundColor,
+                                  color: overlay.textColor,
+                                  fontSize: `${overlay.fontSize}px`,
+                                  fontFamily: overlay.fontFamily,
+                                  fontWeight: overlay.isBold ? 'bold' : 'normal',
+                                  fontStyle: overlay.isItalic ? 'italic' : 'normal',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  padding: '10px',
+                                  borderRadius: '8px',
+                                  border: overlay.borderWidth ? `${overlay.borderWidth}px solid ${overlay.borderColor}` : 'none',
+                                }}
+                              >
+                                {overlay.text}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      }
+                          );
+                        }
 
-                      if (overlay.overlayType === 'image' && overlay.imageUrl) {
-                        return (
-                          <div
-                            key={overlay.id}
-                            data-overlay-id={overlay.id}
-                            style={{
-                              position: 'absolute',
-                              left: `${overlay.x}%`,
-                              top: `${overlay.y}px`,
-                              width: `${overlay.width}%`,
-                              height: `${overlay.height}px`,
-                              zIndex: overlay.zIndex,
-                              opacity: overlay.opacity,
-                              pointerEvents: 'none',
-                            }}
-                          >
-                            <img
-                              src={overlay.imageUrl}
-                              alt={overlay.text || 'Overlay image'}
+                        if (overlay.overlayType === 'image' && overlay.imageUrl) {
+                          return (
+                            <div
+                              key={overlay.id}
+                              data-overlay-id={overlay.id}
                               style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain',
+                                position: 'absolute',
+                                left: `${overlay.x}%`,
+                                top: `${overlay.y}px`,
+                                width: `${overlay.width}%`,
+                                height: `${overlay.height}px`,
+                                zIndex: overlay.zIndex,
+                                opacity: overlay.opacity,
+                                pointerEvents: 'none',
                               }}
-                            />
-                          </div>
-                        );
+                            >
+                              <img
+                                src={overlay.imageUrl}
+                                alt={overlay.text || 'Overlay image'}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'contain',
+                                }}
+                              />
+                            </div>
+                          );
+                        }
+
+                        return null;
                       }
 
-                      return null;
-                    }
+                      const overlayStyle: React.CSSProperties = {
+                        position: 'absolute',
+                        left: `${overlay.x}%`,
+                        top: `${overlay.y}px`,
+                        width: `${overlay.width}%`,
+                        height: `${overlay.height}px`,
+                        zIndex: overlay.zIndex,
+                        opacity: overlay.opacity,
+                        pointerEvents: 'none',
+                      };
 
-                    const overlayStyle: React.CSSProperties = {
-                      position: 'absolute',
-                      left: `${overlay.x}%`,
-                      top: `${overlay.y}px`,
-                      width: `${overlay.width}%`,
-                      height: `${overlay.height}px`,
-                      zIndex: overlay.zIndex,
-                      opacity: overlay.opacity,
-                      pointerEvents: 'none',
-                    };
-
-                    return (
-                      <div
-                        key={overlay.id}
-                        data-overlay-id={overlay.id}
-                        style={overlayStyle}
-                      >
-                        <OverlayErrorBoundary overlayId={overlay.id}>
-                          <OverlayComponent 
-                            width={overlay.width}
-                            height={overlay.height}
-                            opacity={overlay.opacity}
-                            teamId={overlay.teamId}
-                            homeTeamId={overlay.homeTeamId}
-                            awayTeamId={overlay.awayTeamId}
-                            player1Id={overlay.overlayPlayer1Id}
-                            player2Id={overlay.overlayPlayer2Id}
-                            colorPalette={overlay.colorPalette}
-                            titleSize={overlay.formTitleSize}
-                            circleSize={overlay.formCircleSize}
-                            labelSize={overlay.formLabelSize}
-                            matchLimit={overlay.overlayMatchLimit}
-                            fixtureCount={overlay.overlayFixtureCount}
-                            showCountdown={overlay.overlayShowCountdown}
-                            showOpponentForm={overlay.overlayShowOpponentForm}
-                            viewMode={overlay.overlayViewMode}
-                            statCategories={overlay.overlayStatCategories}
-                            showSentiment={overlay.overlayShowSentiment}
-                            showTopics={overlay.overlayShowTopics}
-                            showKeywords={overlay.overlayShowKeywords}
-                            showCredibility={overlay.overlayShowCredibility}
-                            sentimentMin={overlay.overlaySentimentMin}
-                            sentimentMax={overlay.overlaySentimentMax}
-                            rssSourceIds={overlay.rssSourceIds}
-                            rssMaxArticles={overlay.rssMaxArticles}
-                            rssShowSource={overlay.rssShowSource}
-                          />
-                        </OverlayErrorBoundary>
-                      </div>
-                    );
-                  })}
+                      return (
+                        <div
+                          key={overlay.id}
+                          data-overlay-id={overlay.id}
+                          style={overlayStyle}
+                        >
+                          <OverlayErrorBoundary overlayId={overlay.id}>
+                            <OverlayComponent 
+                              width={overlay.width}
+                              height={overlay.height}
+                              opacity={overlay.opacity}
+                              teamId={overlay.teamId}
+                              homeTeamId={overlay.homeTeamId}
+                              awayTeamId={overlay.awayTeamId}
+                              player1Id={overlay.overlayPlayer1Id}
+                              player2Id={overlay.overlayPlayer2Id}
+                              colorPalette={overlay.colorPalette}
+                              titleSize={overlay.formTitleSize}
+                              circleSize={overlay.formCircleSize}
+                              labelSize={overlay.formLabelSize}
+                              matchLimit={overlay.overlayMatchLimit}
+                              fixtureCount={overlay.overlayFixtureCount}
+                              showCountdown={overlay.overlayShowCountdown}
+                              showOpponentForm={overlay.overlayShowOpponentForm}
+                              viewMode={overlay.overlayViewMode}
+                              statCategories={overlay.overlayStatCategories}
+                              showSentiment={overlay.overlayShowSentiment}
+                              showTopics={overlay.overlayShowTopics}
+                              showKeywords={overlay.overlayShowKeywords}
+                              showCredibility={overlay.overlayShowCredibility}
+                              sentimentMin={overlay.overlaySentimentMin}
+                              sentimentMax={overlay.overlaySentimentMax}
+                              rssSourceIds={overlay.rssSourceIds}
+                              rssMaxArticles={overlay.rssMaxArticles}
+                              rssShowSource={overlay.rssShowSource}
+                            />
+                          </OverlayErrorBoundary>
+                        </div>
+                      );
+                    })}
                 </div>
                 {activeSources.length === 0 && (
                   <p className="text-center text-muted-foreground mt-4 text-sm">
@@ -3705,10 +3707,30 @@ export default function LivePresentation() {
                                   <SelectValue placeholder="Select color palette" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="classic">Classic LFC</SelectItem>
-                                  <SelectItem value="navy">Navy Professional</SelectItem>
-                                  <SelectItem value="cream">Cream Elegant</SelectItem>
-                                  <SelectItem value="dark">Dark Mode</SelectItem>
+                                  <SelectItem value="classic">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#C8102E' }} />
+                                      Classic LFC
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="navy">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#002147' }} />
+                                      Navy Professional
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="cream">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F5F1E9' }} />
+                                      Cream Elegant
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="dark">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 rounded" style={{ backgroundColor: '#0A0A0A' }} />
+                                      Dark Mode
+                                    </div>
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <p className="text-xs text-muted-foreground mt-1">
@@ -4142,503 +4164,505 @@ export default function LivePresentation() {
             </div>
 
             {(overlayType === 'text' || overlayType === 'rss') && (
-              <div>
-                <Label htmlFor="ticker-color-palette">Color Palette</Label>
-                <Select value={overlayColorPalette} onValueChange={(v) => setOverlayColorPalette(v as 'classic' | 'navy' | 'cream' | 'dark')}>
-                  <SelectTrigger id="ticker-color-palette" data-testid="select-ticker-color-palette">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="classic">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#C8102E' }} />
-                        Classic LFC
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="navy">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#002147' }} />
-                        Navy Professional
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="cream">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F5F1E9' }} />
-                        Cream Elegant
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="dark">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: '#0A0A0A' }} />
-                        Dark Mode
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Mailman Media branded color scheme
-                </p>
-              </div>
-            )}
-
-            <div>
-              <Label>Position</Label>
-              <RadioGroup value={overlayPosition} onValueChange={(v) => setOverlayPosition(v as 'top' | 'bottom')}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="top" id="position-top" data-testid="radio-position-top" />
-                  <Label htmlFor="position-top" className="font-normal cursor-pointer">
-                    Top of screen
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="bottom" id="position-bottom" data-testid="radio-position-bottom" />
-                  <Label htmlFor="position-bottom" className="font-normal cursor-pointer">
-                    Bottom of screen (Ticker style)
-                  </Label>
-                </div>
-              </RadioGroup>
-
-              {positionConflict && (
-                <Alert variant="destructive" className="mt-3" data-testid="alert-position-conflict">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    ⚠️ Position conflict: An overlay already exists at this position
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="overlay-width">Width: {overlayWidth}%</Label>
-              <Slider
-                id="overlay-width"
-                min={10}
-                max={100}
-                step={5}
-                value={[overlayWidth]}
-                onValueChange={(vals) => setOverlayWidth(vals[0])}
-                data-testid="slider-overlay-width"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Overlay width as percentage of screen (10% - 100%)
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="overlay-height">Height: {overlayHeight}px</Label>
-              <Slider
-                id="overlay-height"
-                min={30}
-                max={300}
-                step={10}
-                value={[overlayHeight]}
-                onValueChange={(vals) => setOverlayHeight(vals[0])}
-                data-testid="slider-overlay-height"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Overlay height in pixels (30px - 300px)
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="animation-type">Animation Type</Label>
-              <Select value={overlayAnimationType} onValueChange={(v) => setOverlayAnimationType(v as 'scroll' | 'fade' | 'static')}>
-                <SelectTrigger id="animation-type" data-testid="select-animation-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="scroll">Scrolling</SelectItem>
-                  <SelectItem value="fade">Fade In/Out</SelectItem>
-                  <SelectItem value="static">Static (No Animation)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                How the overlay appears and behaves
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="overlay-zindex">Z-Index (Layer Order): {overlayZIndex}</Label>
-              <Slider
-                id="overlay-zindex"
-                min={0}
-                max={1000}
-                step={10}
-                value={[overlayZIndex]}
-                onValueChange={(vals) => setOverlayZIndex(vals[0])}
-                data-testid="slider-overlay-zindex"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Higher values appear on top (0-1000)
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="overlay-opacity">Opacity: {(overlayOpacity * 100).toFixed(0)}%</Label>
-              <Slider
-                id="overlay-opacity"
-                min={0}
-                max={1}
-                step={0.05}
-                value={[overlayOpacity]}
-                onValueChange={(vals) => setOverlayOpacity(vals[0])}
-                data-testid="slider-overlay-opacity"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Transparency of overlay (0% = invisible, 100% = opaque)
-              </p>
-            </div>
-
-            {(overlayType === 'text' || overlayType === 'rss') && (
               <>
                 <div>
-                  <Label htmlFor="font-family">Font Family</Label>
-                  <Select value={overlayFontFamily} onValueChange={setOverlayFontFamily}>
-                    <SelectTrigger id="font-family" data-testid="select-overlay-font">
+                  <Label htmlFor="ticker-color-palette">Color Palette</Label>
+                  <Select value={overlayColorPalette} onValueChange={(v) => setOverlayColorPalette(v as 'classic' | 'navy' | 'cream' | 'dark')}>
+                    <SelectTrigger id="ticker-color-palette" data-testid="select-ticker-color-palette">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="League Spartan">League Spartan (Bold)</SelectItem>
-                      <SelectItem value="Libre Franklin">Libre Franklin</SelectItem>
-                      <SelectItem value="JetBrains Mono">JetBrains Mono</SelectItem>
-                      <SelectItem value="Arial">Arial</SelectItem>
-                      <SelectItem value="Georgia">Georgia</SelectItem>
+                      <SelectItem value="classic">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#C8102E' }} />
+                          Classic LFC
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="navy">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#002147' }} />
+                          Navy Professional
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="cream">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F5F1E9' }} />
+                          Cream Elegant
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="dark">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#0A0A0A' }} />
+                          Dark Mode
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="font-size">Font Size: {overlayFontSize}px</Label>
-                  <Slider
-                    id="font-size"
-                    min={12}
-                    max={144}
-                    step={1}
-                    value={[overlayFontSize]}
-                    onValueChange={(vals) => setOverlayFontSize(vals[0])}
-                    data-testid="slider-overlay-font-size"
-                  />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Adjust the text size from 12px to 144px
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="overlay-bold"
-                      checked={overlayIsBold}
-                      onCheckedChange={(checked) => setOverlayIsBold(checked === true)}
-                      data-testid="checkbox-overlay-bold"
-                    />
-                    <Label htmlFor="overlay-bold" className="font-normal cursor-pointer">
-                      Bold
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="overlay-italic"
-                      checked={overlayIsItalic}
-                      onCheckedChange={(checked) => setOverlayIsItalic(checked === true)}
-                      data-testid="checkbox-overlay-italic"
-                    />
-                    <Label htmlFor="overlay-italic" className="font-normal cursor-pointer">
-                      Italics
-                    </Label>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="border-width">Border Width: {overlayBorderWidth || 0}px</Label>
-                  <Slider
-                    id="border-width"
-                    min={0}
-                    max={10}
-                    step={1}
-                    value={[overlayBorderWidth || 0]}
-                    onValueChange={(vals) => setOverlayBorderWidth(vals[0])}
-                    data-testid="slider-overlay-border-width"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Add outline/stroke to text (0-10px)
+                    Mailman Media branded color scheme
                   </p>
                 </div>
 
                 <div>
-                  <Label htmlFor="border-color">Border Color</Label>
-                  <Input
-                    id="border-color"
-                    type="color"
-                    value={overlayBorderColor || '#000000'}
-                    onChange={(e) => setOverlayBorderColor(e.target.value)}
-                    data-testid="input-overlay-border-color"
-                  />
-                </div>
-              </>
-            )}
-
-            {overlayType === 'image' && (
-              <div className="pt-4 border-t space-y-3">
-                <Label>Image Overlay (Optional)</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => document.getElementById('overlay-image-input')?.click()}
-                    data-testid="button-upload-overlay-image"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Image
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setIsLibraryPickerOpen(true)}
-                    data-testid="button-library-overlay-image"
-                  >
-                    <Images className="w-4 h-4 mr-2" />
-                    Choose from Library
-                  </Button>
-                </div>
-                <input
-                  id="overlay-image-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-
-                {(overlayImageUrl || overlayImageData) && (
-                  <div className="p-3 bg-muted rounded-md space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {overlayImageData ? 'Uploaded image' : 'Library image'}
-                      </span>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        onClick={handleRemoveImage}
-                        data-testid="button-remove-overlay-image"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
+                  <Label>Position</Label>
+                  <RadioGroup value={overlayPosition} onValueChange={(v) => setOverlayPosition(v as 'top' | 'bottom')}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="top" id="position-top" data-testid="radio-position-top" />
+                      <Label htmlFor="position-top" className="font-normal cursor-pointer">
+                        Top of screen
+                      </Label>
                     </div>
-                    <img
-                      src={overlayImageData || overlayImageUrl}
-                      alt="Overlay preview"
-                      className="w-full h-auto max-h-[100px] object-contain rounded border"
-                      data-testid="img-overlay-preview"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="bottom" id="position-bottom" data-testid="radio-position-bottom" />
+                      <Label htmlFor="position-bottom" className="font-normal cursor-pointer">
+                        Bottom of screen (Ticker style)
+                      </Label>
+                    </div>
+                  </RadioGroup>
 
-            <div>
-              <Label htmlFor="scroll-speed">Scroll Speed: {overlayScrollSpeed}</Label>
-              <Slider
-                id="scroll-speed"
-                min={1}
-                max={100}
-                step={1}
-                value={[overlayScrollSpeed]}
-                onValueChange={(vals) => setOverlayScrollSpeed(vals[0])}
-                data-testid="slider-scroll-speed"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                1 = Very Slow, 50 = Medium, 100 = Very Fast
-              </p>
-            </div>
-
-            <div>
-              <Label>Scroll Direction</Label>
-              <RadioGroup 
-                value={overlayScrollDirection} 
-                onValueChange={(v) => setOverlayScrollDirection(v as 'left' | 'right' | 'up' | 'down')}
-                className="grid grid-cols-2 gap-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="left" id="dir-left" data-testid="radio-direction-left" />
-                  <Label htmlFor="dir-left" className="font-normal cursor-pointer">← Left</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="right" id="dir-right" data-testid="radio-direction-right" />
-                  <Label htmlFor="dir-right" className="font-normal cursor-pointer">Right →</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="up" id="dir-up" data-testid="radio-direction-up" />
-                  <Label htmlFor="dir-up" className="font-normal cursor-pointer">↑ Up</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="down" id="dir-down" data-testid="radio-direction-down" />
-                  <Label htmlFor="dir-down" className="font-normal cursor-pointer">Down ↓</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between" data-testid="button-advanced-styling">
-                  Advanced Styling
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 mt-4">
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Typography</h4>
-
-                  <div>
-                    <Label>Font Weight: {overlayFontWeight}</Label>
-                    <Slider 
-                      value={[overlayFontWeight]} 
-                      onValueChange={(v) => setOverlayFontWeight(v[0])}
-                      min={300} 
-                      max={900} 
-                      step={100}
-                      data-testid="slider-font-weight"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Letter Spacing: {overlayLetterSpacing.toFixed(2)}em</Label>
-                    <Slider 
-                      value={[overlayLetterSpacing]} 
-                      onValueChange={(v) => setOverlayLetterSpacing(v[0])}
-                      min={-0.1} 
-                      max={0.2} 
-                      step={0.01}
-                      data-testid="slider-letter-spacing"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Line Height: {overlayLineHeight.toFixed(1)}</Label>
-                    <Slider 
-                      value={[overlayLineHeight]} 
-                      onValueChange={(v) => setOverlayLineHeight(v[0])}
-                      min={0.8} 
-                      max={2.0} 
-                      step={0.1}
-                      data-testid="slider-line-height"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Text Transform</Label>
-                    <Select value={overlayTextTransform} onValueChange={setOverlayTextTransform}>
-                      <SelectTrigger data-testid="select-text-transform">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="uppercase">UPPERCASE</SelectItem>
-                        <SelectItem value="lowercase">lowercase</SelectItem>
-                        <SelectItem value="capitalize">Capitalize</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Background</h4>
-
-                  <div>
-                    <Label>Background Type</Label>
-                    <Select value={overlayBackgroundType} onValueChange={setOverlayBackgroundType}>
-                      <SelectTrigger data-testid="select-background-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="solid">Solid Color</SelectItem>
-                        <SelectItem value="linear-gradient">Linear Gradient</SelectItem>
-                        <SelectItem value="radial-gradient">Radial Gradient</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {overlayBackgroundType !== 'solid' && (
-                    <>
-                      <div>
-                        <Label>Gradient Color 1</Label>
-                        <Input 
-                          type="color" 
-                          value={overlayGradientColor1} 
-                          onChange={(e) => setOverlayGradientColor1(e.target.value)}
-                          data-testid="input-gradient-color1"
-                        />
-                      </div>
-                      <div>
-                        <Label>Gradient Color 2</Label>
-                        <Input 
-                          type="color" 
-                          value={overlayGradientColor2} 
-                          onChange={(e) => setOverlayGradientColor2(e.target.value)}
-                          data-testid="input-gradient-color2"
-                        />
-                      </div>
-                      {overlayBackgroundType === 'linear-gradient' && (
-                        <div>
-                          <Label>Gradient Angle: {overlayGradientAngle}°</Label>
-                          <Slider 
-                            value={[overlayGradientAngle]} 
-                            onValueChange={(v) => setOverlayGradientAngle(v[0])}
-                            min={0} 
-                            max={360} 
-                            step={15}
-                            data-testid="slider-gradient-angle"
-                          />
-                        </div>
-                      )}
-                    </>
+                  {positionConflict && (
+                    <Alert variant="destructive" className="mt-3" data-testid="alert-position-conflict">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        ⚠️ Position conflict: An overlay already exists at this position
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </div>
 
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Border & Effects</h4>
-
-                  <div>
-                    <Label>Border Radius: {overlayBorderRadius}px</Label>
-                    <Slider 
-                      value={[overlayBorderRadius]} 
-                      onValueChange={(v) => setOverlayBorderRadius(v[0])}
-                      min={0} 
-                      max={24} 
-                      step={2}
-                      data-testid="slider-border-radius"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Border Style</Label>
-                    <Select value={overlayBorderStyle} onValueChange={setOverlayBorderStyle}>
-                      <SelectTrigger data-testid="select-border-style">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="solid">Solid</SelectItem>
-                        <SelectItem value="dashed">Dashed</SelectItem>
-                        <SelectItem value="dotted">Dotted</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox 
-                        checked={overlayGlowEffect} 
-                        onCheckedChange={setOverlayGlowEffect}
-                        data-testid="checkbox-glow-effect"
-                      />
-                      Glow Effect
-                    </Label>
-                  </div>
+                <div>
+                  <Label htmlFor="overlay-width">Width: {overlayWidth}%</Label>
+                  <Slider
+                    id="overlay-width"
+                    min={10}
+                    max={100}
+                    step={5}
+                    value={[overlayWidth]}
+                    onValueChange={(vals) => setOverlayWidth(vals[0])}
+                    data-testid="slider-overlay-width"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Overlay width as percentage of screen (10% - 100%)
+                  </p>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+
+                <div>
+                  <Label htmlFor="overlay-height">Height: {overlayHeight}px</Label>
+                  <Slider
+                    id="overlay-height"
+                    min={30}
+                    max={300}
+                    step={10}
+                    value={[overlayHeight]}
+                    onValueChange={(vals) => setOverlayHeight(vals[0])}
+                    data-testid="slider-overlay-height"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Overlay height in pixels (30px - 300px)
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="animation-type">Animation Type</Label>
+                  <Select value={overlayAnimationType} onValueChange={(v) => setOverlayAnimationType(v as 'scroll' | 'fade' | 'static')}>
+                    <SelectTrigger id="animation-type" data-testid="select-animation-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="scroll">Scrolling</SelectItem>
+                      <SelectItem value="fade">Fade In/Out</SelectItem>
+                      <SelectItem value="static">Static (No Animation)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    How the overlay appears and behaves
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="overlay-zindex">Z-Index (Layer Order): {overlayZIndex}</Label>
+                  <Slider
+                    id="overlay-zindex"
+                    min={0}
+                    max={1000}
+                    step={10}
+                    value={[overlayZIndex]}
+                    onValueChange={(vals) => setOverlayZIndex(vals[0])}
+                    data-testid="slider-overlay-zindex"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Higher values appear on top (0-1000)
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="overlay-opacity">Opacity: {(overlayOpacity * 100).toFixed(0)}%</Label>
+                  <Slider
+                    id="overlay-opacity"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={[overlayOpacity]}
+                    onValueChange={(vals) => setOverlayOpacity(vals[0])}
+                    data-testid="slider-overlay-opacity"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Transparency of overlay (0% = invisible, 100% = opaque)
+                  </p>
+                </div>
+
+                {(overlayType === 'text' || overlayType === 'rss') && (
+                  <>
+                    <div>
+                      <Label htmlFor="font-family">Font Family</Label>
+                      <Select value={overlayFontFamily} onValueChange={setOverlayFontFamily}>
+                        <SelectTrigger id="font-family" data-testid="select-overlay-font">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="League Spartan">League Spartan (Bold)</SelectItem>
+                          <SelectItem value="Libre Franklin">Libre Franklin</SelectItem>
+                          <SelectItem value="JetBrains Mono">JetBrains Mono</SelectItem>
+                          <SelectItem value="Arial">Arial</SelectItem>
+                          <SelectItem value="Georgia">Georgia</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="font-size">Font Size: {overlayFontSize}px</Label>
+                      <Slider
+                        id="font-size"
+                        min={12}
+                        max={144}
+                        step={1}
+                        value={[overlayFontSize]}
+                        onValueChange={(vals) => setOverlayFontSize(vals[0])}
+                        data-testid="slider-overlay-font-size"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Adjust the text size from 12px to 144px
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="overlay-bold"
+                          checked={overlayIsBold}
+                          onCheckedChange={(checked) => setOverlayIsBold(checked === true)}
+                          data-testid="checkbox-overlay-bold"
+                        />
+                        <Label htmlFor="overlay-bold" className="font-normal cursor-pointer">
+                          Bold
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="overlay-italic"
+                          checked={overlayIsItalic}
+                          onCheckedChange={(checked) => setOverlayIsItalic(checked === true)}
+                          data-testid="checkbox-overlay-italic"
+                        />
+                        <Label htmlFor="overlay-italic" className="font-normal cursor-pointer">
+                          Italics
+                        </Label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="border-width">Border Width: {overlayBorderWidth || 0}px</Label>
+                      <Slider
+                        id="border-width"
+                        min={0}
+                        max={10}
+                        step={1}
+                        value={[overlayBorderWidth || 0]}
+                        onValueChange={(vals) => setOverlayBorderWidth(vals[0])}
+                        data-testid="slider-overlay-border-width"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Add outline/stroke to text (0-10px)
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="border-color">Border Color</Label>
+                      <Input
+                        id="border-color"
+                        type="color"
+                        value={overlayBorderColor || '#000000'}
+                        onChange={(e) => setOverlayBorderColor(e.target.value)}
+                        data-testid="input-overlay-border-color"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {overlayType === 'image' && (
+                  <div className="pt-4 border-t space-y-3">
+                    <Label>Image Overlay (Optional)</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => document.getElementById('overlay-image-input')?.click()}
+                        data-testid="button-upload-overlay-image"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Image
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setIsLibraryPickerOpen(true)}
+                        data-testid="button-library-overlay-image"
+                      >
+                        <Images className="w-4 h-4 mr-2" />
+                        Choose from Library
+                      </Button>
+                    </div>
+                    <input
+                      id="overlay-image-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+
+                    {(overlayImageUrl || overlayImageData) && (
+                      <div className="p-3 bg-muted rounded-md space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">
+                            {overlayImageData ? 'Uploaded image' : 'Library image'}
+                          </span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={handleRemoveImage}
+                            data-testid="button-remove-overlay-image"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <img
+                          src={overlayImageData || overlayImageUrl}
+                          alt="Overlay preview"
+                          className="w-full h-auto max-h-[100px] object-contain rounded border"
+                          data-testid="img-overlay-preview"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="scroll-speed">Scroll Speed: {overlayScrollSpeed}</Label>
+                  <Slider
+                    id="scroll-speed"
+                    min={1}
+                    max={100}
+                    step={1}
+                    value={[overlayScrollSpeed]}
+                    onValueChange={(vals) => setOverlayScrollSpeed(vals[0])}
+                    data-testid="slider-scroll-speed"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    1 = Very Slow, 50 = Medium, 100 = Very Fast
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Scroll Direction</Label>
+                  <RadioGroup 
+                    value={overlayScrollDirection} 
+                    onValueChange={(v) => setOverlayScrollDirection(v as 'left' | 'right' | 'up' | 'down')}
+                    className="grid grid-cols-2 gap-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="left" id="dir-left" data-testid="radio-direction-left" />
+                      <Label htmlFor="dir-left" className="font-normal cursor-pointer">← Left</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="right" id="dir-right" data-testid="radio-direction-right" />
+                      <Label htmlFor="dir-right" className="font-normal cursor-pointer">Right →</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="up" id="dir-up" data-testid="radio-direction-up" />
+                      <Label htmlFor="dir-up" className="font-normal cursor-pointer">↑ Up</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="down" id="dir-down" data-testid="radio-direction-down" />
+                      <Label htmlFor="dir-down" className="font-normal cursor-pointer">Down ↓</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between" data-testid="button-advanced-styling">
+                      Advanced Styling
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 mt-4">
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm">Typography</h4>
+
+                      <div>
+                        <Label>Font Weight: {overlayFontWeight}</Label>
+                        <Slider 
+                          value={[overlayFontWeight]} 
+                          onValueChange={(v) => setOverlayFontWeight(v[0])}
+                          min={300} 
+                          max={900} 
+                          step={100}
+                          data-testid="slider-font-weight"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Letter Spacing: {overlayLetterSpacing.toFixed(2)}em</Label>
+                        <Slider 
+                          value={[overlayLetterSpacing]} 
+                          onValueChange={(v) => setOverlayLetterSpacing(v[0])}
+                          min={-0.1} 
+                          max={0.2} 
+                          step={0.01}
+                          data-testid="slider-letter-spacing"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Line Height: {overlayLineHeight.toFixed(1)}</Label>
+                        <Slider 
+                          value={[overlayLineHeight]} 
+                          onValueChange={(v) => setOverlayLineHeight(v[0])}
+                          min={0.8} 
+                          max={2.0} 
+                          step={0.1}
+                          data-testid="slider-line-height"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Text Transform</Label>
+                        <Select value={overlayTextTransform} onValueChange={setOverlayTextTransform}>
+                          <SelectTrigger data-testid="select-text-transform">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="uppercase">UPPERCASE</SelectItem>
+                            <SelectItem value="lowercase">lowercase</SelectItem>
+                            <SelectItem value="capitalize">Capitalize</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm">Background</h4>
+
+                      <div>
+                        <Label>Background Type</Label>
+                        <Select value={overlayBackgroundType} onValueChange={setOverlayBackgroundType}>
+                          <SelectTrigger data-testid="select-background-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="solid">Solid Color</SelectItem>
+                            <SelectItem value="linear-gradient">Linear Gradient</SelectItem>
+                            <SelectItem value="radial-gradient">Radial Gradient</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {overlayBackgroundType !== 'solid' && (
+                        <>
+                          <div>
+                            <Label>Gradient Color 1</Label>
+                            <Input 
+                              type="color" 
+                              value={overlayGradientColor1} 
+                              onChange={(e) => setOverlayGradientColor1(e.target.value)}
+                              data-testid="input-gradient-color1"
+                            />
+                          </div>
+                          <div>
+                            <Label>Gradient Color 2</Label>
+                            <Input 
+                              type="color" 
+                              value={overlayGradientColor2} 
+                              onChange={(e) => setOverlayGradientColor2(e.target.value)}
+                              data-testid="input-gradient-color2"
+                            />
+                          </div>
+                          {overlayBackgroundType === 'linear-gradient' && (
+                            <div>
+                              <Label>Gradient Angle: {overlayGradientAngle}°</Label>
+                              <Slider 
+                                value={[overlayGradientAngle]} 
+                                onValueChange={(v) => setOverlayGradientAngle(v[0])}
+                                min={0} 
+                                max={360} 
+                                step={15}
+                                data-testid="slider-gradient-angle"
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm">Border & Effects</h4>
+
+                      <div>
+                        <Label>Border Radius: {overlayBorderRadius}px</Label>
+                        <Slider 
+                          value={[overlayBorderRadius]} 
+                          onValueChange={(v) => setOverlayBorderRadius(v[0])}
+                          min={0} 
+                          max={24} 
+                          step={2}
+                          data-testid="slider-border-radius"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Border Style</Label>
+                        <Select value={overlayBorderStyle} onValueChange={setOverlayBorderStyle}>
+                          <SelectTrigger data-testid="select-border-style">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="solid">Solid</SelectItem>
+                            <SelectItem value="dashed">Dashed</SelectItem>
+                            <SelectItem value="dotted">Dotted</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox 
+                            checked={overlayGlowEffect} 
+                            onCheckedChange={setOverlayGlowEffect}
+                            data-testid="checkbox-glow-effect"
+                          />
+                          Glow Effect
+                        </Label>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </>
+            )}
 
             <div className="p-4 bg-muted rounded-md">
               <p className="text-sm font-medium mb-2">Preview</p>
@@ -4899,7 +4923,7 @@ export default function LivePresentation() {
             >
               {/* Render active overlays */}
               {overlays.map((overlay) => {
-                const OverlayComponent = getOverlayComponent(overlay.overlayType, overlay.metricType);
+                const OverlayComponent = getOverlayComponent(overlay);
                 if (!OverlayComponent) {
                   // Render non-component overlays (text, images)
                   if (overlay.overlayType === 'text') {
