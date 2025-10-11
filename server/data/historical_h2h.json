@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2025-10-11T17:34:36.697Z",
+  "lastUpdated": "2025-10-11T17:36:03.209Z",
   "team": {
     "id": 40,
     "name": "Liverpool",
@@ -265,22 +265,6 @@
           "round": "Regular Season - 26"
         },
         {
-          "fixtureId": 1208147,
-          "date": "2024-12-01T16:00:00.000Z",
-          "season": 2024,
-          "competition": "Premier League",
-          "competitionId": 39,
-          "venue": "Anfield",
-          "homeTeamId": 40,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 50,
-          "awayTeamName": "Away Team",
-          "homeScore": 2,
-          "awayScore": 0,
-          "status": "FT",
-          "round": "Regular Season - 13"
-        },
-        {
           "fixtureId": 1240004,
           "date": "2024-12-01T16:00:00.000Z",
           "season": 2024,
@@ -294,6 +278,22 @@
           "homeScore": 2,
           "awayScore": 0,
           "status": "NS",
+          "round": "Regular Season - 13"
+        },
+        {
+          "fixtureId": 1208147,
+          "date": "2024-12-01T16:00:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 50,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 0,
+          "status": "FT",
           "round": "Regular Season - 13"
         },
         {
@@ -2907,29 +2907,29 @@
       }
     },
     {
-      "id": 8500,
-      "name": "W. Endo",
-      "photo": "https://media.api-sports.io/football/players/8500.png",
+      "id": 6716,
+      "name": "A. Mac Allister",
+      "photo": "https://media.api-sports.io/football/players/6716.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 1,
-        "appearances": 4,
-        "minutes": 55,
+        "appearances": 6,
+        "minutes": 390,
         "rating": "6.67"
       }
     },
     {
-      "id": 19035,
-      "name": "H. Elliott",
-      "photo": "https://media.api-sports.io/football/players/19035.png",
+      "id": 397997,
+      "name": "T. Nyoni",
+      "photo": "https://media.api-sports.io/football/players/397997.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
-        "appearances": 1,
-        "minutes": 8,
-        "rating": "6.5"
+        "appearances": 0,
+        "minutes": 0,
+        "rating": null
       }
     },
     {
@@ -2972,107 +2972,29 @@
       }
     },
     {
-      "id": 1145,
-      "name": "I. Konaté",
-      "photo": "https://media.api-sports.io/football/players/1145.png",
+      "id": 542,
+      "name": "R. Gravenberch",
+      "photo": "https://media.api-sports.io/football/players/542.png",
       "statistics": {
         "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 7,
-        "minutes": 566,
-        "rating": "6.96"
-      }
-    },
-    {
-      "id": 6716,
-      "name": "A. Mac Allister",
-      "photo": "https://media.api-sports.io/football/players/6716.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
+        "goals": 2,
         "assists": 1,
         "appearances": 6,
-        "minutes": 390,
-        "rating": "6.67"
+        "minutes": 540,
+        "rating": "7.37"
       }
     },
     {
-      "id": 1096,
-      "name": "D. Szoboszlai",
-      "photo": "https://media.api-sports.io/football/players/1096.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 1,
-        "assists": 0,
-        "appearances": 7,
-        "minutes": 630,
-        "rating": "7.01"
-      }
-    },
-    {
-      "id": 24760,
-      "name": "G. Mamardashvili",
-      "photo": "https://media.api-sports.io/football/players/24760.png",
+      "id": 19035,
+      "name": "H. Elliott",
+      "photo": "https://media.api-sports.io/football/players/19035.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
         "appearances": 1,
-        "minutes": 90,
-        "rating": "7.2"
-      }
-    },
-    {
-      "id": 306,
-      "name": "Mohamed Salah",
-      "photo": "https://media.api-sports.io/football/players/306.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 2,
-        "assists": 2,
-        "appearances": 7,
-        "minutes": 629,
-        "rating": "6.66"
-      }
-    },
-    {
-      "id": 397997,
-      "name": "T. Nyoni",
-      "photo": "https://media.api-sports.io/football/players/397997.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 0,
-        "minutes": 0,
-        "rating": null
-      }
-    },
-    {
-      "id": 2864,
-      "name": "A. Isak",
-      "photo": "https://media.api-sports.io/football/players/2864.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 1,
-        "appearances": 3,
-        "minutes": 181,
-        "rating": "6.23"
-      }
-    },
-    {
-      "id": 452685,
-      "name": "R. Ngumoha",
-      "photo": "https://media.api-sports.io/football/players/452685.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 1,
-        "assists": 0,
-        "appearances": 3,
-        "minutes": 34,
-        "rating": "6.87"
+        "minutes": 8,
+        "rating": "6.5"
       }
     },
     {
@@ -3089,6 +3011,19 @@
       }
     },
     {
+      "id": 24760,
+      "name": "G. Mamardashvili",
+      "photo": "https://media.api-sports.io/football/players/24760.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 1,
+        "minutes": 90,
+        "rating": "7.2"
+      }
+    },
+    {
       "id": 247,
       "name": "C. Gakpo",
       "photo": "https://media.api-sports.io/football/players/247.png",
@@ -3102,16 +3037,68 @@
       }
     },
     {
-      "id": 542,
-      "name": "R. Gravenberch",
-      "photo": "https://media.api-sports.io/football/players/542.png",
+      "id": 1096,
+      "name": "D. Szoboszlai",
+      "photo": "https://media.api-sports.io/football/players/1096.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 1,
+        "assists": 0,
+        "appearances": 7,
+        "minutes": 630,
+        "rating": "7.01"
+      }
+    },
+    {
+      "id": 2864,
+      "name": "A. Isak",
+      "photo": "https://media.api-sports.io/football/players/2864.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 1,
+        "appearances": 3,
+        "minutes": 181,
+        "rating": "6.23"
+      }
+    },
+    {
+      "id": 306,
+      "name": "Mohamed Salah",
+      "photo": "https://media.api-sports.io/football/players/306.png",
       "statistics": {
         "season": 2025,
         "goals": 2,
-        "assists": 1,
+        "assists": 2,
+        "appearances": 7,
+        "minutes": 629,
+        "rating": "6.66"
+      }
+    },
+    {
+      "id": 452685,
+      "name": "R. Ngumoha",
+      "photo": "https://media.api-sports.io/football/players/452685.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 1,
+        "assists": 0,
+        "appearances": 3,
+        "minutes": 34,
+        "rating": "6.87"
+      }
+    },
+    {
+      "id": 293,
+      "name": "C. Jones",
+      "photo": "https://media.api-sports.io/football/players/293.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
         "appearances": 6,
-        "minutes": 540,
-        "rating": "7.37"
+        "minutes": 225,
+        "rating": "6.88"
       }
     },
     {
@@ -3128,29 +3115,29 @@
       }
     },
     {
-      "id": 284,
-      "name": "J. Gomez",
-      "photo": "https://media.api-sports.io/football/players/284.png",
+      "id": 1145,
+      "name": "I. Konaté",
+      "photo": "https://media.api-sports.io/football/players/1145.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
-        "appearances": 2,
-        "minutes": 30,
-        "rating": "6.75"
+        "appearances": 7,
+        "minutes": 566,
+        "rating": "6.96"
       }
     },
     {
-      "id": 293,
-      "name": "C. Jones",
-      "photo": "https://media.api-sports.io/football/players/293.png",
+      "id": 8500,
+      "name": "W. Endo",
+      "photo": "https://media.api-sports.io/football/players/8500.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
-        "assists": 0,
-        "appearances": 6,
-        "minutes": 225,
-        "rating": "6.88"
+        "assists": 1,
+        "appearances": 4,
+        "minutes": 55,
+        "rating": "6.67"
       }
     },
     {
@@ -3203,6 +3190,19 @@
         "appearances": 3,
         "minutes": 86,
         "rating": "6.6"
+      }
+    },
+    {
+      "id": 284,
+      "name": "J. Gomez",
+      "photo": "https://media.api-sports.io/football/players/284.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 2,
+        "minutes": 30,
+        "rating": "6.75"
       }
     },
     {
