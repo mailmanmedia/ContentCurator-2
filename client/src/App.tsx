@@ -22,12 +22,13 @@ import TeamFormsList from "@/pages/TeamFormsList";
 import AdminDashboard from "@/pages/AdminDashboard";
 import DataAudit from "@/pages/DataAudit";
 import DataImportExport from "@/pages/DataImportExport";
+import VisualAssistant from "@/components/VisualAssistant";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={DatabaseStatus} />
+      <Route path="/" component={VisualAssistant} />
       <Route path="/database-status" component={DatabaseStatus} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/data-audit" component={DataAudit} />
