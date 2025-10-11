@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2025-10-11T01:53:41.416Z",
+  "lastUpdated": "2025-10-11T01:58:07.666Z",
   "team": {
     "id": 40,
     "name": "Liverpool",
@@ -297,22 +297,6 @@
           "round": "Regular Season - 13"
         },
         {
-          "fixtureId": 1250004,
-          "date": "2025-10-27T16:30:00.000Z",
-          "season": 2025,
-          "competition": "Premier League",
-          "competitionId": 39,
-          "venue": "Etihad Stadium",
-          "homeTeamId": 50,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 40,
-          "awayTeamName": "Away Team",
-          "homeScore": null,
-          "awayScore": null,
-          "status": "NS",
-          "round": "Regular Season - 11"
-        },
-        {
           "fixtureId": 1035450,
           "date": "2024-03-10T15:45:00.000Z",
           "season": 2023,
@@ -533,22 +517,6 @@
           "round": "Regular Season - 9"
         },
         {
-          "fixtureId": 1250002,
-          "date": "2025-10-13T16:00:00.000Z",
-          "season": 2025,
-          "competition": "Premier League",
-          "competitionId": 39,
-          "venue": "Emirates Stadium",
-          "homeTeamId": 42,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 40,
-          "awayTeamName": "Away Team",
-          "homeScore": null,
-          "awayScore": null,
-          "status": "NS",
-          "round": "Regular Season - 9"
-        },
-        {
           "fixtureId": 1219970,
           "date": "2024-07-31T23:30:00.000Z",
           "season": 2024,
@@ -578,22 +546,6 @@
           "homeScore": 3,
           "awayScore": 1,
           "status": "FT",
-          "round": "Regular Season - 23"
-        },
-        {
-          "fixtureId": 1240007,
-          "date": "2024-02-04T16:30:00.000Z",
-          "season": 2023,
-          "competition": "Premier League",
-          "competitionId": 39,
-          "venue": "Emirates Stadium",
-          "homeTeamId": 42,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 40,
-          "awayTeamName": "Away Team",
-          "homeScore": 3,
-          "awayScore": 1,
-          "status": "NS",
           "round": "Regular Season - 23"
         },
         {
@@ -680,7 +632,7 @@
       "record": {
         "wins": 4,
         "draws": 5,
-        "losses": 3
+        "losses": 2
       }
     },
     {
@@ -766,22 +718,6 @@
           "homeScore": 2,
           "awayScore": 1,
           "status": "FT",
-          "round": "Regular Season - 8"
-        },
-        {
-          "fixtureId": 1250001,
-          "date": "2025-10-06T19:30:00.000Z",
-          "season": 2025,
-          "competition": "Premier League",
-          "competitionId": 39,
-          "venue": "Anfield",
-          "homeTeamId": 40,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 49,
-          "awayTeamName": "Away Team",
-          "homeScore": null,
-          "awayScore": null,
-          "status": "NS",
           "round": "Regular Season - 8"
         },
         {
@@ -1315,22 +1251,6 @@
           "awayScore": 0,
           "status": "FT",
           "round": "Regular Season - 11"
-        },
-        {
-          "fixtureId": 1250005,
-          "date": "2025-11-03T19:00:00.000Z",
-          "season": 2025,
-          "competition": "Premier League",
-          "competitionId": 39,
-          "venue": "Anfield",
-          "homeTeamId": 40,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 66,
-          "awayTeamName": "Away Team",
-          "homeScore": null,
-          "awayScore": null,
-          "status": "NS",
-          "round": "Regular Season - 12"
         },
         {
           "fixtureId": 1035535,
@@ -1891,22 +1811,6 @@
           "awayScore": 3,
           "status": "FT",
           "round": "Round of 16"
-        },
-        {
-          "fixtureId": 1250003,
-          "date": "2025-10-20T14:00:00.000Z",
-          "season": 2025,
-          "competition": "Premier League",
-          "competitionId": 39,
-          "venue": "Anfield",
-          "homeTeamId": 40,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 51,
-          "awayTeamName": "Away Team",
-          "homeScore": null,
-          "awayScore": null,
-          "status": "NS",
-          "round": "Regular Season - 10"
         },
         {
           "fixtureId": 1035468,
@@ -3003,29 +2907,29 @@
       }
     },
     {
-      "id": 1096,
-      "name": "D. Szoboszlai",
-      "photo": "https://media.api-sports.io/football/players/1096.png",
+      "id": 30410,
+      "name": "F. Chiesa",
+      "photo": "https://media.api-sports.io/football/players/30410.png",
       "statistics": {
         "season": 2025,
-        "goals": 1,
+        "goals": 2,
         "assists": 0,
-        "appearances": 7,
-        "minutes": 630,
-        "rating": "7.01"
+        "appearances": 5,
+        "minutes": 64,
+        "rating": "6.82"
       }
     },
     {
-      "id": 452685,
-      "name": "R. Ngumoha",
-      "photo": "https://media.api-sports.io/football/players/452685.png",
+      "id": 306,
+      "name": "Mohamed Salah",
+      "photo": "https://media.api-sports.io/football/players/306.png",
       "statistics": {
         "season": 2025,
-        "goals": 1,
-        "assists": 0,
-        "appearances": 3,
-        "minutes": 34,
-        "rating": "6.87"
+        "goals": 2,
+        "assists": 2,
+        "appearances": 7,
+        "minutes": 629,
+        "rating": "6.66"
       }
     },
     {
@@ -3039,6 +2943,19 @@
         "appearances": 7,
         "minutes": 513,
         "rating": "6.66"
+      }
+    },
+    {
+      "id": 289,
+      "name": "A. Robertson",
+      "photo": "https://media.api-sports.io/football/players/289.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 3,
+        "minutes": 118,
+        "rating": "6.6"
       }
     },
     {
@@ -3068,42 +2985,29 @@
       }
     },
     {
-      "id": 6716,
-      "name": "A. Mac Allister",
-      "photo": "https://media.api-sports.io/football/players/6716.png",
+      "id": 19035,
+      "name": "H. Elliott",
+      "photo": "https://media.api-sports.io/football/players/19035.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
-        "assists": 1,
-        "appearances": 6,
-        "minutes": 390,
-        "rating": "6.67"
-      }
-    },
-    {
-      "id": 30410,
-      "name": "F. Chiesa",
-      "photo": "https://media.api-sports.io/football/players/30410.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 2,
         "assists": 0,
-        "appearances": 5,
-        "minutes": 64,
-        "rating": "6.82"
+        "appearances": 1,
+        "minutes": 8,
+        "rating": "6.5"
       }
     },
     {
-      "id": 247,
-      "name": "C. Gakpo",
-      "photo": "https://media.api-sports.io/football/players/247.png",
+      "id": 452685,
+      "name": "R. Ngumoha",
+      "photo": "https://media.api-sports.io/football/players/452685.png",
       "statistics": {
         "season": 2025,
-        "goals": 2,
-        "assists": 2,
-        "appearances": 7,
-        "minutes": 555,
-        "rating": "7.23"
+        "goals": 1,
+        "assists": 0,
+        "appearances": 3,
+        "minutes": 34,
+        "rating": "6.87"
       }
     },
     {
@@ -3120,16 +3024,16 @@
       }
     },
     {
-      "id": 306,
-      "name": "Mohamed Salah",
-      "photo": "https://media.api-sports.io/football/players/306.png",
+      "id": 247,
+      "name": "C. Gakpo",
+      "photo": "https://media.api-sports.io/football/players/247.png",
       "statistics": {
         "season": 2025,
         "goals": 2,
         "assists": 2,
         "appearances": 7,
-        "minutes": 629,
-        "rating": "6.66"
+        "minutes": 555,
+        "rating": "7.23"
       }
     },
     {
@@ -3146,55 +3050,16 @@
       }
     },
     {
-      "id": 289,
-      "name": "A. Robertson",
-      "photo": "https://media.api-sports.io/football/players/289.png",
+      "id": 180317,
+      "name": "C. Bradley",
+      "photo": "https://media.api-sports.io/football/players/180317.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
-        "appearances": 3,
-        "minutes": 118,
-        "rating": "6.6"
-      }
-    },
-    {
-      "id": 19035,
-      "name": "H. Elliott",
-      "photo": "https://media.api-sports.io/football/players/19035.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 1,
-        "minutes": 8,
-        "rating": "6.5"
-      }
-    },
-    {
-      "id": 18889,
-      "name": "F. Woodman",
-      "photo": "https://media.api-sports.io/football/players/18889.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 0,
-        "minutes": 0,
-        "rating": null
-      }
-    },
-    {
-      "id": 8500,
-      "name": "W. Endo",
-      "photo": "https://media.api-sports.io/football/players/8500.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 1,
-        "appearances": 4,
-        "minutes": 55,
-        "rating": "6.67"
+        "appearances": 5,
+        "minutes": 235,
+        "rating": "6.3"
       }
     },
     {
@@ -3211,16 +3076,42 @@
       }
     },
     {
-      "id": 180317,
-      "name": "C. Bradley",
-      "photo": "https://media.api-sports.io/football/players/180317.png",
+      "id": 18889,
+      "name": "F. Woodman",
+      "photo": "https://media.api-sports.io/football/players/18889.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
-        "appearances": 5,
-        "minutes": 235,
-        "rating": "6.3"
+        "appearances": 0,
+        "minutes": 0,
+        "rating": null
+      }
+    },
+    {
+      "id": 6716,
+      "name": "A. Mac Allister",
+      "photo": "https://media.api-sports.io/football/players/6716.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 1,
+        "appearances": 6,
+        "minutes": 390,
+        "rating": "6.67"
+      }
+    },
+    {
+      "id": 1096,
+      "name": "D. Szoboszlai",
+      "photo": "https://media.api-sports.io/football/players/1096.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 1,
+        "assists": 0,
+        "appearances": 7,
+        "minutes": 630,
+        "rating": "7.01"
       }
     },
     {
@@ -3299,6 +3190,19 @@
         "appearances": 6,
         "minutes": 225,
         "rating": "6.88"
+      }
+    },
+    {
+      "id": 8500,
+      "name": "W. Endo",
+      "photo": "https://media.api-sports.io/football/players/8500.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 1,
+        "appearances": 4,
+        "minutes": 55,
+        "rating": "6.67"
       }
     },
     {
