@@ -3776,7 +3776,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fixture: {
             date: f.date || new Date().toISOString(),
             venue: { 
-              name: venueData.name || 'Unknown', 
+              name: venueData.name || 'Unknown Venue', 
               city: venueData.city || 'Unknown' 
             }
           },
@@ -3803,39 +3803,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get league standings from database for LeagueTableOverlay and LeaguePositionOverlay
   app.get("/api/database/standings", async (req, res) => {
     try {
-      const leagueId = parseInt(req.query.leagueId as string) || 39;
-      const season = parseInt(req.query.season as string) || 2025;
+      const { leagueId, season } = req.query;
 
-      const standings = await db.select()
+      const standings = await db
+        .select({
+          position: footballStandings.rank,
+          team: footballStandings.team_name,
+          played: footballStandings.all_played,
+          won: footballStandings.all_win,
+          drawn: footballStandings.all_draw,
+          lost: footballStandings.all_lose,
+          goalsFor: footballStandings.all_goals_for,
+          goalsAgainst: footballStandings.all_goals_against,
+          goalDifference: footballStandings.goals_diff,
+          points: footballStandings.points,
+          form: footballStandings.form,
+        })
         .from(footballStandings)
         .where(
           and(
-            eq(footballStandings.leagueId, leagueId),
-            eq(footballStandings.season, season.toString())
+            eq(footballStandings.league_id, Number(leagueId)),
+            eq(footballStandings.season, String(season))
           )
         )
         .orderBy(footballStandings.rank);
 
-      const transformedStandings = standings.map(s => ({
-        position: s.rank || 0,
-        team: s.teamName || '',
-        points: s.points || 0,
-        played: s.allPlayed || 0,
-        won: s.allWin || 0,
-        drawn: s.allDraw || 0,
-        lost: s.allLose || 0,
-        goalsFor: s.allGoalsFor || 0,
-        goalsAgainst: s.allGoalsAgainst || 0,
-        goalDifference: s.goalsDiff || 0,
-        form: s.form ? s.form.split('') : []
-      }));
-
       res.json({
-        data: transformedStandings,
-        lastUpdated: standings[0]?.lastUpdate || new Date(),
-        source: "database"
+        data: standings,
+        source: 'database',
+        timestamp: new Date().toISOString(),
+        lastUpdated: standings[0]?.updated_at || new Date().toISOString()
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching standings from database:', error);
       res.status(500).json({ error: "Failed to fetch standings from database" });
     }

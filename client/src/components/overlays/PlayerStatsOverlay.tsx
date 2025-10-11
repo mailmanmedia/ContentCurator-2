@@ -41,9 +41,9 @@ export default function PlayerStatsOverlay({
   
   // Fetch player statistics from database
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['player-stats-db'],
+    queryKey: ['player-stats-db', 40, 2025],
     queryFn: async () => {
-      const response = await fetch('/api/database/players/top-scorers?season=2025&teamId=40');
+      const response = await fetch('/api/database/players/top-scorers?season=2025&teamId=40&limit=50');
       if (!response.ok) throw new Error('Failed to fetch player stats');
       return response.json();
     },

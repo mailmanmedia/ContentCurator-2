@@ -254,9 +254,9 @@ export default function PlayerComparisonOverlay({
   
   // Fetch player statistics from database
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['player-comparison-db'],
+    queryKey: ['player-comparison-db', 40, 2025],
     queryFn: async () => {
-      const response = await fetch('/api/database/players/top-scorers?season=2025&teamId=40&limit=20');
+      const response = await fetch('/api/database/players/top-scorers?season=2025&teamId=40&limit=30');
       if (!response.ok) throw new Error('Failed to fetch player stats');
       return response.json();
     },

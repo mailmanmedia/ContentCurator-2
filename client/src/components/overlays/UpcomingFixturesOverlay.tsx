@@ -49,9 +49,9 @@ export default function UpcomingFixturesOverlay({
   
   // Fetch upcoming fixtures from database
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['upcoming-fixtures-db'],
+    queryKey: ['upcoming-fixtures-db', 40],
     queryFn: async () => {
-      const response = await fetch('/api/database/fixtures/upcoming?teamId=40&limit=10');
+      const response = await fetch('/api/database/fixtures/upcoming?teamId=40&limit=15');
       if (!response.ok) throw new Error('Failed to fetch fixtures');
       return response.json();
     },

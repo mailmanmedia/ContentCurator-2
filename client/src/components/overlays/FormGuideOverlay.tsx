@@ -119,9 +119,9 @@ export default function FormGuideOverlay({
     error: statsError,
     refetch: refetchStats
   } = useQuery({
-    queryKey: ['database-team-stats', teamId, leagueId],
+    queryKey: ['database-team-stats', teamId, leagueId, season],
     queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}`);
+      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}&season=${season}`);
       if (!response.ok) throw new Error('Failed to fetch team stats');
       return response.json();
     },
@@ -138,9 +138,9 @@ export default function FormGuideOverlay({
     error: fixturesError,
     refetch: refetchFixtures
   } = useQuery({
-    queryKey: ['database-team-fixtures', teamId, matchLimit],
+    queryKey: ['database-team-fixtures', teamId, matchLimit, season],
     queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}`);
+      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}&season=${season}`);
       if (!response.ok) throw new Error('Failed to fetch fixtures');
       return response.json();
     },

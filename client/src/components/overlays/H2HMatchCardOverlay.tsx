@@ -65,7 +65,7 @@ export default function H2HMatchCardOverlay({
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['h2h-db', homeTeamId, awayTeamId],
     queryFn: async () => {
-      const response = await fetch(`/api/database/head-to-head/${homeTeamId}/${awayTeamId}?limit=30`);
+      const response = await fetch(`/api/database/head-to-head/${homeTeamId}/${awayTeamId}?limit=50`);
       if (!response.ok) throw new Error('Failed to fetch H2H data');
       return response.json();
     },

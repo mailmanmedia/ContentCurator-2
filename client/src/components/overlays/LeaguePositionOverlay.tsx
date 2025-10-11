@@ -34,7 +34,7 @@ export default function LeaguePositionOverlay({
   
   // Fetch standings data from database
   const { data: standingsData, isLoading, refetch } = useQuery({
-    queryKey: ['standings-db'],
+    queryKey: ['standings-db', 39, 2025],
     queryFn: async () => {
       const response = await fetch('/api/database/standings?leagueId=39&season=2025');
       if (!response.ok) throw new Error('Failed to fetch standings');
