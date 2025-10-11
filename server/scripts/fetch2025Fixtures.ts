@@ -5,19 +5,19 @@ import { apiFootballService } from "../football/apiFootballService";
 import { eq, and } from "drizzle-orm";
 
 const LIVERPOOL_ID = 40;
-const SEASON_2025 = 2025;
+const CURRENT_SEASON = 2024; // 2024-25 season
 
 async function fetch2025Fixtures() {
-  console.log('🔄 Fetching Liverpool FC 2025-26 season fixtures...\n');
+  console.log('🔄 Fetching Liverpool FC 2024-25 season fixtures...\n');
   
   try {
-    // Fetch fixtures for Liverpool in 2025-26 season
+    // Fetch fixtures for Liverpool in current season
     const fixtures = await apiFootballService.fetchFixturesByTeam({
-      season: SEASON_2025,
+      season: CURRENT_SEASON,
       team: LIVERPOOL_ID
     });
 
-    console.log(`📊 Found ${fixtures.length} fixtures for Liverpool in 2025-26 season\n`);
+    console.log(`📊 Found ${fixtures.length} fixtures for Liverpool in 2024-25 season\n`);
 
     let newCount = 0;
     let updatedCount = 0;
@@ -109,7 +109,7 @@ async function fetch2025Fixtures() {
           .where(
             and(
               eq(football_leagues.id, fixture.league.id),
-              eq(football_leagues.season, SEASON_2025.toString())
+              eq(football_leagues.season, CURRENT_SEASON.toString())
             )
           )
           .limit(1);
@@ -121,7 +121,7 @@ async function fetch2025Fixtures() {
             country: fixture.league.country,
             logo: fixture.league.logo,
             type: 'League',
-            season: SEASON_2025.toString()
+            season: CURRENT_SEASON.toString()
           });
           console.log(`  📌 Added league: ${fixture.league.name}`);
         }
@@ -137,7 +137,7 @@ async function fetch2025Fixtures() {
     console.log(`  🔄 Fixtures updated: ${updatedCount}`);
     console.log(`  ❌ Fixtures skipped: ${skippedCount}`);
     console.log(`  📅 Total processed: ${fixtures.length}`);
-    console.log('\n✅ 2025-26 fixtures sync complete!');
+    console.log('\n✅ 2024-25 fixtures sync complete!');
 
   } catch (error) {
     console.error('❌ Error fetching 2025-26 fixtures:', error);
