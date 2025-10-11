@@ -1,0 +1,125 @@
+Mission Overview
+You are tasked to build an autonomous, in-app agent and admin panel that continuously monitors, manages, fixes, updates, audits, and reports on every aspect of my web app—ContentCurator—with the following explicit requirements:
+
+1. System Health & Resource Monitoring
+Monitor server uptime, RAM/CPU usage, bandwidth, disk space, and error logs for frontend, backend, and database in real-time.
+
+If any resource crosses 80% threshold, automatically alert administrators and log event.
+
+Run scheduled health checks every 10 minutes, manual checks on demand.
+
+Store historical health snapshots, graph trends on dashboard.
+
+2. Database Admin Panel
+Allow secure import/export of data for every table (CSV, JSON, SQL).
+
+Validate schemas and enforce referential integrity before imports. Prevent invalid data; explain any errors in plain English.
+
+Support add/edit/delete for rows only with explicit confirmation—show preview before committing changes.
+
+Provide DB diff tool—compare historical states, highlight what changed in each session.
+
+Run full backup before every schema or bulk-change.
+
+Allow restoring backups to any previous timestamp, warning on conflicts.
+
+3. API Manager (+ Self-Healing)
+Surface every integrated API, showing keys, endpoints, auth method, rate limits, last response status, average latency.
+
+Allow updating API keys, endpoints, or settings via secure UI.
+
+Automatically monitor all API connections every 15 minutes:
+
+If errors >3 in 1 hour, agent attempts auto-fix (e.g., retries, refreshes key if possible, rotates endpoint, escalates to admin if needed).
+
+Self-healing agent must ALWAYS log every change with timestamp, old/new value, reason for action.
+
+Display API call history, failure rates, common errors, and recommended fixes.
+
+Allow admin to "chat" with API manager agent: typed instructions are parsed and verified before acting.
+
+4. Codebase Checker & Maintenance Agent
+Scan ALL code files (frontend, backend, scripts, configs) at least once per hour for errors, deprecated libraries, security vulnerabilities, TODOs, and code smells.
+
+Build a changelog of all commits, diffs, and meta-data (author, time, file, summary).
+
+Show “function map” of every function/class/component: input/output types, expected return values, dependencies.
+
+Allow manual or automatic code patching—with explicit diff and rollback prompt.
+
+BEFORE running code fixes: run tests (+ simulate with dry-run), log results, present changes for admin approval.
+
+If an automated fix fails, roll back all changes and notify admin immediately.
+
+Archive every patch and fix result (success/failure) in the maintenance log.
+
+5. Maintenance & Update Scheduler
+Automate regular backup, database optimization, cache purging, library updates, and dependency audits.
+
+Be able to run hotfixes/security patches or schedule full maintenance windows—with countdown/notification to users.
+
+Show next scheduled task, historical runs, estimated duration, and outcomes.
+
+6. Data/Stats/Report Manager
+Export comprehensive reports (CSV, PDF, HTML) on:
+
+Stats of every page, UI element, function, component, API connection.
+
+For each report, include count, last updated, error rates, usage stats, and change history.
+
+At pixel/UI/component level: audit for broken elements, slow response, rendering errors.
+
+Allow downloading or emailing reports, with summary and full-data options.
+
+Save, catalog, and version-control every exported report for later review.
+
+Option to export entire system/activity/health log as a ZIP’d archive.
+
+7. Permissions, Security, and Audit
+All sensitive actions require admin/superuser confirmation.
+
+Use 2FA/auth for agent UI and backup/restore actions.
+
+Log every action in an audit trail: username, device, time, action details, before/after state.
+
+Rollback or undo option for every automated/agent-initiated action, with double confirmation.
+
+Notify user of ambiguous or dangerous instructions—require explicit override for risky operations.
+
+8. Agent Chat/Instruction Interface
+In-app chat window for human <-> agent communication.
+
+Allow sending instructions in natural language.
+
+Agent must parse, validate, and confirm intent before executing.
+
+For unclear instructions, agent asks for clarification.
+
+Explain in detail: what’s about to happen, side effects, rollback options.
+
+Respond with formatted status, error/fix logs, recommended next steps.
+
+9. Edge Case Handling
+If encountering unknown error, agent logs stack trace, stops further automation, alerts admin.
+
+Never delete or overwrite data/code/config without prior backup and explicit review.
+
+All “self-healing” or fix attempts must be clearly logged and reversible.
+
+If API or code auto-repair fails twice, escalate to human and stop.
+
+10. Extensibility & Plugin Framework (Futureproofing)
+Design the agent/system so new panels or tools can be plugged in (analytics, ML, 3rd-party services) with minimal changes.
+
+Document all agent interfaces, action types, and security boundaries.
+
+Instruction to Builder/Agent:
+Do not assume intent. Always confirm and ask for details if instructions may risk data or system stability.
+
+Never automate irreversible changes without prior backup and plain-English explanation of consequences.
+
+Always keep user informed. Always log EVERYTHING. Always allow manual override and rollback.
+
+Design for clarity, accessibility, and security.
+
+If any step fails, STOP and escalate, do NOT try further fixes without user input.

@@ -1,0 +1,165 @@
+Meta-Agent/Admin Super-Panel Builder — Complete Integration, Audit-Informed, Multi-LLM, and Multi-Step Verified
+General Principles
+Integrate, Upgrade, Never Duplicate:
+All existing app tools—database status, admin panel, overlays, production studio, video editor, visual assistant, homepage, framework manager, and analytic dashboards—must be reused, improved, and linked into this panel. Do not reimplement or fragment features.
+
+Audit-Driven Planning:
+Start every phase by scanning the complete project file tree and reviewing all current /client/src/pages, /client/src/components, /server/, /scripts, /data, /assets, and contexts/ modules.
+Reference all audit findings on API failures, database schema mismatches, overlay registration, homepage display, and panel navigation.
+
+No Page/Module Removal:
+Do not remove or overwrite existing pages (Mailman Media homepage, overlays, dashboards, video editor/studio, analytics, etc.).
+All legacy and branded content, date/time, countdown, next match, etc. must remain accessible and be restored if absent.
+
+Explicit Multi-Step Verification (Critical):
+Every automated agent task—fetch, export, import, render, fix—must require:
+
+Backend and UI verification
+
+Automated checks, real-time logs, and manual user/test confirmation
+
+Screenshots or state summaries for overlays, studio/editor, analytics
+
+No action marked “complete” until backend data, front-end display, and UX all pass verification
+
+Core Features & Integration Requirements
+1. Central Meta-Agent Dashboard
+Unified control panel connects all admin, health/status, API managers, LLM switches, overlays, studio/editor controls, and reporting tools.
+
+Agent chat box accepts natural language instructions, directs/fixes/automates tasks, and uses the chosen LLM: GPT, Claude, Perplexity (with model toggle and fallback).
+
+Prominently display audit logs, active LLM, current/next match, key system stats.
+
+2. Database Status & Admin (Integrated)
+Directly connect and enhance existing database status and admin pages—fix any schema mismatches, broken dropdowns/filters, and ensure all team/player/season/league/fixture filters are accurate, up-to-date, and auto-refreshing.
+
+Show live counts, last updated status, and allow export/import with error protection.
+
+Validate all schema and query changes against the live database before reporting success.
+
+Underlying table names, columns, and IDs must match, and dropdowns never display zero when content exists.
+
+3. API Manager (Self-Healing, Efficient, Incremental)
+Integrate all existing API fetch/sync, update, and self-fix logic.
+
+Upgrade to fully support:
+
+Schema match (snake_case vs camelCase)
+
+ID mapping (player, team, league, fixture, venue, etc.)
+
+Robust error handling/logging for SQL, Drizzle ORM, endpoint failures
+
+Incremental sync: initially download and store all available historical data, then only fetch/store new updates (minimize costs, prevent duplicates).
+
+All API actions logged, with backend + UI result verification and rollback plan.
+
+4. Multi-LLM Model Routing & Usage Tracking
+Multi-model integration: OpenAI, Anthropic, Perplexity, with manual toggle and smart routing.
+
+Model selection applies per task/module (chat, code fix, reporting, UX audit).
+
+Active model clearly displayed; fallback and cost/usage auto-reported.
+
+LLM audit and usage statistics for all agent actions.
+
+5. Production Studio, Video Editor, Overlays & Live Presentation
+Link and enhance all production tools and overlays:
+
+Restore Mailman Media homepage, branding, date/time, countdown, next match
+
+Ensure all overlay modules (FormGuideOverlay, UpcomingFixturesOverlay, etc.) are registered, render on canvas, and available in Live Presentation UI
+
+Multi-step verify overlays: check API/data, database pulls, UI display, and user input
+
+Automated screenshot, preview, and manual affirmation where possible
+
+Provide live edit, preview, error logs, and version history for all overlays/studio features
+
+6. Codebase Checker, Maintenance & Reporting
+Audit and connect codebase linters, fix scripts, commit and patch history
+
+Multi-step verify every code fix/patch:
+
+Test backend result and UI/UX render
+
+Log change, screenshots, and user confirmation before publishing or marking complete
+
+Export reports on all actions, changes, overlay/analytics status, with full backend and UI state summary
+
+7. Reporting, Export, and Data Audit
+Export comprehensive stats for every table, overlay, video, UI element, model usage, and error log
+
+Model (LLM)-generated summaries and reporting
+
+Export must include backend state, UI screenshots, and workflow/log summaries
+
+8. Permissions, Security, and Audit Trail
+Every sensitive action (DB edit, API key update, code patch, LLM switching) requires step-by-step, multi-factor confirmation
+
+Full audit log—date, user, before/after, module(s), verification steps, screenshots
+
+Enforce rollback/reversion for all automated changes
+
+9. Error Handling and Ambiguity Management
+All failures/ambiguities alert user, pause agent action, and prompt for review/clarification
+
+No process marked “done” unless backend, UI, and validation pass all steps
+
+10. Extensibility and Plugin Architecture
+All dashboards, overlays, studio/editor modules, and model integrations use plugin-style architecture
+
+Dynamic mounting, documented interfaces, conversion for future models/panels
+
+Key Audit Findings/Gaps Needing Resolution
+Broken API data pipeline: SQL/Drizzle ORM queries contained schema mismatches; player/team/fixture/season IDs not consistently stored or mapped. All schema references fixed to match actual database column names (snake_case).
+
+Incremental Data Sync: API tool now supports incremental updates—initial full import, then only store new/updated fixtures, player stats, overlays, etc.
+
+Overlay Registration Issues: Some overlays (FormGuide, UpcomingFixtures) weren’t registered, so Live Presentation UI couldn’t display them. Registration and test-render logic added and visually verified.
+
+Homepage Restoration: Mailman Media homepage (logo, date/time, next match, countdown, quick links) restored—remains main entrypoint, with all other pages directly linked.
+
+Database Dropdowns/Filters: Previously showed zeros (undefined/empty arrays); fixed to always display all active teams, seasons, leagues, and players with error-guard fallback.
+
+Multi-Step Verification: Overlays and UI modules now multi-step verified—backend data, UI render, and user/interactor result all checked, with screenshots/logging at each stage.
+
+Error Logging: APIs and overlays have real-time error logs and fallback data to prevent blank screens. All failures logged and sent to admin panel.
+
+Extensibility/Modularity: All future panel/features—analytics, reporting, overlays, video editor—use documented plugin interfaces for expansion.
+
+Advanced Improvements/Gaps for Maximum Reliability and Efficiency
+Automated Visual Confirmation: Screenshots and side-by-side comparison for every overlay/UI change, with regression test harness (using Framer Motion, Puppeteer, etc.).
+
+Dynamic Plugin Loader: Allow easy mounting/swapping of new features without full app restart.
+
+Live System/Activity Monitoring: Real-time dashboard feed for all studio/editor/overlay activity, LLM usage, and admin/API events.
+
+Dev/Production/QA Workflow Sync: Support multiple deployment environments—with safety toggles and separate data/workflows.
+
+Accessibility/WCAG Compliance: Automated agent-driven accessibility checks (important for overlays and video studio modules).
+
+Internationalization/User Roles: UI translation, role-based access, and audit log for every user, change, and agent action.
+
+User Feedback Shortcuts: “Report a snag” button on every overlay/studio/editor view; agent triages, logs, and prepares rapid fix/test plan.
+
+Multi-LLM Benchmarks: Track model performance, efficiency, and quality by task for ongoing improvement and cost savings.
+
+Final Instructions to Builder/Agent
+Do NOT duplicate panels, overlays, or features—integrate or upgrade only.
+
+Agent actions must pass multi-step backend + UI verification, logged at every stage, before marking “complete.”
+
+Always display current/next match info, key stats, model selection, and error/fix logs in real time.
+
+All plugin/module interfaces must be documented for future upgrades.
+
+Export/report features must collect backend state, UI screenshots, workflow summaries, and LLM model usage for every action.
+
+All critical failures, errors, or ambiguous processes must prompt the admin/user and require explicit confirmation/step-through before proceeding.
+
+Maintain audit logs of every action, patch, and API event, with user, timestamp, verification results, and reason for change.
+
+Release, patch, and verify in a protected/automated cycle—never in production until multi-step test confirms all backend and UI/UX components are operational.
+
+End of Meta-Agent/Admin Super-Panel prompt — the definitive, comprehensive blueprint for advanced, error-free, integrated, multi-LLM, and fully verified automation in ContentCurator.
