@@ -1,8 +1,8 @@
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 import { apiFootballService } from './apiFootballService';
 import { historicalDataService } from '../services/historicalDataService';
 import { db } from '../db';
-import { toSafeDate, toSafeDateRequired, convertTimestampFields } from '../utils/dateUtils';
+import { toSafeDate, toSafeDateRequired, convertTimestampFields, toUnixTimestamp } from '../utils/dateUtils';
 import {
   football_fixtures as footballFixtures,
   football_standings as footballStandings,
@@ -258,54 +258,35 @@ class ScheduledUpdateService {
       
       // Update database
       for (const fixture of allFixtures) {
+        const fixtureDate = new Date(fixture.fixture.date);
         await db.insert(footballFixtures)
           .values({
             id: fixture.fixture.id,
             referee: fixture.fixture.referee,
             timezone: fixture.fixture.timezone,
-            timestamp: toSafeDate(fixture.fixture.date || fixture.fixture.timestamp),
-            venue_id: fixture.fixture.venue?.id || null,
-            venue_name: fixture.fixture.venue?.name || null,
-            venue_city: fixture.fixture.venue?.city || null,
-            status_long: fixture.fixture.status.long,
-            status_short: fixture.fixture.status.short,
-            status_elapsed: fixture.fixture.status.elapsed,
+            date: fixtureDate,
+            timestamp: toUnixTimestamp(fixture.fixture.timestamp, fixtureDate),
+            periods: JSON.stringify(fixture.fixture.periods || {}),
+            venue: JSON.stringify(fixture.fixture.venue || {}),
+            status: JSON.stringify(fixture.fixture.status || {}),
             league_id: fixture.league.id,
-            season: fixture.league.season.toString(),
+            season: fixture.league.season,
             round: fixture.league.round,
             home_team_id: fixture.teams.home.id,
-            home_team_name: fixture.teams.home.name,
-            home_team_logo: fixture.teams.home.logo,
-            home_team_winner: fixture.teams.home.winner,
             away_team_id: fixture.teams.away.id,
-            away_team_name: fixture.teams.away.name,
-            away_team_logo: fixture.teams.away.logo,
-            away_team_winner: fixture.teams.away.winner,
-            goals_home: fixture.goals.home,
-            goals_away: fixture.goals.away,
-            score_halftime_home: fixture.score.halftime?.home || null,
-            score_halftime_away: fixture.score.halftime?.away || null,
-            score_fulltime_home: fixture.score.fulltime?.home || null,
-            score_fulltime_away: fixture.score.fulltime?.away || null,
-            score_extratime_home: fixture.score.extratime?.home || null,
-            score_extratime_away: fixture.score.extratime?.away || null,
-            score_penalty_home: fixture.score.penalty?.home || null,
-            score_penalty_away: fixture.score.penalty?.away || null,
-            updated_at: toSafeDateRequired(Date.now())
+            goals: JSON.stringify(fixture.goals || {}),
+            score: JSON.stringify(fixture.score || {}),
+            status_short: fixture.fixture.status.short,
+            last_updated: new Date()
           })
           .onConflictDoUpdate({
             target: footballFixtures.id,
             set: {
-              status_long: fixture.fixture.status.long,
+              status: JSON.stringify(fixture.fixture.status || {}),
               status_short: fixture.fixture.status.short,
-              status_elapsed: fixture.fixture.status.elapsed,
-              goals_home: fixture.goals.home,
-              goals_away: fixture.goals.away,
-              score_halftime_home: fixture.score.halftime?.home || null,
-              score_halftime_away: fixture.score.halftime?.away || null,
-              score_fulltime_home: fixture.score.fulltime?.home || null,
-              score_fulltime_away: fixture.score.fulltime?.away || null,
-              updated_at: toSafeDateRequired(Date.now())
+              goals: JSON.stringify(fixture.goals || {}),
+              score: JSON.stringify(fixture.score || {}),
+              last_updated: new Date()
             }
           });
         
@@ -339,16 +320,16 @@ class ScheduledUpdateService {
     
     try {
       // Get Premier League standings
-      const plStandings = await apiFootballService.getStandings({
-        league: this.PREMIER_LEAGUE_ID,
-        season: this.getCurrentSeason()
-      });
+      const plStandings = await apiFootballService.fetchStandings(
+        this.PREMIER_LEAGUE_ID,
+        this.getCurrentSeason()
+      );
       
       // Get Champions League standings
-      const clStandings = await apiFootballService.getStandings({
-        league: this.CHAMPIONS_LEAGUE_ID,
-        season: this.getCurrentSeason()
-      });
+      const clStandings = await apiFootballService.fetchStandings(
+        this.CHAMPIONS_LEAGUE_ID,
+        this.getCurrentSeason()
+      );
       
       const allStandings = [...plStandings, ...clStandings];
       
@@ -388,7 +369,7 @@ class ScheduledUpdateService {
               away_lose: standing.away.lose,
               away_goals_for: standing.away.goals.for,
               away_goals_against: standing.away.goals.against,
-              updated_at: toSafeDateRequired(Date.now())
+              last_update: toSafeDateRequired(Date.now())
             })
             .onConflictDoUpdate({
               target: [footballStandings.league_id, footballStandings.team_id, footballStandings.season],
@@ -403,7 +384,7 @@ class ScheduledUpdateService {
                 all_lose: standing.all.lose,
                 all_goals_for: standing.all.goals.for,
                 all_goals_against: standing.all.goals.against,
-                updated_at: toSafeDateRequired(Date.now())
+                last_update: toSafeDateRequired(Date.now())
               }
             });
           
@@ -445,45 +426,41 @@ class ScheduledUpdateService {
       for (const team of teams) {
         try {
           // Get team statistics for Premier League
-          const plStats = await apiFootballService.getTeamStatistics({
-            team: team.id,
-            season: this.getCurrentSeason(),
-            league: this.PREMIER_LEAGUE_ID
-          });
+          const plStats = await apiFootballService.fetchTeamStatistics(
+            team.id,
+            this.getCurrentSeason(),
+            this.PREMIER_LEAGUE_ID
+          );
           
           if (plStats) {
+            const goalsFor = plStats.goals.for.total.total || 0;
+            const goalsAgainst = plStats.goals.against.total.total || 0;
             await db.insert(teamSeasonStatistics)
               .values({
                 team_id: team.id,
-                competition_id: this.PREMIER_LEAGUE_ID,
+                competition: this.PREMIER_LEAGUE_ID.toString(),
                 season: this.getCurrentSeason().toString(),
                 matches_played: plStats.fixtures.played.total,
                 wins: plStats.fixtures.wins.total,
                 draws: plStats.fixtures.draws.total,
                 losses: plStats.fixtures.loses.total,
-                goals_for: plStats.goals.for.total.total,
-                goals_against: plStats.goals.against.total.total,
-                clean_sheets: plStats.clean_sheet.total,
-                form: plStats.form,
-                avg_goals_scored: parseFloat(plStats.goals.for.average.total),
-                avg_goals_conceded: parseFloat(plStats.goals.against.average.total),
-                biggest_win_home: plStats.biggest.wins.home,
-                biggest_win_away: plStats.biggest.wins.away,
-                biggest_loss_home: plStats.biggest.loses.home,
-                biggest_loss_away: plStats.biggest.loses.away,
+                goals_for: goalsFor,
+                goals_against: goalsAgainst,
+                goal_difference: goalsFor - goalsAgainst,
+                points: (plStats.fixtures.wins.total * 3) + plStats.fixtures.draws.total,
                 updated_at: toSafeDateRequired(Date.now())
               })
               .onConflictDoUpdate({
-                target: [teamSeasonStatistics.team_id, teamSeasonStatistics.competition_id, teamSeasonStatistics.season],
+                target: [teamSeasonStatistics.team_id, teamSeasonStatistics.competition, teamSeasonStatistics.season],
                 set: {
                   matches_played: plStats.fixtures.played.total,
                   wins: plStats.fixtures.wins.total,
                   draws: plStats.fixtures.draws.total,
                   losses: plStats.fixtures.loses.total,
-                  goals_for: plStats.goals.for.total.total,
-                  goals_against: plStats.goals.against.total.total,
-                  clean_sheets: plStats.clean_sheet.total,
-                  form: plStats.form,
+                  goals_for: goalsFor,
+                  goals_against: goalsAgainst,
+                  goal_difference: goalsFor - goalsAgainst,
+                  points: (plStats.fixtures.wins.total * 3) + plStats.fixtures.draws.total,
                   updated_at: toSafeDateRequired(Date.now())
                 }
               });
@@ -524,53 +501,45 @@ class ScheduledUpdateService {
     let recordsUpdated = 0;
     
     try {
-      // Get active players (fetch all Liverpool squad members)
+      // Get active players (fetch Liverpool squad members)
       const players = await db.select()
         .from(footballPlayers)
-        .where(eq(footballPlayers.team_id, 40)) // Liverpool FC
-        .limit(50); // Increased to accommodate full squad (typically 25-30 players)
+        .limit(50); // Limit to avoid API rate limits
       
       for (const player of players) {
         try {
-          const playerStats = await apiFootballService.getPlayerStatistics({
-            id: player.id,
-            season: this.getCurrentSeason()
-          });
+          if (!player.player_id) continue; // Skip if no player_id
+          
+          const playerStats = await apiFootballService.fetchPlayerStatistics(
+            this.PREMIER_LEAGUE_ID,
+            this.getCurrentSeason(),
+            40 // Liverpool FC team ID
+          );
           
           if (playerStats && playerStats.length > 0) {
-            const stats = playerStats[0].statistics[0];
+            // Find the specific player in the results
+            const playerData = playerStats.find(p => p.player.id === player.player_id);
+            if (!playerData || !playerData.statistics || playerData.statistics.length === 0) continue;
+            
+            const stats = playerData.statistics[0];
             
             if (stats) {
               await db.insert(playerSeasonStatistics)
                 .values({
-                  player_id: player.id,
+                  player_id: player.player_id,
                   team_id: stats.team.id,
-                  competition_id: stats.league.id,
-                  season: this.getCurrentSeason().toString(),
+                  league_id: stats.league.id,
+                  season: this.getCurrentSeason(),
                   appearances: stats.games.appearances || 0,
-                  lineups: stats.games.lineups || 0,
                   minutes: stats.games.minutes || 0,
                   goals: stats.goals.total || 0,
                   assists: stats.goals.assists || 0,
                   yellow_cards: stats.cards.yellow || 0,
                   red_cards: stats.cards.red || 0,
-                  rating: stats.games.rating ? parseFloat(stats.games.rating) : null,
-                  shots_total: stats.shots.total || 0,
-                  shots_on: stats.shots.on || 0,
-                  passes_total: stats.passes.total || 0,
-                  passes_key: stats.passes.key || 0,
-                  passes_accuracy: stats.passes.accuracy || 0,
-                  tackles_total: stats.tackles.total || 0,
-                  duels_total: stats.duels.total || 0,
-                  duels_won: stats.duels.won || 0,
-                  dribbles_attempts: stats.dribbles.attempts || 0,
-                  dribbles_success: stats.dribbles.success || 0,
-                  fouls_drawn: stats.fouls.drawn || 0,
-                  fouls_committed: stats.fouls.committed || 0,
-                  updated_at: toSafeDateRequired(Date.now())
+                  rating: stats.games.rating || null
                 })
                 .onConflictDoUpdate({
-                  target: [playerSeasonStatistics.player_id, playerSeasonStatistics.team_id, playerSeasonStatistics.season],
+                  target: [playerSeasonStatistics.player_id, playerSeasonStatistics.team_id, playerSeasonStatistics.league_id, playerSeasonStatistics.season],
                   set: {
                     appearances: stats.games.appearances || 0,
                     minutes: stats.games.minutes || 0,
@@ -578,8 +547,7 @@ class ScheduledUpdateService {
                     assists: stats.goals.assists || 0,
                     yellow_cards: stats.cards.yellow || 0,
                     red_cards: stats.cards.red || 0,
-                    rating: stats.games.rating ? parseFloat(stats.games.rating) : null,
-                    updated_at: toSafeDateRequired(Date.now())
+                    rating: stats.games.rating || null
                   }
                 });
               
@@ -626,12 +594,11 @@ class ScheduledUpdateService {
       for (const match of liveMatches) {
         await db.update(footballFixtures)
           .set({
-            status_long: match.fixture.status.long,
+            status: JSON.stringify(match.fixture.status),
             status_short: match.fixture.status.short,
-            status_elapsed: match.fixture.status.elapsed,
-            goals_home: match.goals.home,
-            goals_away: match.goals.away,
-            updated_at: toSafeDateRequired(Date.now())
+            goals: JSON.stringify(match.goals),
+            score: JSON.stringify(match.score),
+            last_updated: toSafeDateRequired(Date.now())
           })
           .where(eq(footballFixtures.id, match.fixture.id));
         
@@ -745,10 +712,10 @@ class ScheduledUpdateService {
   private async logUpdateResult(updateType: string, result: UpdateResult) {
     try {
       await db.insert(data_sync_logs).values({
-        sync_type: updateType,
+        action: updateType,
         resource_type: this.currentOperation || 'all',
         status: result.success ? 'success' : 'failed',
-        records_affected: result.recordsUpdated,
+        records_processed: result.recordsUpdated,
         error_message: result.error,
         started_at: result.timestamp,
         completed_at: toSafeDateRequired(Date.now())

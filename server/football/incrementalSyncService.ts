@@ -9,6 +9,7 @@ import {
 } from "@shared/schema";
 import { eq, and, gt, desc } from "drizzle-orm";
 import { APIFootballService } from "./apiFootballService";
+import { toUnixTimestamp } from '../utils/dateUtils';
 
 interface SyncResult {
   resource: string;
@@ -114,7 +115,7 @@ export class IncrementalSyncService {
         .where(
           and(
             eq(football_fixtures.league_id, leagueId),
-            eq(football_fixtures.season, season.toString())
+            eq(football_fixtures.season, season)
           )
         )
         .orderBy(desc(football_fixtures.timestamp))
@@ -141,52 +142,36 @@ export class IncrementalSyncService {
           .limit(1);
 
         if (existingFixture.length === 0) {
+          const fixtureDate = new Date(fixture.fixture.date);
           await db.insert(football_fixtures).values({
             id: fixture.fixture.id,
             referee: fixture.fixture.referee,
             timezone: fixture.fixture.timezone,
-            timestamp: new Date(fixture.fixture.date || fixture.fixture.timestamp),
-            venue_id: fixture.fixture.venue?.id || null,
-            venue_name: fixture.fixture.venue?.name || null,
-            venue_city: fixture.fixture.venue?.city || null,
-            status_long: fixture.fixture.status.long,
-            status_short: fixture.fixture.status.short,
-            status_elapsed: fixture.fixture.status.elapsed,
+            date: fixtureDate,
+            timestamp: toUnixTimestamp(fixture.fixture.timestamp, fixtureDate),
+            periods: JSON.stringify(fixture.fixture.periods || {}),
+            venue: JSON.stringify(fixture.fixture.venue || {}),
+            status: JSON.stringify(fixture.fixture.status || {}),
             league_id: fixture.league.id,
-            season: fixture.league.season.toString(),
+            season: fixture.league.season,
             round: fixture.league.round,
             home_team_id: fixture.teams.home.id,
-            home_team_name: fixture.teams.home.name,
-            home_team_logo: fixture.teams.home.logo,
-            home_team_winner: fixture.teams.home.winner,
             away_team_id: fixture.teams.away.id,
-            away_team_name: fixture.teams.away.name,
-            away_team_logo: fixture.teams.away.logo,
-            away_team_winner: fixture.teams.away.winner,
-            goals_home: fixture.goals.home,
-            goals_away: fixture.goals.away,
-            score_halftime_home: fixture.score.halftime?.home || null,
-            score_halftime_away: fixture.score.halftime?.away || null,
-            score_fulltime_home: fixture.score.fulltime?.home || null,
-            score_fulltime_away: fixture.score.fulltime?.away || null,
-            score_extratime_home: fixture.score.extratime?.home || null,
-            score_extratime_away: fixture.score.extratime?.away || null,
-            score_penalty_home: fixture.score.penalty?.home || null,
-            score_penalty_away: fixture.score.penalty?.away || null
+            goals: JSON.stringify(fixture.goals || {}),
+            score: JSON.stringify(fixture.score || {}),
+            status_short: fixture.fixture.status.short,
+            last_updated: new Date()
           });
           newRecords++;
         } else {
           // Update if status changed
           await db.update(football_fixtures)
             .set({
-              status_long: fixture.fixture.status.long,
+              status: JSON.stringify(fixture.fixture.status || {}),
               status_short: fixture.fixture.status.short,
-              status_elapsed: fixture.fixture.status.elapsed,
-              goals_home: fixture.goals.home,
-              goals_away: fixture.goals.away,
-              score_fulltime_home: fixture.score.fulltime?.home || null,
-              score_fulltime_away: fixture.score.fulltime?.away || null,
-              updated_at: new Date()
+              goals: JSON.stringify(fixture.goals || {}),
+              score: JSON.stringify(fixture.score || {}),
+              last_updated: new Date()
             })
             .where(eq(football_fixtures.id, fixture.fixture.id));
           updatedRecords++;
