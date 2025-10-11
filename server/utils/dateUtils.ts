@@ -100,3 +100,57 @@ export function formatForDb(date: Date | null): Date | null {
   if (!isValidDate(date)) return new Date();
   return date;
 }
+
+/**
+ * Safely converts various timestamp formats to a Unix timestamp (integer, seconds since epoch)
+ * @param value - Can be a Date, string (ISO or numeric), number (Unix timestamp or milliseconds), or null/undefined
+ * @param fallbackDate - Optional fallback date to use if value is invalid
+ * @returns Unix timestamp in seconds (integer), or null if invalid and no fallback
+ */
+export function toUnixTimestamp(value: any, fallbackDate?: Date): number | null {
+  // Null or undefined
+  if (value == null) {
+    return fallbackDate ? Math.floor(fallbackDate.getTime() / 1000) : null;
+  }
+  
+  // Already a number - check if it's seconds or milliseconds
+  if (typeof value === 'number') {
+    // Unix timestamps are typically 10 digits (seconds), milliseconds are 13 digits
+    return value < 10000000000 ? Math.floor(value) : Math.floor(value / 1000);
+  }
+  
+  // String format - could be ISO date or numeric string
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed === '') {
+      return fallbackDate ? Math.floor(fallbackDate.getTime() / 1000) : null;
+    }
+    
+    // Try parsing as number first
+    const numValue = Number(trimmed);
+    if (!isNaN(numValue)) {
+      return numValue < 10000000000 ? Math.floor(numValue) : Math.floor(numValue / 1000);
+    }
+    
+    // Try parsing as ISO date string
+    try {
+      const date = new Date(trimmed);
+      if (!isNaN(date.getTime())) {
+        return Math.floor(date.getTime() / 1000);
+      }
+    } catch (e) {
+      console.warn(`Failed to parse timestamp string: ${trimmed}`, e);
+    }
+  }
+  
+  // Date object
+  if (value instanceof Date) {
+    if (!isNaN(value.getTime())) {
+      return Math.floor(value.getTime() / 1000);
+    }
+  }
+  
+  // Fallback
+  console.warn(`Unable to parse timestamp value: ${value} (type: ${typeof value})`);
+  return fallbackDate ? Math.floor(fallbackDate.getTime() / 1000) : null;
+}

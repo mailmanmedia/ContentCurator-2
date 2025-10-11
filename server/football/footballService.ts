@@ -18,7 +18,7 @@ import {
 } from "@shared/schema";
 import { eq, and, or, gte, lte, desc, inArray } from "drizzle-orm";
 import { smartFootballCache } from "./cacheService";
-import { toSafeDate, toSafeDateRequired } from '../utils/dateUtils';
+import { toSafeDate, toSafeDateRequired, toUnixTimestamp } from '../utils/dateUtils';
 
 export interface FootballAPIResponse<T> {
   get: string;
@@ -1442,12 +1442,13 @@ class FootballService {
 
       const fixtures: FootballFixture[] = [];
       for (const item of response.response) {
+        const fixtureDate = new Date(item.fixture.date);
         const fixtureData = {
           id: item.fixture.id,
           referee: item.fixture.referee || null,
           timezone: item.fixture.timezone || 'UTC',
-          date: new Date(item.fixture.date),
-          timestamp: item.fixture.timestamp || null,
+          date: fixtureDate,
+          timestamp: toUnixTimestamp(item.fixture.timestamp, fixtureDate),
           periods: JSON.stringify(item.fixture.periods),
           venue: JSON.stringify(item.fixture.venue),
           status: JSON.stringify(item.fixture.status),

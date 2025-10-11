@@ -4,6 +4,7 @@ import { db } from '../db';
 import { footballTeams, footballFixtures, footballPlayers, playerSeasonStatistics } from '@shared/schema';
 import { eq, and, or, desc, inArray } from 'drizzle-orm';
 import { apiFootballService } from '../football/apiFootballService';
+import { toUnixTimestamp } from '../utils/dateUtils';
 
 interface H2HMatch {
   fixtureId: number;
@@ -140,7 +141,8 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
           // Add to database for future use
           for (const match of h2hApiMatches) {
             const fixtureDate = new Date(match.fixture.date);
-            const timestampValue = match.fixture.timestamp || Math.floor(fixtureDate.getTime() / 1000);
+            // Convert timestamp to integer - handles ISO strings, numeric strings, and numbers
+            const timestampValue = toUnixTimestamp(match.fixture.timestamp, fixtureDate);
             
             await db.insert(footballFixtures).values({
               id: match.fixture.id,
