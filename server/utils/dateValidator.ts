@@ -121,8 +121,27 @@ export function getHistoricalStatsSeason(date: Date = new Date()): { season: str
  * This should be the current/upcoming season
  */
 export function getFixturesSeason(date: Date = new Date()): { season: string; year: number } {
-  // Fixtures always use the current or upcoming season
-  return getCurrentFootballSeason(date);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // getMonth() is 0-indexed
+  
+  let fixturesSeasonYear: number;
+  
+  // During off-season (June-July), fixtures should target the UPCOMING season
+  if (month === 6 || month === 7) {
+    // June-July: use current year for upcoming season
+    fixturesSeasonYear = year;
+  } else if (month >= 8) {
+    // August onwards - current season
+    fixturesSeasonYear = year;
+  } else {
+    // January to May - still in current season that started previous year
+    fixturesSeasonYear = year - 1;
+  }
+  
+  const nextYear = fixturesSeasonYear + 1;
+  const season = `${fixturesSeasonYear}/${nextYear.toString().slice(-2)}`;
+  
+  return { season, year: fixturesSeasonYear };
 }
 
 /**
