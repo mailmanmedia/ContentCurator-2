@@ -33,11 +33,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { 
-  Radio, 
-  Video, 
-  Monitor, 
-  Play, 
+import {
+  Radio,
+  Video,
+  Monitor,
+  Play,
   Square,
   GripVertical,
   Plus,
@@ -380,15 +380,15 @@ const TEMPLATE_PRESETS = {
   },
 };
 
-function SortableActiveSource({ 
-  source, 
+function SortableActiveSource({
+  source,
   onRemove,
   sourceFitModes,
   globalFitMode,
   onFitModeChange,
   onChangeResolution,
   onRetry
-}: { 
+}: {
   source: ActiveSource;
   onRemove: (id: string) => void;
   sourceFitModes: Record<string, 'contain' | 'cover' | 'fill'>;
@@ -466,7 +466,7 @@ function SortableActiveSource({
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge 
+          <Badge
             variant={healthBadge.variant}
             className={`gap-1.5 text-xs ${healthBadge.className}`}
             data-testid={`badge-source-status-${source.id}`}
@@ -538,7 +538,7 @@ function SortableActiveSource({
         </PopoverContent>
       </Popover>
 
-      {source.type === 'camera' && onChangeResolution && (
+      {(source.type === 'camera' && onChangeResolution) && (
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -736,7 +736,7 @@ export default function LivePresentation() {
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
     queryKey: ['/api/cached-stats/teams', selectedLeagueFilter],
     queryFn: async () => {
-      const url = selectedLeagueFilter 
+      const url = selectedLeagueFilter
         ? `/api/cached-stats/teams?leagueId=${selectedLeagueFilter}`
         : '/api/cached-stats/teams';
       const response = await fetch(url);
@@ -758,8 +758,8 @@ export default function LivePresentation() {
   });
 
   const checkPositionConflict = (position: 'top' | 'bottom', excludeId?: string): boolean => {
-    return overlays.some(overlay => 
-      overlay.position === position && 
+    return overlays.some(overlay =>
+      overlay.position === position &&
       overlay.id !== excludeId
     );
   };
@@ -950,7 +950,7 @@ export default function LivePresentation() {
   }, [toast]);
 
   const handleUpdateOverlay = useCallback((overlayId: string, updates: Partial<OverlayConfig>) => {
-    setOverlays(prev => prev.map(overlay => 
+    setOverlays(prev => prev.map(overlay =>
       overlay.id === overlayId ? normalizeOverlay({ ...overlay, ...updates }) : overlay
     ));
   }, []);
@@ -962,7 +962,7 @@ export default function LivePresentation() {
   useEffect(() => {
     if (isOverlayDialogOpen) {
       const conflict = checkPositionConflict(
-        overlayPosition, 
+        overlayPosition,
         editingOverlayId || undefined
       );
       setPositionConflict(conflict);
@@ -1102,7 +1102,7 @@ export default function LivePresentation() {
   // Monitor stream health
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveSources(prevSources => 
+      setActiveSources(prevSources =>
         prevSources.map(source => {
           if (source.stream) {
             const isActive = source.stream.active;
@@ -1166,9 +1166,9 @@ export default function LivePresentation() {
 
         setActiveSources(prev => prev.map(s =>
           s.id === sourceId
-            ? { 
-                ...s, 
-                stream: newStream, 
+            ? {
+                ...s,
+                stream: newStream,
                 healthStatus: 'connected' as SourceHealthStatus,
                 lastError: undefined,
                 reconnectAttempts: 0
@@ -1190,9 +1190,9 @@ export default function LivePresentation() {
 
         setActiveSources(prev => prev.map(s =>
           s.id === sourceId
-            ? { 
-                ...s, 
-                stream: newStream, 
+            ? {
+                ...s,
+                stream: newStream,
                 healthStatus: 'connected' as SourceHealthStatus,
                 lastError: undefined,
                 reconnectAttempts: 0
@@ -1210,8 +1210,8 @@ export default function LivePresentation() {
 
       setActiveSources(prev => prev.map(s =>
         s.id === sourceId
-          ? { 
-              ...s, 
+          ? {
+              ...s,
               healthStatus: 'error' as SourceHealthStatus,
               lastError: err.message || 'Reconnection failed'
             }
@@ -1394,10 +1394,10 @@ export default function LivePresentation() {
     try {
       const camera = cameras.find(c => c.deviceId === deviceId);
       if (!camera) {
-        toast({ 
-          title: 'Camera not found', 
+        toast({
+          title: 'Camera not found',
           description: 'The selected camera is not available',
-          variant: 'destructive' 
+          variant: 'destructive'
         });
         return;
       }
@@ -1431,25 +1431,25 @@ export default function LivePresentation() {
       };
 
       setActiveSources(prev => [...prev, newSource]);
-      toast({ 
-        title: 'Camera added', 
+      toast({
+        title: 'Camera added',
         description: camera.label || 'Camera connected successfully'
       });
     } catch (err: any) {
       console.error('Failed to add camera:', err);
 
-      const errorMessage = err.name === 'NotAllowedError' 
+      const errorMessage = err.name === 'NotAllowedError'
         ? 'Camera access denied. Please allow camera permissions in your browser settings.'
         : err.name === 'NotFoundError'
-        ? 'Camera not found. Please check your camera connection.'
-        : err.name === 'NotReadableError'
-        ? 'Camera is already in use by another application.'
-        : err.message || 'Failed to connect to camera';
+          ? 'Camera not found. Please check your camera connection.'
+          : err.name === 'NotReadableError'
+            ? 'Camera is already in use by another application.'
+            : err.message || 'Failed to connect to camera';
 
-      toast({ 
-        title: 'Failed to add camera', 
+      toast({
+        title: 'Failed to add camera',
         description: errorMessage,
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     }
   };
@@ -1468,9 +1468,9 @@ export default function LivePresentation() {
       };
 
       setActiveSources(prev => [...prev, newSource]);
-      toast({ 
-        title: 'Screen mirroring active', 
-        description: 'Your screen is now visible in the broadcast feed. Mark images and annotations will appear live!' 
+      toast({
+        title: 'Screen mirroring active',
+        description: 'Your screen is now visible in the broadcast feed. Mark images and annotations will appear live!'
       });
     } catch (err) {
       console.error('Failed to add screen share:', err);
@@ -1479,41 +1479,41 @@ export default function LivePresentation() {
       if (err instanceof ScreenShareError) {
         switch (err.type) {
           case ScreenShareErrorType.NOT_SUPPORTED:
-            toast({ 
-              title: 'Screen sharing not supported', 
+            toast({
+              title: 'Screen sharing not supported',
               description: 'Please use Chrome, Edge, Safari 13+, or Firefox for screen sharing.',
-              variant: 'destructive' 
+              variant: 'destructive'
             });
             break;
 
           case ScreenShareErrorType.USER_CANCELLED:
-            toast({ 
-              title: 'Screen sharing cancelled', 
+            toast({
+              title: 'Screen sharing cancelled',
               description: 'You need to select a screen, window, or tab to share. Try again and click "Share".',
-              variant: 'destructive' 
+              variant: 'destructive'
             });
             break;
 
           case ScreenShareErrorType.PERMISSION_DENIED:
-            toast({ 
-              title: 'Permission denied', 
+            toast({
+              title: 'Permission denied',
               description: 'Screen sharing permission was denied. Check your browser settings to allow screen sharing.',
-              variant: 'destructive' 
+              variant: 'destructive'
             });
             break;
 
           default:
-            toast({ 
-              title: 'Screen sharing failed', 
+            toast({
+              title: 'Screen sharing failed',
               description: err.message || 'An unknown error occurred. Please try again.',
-              variant: 'destructive' 
+              variant: 'destructive'
             });
         }
       } else {
-        toast({ 
-          title: 'Screen sharing failed', 
+        toast({
+          title: 'Screen sharing failed',
           description: 'On iPad: Select "Entire Screen" or "Safari" to mirror your display',
-          variant: 'destructive' 
+          variant: 'destructive'
         });
       }
     }
@@ -1570,62 +1570,62 @@ export default function LivePresentation() {
 
   const handleAddOverlay = () => {
     if (!overlayText.trim() && overlayType === 'text') {
-      toast({ 
-        title: 'Enter overlay text', 
-        variant: 'destructive' 
+      toast({
+        title: 'Enter overlay text',
+        variant: 'destructive'
       });
       return;
     }
 
     if (overlayType === 'rss' && selectedRssSourceIds.length === 0) {
-      toast({ 
-        title: 'Select at least one RSS source', 
-        variant: 'destructive' 
+      toast({
+        title: 'Select at least one RSS source',
+        variant: 'destructive'
       });
       return;
     }
 
     if (overlayType === 'metric') {
       if (overlayMetricType === 'h2h-card' && (!overlayHomeTeamId || !overlayAwayTeamId)) {
-        toast({ 
-          title: 'Select both teams', 
+        toast({
+          title: 'Select both teams',
           description: 'Please select both home and away teams for the H2H card.',
-          variant: 'destructive' 
+          variant: 'destructive'
         });
         return;
       }
       if (overlayMetricType === 'form-guide' && !overlayTeamId) {
-        toast({ 
-          title: 'Select a team', 
+        toast({
+          title: 'Select a team',
           description: 'Please select a team for the form guide.',
-          variant: 'destructive' 
+          variant: 'destructive'
         });
         return;
       }
     }
 
     if (!editingOverlayId && checkPositionConflict(overlayPosition)) {
-      toast({ 
+      toast({
         title: `An overlay already exists at ${overlayPosition} position.`,
         description: 'Please remove it first or choose a different position.',
-        variant: 'destructive' 
+        variant: 'destructive'
       });
       return;
     }
 
     if (editingOverlayId && checkPositionConflict(overlayPosition, editingOverlayId)) {
-      toast({ 
+      toast({
         title: `An overlay already exists at ${overlayPosition} position.`,
         description: 'Please remove it first or choose a different position.',
-        variant: 'destructive' 
+        variant: 'destructive'
       });
       return;
     }
 
     const preset = TEMPLATE_PRESETS[selectedPreset];
     const { x: defaultX, y: defaultY, category: defaultCategory } = getDefaultCoordinatesAndCategory(
-      overlayPosition, 
-      overlayType, 
+      overlayPosition,
+      overlayType,
       overlayMetricType
     );
 
@@ -1686,7 +1686,7 @@ export default function LivePresentation() {
     }
 
     if (editingOverlayId) {
-      setOverlays(prev => prev.map(overlay => 
+      setOverlays(prev => prev.map(overlay =>
         overlay.id === editingOverlayId
           ? {
               ...overlay,
@@ -1852,16 +1852,16 @@ export default function LivePresentation() {
           : s
       ));
 
-      toast({ 
-        title: 'Resolution changed', 
+      toast({
+        title: 'Resolution changed',
         description: resolution === 'custom' ? `${customWidth}x${customHeight}` : RESOLUTION_PRESETS[resolution as keyof typeof RESOLUTION_PRESETS]?.label || resolution
       });
     } catch (err) {
       console.error('Failed to change resolution:', err);
-      toast({ 
-        title: 'Failed to change resolution', 
+      toast({
+        title: 'Failed to change resolution',
         description: 'Please try again',
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     }
   };
@@ -1870,25 +1870,25 @@ export default function LivePresentation() {
     try {
       const overlay = overlays.find(o => o.id === overlayId);
       if (!overlay) {
-        toast({ 
-          title: 'Overlay not found', 
+        toast({
+          title: 'Overlay not found',
           description: 'The overlay may have already been removed',
-          variant: 'destructive' 
+          variant: 'destructive'
         });
         return;
       }
 
       setOverlays(prev => prev.filter(o => o.id !== overlayId));
-      toast({ 
-        title: 'Overlay removed', 
+      toast({
+        title: 'Overlay removed',
         description: `Removed ${overlay.overlayType} overlay`
       });
     } catch (err: any) {
       console.error('Failed to remove overlay:', err);
-      toast({ 
-        title: 'Failed to remove overlay', 
+      toast({
+        title: 'Failed to remove overlay',
         description: err.message || 'An error occurred',
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     }
   };
@@ -1897,10 +1897,10 @@ export default function LivePresentation() {
     try {
       const overlay = overlays.find(o => o.id === overlayId);
       if (!overlay) {
-        toast({ 
-          title: 'Overlay not found', 
+        toast({
+          title: 'Overlay not found',
           description: 'Cannot toggle visibility',
-          variant: 'destructive' 
+          variant: 'destructive'
         });
         return;
       }
@@ -1911,16 +1911,16 @@ export default function LivePresentation() {
           : o
       ));
 
-      toast({ 
+      toast({
         title: overlay.visible ? 'Overlay hidden' : 'Overlay shown',
         description: `${overlay.overlayType} overlay is now ${overlay.visible ? 'hidden' : 'visible'}`
       });
     } catch (err: any) {
       console.error('Failed to toggle overlay:', err);
-      toast({ 
-        title: 'Failed to toggle overlay', 
+      toast({
+        title: 'Failed to toggle overlay',
         description: err.message || 'An error occurred',
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     }
   };
@@ -2014,7 +2014,7 @@ export default function LivePresentation() {
       setOverlayColorPalette(overlay.colorPalette);
     }
 
-    const presetKey = Object.entries(TEMPLATE_PRESETS).find(([_, preset]) => 
+    const presetKey = Object.entries(TEMPLATE_PRESETS).find(([_, preset]) =>
       preset.backgroundColor === overlay.backgroundColor &&
       preset.textColor === overlay.textColor
     )?.[0] as keyof typeof TEMPLATE_PRESETS || 'breaking-news';
@@ -2193,18 +2193,18 @@ export default function LivePresentation() {
         delete updated[sourceId];
         return updated;
       });
-      toast({ 
-        title: 'Fit mode reset', 
-        description: `Using global ${globalFitMode} mode` 
+      toast({
+        title: 'Fit mode reset',
+        description: `Using global ${globalFitMode} mode`
       });
     } else {
       setSourceFitModes(prev => ({
         ...prev,
         [sourceId]: fitMode
       }));
-      toast({ 
-        title: 'Fit mode updated', 
-        description: `Source using ${fitMode} mode` 
+      toast({
+        title: 'Fit mode updated',
+        description: `Source using ${fitMode} mode`
       });
     }
   };
@@ -2355,21 +2355,21 @@ export default function LivePresentation() {
   };
 
   // Helper function to map overlay types and metric types to components
-  const getOverlayComponent = (overlay: OverlayConfig) => {
-    switch (overlay.overlayType) {
-      case 'rss':
-        return RssTickerEnhancedOverlay;
-      case 'metric':
-        // Determine which metric overlay based on metricType
-        if (overlay.metricType === 'upcoming-fixtures') return UpcomingFixturesOverlay;
-        if (overlay.metricType === 'player-comparison') return PlayerComparisonOverlay;
-        if (overlay.metricType === 'form-guide') return FormGuideOverlay;
-        // Add other metric component returns here if they exist
-        return null; 
-      default:
-        return null;
-    }
+  const getOverlayComponent = (type: string) => {
+    const OVERLAY_COMPONENTS = {
+      'form-guide': FormGuideOverlay,
+      'league-position': LeaguePositionOverlay,
+      'league-table': LeagueTableOverlay,
+      'player-comparison': PlayerComparisonOverlay,
+      'player-stats': PlayerStatsOverlay,
+      'h2h-match-card': H2HMatchCardOverlay,
+      'upcoming-fixtures': UpcomingFixturesOverlay,
+      'rss-ticker': RssTickerEnhancedOverlay,
+      'rss-sentiment': RssSentimentOverlay,
+    };
+    return OVERLAY_COMPONENTS[type as keyof typeof OVERLAY_COMPONENTS] || null;
   };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -2389,14 +2389,14 @@ export default function LivePresentation() {
             <div className="flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge 
+                  <Badge
                     variant={sseStatus === 'connected' ? 'default' : 'destructive'}
                     className={`gap-1.5 ${
-                      sseStatus === 'connected' 
-                        ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' 
+                      sseStatus === 'connected'
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20'
                         : sseStatus === 'connecting'
-                        ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20 animate-pulse'
-                        : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                          ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20 animate-pulse'
+                          : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
                     }`}
                     data-testid="badge-sse-status"
                   >
@@ -2425,8 +2425,8 @@ export default function LivePresentation() {
               </Tooltip>
 
               {isBroadcasting && (
-                <Badge 
-                  variant="default" 
+                <Badge
+                  variant="default"
                   className="gap-2 animate-broadcast bg-primary text-primary-foreground"
                   data-testid="badge-on-air"
                 >
@@ -2464,7 +2464,7 @@ export default function LivePresentation() {
                   <div className="flex items-center gap-3">
                     <CardTitle className="text-lg">Recording Controls</CardTitle>
                     {isRecording && (
-                      <Badge 
+                      <Badge
                         className="gap-2 bg-[#C8102E] text-white hover:bg-[#C8102E] animate-pulse"
                         data-testid="badge-recording"
                       >
@@ -2487,7 +2487,7 @@ export default function LivePresentation() {
                   {(isRecording || isPaused) && (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Duration:</span>
-                      <span 
+                      <span
                         className="text-lg font-mono font-bold"
                         data-testid="text-duration"
                       >
@@ -2612,7 +2612,7 @@ export default function LivePresentation() {
                 ) : (
                   <div className="space-y-2">
                     {broadcastRecordings.slice(0, 5).map((recording: any) => (
-                      <div 
+                      <div
                         key={recording.id}
                         className="flex items-center justify-between p-3 border rounded-md hover-elevate"
                         data-testid={`recording-item-${recording.id}`}
@@ -2731,7 +2731,7 @@ export default function LivePresentation() {
                   {overlays
                     .filter(overlay => overlay.visible)
                     .map((overlay) => {
-                      const OverlayComponent = getOverlayComponent(overlay);
+                      const OverlayComponent = getOverlayComponent(overlay.overlayType); // Use overlayType here
 
                       if (!OverlayComponent) {
                         // Render non-component overlays (text, images)
@@ -2825,7 +2825,7 @@ export default function LivePresentation() {
                           style={overlayStyle}
                         >
                           <OverlayErrorBoundary overlayId={overlay.id}>
-                            <OverlayComponent 
+                            <OverlayComponent
                               width={overlay.width}
                               height={overlay.height}
                               opacity={overlay.opacity}
@@ -2884,14 +2884,14 @@ export default function LivePresentation() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="output-resolution">Output Resolution</Label>
-                      <Select 
+                      <Select
                         value={`${outputResolution.width}x${outputResolution.height}`}
                         onValueChange={(value) => {
                           const [width, height] = value.split('x').map(Number);
                           setOutputResolution({ width, height });
-                          toast({ 
-                            title: 'Resolution updated', 
-                            description: `${width} × ${height}` 
+                          toast({
+                            title: 'Resolution updated',
+                            description: `${width} × ${height}`
                           });
                         }}
                       >
@@ -2913,12 +2913,12 @@ export default function LivePresentation() {
 
                     <div className="space-y-2">
                       <Label htmlFor="fit-mode">Fit Mode</Label>
-                      <Select 
+                      <Select
                         value={globalFitMode}
                         onValueChange={(value: 'contain' | 'cover' | 'fill') => {
                           setGlobalFitMode(value);
-                          toast({ 
-                            title: 'Fit mode updated', 
+                          toast({
+                            title: 'Fit mode updated',
                             description: value.charAt(0).toUpperCase() + value.slice(1)
                           });
                         }}
@@ -2989,8 +2989,8 @@ export default function LivePresentation() {
                     <SelectSeparator />
                     {needsPermission && (
                       <div className="p-2">
-                        <Button 
-                          onClick={requestCameraPermissions} 
+                        <Button
+                          onClick={requestCameraPermissions}
                           className="w-full"
                           size="sm"
                           data-testid="button-request-camera-permission"
@@ -2999,8 +2999,8 @@ export default function LivePresentation() {
                           Enable Camera Access
                         </Button>
                         <p className="text-xs text-muted-foreground mt-2 text-center">
-                          {cameras.length === 0 
-                            ? "Camera devices will appear after granting access" 
+                          {cameras.length === 0
+                            ? "Camera devices will appear after granting access"
                             : "Click to allow camera access (required for iOS devices)"}
                         </p>
                       </div>
@@ -3011,8 +3011,8 @@ export default function LivePresentation() {
                         <SelectGroup>
                           <SelectLabel>Cameras</SelectLabel>
                           {cameras.map((camera) => (
-                            <SelectItem 
-                              key={camera.deviceId} 
+                            <SelectItem
+                              key={camera.deviceId}
                               value={`camera-${camera.deviceId}`}
                               data-testid={`select-camera-${camera.deviceId}`}
                             >
@@ -3140,7 +3140,7 @@ export default function LivePresentation() {
                                     {categoryOverlays.length}
                                   </Badge>
                                 </div>
-                                <ChevronDown 
+                                <ChevronDown
                                   className={`w-4 h-4 text-muted-foreground transition-transform ${
                                     isCollapsed ? '-rotate-90' : ''
                                   }`}
@@ -3155,7 +3155,7 @@ export default function LivePresentation() {
                                     className="flex items-center gap-3 p-3 bg-muted/50 rounded-md border hover-elevate group"
                                     data-testid={`overlay-item-${overlay.id}`}
                                   >
-                                    <div 
+                                    <div
                                       className="w-12 h-8 rounded flex items-center justify-center text-xs font-bold"
                                       style={{
                                         backgroundColor: overlay.backgroundColor,
@@ -3185,7 +3185,7 @@ export default function LivePresentation() {
                                         ) : (
                                           <p className="text-sm font-medium truncate">{overlay.text}</p>
                                         )}
-                                        <Badge 
+                                        <Badge
                                           variant="outline"
                                           className="bg-primary/10"
                                           data-testid={`badge-coordinates-${overlay.id}`}
@@ -3308,8 +3308,8 @@ export default function LivePresentation() {
                     >
                       <div className="space-y-2">
                         {activeSources.map((source) => (
-                          <SortableActiveSource 
-                            key={source.id} 
+                          <SortableActiveSource
+                            key={source.id}
                             source={source}
                             onRemove={handleRemoveSource}
                             sourceFitModes={sourceFitModes}
@@ -3346,16 +3346,16 @@ export default function LivePresentation() {
         <DialogContent data-testid="dialog-overlay-config" className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingOverlayId 
-                ? 'Edit Overlay' 
-                : overlayType === 'rss' 
+              {editingOverlayId
+                ? 'Edit Overlay'
+                : overlayType === 'rss'
                   ? 'Add RSS Feed Ticker'
                   : overlayType === 'image'
                     ? 'Add Image Overlay'
                     : 'Add Text Overlay'}
             </DialogTitle>
             <DialogDescription>
-              {overlayType === 'rss' 
+              {overlayType === 'rss'
                 ? 'Configure your RSS news ticker with live headlines'
                 : 'Customize your Mailman Media overlay with Liverpool FC branding'}
             </DialogDescription>
@@ -3396,7 +3396,7 @@ export default function LivePresentation() {
                         const categorySources = rssSources.filter(s => s.category === category);
                         if (categorySources.length === 0) return null;
 
-                        const categoryLabel = category === 'fan_site' ? 'Fan Sites' : 
+                        const categoryLabel = category === 'fan_site' ? 'Fan Sites' :
                                             category.charAt(0).toUpperCase() + category.slice(1);
                         const allCategorySelected = categorySources.every(s => selectedRssSourceIds.includes(s.id));
                         const someCategorySelected = categorySources.some(s => selectedRssSourceIds.includes(s.id));
@@ -3419,7 +3419,7 @@ export default function LivePresentation() {
                                       return [...prev, ...newIds];
                                     });
                                   } else {
-                                    setSelectedRssSourceIds(prev => 
+                                    setSelectedRssSourceIds(prev =>
                                       prev.filter(id => !categorySources.some(s => s.id === id))
                                     );
                                   }
@@ -3510,8 +3510,8 @@ export default function LivePresentation() {
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="metric-type">Metric Type</Label>
-                      <Select 
-                        value={overlayMetricType} 
+                      <Select
+                        value={overlayMetricType}
                         onValueChange={setOverlayMetricType}
                       >
                         <SelectTrigger id="metric-type" data-testid="select-metric-type">
@@ -3536,8 +3536,8 @@ export default function LivePresentation() {
                       <>
                         <div>
                           <Label htmlFor="league-filter">League Filter</Label>
-                          <Select 
-                            value={selectedLeagueFilter ? String(selectedLeagueFilter) : 'all'} 
+                          <Select
+                            value={selectedLeagueFilter ? String(selectedLeagueFilter) : 'all'}
                             onValueChange={(v) => {
                               setSelectedLeagueFilter(v === 'all' ? null : parseInt(v));
                               setOverlayHomeTeamId(null);
@@ -3600,8 +3600,8 @@ export default function LivePresentation() {
                           <>
                             <div>
                               <Label htmlFor="home-team">Home Team</Label>
-                              <Select 
-                                value={overlayHomeTeamId ? String(overlayHomeTeamId) : undefined} 
+                              <Select
+                                value={overlayHomeTeamId ? String(overlayHomeTeamId) : undefined}
                                 onValueChange={(v) => setOverlayHomeTeamId(parseInt(v))}
                               >
                                 <SelectTrigger id="home-team" data-testid="select-home-team">
@@ -3629,8 +3629,8 @@ export default function LivePresentation() {
 
                             <div>
                               <Label htmlFor="away-team">Away Team</Label>
-                              <Select 
-                                value={overlayAwayTeamId ? String(overlayAwayTeamId) : undefined} 
+                              <Select
+                                value={overlayAwayTeamId ? String(overlayAwayTeamId) : undefined}
                                 onValueChange={(v) => setOverlayAwayTeamId(parseInt(v))}
                               >
                                 <SelectTrigger id="away-team" data-testid="select-away-team">
@@ -3677,8 +3677,8 @@ export default function LivePresentation() {
                           <>
                             <div>
                               <Label htmlFor="team">Team</Label>
-                              <Select 
-                                value={overlayTeamId ? String(overlayTeamId) : undefined} 
+                              <Select
+                                value={overlayTeamId ? String(overlayTeamId) : undefined}
                                 onValueChange={(v) => setOverlayTeamId(parseInt(v))}
                               >
                                 <SelectTrigger id="team" data-testid="select-team">
@@ -3699,8 +3699,8 @@ export default function LivePresentation() {
 
                             <div>
                               <Label htmlFor="color-palette">Color Palette</Label>
-                              <Select 
-                                value={overlayColorPalette} 
+                              <Select
+                                value={overlayColorPalette}
                                 onValueChange={(v) => setOverlayColorPalette(v as 'classic' | 'navy' | 'cream' | 'dark')}
                               >
                                 <SelectTrigger id="color-palette" data-testid="select-color-palette">
@@ -3800,7 +3800,7 @@ export default function LivePresentation() {
                     {(overlayMetricType === 'league-table' || overlayMetricType === 'rss-sentiment') && (
                       <Alert>
                         <AlertDescription>
-                          {overlayMetricType === 'league-table' 
+                          {overlayMetricType === 'league-table'
                             ? 'League Table shows all teams automatically - no team selection needed.'
                             : 'RSS Sentiment displays aggregated news sentiment - no team selection needed.'}
                         </AlertDescription>
@@ -3811,8 +3811,8 @@ export default function LivePresentation() {
                       <div className="space-y-3">
                         <div>
                           <Label>Number of Fixtures</Label>
-                          <RadioGroup value={overlayFixtureCount.toString()} 
-                                      onValueChange={(v) => setOverlayFixtureCount(parseInt(v) as 3|5|7)}>
+                          <RadioGroup value={overlayFixtureCount.toString()}
+                                      onValueChange={(v) => setOverlayFixtureCount(parseInt(v) as 3 | 5 | 7)}>
                             <div className="flex gap-4">
                               <div className="flex items-center gap-2">
                                 <RadioGroupItem value="3" id="fixtures-3" />
@@ -3830,13 +3830,13 @@ export default function LivePresentation() {
                           </RadioGroup>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Checkbox checked={overlayShowCountdown} 
-                                   onCheckedChange={setOverlayShowCountdown} />
+                          <Checkbox checked={overlayShowCountdown}
+                                     onCheckedChange={setOverlayShowCountdown} />
                           <Label>Show Countdown Timer</Label>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Checkbox checked={overlayShowOpponentForm} 
-                                   onCheckedChange={setOverlayShowOpponentForm} />
+                          <Checkbox checked={overlayShowOpponentForm}
+                                     onCheckedChange={setOverlayShowOpponentForm} />
                           <Label>Show Opponent Form</Label>
                         </div>
                       </div>
@@ -3846,14 +3846,14 @@ export default function LivePresentation() {
                       <div className="space-y-3">
                         <div>
                           <Label>Player 1 ID</Label>
-                          <Input type="number" value={overlayPlayer1Id || ''} 
-                                 onChange={(e) => setOverlayPlayer1Id(parseInt(e.target.value) || null)} 
+                          <Input type="number" value={overlayPlayer1Id || ''}
+                                 onChange={(e) => setOverlayPlayer1Id(parseInt(e.target.value) || null)}
                                  placeholder="Enter player ID" />
                         </div>
                         <div>
                           <Label>Player 2 ID</Label>
-                          <Input type="number" value={overlayPlayer2Id || ''} 
-                                 onChange={(e) => setOverlayPlayer2Id(parseInt(e.target.value) || null)} 
+                          <Input type="number" value={overlayPlayer2Id || ''}
+                                 onChange={(e) => setOverlayPlayer2Id(parseInt(e.target.value) || null)}
                                  placeholder="Enter player ID" />
                         </div>
                         <div>
@@ -3914,7 +3914,7 @@ export default function LivePresentation() {
 
                         <div>
                           <Label>Max Articles</Label>
-                          <Input type="number" value={rssMaxArticles} 
+                          <Input type="number" value={rssMaxArticles}
                                  onChange={(e) => setRssMaxArticles(parseInt(e.target.value) || 10)}
                                  min={1} max={50} />
                         </div>
@@ -3922,22 +3922,22 @@ export default function LivePresentation() {
                         <div className="space-y-2">
                           <Label>Display Options</Label>
                           <div className="flex items-center gap-2">
-                            <Checkbox checked={overlayShowSentiment} 
+                            <Checkbox checked={overlayShowSentiment}
                                      onCheckedChange={(checked) => setOverlayShowSentiment(checked === true)} />
                             <Label>Show Sentiment Colors</Label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Checkbox checked={overlayShowTopics} 
+                            <Checkbox checked={overlayShowTopics}
                                      onCheckedChange={(checked) => setOverlayShowTopics(checked === true)} />
                             <Label>Show Topics</Label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Checkbox checked={overlayShowKeywords} 
+                            <Checkbox checked={overlayShowKeywords}
                                      onCheckedChange={(checked) => setOverlayShowKeywords(checked === true)} />
                             <Label>Show Keywords</Label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Checkbox checked={overlayShowCredibility} 
+                            <Checkbox checked={overlayShowCredibility}
                                      onCheckedChange={(checked) => setOverlayShowCredibility(checked === true)} />
                             <Label>Show Source Tier</Label>
                           </div>
@@ -3946,11 +3946,11 @@ export default function LivePresentation() {
                         <div>
                           <Label>Sentiment Filter Range</Label>
                           <div className="flex gap-2 items-center">
-                            <Input type="number" value={overlaySentimentMin} 
+                            <Input type="number" value={overlaySentimentMin}
                                    onChange={(e) => setOverlaySentimentMin(parseFloat(e.target.value) || -1)}
                                    min={-1} max={1} step={0.1} className="w-20" />
                             <span>to</span>
-                            <Input type="number" value={overlaySentimentMax} 
+                            <Input type="number" value={overlaySentimentMax}
                                    onChange={(e) => setOverlaySentimentMax(parseFloat(e.target.value) || 1)}
                                    min={-1} max={1} step={0.1} className="w-20" />
                           </div>
@@ -3967,8 +3967,8 @@ export default function LivePresentation() {
                   {/* Competition Selector */}
                   <div>
                     <Label>Competition</Label>
-                    <Select 
-                      value={overlayCompetitionId?.toString() || 'all'} 
+                    <Select
+                      value={overlayCompetitionId?.toString() || 'all'}
                       onValueChange={(v) => setOverlayCompetitionId(v === 'all' ? null : parseInt(v))}
                     >
                       <SelectTrigger data-testid="select-competition">
@@ -3986,8 +3986,8 @@ export default function LivePresentation() {
                   {/* Season Selector */}
                   <div>
                     <Label>Season</Label>
-                    <Select 
-                      value={overlaySeasonFilter?.toString() || 'current'} 
+                    <Select
+                      value={overlaySeasonFilter?.toString() || 'current'}
                       onValueChange={(v) => setOverlaySeasonFilter(v === 'current' ? null : parseInt(v))}
                     >
                       <SelectTrigger data-testid="select-season">
@@ -4006,9 +4006,9 @@ export default function LivePresentation() {
                   {overlayMetricType === 'form-guide' && (
                     <div>
                       <Label>Match Limit</Label>
-                      <RadioGroup 
-                        value={overlayMatchLimit.toString()} 
-                        onValueChange={(v) => setOverlayMatchLimit(parseInt(v) as 3|5|10|20)}
+                      <RadioGroup
+                        value={overlayMatchLimit.toString()}
+                        onValueChange={(v) => setOverlayMatchLimit(parseInt(v) as 3 | 5 | 10 | 20)}
                       >
                         <div className="flex gap-4">
                           <div className="flex items-center gap-2">
@@ -4031,9 +4031,9 @@ export default function LivePresentation() {
                       </RadioGroup>
                       <div className="mt-2">
                         <Label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox 
-                            checked={overlayShowCompBadges} 
-                            onCheckedChange={(checked) => setOverlayShowCompBadges(checked === true)} 
+                          <Checkbox
+                            checked={overlayShowCompBadges}
+                            onCheckedChange={(checked) => setOverlayShowCompBadges(checked === true)}
                           />
                           Show Competition Badges
                         </Label>
@@ -4045,9 +4045,9 @@ export default function LivePresentation() {
                   {overlayMetricType === 'h2h-card' && (
                     <div>
                       <Label>Venue Filter</Label>
-                      <RadioGroup 
-                        value={overlayVenueFilter} 
-                        onValueChange={(v) => setOverlayVenueFilter(v as 'all'|'home'|'away')}
+                      <RadioGroup
+                        value={overlayVenueFilter}
+                        onValueChange={(v) => setOverlayVenueFilter(v as 'all' | 'home' | 'away')}
                       >
                         <div className="flex gap-4">
                           <div className="flex items-center gap-2">
@@ -4071,9 +4071,9 @@ export default function LivePresentation() {
                   {overlayMetricType === 'league-table' && (
                     <div>
                       <Label>Teams to Display</Label>
-                      <RadioGroup 
-                        value={overlayTeamCount.toString()} 
-                        onValueChange={(v) => setOverlayTeamCount(v === 'full' ? 'full' : parseInt(v) as 5|10|20)}
+                      <RadioGroup
+                        value={overlayTeamCount.toString()}
+                        onValueChange={(v) => setOverlayTeamCount(v === 'full' ? 'full' : parseInt(v) as 5 | 10 | 20)}
                       >
                         <div className="flex gap-4">
                           <div className="flex items-center gap-2">
@@ -4478,8 +4478,8 @@ export default function LivePresentation() {
 
                 <div>
                   <Label>Scroll Direction</Label>
-                  <RadioGroup 
-                    value={overlayScrollDirection} 
+                  <RadioGroup
+                    value={overlayScrollDirection}
                     onValueChange={(v) => setOverlayScrollDirection(v as 'left' | 'right' | 'up' | 'down')}
                     className="grid grid-cols-2 gap-2"
                   >
@@ -4515,11 +4515,11 @@ export default function LivePresentation() {
 
                       <div>
                         <Label>Font Weight: {overlayFontWeight}</Label>
-                        <Slider 
-                          value={[overlayFontWeight]} 
+                        <Slider
+                          value={[overlayFontWeight]}
                           onValueChange={(v) => setOverlayFontWeight(v[0])}
-                          min={300} 
-                          max={900} 
+                          min={300}
+                          max={900}
                           step={100}
                           data-testid="slider-font-weight"
                         />
@@ -4527,11 +4527,11 @@ export default function LivePresentation() {
 
                       <div>
                         <Label>Letter Spacing: {overlayLetterSpacing.toFixed(2)}em</Label>
-                        <Slider 
-                          value={[overlayLetterSpacing]} 
+                        <Slider
+                          value={[overlayLetterSpacing]}
                           onValueChange={(v) => setOverlayLetterSpacing(v[0])}
-                          min={-0.1} 
-                          max={0.2} 
+                          min={-0.1}
+                          max={0.2}
                           step={0.01}
                           data-testid="slider-letter-spacing"
                         />
@@ -4539,11 +4539,11 @@ export default function LivePresentation() {
 
                       <div>
                         <Label>Line Height: {overlayLineHeight.toFixed(1)}</Label>
-                        <Slider 
-                          value={[overlayLineHeight]} 
+                        <Slider
+                          value={[overlayLineHeight]}
                           onValueChange={(v) => setOverlayLineHeight(v[0])}
-                          min={0.8} 
-                          max={2.0} 
+                          min={0.8}
+                          max={2.0}
                           step={0.1}
                           data-testid="slider-line-height"
                         />
@@ -4586,18 +4586,18 @@ export default function LivePresentation() {
                         <>
                           <div>
                             <Label>Gradient Color 1</Label>
-                            <Input 
-                              type="color" 
-                              value={overlayGradientColor1} 
+                            <Input
+                              type="color"
+                              value={overlayGradientColor1}
                               onChange={(e) => setOverlayGradientColor1(e.target.value)}
                               data-testid="input-gradient-color1"
                             />
                           </div>
                           <div>
                             <Label>Gradient Color 2</Label>
-                            <Input 
-                              type="color" 
-                              value={overlayGradientColor2} 
+                            <Input
+                              type="color"
+                              value={overlayGradientColor2}
                               onChange={(e) => setOverlayGradientColor2(e.target.value)}
                               data-testid="input-gradient-color2"
                             />
@@ -4605,11 +4605,11 @@ export default function LivePresentation() {
                           {overlayBackgroundType === 'linear-gradient' && (
                             <div>
                               <Label>Gradient Angle: {overlayGradientAngle}°</Label>
-                              <Slider 
-                                value={[overlayGradientAngle]} 
+                              <Slider
+                                value={[overlayGradientAngle]}
                                 onValueChange={(v) => setOverlayGradientAngle(v[0])}
-                                min={0} 
-                                max={360} 
+                                min={0}
+                                max={360}
                                 step={15}
                                 data-testid="slider-gradient-angle"
                               />
@@ -4624,11 +4624,11 @@ export default function LivePresentation() {
 
                       <div>
                         <Label>Border Radius: {overlayBorderRadius}px</Label>
-                        <Slider 
-                          value={[overlayBorderRadius]} 
+                        <Slider
+                          value={[overlayBorderRadius]}
                           onValueChange={(v) => setOverlayBorderRadius(v[0])}
-                          min={0} 
-                          max={24} 
+                          min={0}
+                          max={24}
                           step={2}
                           data-testid="slider-border-radius"
                         />
@@ -4650,8 +4650,8 @@ export default function LivePresentation() {
 
                       <div>
                         <Label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox 
-                            checked={overlayGlowEffect} 
+                          <Checkbox
+                            checked={overlayGlowEffect}
                             onCheckedChange={setOverlayGlowEffect}
                             data-testid="checkbox-glow-effect"
                           />
@@ -4666,7 +4666,7 @@ export default function LivePresentation() {
 
             <div className="p-4 bg-muted rounded-md">
               <p className="text-sm font-medium mb-2">Preview</p>
-              <div 
+              <div
                 className="w-full rounded flex items-center justify-center py-2 px-4 text-sm font-bold"
                 style={{
                   backgroundColor: TEMPLATE_PRESETS[selectedPreset].backgroundColor,
@@ -4680,8 +4680,8 @@ export default function LivePresentation() {
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setIsOverlayDialogOpen(false);
                 setEditingOverlayId(null);
@@ -4691,10 +4691,10 @@ export default function LivePresentation() {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleAddOverlay}
               disabled={
-                positionConflict || 
+                positionConflict ||
                 (!overlayText && overlayType === 'text') ||
                 (overlayType === 'rss' && selectedRssSourceIds.length === 0)
               }
@@ -4754,8 +4754,8 @@ export default function LivePresentation() {
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsLibraryPickerOpen(false)}
               data-testid="button-close-library-picker"
             >
@@ -4797,7 +4797,7 @@ export default function LivePresentation() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {Object.values(overlayTemplates)
-                .filter(template => 
+                .filter(template =>
                   selectedTemplateCategory === 'all' || template.category === selectedTemplateCategory
                 )
                 .map((template: OverlayTemplate) => (
@@ -4805,8 +4805,8 @@ export default function LivePresentation() {
                     key={template.id}
                     onClick={() => {
                       const { x: defaultX, y: defaultY, category: defaultCategory } = getDefaultCoordinatesAndCategory(
-                        template.position, 
-                        template.overlayType, 
+                        template.position,
+                        template.overlayType,
                         template.metricType
                       );
                       const newOverlay: OverlayConfig = {
@@ -4830,7 +4830,7 @@ export default function LivePresentation() {
                         zIndex: template.zIndex,
                         opacity: template.opacity,
                         metricType: template.metricType,
-                        metricData: template.metricType === 'h2h-card' ? { homeTeamId: 40, awayTeamId: 47 } 
+                        metricData: template.metricType === 'h2h-card' ? { homeTeamId: 40, awayTeamId: 47 }
                                   : template.metricType === 'player-stats' ? { playerId: 1 }
                                   : {},
                         x: defaultX,
@@ -4847,7 +4847,7 @@ export default function LivePresentation() {
                     className="group relative overflow-hidden rounded-lg border-2 border-border hover-elevate active-elevate-2 transition-all"
                     data-testid={`template-${template.id}`}
                   >
-                    <div 
+                    <div
                       className="w-full aspect-video flex items-center justify-center p-4"
                       style={{
                         backgroundColor: template.backgroundColor,
@@ -4890,8 +4890,8 @@ export default function LivePresentation() {
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsTemplatePickerOpen(false)}
             >
               Close
@@ -4910,10 +4910,10 @@ export default function LivePresentation() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div 
+            <div
               ref={gridPreviewRef}
               className="relative bg-black rounded-md overflow-hidden cursor-crosshair border-2 border-primary/20"
-              style={{ 
+              style={{
                 aspectRatio: `${outputResolution.width}/${outputResolution.height}`,
                 backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent ${20 * gridScale - 0.5}px, rgba(255,255,255,0.1) ${20 * gridScale - 0.5}px, rgba(255,255,255,0.1) ${20 * gridScale}px), repeating-linear-gradient(90deg, transparent, transparent ${20 * gridScale - 0.5}px, rgba(255,255,255,0.1) ${20 * gridScale - 0.5}px, rgba(255,255,255,0.1) ${20 * gridScale}px)`,
                 backgroundSize: `${20 * gridScale}px ${20 * gridScale}px`
@@ -4923,7 +4923,7 @@ export default function LivePresentation() {
             >
               {/* Render active overlays */}
               {overlays.map((overlay) => {
-                const OverlayComponent = getOverlayComponent(overlay);
+                const OverlayComponent = getOverlayComponent(overlay.overlayType); // Use overlayType here
                 if (!OverlayComponent) {
                   // Render non-component overlays (text, images)
                   if (overlay.overlayType === 'text') {
@@ -4932,8 +4932,8 @@ export default function LivePresentation() {
                         key={overlay.id}
                         data-overlay-id={overlay.id}
                         className={`absolute rounded pointer-events-none ${
-                          overlay.id === editingPositionOverlayId 
-                            ? 'bg-primary/30 border-2 border-primary z-10' 
+                          overlay.id === editingPositionOverlayId
+                            ? 'bg-primary/30 border-2 border-primary z-10'
                             : 'bg-white/10 border border-white/30'
                         }`}
                         style={{
@@ -4959,8 +4959,8 @@ export default function LivePresentation() {
                         key={overlay.id}
                         data-overlay-id={overlay.id}
                         className={`absolute rounded pointer-events-none ${
-                          overlay.id === editingPositionOverlayId 
-                            ? 'bg-primary/30 border-2 border-primary z-10' 
+                          overlay.id === editingPositionOverlayId
+                            ? 'bg-primary/30 border-2 border-primary z-10'
                             : 'bg-white/10 border border-white/30'
                         }`}
                         style={{
@@ -4992,8 +4992,8 @@ export default function LivePresentation() {
                   <OverlayErrorBoundary key={overlay.id} overlayId={overlay.id}>
                     <div
                       className={`absolute rounded pointer-events-none ${
-                        isEditing 
-                          ? 'bg-primary/30 border-2 border-primary z-10' 
+                        isEditing
+                          ? 'bg-primary/30 border-2 border-primary z-10'
                           : 'bg-white/10 border border-white/30'
                       }`}
                       style={{
@@ -5060,14 +5060,14 @@ export default function LivePresentation() {
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsPositionEditorOpen(false)}
               data-testid="button-cancel-position"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleUpdatePosition}
               data-testid="button-update-position"
             >
@@ -5086,14 +5086,14 @@ export default function LivePresentation() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowClearConfirmDialog(false)}
               data-testid="button-cancel-clear"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               onClick={confirmClearRecording}
               data-testid="button-confirm-clear"
