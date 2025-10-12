@@ -2851,7 +2851,7 @@ export default function LivePresentation() {
                         >
                           <OverlayErrorBoundary overlayId={overlay.id}>
                             <OverlayComponent
-                              width={overlay.width}
+                              width={Math.round((overlay.width / 100) * outputResolution.width)}
                               height={overlay.height}
                               opacity={overlay.opacity}
                               teamId={overlay.metricData?.teamId}

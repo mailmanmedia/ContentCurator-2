@@ -360,7 +360,6 @@ export default function FormGuideOverlay({
         width: "100%",
         height: "100%",
         background: `linear-gradient(145deg, ${palette.background}, ${palette.border})`,
-        opacity,
         color: palette.text,
         fontFamily: "League Spartan, sans-serif",
         padding,
