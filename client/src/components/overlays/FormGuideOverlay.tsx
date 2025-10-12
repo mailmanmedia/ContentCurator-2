@@ -275,6 +275,7 @@ export default function FormGuideOverlay({
     };
   }, [teamStatsData, fixturesData, teamId, matchLimit]);
 
+  // Clean scaling with NO Math.max constraints
   const { scale, px } = useMemo(() => {
     if (!width || !height) {
       return {
@@ -304,21 +305,21 @@ export default function FormGuideOverlay({
   const isMini = width < 240 || height < 150;
   const isStacked = layout === "vertical" || isCompact;
 
-  // Properly scaled values with percentage-based minimums
-  const circlePx = Math.max(px(isMini ? 20 : isVeryCompact ? 28 : isCompact ? 36 : circleSize), Math.round(height * 0.08));
-  const titlePx = Math.max(px(isMini ? 11 : isVeryCompact ? 13 : titleSize), Math.round(height * 0.06));
-  const subtitlePx = Math.max(px(isMini ? 9 : isVeryCompact ? 11 : 14), Math.round(height * 0.05));
-  const labelPx = Math.max(px(isMini ? 7 : isVeryCompact ? 9 : labelSize), Math.round(height * 0.04));
-  const textPx = Math.max(px(isMini ? 8 : isVeryCompact ? 10 : 13), Math.round(height * 0.045));
-  const smallTextPx = Math.max(px(isMini ? 6 : isVeryCompact ? 8 : 10), Math.round(height * 0.035));
+  // NO Math.max() - pure scaling
+  const circlePx = px(isMini ? 24 : isVeryCompact ? 32 : isCompact ? 40 : circleSize);
+  const titlePx = px(isMini ? 12 : isVeryCompact ? 14 : titleSize);
+  const subtitlePx = px(isMini ? 10 : isVeryCompact ? 11 : 14);
+  const labelPx = px(isMini ? 8 : isVeryCompact ? 9 : labelSize);
+  const textPx = px(isMini ? 9 : isVeryCompact ? 10 : 13);
+  const smallTextPx = px(isMini ? 7 : isVeryCompact ? 8 : 11);
 
-  const displayMatchLimit = isMini ? 3 : isVeryCompact ? 3 : matchLimit;
+  const displayMatchLimit = isMini ? 2 : isVeryCompact ? 3 : matchLimit;
 
-  const spacing = Math.max(px(isMini ? 6 : isVeryCompact ? 8 : isCompact ? 12 : 16), Math.round(height * 0.04));
-  const smallSpacing = Math.max(px(isMini ? 3 : isVeryCompact ? 4 : isCompact ? 6 : 8), Math.round(height * 0.02));
-  const padding = Math.max(px(isMini ? 8 : isVeryCompact ? 10 : isCompact ? 14 : 20), Math.round(height * 0.06));
+  const spacing = px(isMini ? 4 : isVeryCompact ? 6 : isCompact ? 10 : 16);
+  const smallSpacing = px(isMini ? 2 : isVeryCompact ? 3 : isCompact ? 5 : 8);
+  const padding = px(isMini ? 6 : isVeryCompact ? 8 : isCompact ? 12 : 20);
   const borderRadius = px(isMini ? 4 : isVeryCompact ? 6 : 10);
-  const borderWidth = Math.max(Math.round(2 * scale), 1);
+  const borderWidth = isMini ? 1 : Math.max(Math.round(2 * scale), 1);
 
   const streakType = matches[0]?.result;
   let streakLabel = "";
@@ -382,7 +383,7 @@ export default function FormGuideOverlay({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          gap: spacing,
+          gap: smallSpacing,
           flexShrink: 0,
         }}
       >
@@ -465,7 +466,6 @@ export default function FormGuideOverlay({
           flex: 1,
           minHeight: 0,
           overflow: "hidden",
-          alignItems: "stretch",
         }}
       >
         {/* Form Circles */}
