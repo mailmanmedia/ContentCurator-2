@@ -52,7 +52,7 @@ import { randomUUID } from "crypto";
 import { footballService } from "./football/footballService";
 import { db, pool } from "./db";
 import { teamSeasonStatistics, teamMatchupAnalysis, footballTeams, footballPlayers, playerSeasonStatistics, footballFixtures, footballCompetitions, historicalHeadToHead, data_sync_logs, data_sync_status, football_standings, football_leagues, library_items, scenes, rssArticles, football_players, recordings as recordingsTable } from "@shared/schema";
-import { desc, eq, and, gte, lte, or, inArray, sql, isNull } from "drizzle-orm";
+import { desc, eq, and, gte, lte, or, inArray, sql, isNull, ilike } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -1112,7 +1112,7 @@ export class MemStorage implements IStorage {
 
   // RSS Source methods
   async getRssSources(): Promise<RssSource[]> {
-    const results = await db.select().from(rssSourcesTable).orderBy(rssSourcesTable.updatedAt.desc());
+    const results = await db.select().from(rssSourcesTable).orderBy(desc(rssSourcesTable.createdAt));
     return results;
   }
 
@@ -1954,6 +1954,7 @@ export class MemStorage implements IStorage {
       const states = await db
         .select()
         .from(liveStatesTable)
+        .where(eq(liveStatesTable.id, 1))
         .limit(1);
 
       if (states.length > 0) {
@@ -1974,12 +1975,12 @@ export class MemStorage implements IStorage {
       if (existing) {
         const results = await db.update(liveStatesTable)
           .set({ ...updates, updated_at: new Date() })
-          .where(eq(liveStatesTable.key, 'default'))
+          .where(eq(liveStatesTable.id, 1))
           .returning();
         return results[0];
       } else {
         const results = await db.insert(liveStatesTable)
-          .values({ key: 'default', ...updates })
+          .values({ id: 1, key: 'default', ...updates })
           .returning();
         return results[0];
       }
