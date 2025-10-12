@@ -25,6 +25,13 @@ interface H2HMatch {
   homeScore: number;
   awayScore: number;
   competition?: string;
+  homeXg?: number;
+  awayXg?: number;
+}
+
+interface TopScorer {
+  name: string;
+  goals: number;
 }
 
 interface TeamInfo {
@@ -61,6 +68,17 @@ export default function H2HMatchCardOverlay({
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Fetch all teams with stats
+  const { data: teamsData } = useQuery({
+    queryKey: ['all-teams-stats'],
+    queryFn: async () => {
+      const response = await fetch('/api/database/teams/all');
+      if (!response.ok) throw new Error('Failed to fetch teams');
+      return response.json();
+    },
+    staleTime: 30 * 60 * 1000,
+  });
+
   // Fetch H2H data from database
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['h2h-db', homeTeamId, awayTeamId],
@@ -75,6 +93,10 @@ export default function H2HMatchCardOverlay({
 
   const { data: homeTeam } = useTeamBadge(homeTeamId);
   const { data: awayTeam } = useTeamBadge(awayTeamId);
+
+  // Get team stats from teams data
+  const homeTeamStats = teamsData?.data?.find((t: any) => t.id === homeTeamId);
+  const awayTeamStats = teamsData?.data?.find((t: any) => t.id === awayTeamId);
 
   // Scaling system similar to Form Guide
   const { scale, px } = useMemo(() => {
@@ -463,6 +485,21 @@ export default function H2HMatchCardOverlay({
             {match.awayTeam}
           </div>
         </div>
+
+        {!isMini && match.homeXg !== undefined && match.awayXg !== undefined && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: px(8),
+            fontSize: px(7),
+            color: colors.textSecondary,
+            lineHeight: 1,
+          }}>
+            <span>xG: {match.homeXg.toFixed(1)}</span>
+            <span style={{ opacity: 0.5 }}>-</span>
+            <span>{match.awayXg.toFixed(1)}</span>
+          </div>
+        )}
 
         {!isMini && (
           <div style={{

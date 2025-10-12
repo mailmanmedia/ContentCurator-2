@@ -3756,13 +3756,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get head-to-head data from database for H2HMatchCardOverlay
-  app.get("/api/database/head-to-head/:team1Id/:team2Id", async (req, res) => {
+  app.get("/api/database/head-to-head/:homeTeamId/:awayTeamId", async (req, res) => {
     try {
-      const team1Id = parseInt(req.params.team1Id);
-      const team2Id = parseInt(req.params.team2Id);
+      const { homeTeamId, awayTeamId } = req.params;
       const limit = parseInt(req.query.limit as string) || 10;
 
-      if (isNaN(team1Id) || isNaN(team2Id)) {
+      const homeId = parseInt(homeTeamId);
+      const awayId = parseInt(awayTeamId);
+
+      if (isNaN(homeId) || isNaN(awayId)) {
         return res.status(400).json({ error: "Invalid team IDs" });
       }
 
@@ -3773,15 +3775,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           and(
             or(
               and(
-                eq(footballFixtures.homeTeamId, team1Id),
-                eq(footballFixtures.awayTeamId, team2Id)
+                eq(footballFixtures.home_team_id, homeId),
+                eq(footballFixtures.away_team_id, awayId)
               ),
               and(
-                eq(footballFixtures.homeTeamId, team2Id),
-                eq(footballFixtures.awayTeamId, team1Id)
+                eq(footballFixtures.home_team_id, awayId),
+                eq(footballFixtures.away_team_id, homeId)
               )
             ),
-            eq(footballFixtures.statusShort, 'FT')
+            eq(footballFixtures.status_short, 'FT')
           )
         )
         .orderBy(desc(footballFixtures.timestamp))
@@ -3790,11 +3792,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transformedFixtures = fixtures.map(f => ({
         id: f.id,
         date: f.timestamp?.toISOString() || new Date().toISOString(),
-        homeTeam: f.homeTeamName || `Team ${f.homeTeamId}`,
-        awayTeam: f.awayTeamName || `Team ${f.awayTeamId}`,
+        homeTeam: f.homeTeamName || `Team ${f.home_team_id}`,
+        awayTeam: f.awayTeamName || `Team ${f.away_team_id}`,
         homeScore: f.goalsHome,
         awayScore: f.goalsAway,
-        competition: "Premier League",
+        competition: f.league_id === 39 ? 'Premier League' :
+                     f.league_id === 2 ? 'Champions League' :
+                     f.league_id === 3 ? 'Europa League' : 'Other',
         venue: f.venueName
       }));
 
@@ -5715,8 +5719,7 @@ Return ONLY a JSON object with this structure:
       res.json(recordings);
     } catch (error: any) {
       console.error('Error fetching recordings:', error);
-      res.status(500).json({ error: "Failed to fetch recordings" });
-    }
+      res.status(500).json({ error: "Failed to fetch recordings"});
   });
 
   // Get a single recording
@@ -5729,7 +5732,7 @@ Return ONLY a JSON object with this structure:
       res.json(recording);
     } catch (error: any) {
       console.error('Error fetching recording:', error);
-      res.status(500).json({ error: "Failed to fetch recording" });
+      res.status.json({ error: "Failed to fetch recording" });
     }
   });
 
