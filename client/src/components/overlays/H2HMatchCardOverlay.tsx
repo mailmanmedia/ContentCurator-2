@@ -214,7 +214,7 @@ export default function H2HMatchCardOverlay({
   if (!data?.data?.fixtures && !data?.data) {
     return (
       <OverlayEmptyState
-        message="No head-to-head data available"
+        message={`No data available at endpoint:\n/api/database/head-to-head/${homeTeamId}/${awayTeamId}`}
         width={width}
         height={height}
       />
@@ -238,7 +238,7 @@ export default function H2HMatchCardOverlay({
   if (completedMatches.length === 0) {
     return (
       <OverlayEmptyState
-        message="No previous matches found between these teams"
+        message={`No matches found between these teams\nEndpoint returned empty data`}
         width={width}
         height={height}
       />

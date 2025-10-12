@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { AlertTriangle, Database, Loader2, RefreshCw, XCircle } from "lucide-react";
+import { AlertTriangle, Database, Loader2, RefreshCw, XCircle, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -123,34 +123,37 @@ interface OverlayEmptyStateProps {
   height: number | string;
 }
 
-export function OverlayEmptyState({ 
-  message = "No data available", 
-  width, 
-  height 
-}: OverlayEmptyStateProps) {
+export function OverlayEmptyState({ message, width, height }: OverlayEmptyStateProps) {
   const widthValue = typeof width === 'number' ? `${width}%` : width;
   const heightValue = typeof height === 'number' ? `${height}px` : height;
 
   return (
     <div
-      className="flex flex-col items-center justify-center gap-4 bg-card"
-      style={{ width: widthValue, height: heightValue }}
-      data-testid="overlay-empty"
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+        color: '#FFFFFF',
+        fontFamily: 'League Spartan, sans-serif',
+        padding: '20px',
+        textAlign: 'center',
+      }}
+      data-testid="overlay-empty-state"
     >
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <Database 
-          className="w-16 h-16 text-muted-foreground" 
-          data-testid="icon-empty-database"
-        />
-      </motion.div>
-
-      <p className="text-base text-muted-foreground" data-testid="text-empty-message">
-        {message}
-      </p>
+      <div>
+        <AlertCircle size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+        <div style={{ 
+          fontSize: '16px', 
+          opacity: 0.8,
+          whiteSpace: 'pre-line',
+          lineHeight: '1.5'
+        }}>
+          {message}
+        </div>
+      </div>
     </div>
   );
 }

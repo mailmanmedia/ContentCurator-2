@@ -26,7 +26,19 @@ export function useOverlayData<T>({
 
   return useQuery<T>({
     queryKey,
-    queryFn,
+    queryFn: async () => {
+      try {
+        return await queryFn();
+      } catch (error: any) {
+        console.error(`[useOverlayData] Error fetching ${overlayName}:`, error);
+        
+        // If it's a JSON parse error, the endpoint likely returned HTML (error page)
+        if (error.message?.includes('JSON')) {
+          throw new Error(`Endpoint returned invalid response (not JSON). Check if the API endpoint exists.`);
+        }
+        throw error;
+      }
+    },
     enabled,
     staleTime,
     retry,
