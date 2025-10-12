@@ -23,7 +23,7 @@ export default function RssSentimentOverlay({
   showSentimentBreakdown = true,
   minSentiment,
 }: RssSentimentOverlayProps) {
-  const { data: sentimentSummary, isLoading } = useQuery<{
+  const { data: sentimentSummary, isLoading, error } = useQuery<{
     averageSentiment: number;
     totalArticles: number;
     trendingTopics: Array<{ topic: string; count: number; sentiment: number }>;
@@ -31,8 +31,9 @@ export default function RssSentimentOverlay({
     sentimentBreakdown: { positive: number; neutral: number; negative: number };
     lastFetched?: string;
   }>({
-    queryKey: ['/api/rss/sentiment-summary', { timeframe }],
+    queryKey: [`/api/rss/sentiment-summary?timeframe=${timeframe}`],
     refetchInterval: 60000,
+    retry: 2,
   });
 
   const refreshMutation = useMutation({
@@ -44,6 +45,36 @@ export default function RssSentimentOverlay({
       queryClient.invalidateQueries({ queryKey: ['/api/rss/sentiment-summary'] });
     },
   });
+
+  if (error) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: `rgba(0, 33, 71, ${opacity})`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#FFFFFF',
+          fontFamily: 'League Spartan, sans-serif',
+          borderRadius: '8px',
+          border: '2px solid #FF4444',
+          padding: '24px',
+          gap: '12px',
+        }}
+        data-testid="overlay-sentiment-error"
+      >
+        <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#FF4444', textAlign: 'center' }}>
+          Error Loading Sentiment Data
+        </div>
+        <div style={{ fontSize: '12px', color: '#CCCCCC', textAlign: 'center' }}>
+          {error instanceof Error ? error.message : 'Failed to fetch sentiment summary'}
+        </div>
+      </div>
+    );
+  }
 
   if (!isLoading && sentimentSummary?.totalArticles === 0) {
     return (

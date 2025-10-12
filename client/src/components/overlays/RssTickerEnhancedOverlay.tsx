@@ -64,9 +64,10 @@ export default function RssTickerEnhancedOverlay({
     queryParams.set('minSentiment', sentimentFilter.min.toString());
   }
 
-  const { data: articlesData, isLoading } = useQuery<{ articles: Article[] }>({
-    queryKey: ['/api/rss-articles', queryParams.toString()],
+  const { data: articlesData, isLoading, error } = useQuery<{ articles: Article[] }>({
+    queryKey: [`/api/rss-articles?${queryParams.toString()}`],
     refetchInterval: 120000, // Refresh every 2 minutes
+    retry: 2,
   });
 
   const articles = articlesData?.articles || [];
@@ -120,6 +121,29 @@ export default function RssTickerEnhancedOverlay({
     // Default tier 2 for unknown sources
     return tierMap[sourceId] || 2;
   };
+
+  if (error) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: `rgba(0, 33, 71, ${opacity})`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#FF4444',
+          fontFamily: 'League Spartan, sans-serif',
+          fontSize: '12px',
+          borderRadius: '8px',
+          border: '2px solid #FF4444',
+        }}
+        data-testid="ticker-error"
+      >
+        Error loading articles
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
