@@ -82,7 +82,12 @@ import { useCameraStreams, ScreenShareError, ScreenShareErrorType } from "@/cont
 import UpcomingFixturesOverlay from "@/components/overlays/UpcomingFixturesOverlay";
 import PlayerComparisonOverlay from "@/components/overlays/PlayerComparisonOverlay";
 import RssTickerEnhancedOverlay from "@/components/overlays/RssTickerEnhancedOverlay";
-import FormGuideOverlay from "@/components/overlays/FormGuideOverlay"; // Assuming FormGuideOverlay exists
+import FormGuideOverlay from "@/components/overlays/FormGuideOverlay";
+import H2HMatchCardOverlay from "@/components/overlays/H2HMatchCardOverlay";
+import LeagueTableOverlay from "@/components/overlays/LeagueTableOverlay";
+import LeaguePositionOverlay from "@/components/overlays/LeaguePositionOverlay";
+import PlayerStatsOverlay from "@/components/overlays/PlayerStatsOverlay";
+import RssSentimentOverlay from "@/components/overlays/RssSentimentOverlay";
 import { usePiP } from "@/contexts/PictureInPictureContext";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { useQuery } from "@tanstack/react-query";
@@ -2390,23 +2395,6 @@ export default function LivePresentation() {
       description: "Ready to start a new recording",
     });
   };
-
-  // Helper function to map overlay types and metric types to components
-  const getOverlayComponent = (type: string) => {
-    const OVERLAY_COMPONENTS = {
-      'form-guide': FormGuideOverlay,
-      'league-position': LeaguePositionOverlay,
-      'league-table': LeagueTableOverlay,
-      'player-comparison': PlayerComparisonOverlay,
-      'player-stats': PlayerStatsOverlay,
-      'h2h-match-card': H2HMatchCardOverlay,
-      'upcoming-fixtures': UpcomingFixturesOverlay,
-      'rss-ticker': RssTickerEnhancedOverlay,
-      'rss-sentiment': RssSentimentOverlay,
-    };
-    return OVERLAY_COMPONENTS[type as keyof typeof OVERLAY_COMPONENTS] || null;
-  };
-
 
   return (
     <div className="min-h-screen bg-background">
