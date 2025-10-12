@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { useOverlayData } from "@/hooks/useOverlayData";
+import { createScalingSystem } from "@/lib/overlayScaling";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
   OverlayEmptyState,
+  OverlaySourceBadge,
 } from "./OverlayStates";
 
 export const COLOR_PALETTES = {
@@ -115,17 +117,12 @@ export default function FormGuideOverlay({
     isLoading: isLoadingStats,
     error: statsError,
     refetch: refetchStats
-  } = useQuery({
+  } = useOverlayData({
     queryKey: ['database-team-stats', teamId, leagueId],
-    queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}`);
-      if (!response.ok) throw new Error('Failed to fetch team stats');
-      return response.json();
-    },
+    endpoint: `/api/database/teams/${teamId}/statistics?leagueId=${leagueId}`,
     enabled: !!teamId,
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
-    retryDelay: 1000,
+    errorMessage: 'Failed to fetch team statistics',
+    expectedDataStructure: '{ data: { statistics: {...}, form: "WWDLW" }, lastUpdated: "..." }'
   });
 
   const { 
@@ -133,17 +130,12 @@ export default function FormGuideOverlay({
     isLoading: isLoadingFixtures,
     error: fixturesError,
     refetch: refetchFixtures
-  } = useQuery({
+  } = useOverlayData({
     queryKey: ['database-team-fixtures', teamId, matchLimit],
-    queryFn: async () => {
-      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}`);
-      if (!response.ok) throw new Error('Failed to fetch fixtures');
-      return response.json();
-    },
+    endpoint: `/api/database/teams/${teamId}/fixtures?last=${matchLimit}`,
     enabled: !!teamId,
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
-    retryDelay: 1000,
+    errorMessage: 'Failed to fetch team fixtures',
+    expectedDataStructure: '{ data: { fixtures: [{...}] }, lastUpdated: "..." }'
   });
 
   const handleRefresh = async () => {
@@ -275,34 +267,18 @@ export default function FormGuideOverlay({
     };
   }, [teamStatsData, fixturesData, teamId, matchLimit]);
 
-  // Clean scaling with NO Math.max constraints
-  const { scale, px } = useMemo(() => {
-    if (!width || !height) {
-      return {
-        scale: 1,
-        px: (value: number) => value,
-      };
-    }
+  // Standardized scaling system
+  const { scale, px, isMini, isVeryCompact, isCompact } = useMemo(() => 
+    createScalingSystem({
+      width,
+      height,
+      baseWidth: 480,
+      baseHeight: 270,
+      minScale: 0.3,
+      maxScale: 2.0
+    }), [width, height]
+  );
 
-    const baseWidth = 480;
-    const baseHeight = 270;
-    const widthScale = width / baseWidth;
-    const heightScale = height / baseHeight;
-
-    const computed = clamp(Math.min(widthScale, heightScale), 0.3, 2.0);
-
-    const px = (value: number) => {
-      const scaled = value * computed;
-      if (value > 0 && scaled < 1) return 1;
-      return Math.round(scaled);
-    };
-
-    return { scale: computed, px };
-  }, [width, height]);
-
-  const isCompact = width < 400 || height < 250;
-  const isVeryCompact = width < 320 || height < 200;
-  const isMini = width < 240 || height < 150;
   const isStacked = layout === "vertical" || isCompact;
 
   // NO Math.max() - pure scaling
@@ -347,7 +323,16 @@ export default function FormGuideOverlay({
   }
 
   if (error) {
-    return <OverlayErrorState width={width} height={height} error={error as Error} />;
+    return (
+      <OverlayErrorState 
+        width={width} 
+        height={height} 
+        error={error as Error}
+        endpoint={`/api/database/teams/${teamId}/statistics or /fixtures`}
+        expectedData="{ data: { statistics: {...}, fixtures: [...] }, lastUpdated: '...' }"
+        source="Form Guide Data"
+      />
+    );
   }
 
   if (!sequence.length) {
@@ -675,6 +660,12 @@ export default function FormGuideOverlay({
           </div>
         </footer>
       )}
+
+      {/* Data Source Badge */}
+      <OverlaySourceBadge 
+        source={source === "Database" ? "database" : "none"} 
+        timestamp={lastUpdated ? new Date(lastUpdated).getTime() : undefined}
+      />
     </div>
   );
 }

@@ -14,7 +14,7 @@
 | Overlay | File | Status | API Endpoint(s) | Issues |
 |---------|------|--------|-----------------|--------|
 | H2H Match Card | H2HMatchCardOverlay.tsx | ✅ Refactored | /api/database/head-to-head/{id}/{id} | FIXED |
-| Form Guide | FormGuideOverlay.tsx | 🔍 Analyzing | /api/database/teams/{id}/statistics | TBD |
+| Form Guide | FormGuideOverlay.tsx | ✅ Refactored | /api/database/teams/{id}/statistics, /api/database/teams/{id}/fixtures | FIXED |
 | League Table | LeagueTableOverlay.tsx | 🔍 Analyzing | /api/database/standings | TBD |
 | League Position | LeaguePositionOverlay.tsx | 🔍 Analyzing | /api/database/standings | TBD |
 | Player Stats | PlayerStatsOverlay.tsx | 🔍 Analyzing | /api/database/players/top-scorers | TBD |
@@ -90,7 +90,7 @@ curl -s http://0.0.0.0:5000/api/rss-articles?limit=10 | jq
 
 ### Overlay Refactoring Checklist
 - [x] H2HMatchCardOverlay.tsx - ✅ Refactored with standardized hooks
-- [ ] FormGuideOverlay.tsx
+- [x] FormGuideOverlay.tsx - ✅ Refactored with standardized hooks
 - [ ] LeagueTableOverlay.tsx
 - [ ] LeaguePositionOverlay.tsx
 - [ ] PlayerComparisonOverlay.tsx
