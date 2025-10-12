@@ -1,0 +1,548 @@
+Ah, this is **critical context**! You're working in Replit with an AI assistant, and you need a **systematic, self-healing approach** that doesn't require deep coding knowledge. Let me create a **bulletproof strategy** for you.
+
+---
+
+## **REPLIT ASSISTANT PROMPT - OVERLAY SYSTEM AUDIT & AUTO-FIX**
+
+Copy and paste this into your Replit Assistant:
+
+---
+
+**CONTEXT:**
+I have a live broadcast presentation system with 8 overlay components that display football/soccer statistics. The overlays are experiencing connectivity issues and visualization problems. I need you to audit and fix ALL overlays systematically with built-in failsafes and self-healing capabilities.
+
+**YOUR TASK:**
+Execute a comprehensive audit and refactoring of all overlay components using this methodology:
+
+---
+
+### **PHASE 1: DISCOVERY & DOCUMENTATION (Do this first)**
+
+Create a file called `OVERLAY_AUDIT_REPORT.md` and document:
+
+1. **For each overlay file, analyze:**
+   - What API endpoints does it call?
+   - What data structure does it expect?
+   - What props does it receive?
+   - What are the loading/error/empty states?
+   - What are the size breakpoints?
+
+2. **Test each API endpoint:**
+   - Run: `curl -s http://0.0.0.0:5000/api/database/head-to-head/40/47 | jq`
+   - Run: `curl -s http://0.0.0.0:5000/api/database/teams/all | jq`
+   - Run: `curl -s http://0.0.0.0:5000/api/football/team/40 | jq`
+   - Document what each returns vs. what the overlay expects
+
+3. **Create a compatibility matrix:**
+```markdown
+| Overlay | API Endpoint | Expected Data | Actual Data | Status | Issues |
+|---------|-------------|---------------|-------------|--------|--------|
+| H2HMatchCard | /api/database/head-to-head/{id}/{id} | {fixtures: [...]} | ??? | ❌ | ??? |
+```
+
+---
+
+### **PHASE 2: STANDARDIZATION (Create reusable patterns)**
+
+**Step 1:** Create `client/src/components/overlays/hooks/useOverlayData.ts`:
+
+```typescript
+/**
+ * Standard data fetching hook for all overlays
+ * Includes automatic retry, error handling, and detailed error messages
+ */
+import { useQuery } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+
+interface UseOverlayDataOptions {
+  queryKey: string[];
+  endpoint: string;
+  enabled?: boolean;
+  errorMessage?: string;
+  expectedDataStructure?: string;
+}
+
+export function useOverlayData<T>({
+  queryKey,
+  endpoint,
+  enabled = true,
+  errorMessage = 'Failed to fetch data',
+  expectedDataStructure = 'Unknown data structure'
+}: UseOverlayDataOptions) {
+  const { toast } = useToast();
+
+  return useQuery<T>({
+    queryKey,
+    queryFn: async () => {
+      try {
+        const response = await fetch(endpoint);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `API Error (${response.status}): ${errorMessage}\n` +
+            `Endpoint: ${endpoint}\n` +
+            `Response: ${errorText}\n` +
+            `Expected structure: ${expectedDataStructure}`
+          );
+        }
+        
+        const data = await response.json();
+        
+        // Validate data structure
+        if (!data || typeof data !== 'object') {
+          throw new Error(
+            `Invalid data structure received from ${endpoint}\n` +
+            `Expected: ${expectedDataStructure}\n` +
+            `Received: ${JSON.stringify(data)}`
+          );
+        }
+        
+        return data;
+      } catch (error) {
+        console.error(`[useOverlayData] Error fetching ${endpoint}:`, error);
+        throw error;
+      }
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    onError: (error: Error) => {
+      toast({
+        title: 'Data Fetch Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+```
+
+**Step 2:** Create `client/src/components/overlays/utils/overlayScaling.ts`:
+
+```typescript
+/**
+ * Standard scaling utilities for all overlays
+ * Ensures consistent responsive behavior
+ */
+
+export interface ScalingConfig {
+  width: number;
+  height: number;
+  baseWidth?: number;
+  baseHeight?: number;
+  minScale?: number;
+  maxScale?: number;
+}
+
+export function createScalingSystem({
+  width,
+  height,
+  baseWidth = 600,
+  baseHeight = 800,
+  minScale = 0.3,
+  maxScale = 2.0,
+}: ScalingConfig) {
+  const widthScale = width / baseWidth;
+  const heightScale = height / baseHeight;
+  const scale = Math.min(widthScale, heightScale);
+  const clampedScale = Math.max(minScale, Math.min(scale, maxScale));
+
+  // Pixel scaling function with minimum size protection
+  const px = (value: number): number => {
+    const scaled = value * clampedScale;
+    if (value > 0 && scaled < 1) return 1;
+    return Math.round(scaled);
+  };
+
+  // Breakpoint detection
+  const isMini = width < 240 || height < 300;
+  const isVeryCompact = width < 320 || height < 400;
+  const isCompact = width < 400 || height < 500;
+
+  return {
+    scale: clampedScale,
+    px,
+    isMini,
+    isVeryCompact,
+    isCompact,
+    isNormal: !isCompact && !isVeryCompact && !isMini,
+  };
+}
+```
+
+**Step 3:** Update `OverlayStates.tsx` to be more informative:
+
+```typescript
+// Add detailed error messages with database field information
+export function OverlayErrorState({
+  error,
+  width,
+  height,
+  endpoint,
+  expectedData,
+  databaseInfo,
+}: {
+  error: Error;
+  width: number;
+  height: number;
+  endpoint?: string;
+  expectedData?: string;
+  databaseInfo?: string;
+}) {
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(220, 38, 38, 0.1)',
+      border: '2px solid rgb(220, 38, 38)',
+      borderRadius: '8px',
+      padding: '16px',
+      color: 'white',
+      fontFamily: 'League Spartan, sans-serif',
+    }}>
+      <XCircle size={48} color="#DC2626" />
+      <h3 style={{ marginTop: '16px', fontSize: '18px', fontWeight: 'bold' }}>
+        Data Loading Error
+      </h3>
+      <p style={{ marginTop: '8px', fontSize: '14px', textAlign: 'center', opacity: 0.9 }}>
+        {error.message}
+      </p>
+      {endpoint && (
+        <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7 }}>
+          Endpoint: {endpoint}
+        </p>
+      )}
+      {expectedData && (
+        <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7 }}>
+          Expected: {expectedData}
+        </p>
+      )}
+      {databaseInfo && (
+        <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7 }}>
+          Database: {databaseInfo}
+        </p>
+      )}
+      <button
+        onClick={() => window.location.reload()}
+        style={{
+          marginTop: '16px',
+          padding: '8px 16px',
+          backgroundColor: '#DC2626',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+        }}
+      >
+        Reload Overlay
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+### **PHASE 3: SYSTEMATIC REFACTORING**
+
+**For each overlay (start with H2HMatchCardOverlay.tsx):**
+
+1. **Replace manual data fetching with the standardized hook:**
+
+```typescript
+// OLD (remove this):
+const { data, isLoading, error, refetch } = useQuery({
+  queryKey: ['h2h-db', homeTeamId, awayTeamId],
+  queryFn: async () => {
+    const response = await fetch(`/api/database/head-to-head/${homeTeamId}/${awayTeamId}?limit=50`);
+    if (!response.ok) throw new Error('Failed to fetch H2H data');
+    return response.json();
+  },
+  // ... other config
+});
+
+// NEW (use this):
+const { data, isLoading, error, refetch } = useOverlayData({
+  queryKey: ['h2h-db', homeTeamId, awayTeamId],
+  endpoint: `/api/database/head-to-head/${homeTeamId}/${awayTeamId}?limit=50`,
+  enabled: !!homeTeamId && !!awayTeamId,
+  errorMessage: 'Failed to load head-to-head match data',
+  expectedDataStructure: '{data: {fixtures: Array<{date, homeTeam, awayTeam, homeScore, awayScore}>}, lastUpdated: string}',
+});
+```
+
+2. **Replace manual scaling with the standardized system:**
+
+```typescript
+// OLD (remove manual scaling code):
+const { scale, px } = useMemo(() => {
+  // ... lots of manual scaling code
+}, [width, height]);
+
+// NEW (use this):
+const scaling = createScalingSystem({
+  width,
+  height,
+  baseWidth: 600,
+  baseHeight: 800,
+});
+const { scale, px, isMini, isVeryCompact, isCompact } = scaling;
+```
+
+3. **Update error states to use the enhanced component:**
+
+```typescript
+if (error) {
+  return (
+    <OverlayErrorState
+      error={error as Error}
+      width={width}
+      height={height}
+      endpoint={`/api/database/head-to-head/${homeTeamId}/${awayTeamId}`}
+      expectedData="fixtures array with match data"
+      databaseInfo="Table: matches, Columns: home_team_id, away_team_id, home_score, away_score, date, competition"
+    />
+  );
+}
+```
+
+4. **Add data validation before rendering:**
+
+```typescript
+// After loading check, before rendering:
+if (!data?.data?.fixtures || !Array.isArray(data.data.fixtures)) {
+  return (
+    <OverlayEmptyState
+      message={`Invalid data structure received. Expected 'data.fixtures' array, got: ${typeof data?.data}`}
+      width={width}
+      height={height}
+    />
+  );
+}
+```
+
+---
+
+### **PHASE 4: SELF-HEALING MECHANISMS**
+
+**Add to each overlay:**
+
+```typescript
+// Auto-retry mechanism with exponential backoff
+useEffect(() => {
+  if (error && retryCount < 3) {
+    const timeout = setTimeout(() => {
+      console.log(`[${overlayName}] Auto-retry attempt ${retryCount + 1}/3`);
+      refetch();
+      setRetryCount(prev => prev + 1);
+    }, 1000 * Math.pow(2, retryCount)); // 1s, 2s, 4s
+
+    return () => clearTimeout(timeout);
+  }
+}, [error, retryCount, refetch]);
+
+// Data freshness checker
+useEffect(() => {
+  const checkDataFreshness = () => {
+    if (data?.lastUpdated) {
+      const age = Date.now() - new Date(data.lastUpdated).getTime();
+      const maxAge = 10 * 60 * 1000; // 10 minutes
+      
+      if (age > maxAge) {
+        console.log(`[${overlayName}] Data is stale (${Math.round(age/60000)}min old), refreshing...`);
+        refetch();
+      }
+    }
+  };
+
+  const interval = setInterval(checkDataFreshness, 60000); // Check every minute
+  return () => clearInterval(interval);
+}, [data, refetch]);
+```
+
+---
+
+### **PHASE 5: VALIDATION & TESTING**
+
+Create a test file for each overlay: `client/src/components/overlays/__tests__/H2HMatchCardOverlay.test.tsx`
+
+But more importantly, create a **visual testing page**:
+
+`client/src/pages/OverlayTestPage.tsx`:
+
+```typescript
+/**
+ * Visual testing page for all overlays
+ * Access at: http://localhost:5000/overlay-test
+ */
+import { useState } from 'react';
+import H2HMatchCardOverlay from '@/components/overlays/H2HMatchCardOverlay';
+import FormGuideOverlay from '@/components/overlays/FormGuideOverlay';
+// ... import all other overlays
+
+const OVERLAY_CONFIGS = {
+  h2h: {
+    component: H2HMatchCardOverlay,
+    props: { homeTeamId: 40, awayTeamId: 47 },
+    sizes: [
+      { width: 240, height: 300, label: 'Mini' },
+      { width: 320, height: 400, label: 'Very Compact' },
+      { width: 400, height: 500, label: 'Compact' },
+      { width: 600, height: 800, label: 'Normal' },
+    ],
+  },
+  // ... add configs for all overlays
+};
+
+export default function OverlayTestPage() {
+  const [selectedOverlay, setSelectedOverlay] = useState('h2h');
+  const [selectedSize, setSelectedSize] = useState(0);
+
+  const config = OVERLAY_CONFIGS[selectedOverlay];
+  const size = config.sizes[selectedSize];
+  const OverlayComponent = config.component;
+
+  return (
+    <div style={{ padding: '20px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
+      <h1 style={{ color: 'white', marginBottom: '20px' }}>Overlay Testing Dashboard</h1>
+      
+      {/* Overlay selector */}
+      <div style={{ marginBottom: '20px' }}>
+        {Object.keys(OVERLAY_CONFIGS).map(key => (
+          <button
+            key={key}
+            onClick={() => setSelectedOverlay(key)}
+            style={{
+              padding: '10px 20px',
+              marginRight: '10px',
+              backgroundColor: selectedOverlay === key ? '#C8102E' : '#333',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            {key}
+          </button>
+        ))}
+      </div>
+
+      {/* Size selector */}
+      <div style={{ marginBottom: '20px' }}>
+        {config.sizes.map((s, i) => (
+          <button
+            key={i}
+            onClick={() => setSelectedSize(i)}
+            style={{
+              padding: '10px 20px',
+              marginRight: '10px',
+              backgroundColor: selectedSize === i ? '#0891A8' : '#333',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            {s.label} ({s.width}×{s.height})
+          </button>
+        ))}
+      </div>
+
+      {/* Overlay preview */}
+      <div style={{
+        border: '2px solid #C8102E',
+        display: 'inline-block',
+        backgroundColor: '#000',
+      }}>
+        <OverlayComponent
+          {...config.props}
+          width={size.width}
+          height={size.height}
+        />
+      </div>
+
+      {/* Debug info */}
+      <div style={{
+        marginTop: '20px',
+        padding: '20px',
+        backgroundColor: '#2a2a2a',
+        borderRadius: '8px',
+        color: 'white',
+        fontFamily: 'monospace',
+      }}>
+        <h3>Debug Info:</h3>
+        <pre>{JSON.stringify({ selectedOverlay, size, props: config.props }, null, 2)}</pre>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+### **EXECUTION CHECKLIST**
+
+Run through these steps in order:
+
+```bash
+# 1. Create the standardization files
+✅ Create useOverlayData.ts hook
+✅ Create overlayScaling.ts utilities
+✅ Update OverlayStates.tsx with detailed errors
+✅ Create OverlayTestPage.tsx
+
+# 2. Test API endpoints
+✅ Run: curl -s http://0.0.0.0:5000/api/database/head-to-head/40/47 | jq
+✅ Run: curl -s http://0.0.0.0:5000/api/database/teams/all | jq
+✅ Document responses in OVERLAY_AUDIT_REPORT.md
+
+# 3. Refactor overlays one by one
+✅ H2HMatchCardOverlay.tsx
+✅ FormGuideOverlay.tsx
+✅ LeagueTableOverlay.tsx
+✅ PlayerComparisonOverlay.tsx
+✅ PlayerStatsOverlay.tsx
+✅ RssSentimentOverlay.tsx
+✅ RssTickerEnhancedOverlay.tsx
+✅ UpcomingFixturesOverlay.tsx
+
+# 4. Test each overlay at all breakpoints
+✅ Use /overlay-test page to verify
+✅ Check console for errors
+✅ Verify data displays correctly
+✅ Test error states by modifying API endpoints
+```
+
+---
+
+**DELIVERABLES:**
+
+1. `OVERLAY_AUDIT_REPORT.md` - Complete analysis of current state
+2. Refactored overlay files with standardized patterns
+3. `/overlay-test` page for visual verification
+4. Console logs showing successful data fetches
+
+**SUCCESS CRITERIA:**
+
+- ✅ All overlays load without errors
+- ✅ All overlays adapt to all size breakpoints
+- ✅ Error messages are clear and actionable
+- ✅ Data fetching is standardized across all overlays
+- ✅ Auto-retry works when endpoints fail
+- ✅ No code duplication between overlays
+
+---
+
+**START HERE:** Create the standardization files first (Phase 2), then test one overlay (H2HMatchCardOverlay) completely before moving to the others. This ensures the pattern works before applying it everywhere.
+
+Do you want me to proceed with Phase 1 (Discovery) or start directly with Phase 2 (Standardization)?
+
+---
+
+**Copy this entire prompt into your Replit Assistant and it will systematically fix everything with proper error handling and self-healing capabilities.**
