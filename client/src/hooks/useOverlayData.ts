@@ -5,63 +5,36 @@
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 
-interface UseOverlayDataOptions {
+interface UseOverlayDataOptions<T> {
   queryKey: string[];
-  endpoint: string;
+  queryFn: () => Promise<T>;
   enabled?: boolean;
-  errorMessage?: string;
-  expectedDataStructure?: string;
+  overlayName?: string;
+  staleTime?: number;
+  retry?: number;
 }
 
 export function useOverlayData<T>({
   queryKey,
-  endpoint,
+  queryFn,
   enabled = true,
-  errorMessage = 'Failed to fetch data',
-  expectedDataStructure = 'Unknown data structure'
-}: UseOverlayDataOptions) {
+  overlayName = 'Overlay',
+  staleTime = 5 * 60 * 1000,
+  retry = 3,
+}: UseOverlayDataOptions<T>) {
   const { toast } = useToast();
 
   return useQuery<T>({
     queryKey,
-    queryFn: async () => {
-      try {
-        const response = await fetch(endpoint);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(
-            `API Error (${response.status}): ${errorMessage}\n` +
-            `Endpoint: ${endpoint}\n` +
-            `Response: ${errorText}\n` +
-            `Expected structure: ${expectedDataStructure}`
-          );
-        }
-
-        const data = await response.json();
-
-        // Validate data structure
-        if (!data || typeof data !== 'object') {
-          throw new Error(
-            `Invalid data structure received from ${endpoint}\n` +
-            `Expected: ${expectedDataStructure}\n` +
-            `Received: ${JSON.stringify(data)}`
-          );
-        }
-
-        return data;
-      } catch (error) {
-        console.error(`[useOverlayData] Error fetching ${endpoint}:`, error);
-        throw error;
-      }
-    },
+    queryFn,
     enabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 3,
+    staleTime,
+    retry,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     onError: (error: Error) => {
+      console.error(`[useOverlayData] ${overlayName} error:`, error);
       toast({
-        title: 'Data Fetch Failed',
+        title: `${overlayName} Error`,
         description: error.message,
         variant: 'destructive',
       });
