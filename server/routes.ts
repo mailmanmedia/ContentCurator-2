@@ -5720,6 +5720,7 @@ Return ONLY a JSON object with this structure:
     } catch (error: any) {
       console.error('Error fetching recordings:', error);
       res.status(500).json({ error: "Failed to fetch recordings"});
+    }
   });
 
   // Get a single recording
