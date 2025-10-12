@@ -871,7 +871,7 @@ export default function LivePresentation() {
         }
 
         // Check if we have devices but no labels (means we need permissions)
-        if (videoDevices.length > 0 && !videoDevices[0].label) {
+        if (videoDevices.length > 0 && !videoDevices[0]?.label) {
           setNeedsPermission(true);
           setCameraPermissionStatus('prompt');
           setCameras(videoDevices);
@@ -886,7 +886,7 @@ export default function LivePresentation() {
         }
 
         // If we have labels, permissions are already granted
-        if (videoDevices.length > 0 && videoDevices[0].label) {
+        if (videoDevices.length > 0 && videoDevices[0]?.label) {
           setCameraPermissionStatus('granted');
           setNeedsPermission(false);
           setCameras(videoDevices);
@@ -1305,7 +1305,10 @@ export default function LivePresentation() {
     const dest = audioContext.createMediaStreamDestination();
     oscillator.connect(dest);
     oscillator.start();
-    stream.addTrack(dest.stream.getAudioTracks()[0]);
+    const audioTrack = dest.stream.getAudioTracks()[0];
+    if (audioTrack) {
+      stream.addTrack(audioTrack);
+    }
 
     return stream;
   };
@@ -2873,11 +2876,8 @@ export default function LivePresentation() {
                               showTopics={overlay.metricData?.showTopics}
                               showKeywords={overlay.metricData?.showKeywords}
                               showCredibility={overlay.metricData?.showCredibility}
-                              sentimentMin={overlay.metricData?.sentimentFilter?.min}
-                              sentimentMax={overlay.metricData?.sentimentFilter?.max}
                               rssSourceIds={overlay.rssSourceIds || overlay.metricData?.rssSourceIds}
-                              rssMaxArticles={overlay.rssMaxArticles || overlay.metricData?.maxArticles}
-                              rssShowSource={overlay.rssShowSource}
+                              maxArticles={overlay.rssMaxArticles || overlay.metricData?.maxArticles}
                             />
                           </OverlayErrorBoundary>
                         </div>
@@ -2913,7 +2913,7 @@ export default function LivePresentation() {
                         value={`${outputResolution.width}x${outputResolution.height}`}
                         onValueChange={(value) => {
                           const [width, height] = value.split('x').map(Number);
-                          setOutputResolution({ width, height });
+                          setOutputResolution({ width: width || 1920, height: height || 1080 });
                           toast({
                             title: 'Resolution updated',
                             description: `${width} × ${height}`
@@ -3505,7 +3505,7 @@ export default function LivePresentation() {
                     max={20}
                     step={1}
                     value={[rssMaxArticles]}
-                    onValueChange={(vals) => setRssMaxArticles(vals[0])}
+                    onValueChange={(vals) => setRssMaxArticles(vals[0] ?? 10)}
                     data-testid="slider-rss-max-articles"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -3771,7 +3771,7 @@ export default function LivePresentation() {
                                 max={36}
                                 step={1}
                                 value={[formTitleSize]}
-                                onValueChange={(vals) => setFormTitleSize(vals[0])}
+                                onValueChange={(vals) => setFormTitleSize(vals[0] ?? 20)}
                                 data-testid="slider-form-title-size"
                               />
                               <p className="text-xs text-muted-foreground mt-1">
@@ -3787,7 +3787,7 @@ export default function LivePresentation() {
                                 max={100}
                                 step={5}
                                 value={[formCircleSize]}
-                                onValueChange={(vals) => setFormCircleSize(vals[0])}
+                                onValueChange={(vals) => setFormCircleSize(vals[0] ?? 60)}
                                 data-testid="slider-form-circle-size"
                               />
                               <p className="text-xs text-muted-foreground mt-1">
@@ -3803,7 +3803,7 @@ export default function LivePresentation() {
                                 max={20}
                                 step={1}
                                 value={[formLabelSize]}
-                                onValueChange={(vals) => setFormLabelSize(vals[0])}
+                                onValueChange={(vals) => setFormLabelSize(vals[0] ?? 14)}
                                 data-testid="slider-form-label-size"
                               />
                               <p className="text-xs text-muted-foreground mt-1">
@@ -3856,12 +3856,12 @@ export default function LivePresentation() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Checkbox checked={overlayShowCountdown}
-                                     onCheckedChange={setOverlayShowCountdown} />
+                                     onCheckedChange={(checked) => setOverlayShowCountdown(checked === true)} />
                           <Label>Show Countdown Timer</Label>
                         </div>
                         <div className="flex items-center gap-2">
                           <Checkbox checked={overlayShowOpponentForm}
-                                     onCheckedChange={setOverlayShowOpponentForm} />
+                                     onCheckedChange={(checked) => setOverlayShowOpponentForm(checked === true)} />
                           <Label>Show Opponent Form</Label>
                         </div>
                       </div>
@@ -3883,7 +3883,7 @@ export default function LivePresentation() {
                         </div>
                         <div>
                           <Label>View Mode</Label>
-                          <Select value={overlayViewMode} onValueChange={setOverlayViewMode}>
+                          <Select value={overlayViewMode} onValueChange={(v) => setOverlayViewMode(v as 'sideBySide' | 'radar' | 'bars')}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="sideBySide">Side by Side</SelectItem>
@@ -4263,7 +4263,7 @@ export default function LivePresentation() {
                     max={100}
                     step={5}
                     value={[overlayWidth]}
-                    onValueChange={(vals) => setOverlayWidth(vals[0])}
+                    onValueChange={(vals) => setOverlayWidth(vals[0] ?? 100)}
                     data-testid="slider-overlay-width"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -4279,7 +4279,7 @@ export default function LivePresentation() {
                     max={300}
                     step={10}
                     value={[overlayHeight]}
-                    onValueChange={(vals) => setOverlayHeight(vals[0])}
+                    onValueChange={(vals) => setOverlayHeight(vals[0] ?? 70)}
                     data-testid="slider-overlay-height"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -4312,7 +4312,7 @@ export default function LivePresentation() {
                     max={1000}
                     step={10}
                     value={[overlayZIndex]}
-                    onValueChange={(vals) => setOverlayZIndex(vals[0])}
+                    onValueChange={(vals) => setOverlayZIndex(vals[0] ?? 100)}
                     data-testid="slider-overlay-zindex"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -4328,7 +4328,7 @@ export default function LivePresentation() {
                     max={1}
                     step={0.05}
                     value={[overlayOpacity]}
-                    onValueChange={(vals) => setOverlayOpacity(vals[0])}
+                    onValueChange={(vals) => setOverlayOpacity(vals[0] ?? 0.95)}
                     data-testid="slider-overlay-opacity"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -4362,7 +4362,7 @@ export default function LivePresentation() {
                         max={144}
                         step={1}
                         value={[overlayFontSize]}
-                        onValueChange={(vals) => setOverlayFontSize(vals[0])}
+                        onValueChange={(vals) => setOverlayFontSize(vals[0] ?? 28)}
                         data-testid="slider-overlay-font-size"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
@@ -4403,7 +4403,7 @@ export default function LivePresentation() {
                         max={10}
                         step={1}
                         value={[overlayBorderWidth || 0]}
-                        onValueChange={(vals) => setOverlayBorderWidth(vals[0])}
+                        onValueChange={(vals) => setOverlayBorderWidth(vals[0] ?? 0)}
                         data-testid="slider-overlay-border-width"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
@@ -4424,7 +4424,7 @@ export default function LivePresentation() {
                   </>
                 )}
 
-                {overlayType === 'image' && (
+                {(overlayType !== 'text' && overlayType !== 'rss') && overlayType === 'image' && (
                   <div className="pt-4 border-t space-y-3">
                     <Label>Image Overlay (Optional)</Label>
                     <div className="flex gap-2">
@@ -4493,7 +4493,7 @@ export default function LivePresentation() {
                     max={100}
                     step={1}
                     value={[overlayScrollSpeed]}
-                    onValueChange={(vals) => setOverlayScrollSpeed(vals[0])}
+                    onValueChange={(vals) => setOverlayScrollSpeed(vals[0] ?? 50)}
                     data-testid="slider-scroll-speed"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -4542,7 +4542,7 @@ export default function LivePresentation() {
                         <Label>Font Weight: {overlayFontWeight}</Label>
                         <Slider
                           value={[overlayFontWeight]}
-                          onValueChange={(v) => setOverlayFontWeight(v[0])}
+                          onValueChange={(v) => setOverlayFontWeight(v[0] ?? 400)}
                           min={300}
                           max={900}
                           step={100}
@@ -4554,7 +4554,7 @@ export default function LivePresentation() {
                         <Label>Letter Spacing: {overlayLetterSpacing.toFixed(2)}em</Label>
                         <Slider
                           value={[overlayLetterSpacing]}
-                          onValueChange={(v) => setOverlayLetterSpacing(v[0])}
+                          onValueChange={(v) => setOverlayLetterSpacing(v[0] ?? 0)}
                           min={-0.1}
                           max={0.2}
                           step={0.01}
@@ -4566,7 +4566,7 @@ export default function LivePresentation() {
                         <Label>Line Height: {overlayLineHeight.toFixed(1)}</Label>
                         <Slider
                           value={[overlayLineHeight]}
-                          onValueChange={(v) => setOverlayLineHeight(v[0])}
+                          onValueChange={(v) => setOverlayLineHeight(v[0] ?? 1.2)}
                           min={0.8}
                           max={2.0}
                           step={0.1}
@@ -4576,7 +4576,7 @@ export default function LivePresentation() {
 
                       <div>
                         <Label>Text Transform</Label>
-                        <Select value={overlayTextTransform} onValueChange={setOverlayTextTransform}>
+                        <Select value={overlayTextTransform} onValueChange={(v) => setOverlayTextTransform(v as 'none' | 'uppercase' | 'lowercase' | 'capitalize')}>
                           <SelectTrigger data-testid="select-text-transform">
                             <SelectValue />
                           </SelectTrigger>
@@ -4595,7 +4595,7 @@ export default function LivePresentation() {
 
                       <div>
                         <Label>Background Type</Label>
-                        <Select value={overlayBackgroundType} onValueChange={setOverlayBackgroundType}>
+                        <Select value={overlayBackgroundType} onValueChange={(v) => setOverlayBackgroundType(v as 'solid' | 'linear-gradient' | 'radial-gradient')}>
                           <SelectTrigger data-testid="select-background-type">
                             <SelectValue />
                           </SelectTrigger>
@@ -4632,7 +4632,7 @@ export default function LivePresentation() {
                               <Label>Gradient Angle: {overlayGradientAngle}°</Label>
                               <Slider
                                 value={[overlayGradientAngle]}
-                                onValueChange={(v) => setOverlayGradientAngle(v[0])}
+                                onValueChange={(v) => setOverlayGradientAngle(v[0] ?? 90)}
                                 min={0}
                                 max={360}
                                 step={15}
@@ -4651,7 +4651,7 @@ export default function LivePresentation() {
                         <Label>Border Radius: {overlayBorderRadius}px</Label>
                         <Slider
                           value={[overlayBorderRadius]}
-                          onValueChange={(v) => setOverlayBorderRadius(v[0])}
+                          onValueChange={(v) => setOverlayBorderRadius(v[0] ?? 0)}
                           min={0}
                           max={24}
                           step={2}
@@ -4661,7 +4661,7 @@ export default function LivePresentation() {
 
                       <div>
                         <Label>Border Style</Label>
-                        <Select value={overlayBorderStyle} onValueChange={setOverlayBorderStyle}>
+                        <Select value={overlayBorderStyle} onValueChange={(v) => setOverlayBorderStyle(v as 'solid' | 'dashed' | 'dotted')}>
                           <SelectTrigger data-testid="select-border-style">
                             <SelectValue />
                           </SelectTrigger>
@@ -4677,7 +4677,7 @@ export default function LivePresentation() {
                         <Label className="flex items-center gap-2 cursor-pointer">
                           <Checkbox
                             checked={overlayGlowEffect}
-                            onCheckedChange={setOverlayGlowEffect}
+                            onCheckedChange={(checked) => setOverlayGlowEffect(checked === true)}
                             data-testid="checkbox-glow-effect"
                           />
                           Glow Effect
