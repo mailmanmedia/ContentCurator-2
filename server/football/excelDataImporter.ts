@@ -14,6 +14,15 @@ import {
   type InsertFootballTeamStatistics
 } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
+import {
+  transformRowData,
+  lookupTeam,
+  lookupLeague,
+  parseExcelDate,
+  normalizeText,
+  getCanonicalTeamName,
+  clearLookupCaches
+} from './importMappings';
 
 interface ExcelRow {
   [key: string]: any;
@@ -247,81 +256,114 @@ export class ExcelDataImporter {
   private async importFixtures(data: ExcelRow[]) {
     console.log('🏟️ Importing fixtures data...');
     let imported = 0;
+    let failed = 0;
 
     for (const row of data) {
       try {
-        // Ensure teams exist
-        const homeTeam = await this.ensureTeamExists(row.home_team || row.HomeTeam || row['Home Team']);
-        const awayTeam = await this.ensureTeamExists(row.away_team || row.AwayTeam || row['Away Team']);
+        // Transform row data using mapping layer
+        const transformed = await transformRowData(row, {
+          teamLookup: true,
+          leagueLookup: true,
+          logMissing: true
+        });
+
+        // Extract team info
+        const homeTeamName = transformed.team_name || row.home_team || row.HomeTeam || row['Home Team'];
+        const awayTeamName = transformed.opponent_name || row.away_team || row.AwayTeam || row['Away Team'];
         
-        // Ensure league exists
-        const league = await this.ensureLeagueExists('Premier League', 'England');
+        if (!homeTeamName || !awayTeamName) {
+          console.warn(`⚠️ Missing team names in row:`, row);
+          failed++;
+          continue;
+        }
+
+        const homeTeam = await lookupTeam(homeTeamName) || await this.ensureTeamExists(homeTeamName);
+        const awayTeam = await lookupTeam(awayTeamName) || await this.ensureTeamExists(awayTeamName);
+        
+        // Get league
+        const leagueName = transformed.competition || 'Premier League';
+        const league = await lookupLeague(leagueName) || await this.ensureLeagueExists(leagueName, 'England');
+
+        // Parse date
+        const fixtureDate = parseExcelDate(transformed.fixture_date || row.date || row.Date);
+        if (!fixtureDate) {
+          console.warn(`⚠️ Invalid date in row:`, row);
+          failed++;
+          continue;
+        }
 
         const fixtureData: InsertFootballFixture = {
           league_id: league.id,
-          season: row.season || '2024',
-          round: row.round || row.matchday || null,
-          timestamp: new Date(row.date || row.Date),
+          season: transformed.season || new Date().getFullYear().toString(),
+          round: transformed.round || null,
+          timestamp: fixtureDate,
           home_team_id: homeTeam.id,
           home_team_name: homeTeam.name,
           home_team_logo: homeTeam.logo,
           away_team_id: awayTeam.id,
           away_team_name: awayTeam.name,
           away_team_logo: awayTeam.logo,
-          goals_home: row.home_goals || row.home_score || null,
-          goals_away: row.away_goals || row.away_score || null,
-          status_short: row.status || 'FT',
-          status_long: row.status === 'FT' ? 'Match Finished' : row.status,
-          venue_name: row.venue || null,
-          venue_city: row.city || null
+          goals_home: parseInt(transformed.goals_for || transformed.GF || '0') || null,
+          goals_away: parseInt(transformed.goals_against || transformed.GA || '0') || null,
+          status_short: transformed.result || transformed.status || 'FT',
+          status_long: transformed.status === 'FT' ? 'Match Finished' : transformed.status || 'Scheduled',
+          venue_name: transformed.venue || null,
+          venue_city: transformed.city || null
         };
 
         await db.insert(football_fixtures)
           .values(fixtureData)
-          .onConflictDoUpdate({
-            target: [
-              football_fixtures.home_team_name,
-              football_fixtures.away_team_name,
-              football_fixtures.timestamp,
-              football_fixtures.league_id
-            ],
-            set: fixtureData
-          });
+          .onConflictDoNothing();
 
         imported++;
       } catch (error) {
-        console.warn(`⚠️ Failed to import fixture row:`, row, error);
+        console.warn(`⚠️ Failed to import fixture row:`, error);
+        failed++;
       }
     }
 
-    console.log(`✅ Imported ${imported} fixtures`);
+    console.log(`✅ Imported ${imported} fixtures (${failed} failed)`);
   }
 
   private async importStandings(data: ExcelRow[]) {
     console.log('📊 Importing standings data...');
     let imported = 0;
+    let failed = 0;
 
     const league = await this.ensureLeagueExists('Premier League', 'England');
 
     for (const row of data) {
       try {
-        const team = await this.ensureTeamExists(row.team || row.Team);
+        // Transform row data using mapping layer
+        const transformed = await transformRowData(row, {
+          teamLookup: true,
+          logMissing: true
+        });
+
+        const teamName = transformed.team_name || row.team || row.Team || row.Squad;
+        if (!teamName) {
+          console.warn(`⚠️ Missing team name in standings row:`, row);
+          failed++;
+          continue;
+        }
+
+        const team = await lookupTeam(teamName) || await this.ensureTeamExists(teamName);
 
         const standingData: InsertFootballStanding = {
           league_id: league.id,
-          season: row.season || '2024',
-          rank: row.position || row.rank || row.Position,
+          season: transformed.season || new Date().getFullYear().toString(),
+          rank: parseInt(transformed.position || transformed.rank || '0'),
           team_id: team.id,
           team_name: team.name,
-          points: row.points || row.Points || 0,
-          goals_diff: row.goal_difference || row.GD || 0,
-          all_played: row.played || row.Played || 0,
-          all_win: row.wins || row.W || 0,
-          all_draw: row.draws || row.D || 0,
-          all_lose: row.losses || row.L || 0,
-          all_goals_for: row.goals_for || row.GF || 0,
-          all_goals_against: row.goals_against || row.GA || 0,
-          form: row.form || null,
+          points: parseInt(transformed.points || transformed.Pts || '0'),
+          goals_diff: parseInt(transformed.goal_difference || transformed.GD || '0'),
+          all_played: parseInt(transformed.matches_played || transformed.MP || '0'),
+          all_win: parseInt(transformed.wins || transformed.W || '0'),
+          all_draw: parseInt(transformed.draws || transformed.D || '0'),
+          all_lose: parseInt(transformed.losses || transformed.L || '0'),
+          all_goals_for: parseInt(transformed.goals_for || transformed.GF || '0'),
+          all_goals_against: parseInt(transformed.goals_against || transformed.GA || '0'),
+          form: transformed.form || null,
           last_update: new Date()
         };
 
@@ -338,11 +380,12 @@ export class ExcelDataImporter {
 
         imported++;
       } catch (error) {
-        console.warn(`⚠️ Failed to import standing row:`, row, error);
+        console.warn(`⚠️ Failed to import standing row:`, error);
+        failed++;
       }
     }
 
-    console.log(`✅ Imported ${imported} standings`);
+    console.log(`✅ Imported ${imported} standings (${failed} failed)`);
   }
 
   private async importTeamStats(data: ExcelRow[]) {
