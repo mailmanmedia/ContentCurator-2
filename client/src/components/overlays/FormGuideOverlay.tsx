@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -355,10 +354,7 @@ export default function FormGuideOverlay({
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.35 }}
+    <div
       style={{
         width: "100%",
         height: "100%",
@@ -679,6 +675,6 @@ export default function FormGuideOverlay({
           </div>
         </footer>
       )}
-    </motion.div>
+    </div>
   );
 }
