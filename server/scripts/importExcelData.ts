@@ -2,7 +2,7 @@
 import { ExcelDataImporter } from '../football/excelDataImporter';
 
 async function main() {
-  const filePath = process.argv[2] || 'attached_assets/extracted_data_20251012_002708_1760289279749.xlsx';
+  const filePath = process.argv[2] || 'attached_assets/extracted_data_20251012_002708_1760290307799.xlsx';
   
   console.log(`\n🚀 Starting Excel import from: ${filePath}\n`);
   
