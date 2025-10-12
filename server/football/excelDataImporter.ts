@@ -445,7 +445,10 @@ export class ExcelDataImporter {
 }
 
 // CLI execution
-if (require.main === module) {
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+
+if (process.argv[1] === __filename) {
   const filePath = process.argv[2] || 'attached_assets/extracted_data_20251012_002708_1760289279749.xlsx';
   
   const importer = new ExcelDataImporter(filePath);
