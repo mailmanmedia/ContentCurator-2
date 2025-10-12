@@ -2315,6 +2315,43 @@ export default function LivePresentation() {
     }
   };
 
+  // Helper function to map overlay types to components
+  const getOverlayComponent = (overlayType: string, metricType?: string) => {
+    // For metric overlays, use metricType to determine component
+    if (overlayType === 'metric' && metricType) {
+      switch (metricType) {
+        case 'form-guide':
+          return FormGuideOverlay;
+        case 'h2h-card':
+          return H2HMatchCardOverlay;
+        case 'league-table':
+          return LeagueTableOverlay;
+        case 'league-position':
+          return LeaguePositionOverlay;
+        case 'player-stats':
+          return PlayerStatsOverlay;
+        case 'player-comparison':
+          return PlayerComparisonOverlay;
+        case 'upcoming-fixtures':
+          return UpcomingFixturesOverlay;
+        case 'rss-ticker-enhanced':
+          return RssTickerEnhancedOverlay;
+        case 'rss-sentiment':
+          return RssSentimentOverlay;
+        default:
+          return null;
+      }
+    }
+    
+    // For non-metric overlays
+    switch (overlayType) {
+      case 'rss':
+        return RssTickerEnhancedOverlay;
+      default:
+        return null;
+    }
+  };
+
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -2731,7 +2768,7 @@ export default function LivePresentation() {
                   {overlays
                     .filter(overlay => overlay.visible)
                     .map((overlay) => {
-                      const OverlayComponent = getOverlayComponent(overlay.overlayType); // Use overlayType here
+                      const OverlayComponent = getOverlayComponent(overlay.overlayType, overlay.metricType);
 
                       if (!OverlayComponent) {
                         // Render non-component overlays (text, images)
@@ -2829,29 +2866,29 @@ export default function LivePresentation() {
                               width={overlay.width}
                               height={overlay.height}
                               opacity={overlay.opacity}
-                              teamId={overlay.teamId}
-                              homeTeamId={overlay.homeTeamId}
-                              awayTeamId={overlay.awayTeamId}
-                              player1Id={overlay.overlayPlayer1Id}
-                              player2Id={overlay.overlayPlayer2Id}
+                              teamId={overlay.metricData?.teamId}
+                              homeTeamId={overlay.metricData?.homeTeamId}
+                              awayTeamId={overlay.metricData?.awayTeamId}
+                              player1Id={overlay.metricData?.player1Id}
+                              player2Id={overlay.metricData?.player2Id}
                               colorPalette={overlay.colorPalette}
                               titleSize={overlay.formTitleSize}
                               circleSize={overlay.formCircleSize}
                               labelSize={overlay.formLabelSize}
-                              matchLimit={overlay.overlayMatchLimit}
-                              fixtureCount={overlay.overlayFixtureCount}
-                              showCountdown={overlay.overlayShowCountdown}
-                              showOpponentForm={overlay.overlayShowOpponentForm}
-                              viewMode={overlay.overlayViewMode}
-                              statCategories={overlay.overlayStatCategories}
-                              showSentiment={overlay.overlayShowSentiment}
-                              showTopics={overlay.overlayShowTopics}
-                              showKeywords={overlay.overlayShowKeywords}
-                              showCredibility={overlay.overlayShowCredibility}
-                              sentimentMin={overlay.overlaySentimentMin}
-                              sentimentMax={overlay.overlaySentimentMax}
-                              rssSourceIds={overlay.rssSourceIds}
-                              rssMaxArticles={overlay.rssMaxArticles}
+                              matchLimit={overlay.metricData?.matchLimit}
+                              fixtureCount={overlay.metricData?.fixtureCount}
+                              showCountdown={overlay.metricData?.showCountdown}
+                              showOpponentForm={overlay.metricData?.showOpponentForm}
+                              viewMode={overlay.metricData?.viewMode}
+                              statCategories={overlay.metricData?.statCategories}
+                              showSentiment={overlay.metricData?.showSentiment}
+                              showTopics={overlay.metricData?.showTopics}
+                              showKeywords={overlay.metricData?.showKeywords}
+                              showCredibility={overlay.metricData?.showCredibility}
+                              sentimentMin={overlay.metricData?.sentimentFilter?.min}
+                              sentimentMax={overlay.metricData?.sentimentFilter?.max}
+                              rssSourceIds={overlay.rssSourceIds || overlay.metricData?.rssSourceIds}
+                              rssMaxArticles={overlay.rssMaxArticles || overlay.metricData?.maxArticles}
                               rssShowSource={overlay.rssShowSource}
                             />
                           </OverlayErrorBoundary>
