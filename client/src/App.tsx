@@ -24,12 +24,14 @@ import DataAudit from "@/pages/DataAudit";
 import DataImportExport from "@/pages/DataImportExport";
 import MetaAgentDashboard from "@/pages/MetaAgentDashboard";
 import VisualAssistant from "@/components/VisualAssistant";
+import OverlayTestPage from "@/pages/OverlayTestPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={VisualAssistant} />
+      <Route path="/overlay-test" component={OverlayTestPage} />
       <Route path="/meta-agent" component={MetaAgentDashboard} />
       <Route path="/database-status" component={DatabaseStatus} />
       <Route path="/admin" component={AdminDashboard} />

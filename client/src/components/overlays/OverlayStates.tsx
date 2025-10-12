@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { AlertTriangle, Database, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, Database, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,9 @@ interface OverlayErrorStateProps {
   width: number | string;
   height: number | string;
   source?: string;
+  endpoint?: string;
+  expectedData?: string;
+  databaseInfo?: string;
 }
 
 export function OverlayErrorState({ 
@@ -44,7 +47,10 @@ export function OverlayErrorState({
   onRetry, 
   width, 
   height, 
-  source 
+  source,
+  endpoint,
+  expectedData,
+  databaseInfo,
 }: OverlayErrorStateProps) {
   const widthValue = typeof width === 'number' ? `${width}%` : width;
   const heightValue = typeof height === 'number' ? `${height}px` : height;
@@ -68,7 +74,7 @@ export function OverlayErrorState({
           data-testid="icon-error-alert"
         />
       </motion.div>
-      
+
       <div className="flex flex-col items-center gap-2 text-center max-w-md">
         {source && (
           <p className="text-sm text-muted-foreground" data-testid="text-error-source">
@@ -78,6 +84,21 @@ export function OverlayErrorState({
         <p className="text-lg font-semibold text-destructive" data-testid="text-error-message">
           {errorMessage}
         </p>
+        {endpoint && (
+          <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7, wordBreak: 'break-all' }}>
+            Endpoint: {endpoint}
+          </p>
+        )}
+        {expectedData && (
+          <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7 }}>
+            Expected: {expectedData}
+          </p>
+        )}
+        {databaseInfo && (
+          <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7 }}>
+            Database: {databaseInfo}
+          </p>
+        )}
       </div>
 
       {onRetry && (
@@ -126,7 +147,7 @@ export function OverlayEmptyState({
           data-testid="icon-empty-database"
         />
       </motion.div>
-      
+
       <p className="text-base text-muted-foreground" data-testid="text-empty-message">
         {message}
       </p>
@@ -163,7 +184,7 @@ export function OverlayCachedDataBadge({ timestamp }: OverlayCachedDataBadgeProp
 }
 
 interface OverlaySourceBadgeProps {
-  source: 'thefishy' | 'fbref' | 'cache' | 'none';
+  source: 'thefishy' | 'fbref' | 'cache' | 'none' | 'database';
   timestamp?: number;
 }
 
