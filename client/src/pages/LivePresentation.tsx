@@ -2886,9 +2886,14 @@ export default function LivePresentation() {
                       );
                     })}
                 </div>
-                {activeSources.length === 0 && (
+                {activeSources.length === 0 && overlays.length === 0 && (
                   <p className="text-center text-muted-foreground mt-4 text-sm">
-                    Use the dropdown below to add sources to the program output
+                    Add video sources or overlays to build your broadcast scene
+                  </p>
+                )}
+                {activeSources.length === 0 && overlays.length > 0 && (
+                  <p className="text-center text-muted-foreground mt-4 text-sm">
+                    ✓ Overlays configured • Add a video source when ready to broadcast
                   </p>
                 )}
               </CardContent>

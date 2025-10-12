@@ -41,3 +41,72 @@ export function useOverlayData<T>({
     },
   });
 }
+
+export function useOverlayData(overlayType: string | undefined, metricData: any) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['overlay-data', overlayType, metricData],
+    queryFn: async () => {
+      if (!overlayType) return null;
+
+      let endpoint = '';
+
+      if (overlayType === 'h2h-card') {
+        const { homeTeamId, awayTeamId } = metricData || {};
+        if (!homeTeamId || !awayTeamId) {
+          console.log('[useOverlayData] H2H: Missing team IDs, returning placeholder');
+          return {
+            homeTeam: { id: homeTeamId || 0, name: 'Home Team', logo: '' },
+            awayTeam: { id: awayTeamId || 0, name: 'Away Team', logo: '' },
+            matches: [],
+            stats: { home: { wins: 0, draws: 0, losses: 0 }, away: { wins: 0, draws: 0, losses: 0 } }
+          };
+        }
+        endpoint = `/api/football/h2h/${homeTeamId}/${awayTeamId}`;
+      } else if (overlayType === 'form-guide') {
+        const { teamId } = metricData || {};
+        if (!teamId) {
+          console.log('[useOverlayData] Form Guide: Missing team ID, returning placeholder');
+          return {
+            team: { id: teamId || 0, name: 'Team Name', logo: '' },
+            form: [],
+            stats: { played: 0, wins: 0, draws: 0, losses: 0 }
+          };
+        }
+        endpoint = `/api/football/team/${teamId}/form`;
+      }
+
+      if (!endpoint) {
+        console.log('[useOverlayData] No endpoint defined for overlay type:', overlayType);
+        return null;
+      }
+
+      try {
+        console.log('[useOverlayData] Fetching from:', endpoint);
+        const response = await fetch(endpoint);
+
+        if (!response.ok) {
+          console.error('[useOverlayData] HTTP error:', response.status);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('[useOverlayData] Invalid content type:', contentType);
+          throw new Error('Invalid response type - expected JSON');
+        }
+
+        const data = await response.json();
+        console.log('[useOverlayData] Data received:', data);
+        return data;
+      } catch (err) {
+        console.error('[useOverlayData] Error fetching', endpoint + ':', err);
+        throw err;
+      }
+    },
+    enabled: !!overlayType,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  return { data, isLoading, error };
+}

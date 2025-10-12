@@ -97,24 +97,24 @@ interface OverlayConfig {
   formTitleSize?: number;
   formCircleSize?: number;
   formLabelSize?: number;
-  
+
   // Advanced Typography
   fontWeight?: number;
   letterSpacing?: number;
   lineHeight?: number;
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   textShadow?: string;
-  
+
   // Advanced Background
   backgroundType?: 'solid' | 'linear-gradient' | 'radial-gradient';
   gradientAngle?: number;
   gradientColor1?: string;
   gradientColor2?: string;
-  
+
   // Border Customization
   borderRadius?: number;
   borderStyle?: 'solid' | 'dashed' | 'dotted';
-  
+
   // Shadow/Glow
   boxShadow?: string;
   glowEffect?: boolean;
@@ -165,7 +165,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   const fadeStates = useRef<Map<string, number>>(new Map());
   const [isEditing, setIsEditing] = useState(false);
   const lastOverlayUpdate = useRef<number>(0);
-  
+
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -180,7 +180,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   // Fetch RSS articles when RSS overlay exists
   const rssOverlays = overlays.filter(o => o.overlayType === 'rss');
   const hasRssOverlay = rssOverlays.length > 0;
-  
+
   // Collect all unique source IDs from all RSS overlays
   const allRssSourceIds = useMemo(() => {
     const sourceIds = new Set<string>();
@@ -189,7 +189,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
     });
     return Array.from(sourceIds);
   }, [rssOverlays]);
-  
+
   const { data: rssArticlesData } = useQuery<RssArticlesResponse>({
     queryKey: ['/api/rss-articles', { 
       sources: allRssSourceIds.length > 0 ? allRssSourceIds.join(',') : undefined,
@@ -246,7 +246,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
       const description = article.description 
         ? (article.description.length > 80 ? article.description.substring(0, 77) + '...' : article.description)
         : '';
-      
+
       if (overlay.rssShowSource) {
         return description 
           ? `${sourceName.toUpperCase()}: ${headline} - ${description}`
@@ -276,7 +276,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   ): HTMLCanvasElement => {
     const cacheKey = `${overlayId}-${width}-${height}`;
     let cached = overlayCanvasCache.current.get(cacheKey);
-    
+
     if (!cached || cached.width !== width || cached.height !== height) {
       cached = createOffscreenCanvas(width, height);
       const ctx = cached.getContext('2d');
@@ -285,7 +285,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
       }
       overlayCanvasCache.current.set(cacheKey, cached);
     }
-    
+
     return cached;
   }, [createOffscreenCanvas]);
 
@@ -308,12 +308,12 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   ) => {
     const videoAspect = video.videoWidth / video.videoHeight;
     const cellAspect = cellWidth / cellHeight;
-    
+
     let drawWidth = cellWidth;
     let drawHeight = cellHeight;
     let drawX = cellX;
     let drawY = cellY;
-    
+
     if (fitMode === 'contain') {
       if (videoAspect > cellAspect) {
         drawHeight = cellWidth / videoAspect;
@@ -331,7 +331,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         drawY = cellY - (drawHeight - cellHeight) / 2;
       }
     }
-    
+
     ctx.drawImage(video, drawX, drawY, drawWidth, drawHeight);
   }, []);
 
@@ -348,7 +348,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
     activeSources.forEach((source) => {
       if (!source.stream) return;
-      
+
       // Verify stream is actually a MediaStream (not a serialized object)
       if (!(source.stream instanceof MediaStream)) {
         console.warn(`Source ${source.id} has invalid stream object, skipping`);
@@ -363,7 +363,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         video.playsInline = true;
         videoRefs.current.set(source.id, video);
       }
-      
+
       if (video.srcObject !== source.stream) {
         video.srcObject = source.stream;
         video.play().catch(err => {
@@ -405,15 +405,30 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
     });
 
     const render = () => {
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+      // Show black background if no sources, but still render overlays
       if (activeSources.length === 0) {
-        ctx.fillStyle = '#6b7280';
-        ctx.font = '16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('No active sources', canvas.width / 2, canvas.height / 2);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Show message only if there are no overlays either
+        if (overlays.length === 0) {
+          ctx.fillStyle = '#666666';
+          ctx.font = '24px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('No active sources', canvas.width / 2, canvas.height / 2);
+        } else {
+          // Show helpful message when overlays exist but no sources
+          ctx.fillStyle = '#444444';
+          ctx.font = '16px League Spartan, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('Add a video source to complete your scene', canvas.width / 2, canvas.height / 2);
+        }
       } else {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         const count = activeSources.length;
         let cols, rows;
         if (count === 1) {
@@ -449,7 +464,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           const height = cellHeight - padding * 2;
 
           const video = videoRefs.current.get(source.id);
-          
+
           if (video && video.readyState >= 2) {
             const fitMode = sourceFitModes[source.id] || globalFitMode;
             drawVideoWithAspectRatio(ctx, video, x, y, width, height, fitMode);
@@ -458,7 +473,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             ctx.fillRect(x, y, width, height);
             ctx.strokeStyle = '#374151';
             ctx.strokeRect(x, y, width, height);
-            
+
             ctx.fillStyle = '#9ca3af';
             ctx.font = `${Math.floor(height * 0.08)}px sans-serif`;
             ctx.textAlign = 'center';
@@ -497,7 +512,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         const baseHeight = 1080; // Reference height (Full HD)
         const heightScale = canvas.height / baseHeight;
         const scaledHeight = Math.max(60, Math.floor(overlay.height * heightScale)); // Min 60px
-        
+
         // Scale font size proportionally
         const scaledFontSize = Math.max(20, Math.floor(overlay.fontSize * heightScale)); // Min 20px
 
@@ -508,7 +523,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         } else if (overlay.position === 'top') {
           yPosition = 0;
         }
-        
+
         ctx.globalAlpha = overlay.opacity !== undefined ? overlay.opacity : 1;
 
         if (overlay.overlayType === 'video') {
@@ -516,12 +531,12 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           if (!videoSrc) {
             ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.9);
             ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
-            
+
             // Add accent stripe
             const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
             ctx.fillStyle = hexToRgba(overlay.textColor, 0.3);
             ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
-            
+
             ctx.fillStyle = overlay.textColor;
             ctx.font = `${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.textAlign = 'center';
@@ -546,7 +561,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           if (overlay.backgroundColor) {
             ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.9);
             ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
-            
+
             // Add accent stripe
             const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
             ctx.fillStyle = hexToRgba(overlay.textColor, 0.3);
@@ -564,7 +579,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           }
         } else if (overlay.overlayType === 'metric') {
           const metricType = overlay.metricType || 'default';
-          
+
           // Skip canvas rendering for metric overlays that have dedicated React components
           // These are rendered as DOM elements instead (see metricOverlays rendering below)
           const hasReactComponent = ['h2h-card', 'form-guide', 'player-stats', 'league-table', 'rss-sentiment', 'rss-ticker-enhanced', 'upcoming-fixtures', 'player-comparison'].includes(metricType);
@@ -575,7 +590,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
           ctx.fillStyle = hexToRgba(overlay.backgroundColor, overlay.opacity || 0.9);
           ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
-          
+
           // Add accent stripe
           const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
           ctx.fillStyle = hexToRgba(overlay.textColor, 0.3);
@@ -626,7 +641,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               let scrollX = scrollPositions.current.get(overlay.id) || overlayWidth;
               ctx.textAlign = 'left';
               const textWidth = ctx.measureText(metricsText).width;
-              
+
               if (overlay.scrollDirection === 'left') {
                 scrollX -= scrollSpeed;
                 if (scrollX < -textWidth - 100) scrollX = overlayWidth;
@@ -634,7 +649,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
                 scrollX += scrollSpeed;
                 if (scrollX > overlayWidth + 100) scrollX = -textWidth;
               }
-              
+
               ctx.fillText(metricsText, xPosition + scrollX, yPosition + scaledHeight / 2);
               const x2 = overlay.scrollDirection === 'left'
                 ? scrollX + textWidth + 100
@@ -659,7 +674,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           }
 
           let img = loadedImages.current.get(imageSrc);
-          
+
           if (!img) {
             loadImage(imageSrc)
               .then(loadedImg => {
@@ -674,9 +689,9 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
           const imgAspect = img.width / img.height;
           const overlayAspect = overlayWidth / scaledHeight;
-          
+
           let drawWidth, drawHeight, drawX, drawY;
-          
+
           if (imgAspect > overlayAspect) {
             drawWidth = overlayWidth;
             drawHeight = overlayWidth / imgAspect;
@@ -710,59 +725,59 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           const textColor = overlay.colorPalette && COLOR_PALETTES[overlay.colorPalette]
             ? COLOR_PALETTES[overlay.colorPalette].text
             : overlay.textColor;
-          
+
           if (!rssArticles || rssArticles.length === 0) {
             // Show loading or no data message
             ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
             ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
-            
+
             // Add accent stripe
             const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
             ctx.fillStyle = hexToRgba(textColor, 0.3);
             ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
-            
+
             ctx.fillStyle = textColor;
             ctx.font = `bold ${scaledFontSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const loadingMsg = rssSources ? 'No recent headlines available' : 'Loading RSS feed...';
-            
+
             // Add text shadow
             ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
             ctx.shadowBlur = 8;
             ctx.shadowOffsetX = 2;
             ctx.shadowOffsetY = 2;
-            
+
             ctx.fillText(loadingMsg, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
-            
+
             // Reset shadow
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
-            
+
             ctx.globalAlpha = 1;
             return;
           }
 
           // Build ticker text from RSS articles
           const tickerText = formatRssTicker(overlay, rssArticles);
-          
+
           if (!tickerText || tickerText === 'No RSS sources selected' || tickerText === 'No recent headlines available') {
             // Show message
             ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
             ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
-            
+
             // Add accent stripe
             const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
             ctx.fillStyle = hexToRgba(textColor, 0.3);
             ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
-            
+
             ctx.fillStyle = textColor;
             // Measure text and scale to fit if needed
             let actualFontSize = scaledFontSize;
             const maxTextWidth = overlayWidth - 20; // Leave padding
-            
+
             // Function to find the right font size using measureText
             const fitTextToContainer = () => {
               for (let size = scaledFontSize; size > 10; size -= 2) {
@@ -774,27 +789,27 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
                 }
               }
             };
-            
+
             fitTextToContainer();
-            
+
             ctx.font = `bold ${actualFontSize}px "${overlay.fontFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            
+
             // Add text shadow
             ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
             ctx.shadowBlur = 8;
             ctx.shadowOffsetX = 2;
             ctx.shadowOffsetY = 2;
-            
+
             ctx.fillText(tickerText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
-            
+
             // Reset shadow
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
-            
+
             ctx.globalAlpha = 1;
             return;
           }
@@ -802,12 +817,12 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           // Draw background with color palette
           ctx.fillStyle = hexToRgba(bgColor, overlay.opacity || 0.95);
           ctx.fillRect(xPosition, yPosition, overlayWidth, scaledHeight);
-          
+
           // Add accent stripe at top
           const stripeHeight = Math.max(4, Math.floor(scaledHeight * 0.06));
           ctx.fillStyle = hexToRgba(textColor, 0.3);
           ctx.fillRect(xPosition, yPosition, overlayWidth, stripeHeight);
-          
+
           ctx.fillStyle = textColor;
           const fontWeight = overlay.isBold ? 'bold' : 'normal';
           const fontStyle = overlay.isItalic ? 'italic' : 'normal';
@@ -822,10 +837,10 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
           if (overlay.animationType === 'scroll') {
             const scrollSpeed = overlay.scrollSpeed / 10;
-            let scrollX = scrollPositions.current.get(overlay.id) || overlayWidth;
+            const scrollX = scrollPositions.current.get(overlay.id) || overlayWidth;
             ctx.textAlign = 'left';
             const textWidth = ctx.measureText(tickerText).width;
-            
+
             if (overlay.scrollDirection === 'left') {
               scrollX -= scrollSpeed;
               if (scrollX < -textWidth - 100) scrollX = overlayWidth;
@@ -833,7 +848,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
               scrollX += scrollSpeed;
               if (scrollX > overlayWidth + 100) scrollX = -textWidth;
             }
-            
+
             ctx.fillText(tickerText, xPosition + scrollX, yPosition + scaledHeight / 2);
             const x2 = overlay.scrollDirection === 'left'
               ? scrollX + textWidth + 100
@@ -858,7 +873,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             const y1 = yPosition + scaledHeight / 2 - Math.sin(angle) * scaledHeight / 2;
             const x2 = xPosition + overlayWidth / 2 + Math.cos(angle) * overlayWidth / 2;
             const y2 = yPosition + scaledHeight / 2 + Math.sin(angle) * scaledHeight / 2;
-            
+
             const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
             gradient.addColorStop(0, overlay.gradientColor1 || overlay.backgroundColor);
             gradient.addColorStop(1, overlay.gradientColor2 || overlay.backgroundColor);
@@ -945,13 +960,13 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           if (overlay.animationType === 'scroll') {
             const scrollSpeed = overlay.scrollSpeed / 10;
             const isVertical = overlay.scrollDirection === 'up' || overlay.scrollDirection === 'down';
-            
+
             if (isVertical) {
               let scrollY = scrollPositions.current.get(overlay.id);
               if (scrollY === undefined) {
                 scrollY = overlay.scrollDirection === 'down' ? -scaledHeight : canvas.height;
               }
-              
+
               ctx.textAlign = 'center';
               if (overlay.borderWidth && overlay.borderWidth > 0) {
                 ctx.strokeStyle = overlay.borderColor || '#000000';
@@ -961,7 +976,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
                 ctx.setLineDash([]);
               }
               ctx.fillText(displayText, xPosition + overlayWidth / 2, scrollY + scaledHeight / 2);
-              
+
               const textHeight = scaledFontSize * 1.2;
               if (overlay.scrollDirection === 'up') {
                 scrollY -= scrollSpeed;
@@ -974,14 +989,14 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
                   scrollY = -scaledHeight;
                 }
               }
-              
+
               scrollPositions.current.set(overlay.id, scrollY);
             } else {
               let scrollX = scrollPositions.current.get(overlay.id);
               if (scrollX === undefined) {
                 scrollX = overlay.scrollDirection === 'right' ? -overlayWidth : overlayWidth;
               }
-              
+
               ctx.textAlign = 'left';
               if (overlay.borderWidth && overlay.borderWidth > 0) {
                 ctx.strokeStyle = overlay.borderColor || '#000000';
@@ -991,7 +1006,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
                 ctx.setLineDash([]);
               }
               ctx.fillText(displayText, xPosition + scrollX, yPosition + scaledHeight / 2);
-              
+
               const textWidth = ctx.measureText(displayText).width;
               if (overlay.scrollDirection === 'left') {
                 scrollX -= scrollSpeed;
@@ -1004,17 +1019,17 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
                   scrollX = -textWidth;
                 }
               }
-              
+
               scrollPositions.current.set(overlay.id, scrollX);
             }
           } else if (overlay.animationType === 'fade') {
             let fadeTime = fadeStates.current.get(overlay.id) || 0;
             fadeTime += 0.02;
-            
+
             const opacity = (Math.sin(fadeTime) + 1) / 2;
             const baseOpacity = overlay.opacity !== undefined ? overlay.opacity : 1;
             ctx.globalAlpha = opacity * 0.5 * baseOpacity + 0.5 * baseOpacity;
-            
+
             ctx.textAlign = 'center';
             if (overlay.borderWidth && overlay.borderWidth > 0) {
               ctx.strokeStyle = overlay.borderColor || '#000000';
@@ -1025,7 +1040,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             }
             ctx.fillText(displayText, xPosition + overlayWidth / 2, yPosition + scaledHeight / 2);
             ctx.globalAlpha = baseOpacity;
-            
+
             fadeStates.current.set(overlay.id, fadeTime);
           } else {
             ctx.textAlign = 'center';
@@ -1044,13 +1059,13 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           ctx.shadowBlur = 0;
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 0;
-          
+
           // Restore canvas context if border radius was applied
           if (overlay.borderRadius && overlay.borderRadius > 0) {
             ctx.restore();
           }
         }
-        
+
         ctx.globalAlpha = 1;
       });
 
@@ -1076,7 +1091,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   const handleOverlayMouseDown = (e: React.MouseEvent, overlayId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const overlay = overlays.find(o => o.id === overlayId);
     if (!overlay) return;
 
@@ -1098,7 +1113,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   const handleResizeMouseDown = (e: React.MouseEvent, overlayId: string, handle: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const overlay = overlays.find(o => o.id === overlayId);
     if (!overlay) return;
 
@@ -1129,7 +1144,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
       if (isDragging && selectedOverlayId && onUpdateOverlay) {
         const newX = Math.max(0, Math.min(canvas.width - (canvas.width * initialOverlayState.width / 100), initialOverlayState.x + deltaX));
         const newY = Math.max(0, Math.min(canvas.height - initialOverlayState.height, initialOverlayState.y + deltaY));
-        
+
         onUpdateOverlay(selectedOverlayId, { 
           x: newX, 
           y: newY 
@@ -1220,19 +1235,19 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
     const canvas = canvasRef.current;
     const canvasRect = canvas.getBoundingClientRect();
-    
+
     // Calculate actual pixel width from percentage
     const pixelWidth = (width / 100) * canvas.width;
-    
+
     // Calculate adjusted y position to prevent clipping at bottom
     let adjustedY = y;
     const canvasHeight = canvas.height;
-    
+
     // If overlay extends beyond canvas height, adjust y position
     if (y + height > canvasHeight) {
       adjustedY = canvasHeight - height;
     }
-    
+
     // Ensure overlay doesn't go above canvas
     adjustedY = Math.max(0, adjustedY);
 
@@ -1357,7 +1372,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         {['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(handle => {
           let cursorStyle = '';
           let positionStyle: React.CSSProperties = {};
-          
+
           switch (handle) {
             case 'nw':
               cursorStyle = 'nwse-resize';
