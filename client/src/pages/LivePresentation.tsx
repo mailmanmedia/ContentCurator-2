@@ -2332,6 +2332,8 @@ export default function LivePresentation() {
           return FormGuideOverlay;
         case 'h2h-card':
           return H2HMatchCardOverlay;
+        case 'h2h': // Added for potential direct H2H type
+          return H2HMatchCardOverlay;
         case 'league-table':
           return LeagueTableOverlay;
         case 'league-position':
@@ -3544,6 +3546,7 @@ export default function LivePresentation() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="h2h-card">Head-to-Head Card</SelectItem>
+                          <SelectItem value="h2h">Head-to-Head (Legacy)</SelectItem>
                           <SelectItem value="form-guide">Form Guide</SelectItem>
                           <SelectItem value="league-table">League Table</SelectItem>
                           <SelectItem value="rss-sentiment">RSS Sentiment</SelectItem>

@@ -89,6 +89,7 @@ export default function H2HMatchCardOverlay({
     },
     enabled: !!homeTeamId && !!awayTeamId,
     staleTime: 10 * 60 * 1000,
+    retry: 2,
   });
 
   const { data: homeTeam } = useTeamBadge(homeTeamId);
@@ -300,6 +301,7 @@ export default function H2HMatchCardOverlay({
 
   const TeamBadge = ({ team, teamId, side }: { team?: TeamInfo; teamId: number; side: 'home' | 'away' }) => {
     const initials = team?.name?.substring(0, 2).toUpperCase() || (side === 'home' ? 'H' : 'A');
+    const logo = team?.badge;
 
     return (
       <div style={{
@@ -321,10 +323,10 @@ export default function H2HMatchCardOverlay({
           overflow: 'hidden',
           flexShrink: 0,
         }}>
-          {team?.badge ? (
+          {logo ? (
             <img
-              src={team.badge}
-              alt={team.name}
+              src={logo}
+              alt={team?.name || `Team ${teamId}`}
               style={{
                 width: '75%',
                 height: '75%',
@@ -341,7 +343,7 @@ export default function H2HMatchCardOverlay({
             />
           ) : null}
           <div style={{
-            display: team?.badge ? 'none' : 'flex',
+            display: logo ? 'none' : 'flex',
             fontSize: px(isMini ? 20 : isVeryCompact ? 28 : 36),
             fontWeight: 'bold',
             color: colors.text,
@@ -349,21 +351,6 @@ export default function H2HMatchCardOverlay({
             {initials}
           </div>
         </div>
-        {!isMini && (
-          <div style={{
-            fontSize: textSize,
-            fontWeight: 'bold',
-            textAlign: 'center',
-            color: colors.text,
-            maxWidth: px(120),
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            lineHeight: 1.2,
-          }} data-testid={`team-name-${side}`}>
-            {team?.name || `Team ${teamId}`}
-          </div>
-        )}
       </div>
     );
   };

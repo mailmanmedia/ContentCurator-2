@@ -2561,47 +2561,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team IDs" });
       }
 
-      // Get team names from database
+      // Get team names and logos from database
       const teams = await db
-        .select({ id: footballTeams.id, name: footballTeams.name })
+        .select({ 
+          id: footballTeams.id, 
+          name: footballTeams.name,
+          logo: footballTeams.logo
+        })
         .from(footballTeams)
         .where(or(eq(footballTeams.id, homeTeamId), eq(footballTeams.id, awayTeamId)));
 
-      const teamMap = new Map(teams.map(t => [t.id, t.name]));
+      const teamMap = new Map(teams.map(t => [t.id, { name: t.name, logo: t.logo }]));
 
       // First try to get data from database (includes historical data)
       const { historicalDataService } = await import('./services/historicalDataService');
       const dbFixtures = await historicalDataService.getHeadToHeadData(homeTeamId, awayTeamId, 30);
 
-      // Transform fixtures to match H2HDataSchema
-      const transformFixtures = (fixtures: any[]) => {
-        return fixtures.map((fixture: any) => ({
+      // If we have sufficient data from database, use it
+      if (dbFixtures.length >= 5) {
+        console.log(`✓ Using database data for teams ${homeTeamId} vs ${awayTeamId} (${dbFixtures.length} matches)`);
+        const transformedFixtures = dbFixtures.map((fixture: any) => ({
           id: fixture.id,
           date: fixture.date,
-          homeTeam: teamMap.get(fixture.homeTeamId) || `Team ${fixture.homeTeamId}`,
-          awayTeam: teamMap.get(fixture.awayTeamId) || `Team ${fixture.awayTeamId}`,
+          homeTeam: teamMap.get(fixture.homeTeamId)?.name || `Team ${fixture.homeTeamId}`,
+          homeTeamLogo: teamMap.get(fixture.homeTeamId)?.logo,
+          awayTeam: teamMap.get(fixture.awayTeamId)?.name || `Team ${fixture.awayTeamId}`,
+          awayTeamLogo: teamMap.get(fixture.awayTeamId)?.logo,
           homeScore: fixture.goals?.home ?? null,
           awayScore: fixture.goals?.away ?? null,
           competition: fixture.competition,
           venue: fixture.venue,
         }));
-      };
-
-      // If we have sufficient data from database, use it
-      if (dbFixtures.length >= 5) {
-        console.log(`✓ Using database data for teams ${homeTeamId} vs ${awayTeamId} (${dbFixtures.length} matches)`);
-        const transformedFixtures = transformFixtures(dbFixtures);
         return res.json({ fixtures: transformedFixtures, source: 'database' });
       }
 
       // Otherwise fall back to API
       console.log(`⚠ Insufficient database data, fetching from API for teams ${homeTeamId} vs ${awayTeamId}`);
-      const fixtures = await storage.getFootballHeadToHead(homeTeamId, awayTeamId);
-      const transformedFixtures = transformFixtures(fixtures);
-      res.json({ fixtures: transformedFixtures, source: 'api' });
+      // Fetch fixtures from storage service with raw SQL query to include team names and logos
+      const fixturesQuery = await pool.query(`
+        SELECT 
+          f.id,
+          f.home_team_id,
+          f.away_team_id,
+          ht.name as home_team_name,
+          ht.logo as home_team_logo,
+          at.name as away_team_name,
+          at.logo as away_team_logo,
+          f.goals,
+          f.date,
+          f.timestamp,
+          f.venue,
+          f.league_id
+        FROM football_fixtures f
+        INNER JOIN football_teams ht ON ht.id = f.home_team_id
+        INNER JOIN football_teams at ON at.id = f.away_team_id
+        WHERE ((f.home_team_id = $1 AND f.away_team_id = $2) 
+           OR (f.home_team_id = $2 AND f.away_team_id = $1))
+          AND (f.status->>'short') = 'FT'
+        ORDER BY f.timestamp DESC
+        LIMIT $3
+      `, [homeTeamId, awayTeamId, limit]);
+
+      const fixtures = fixturesQuery.rows.map((f: any) => ({
+        id: f.id,
+        date: f.date || f.timestamp,
+        homeTeam: f.home_team_name,
+        homeTeamLogo: f.home_team_logo,
+        awayTeam: f.away_team_name,
+        awayTeamLogo: f.away_team_logo,
+        homeScore: f.goals?.home ?? null,
+        awayScore: f.goals?.away ?? null,
+        competition: f.league_id === 39 ? 'Premier League' : 
+                    f.league_id === 2 ? 'Champions League' : 
+                    f.league_id === 48 ? 'League Cup' : 'Competition',
+        venue: f.venue?.name || 'Unknown Venue' // Assuming venue is a JSONB object with a 'name' field
+      }));
+
+      res.json({
+        data: { fixtures },
+        lastUpdated: new Date(),
+        source: "database"
+      });
     } catch (error) {
-      console.error('Error fetching head-to-head stats:', error);
-      res.status(500).json({ error: "Failed to fetch head-to-head statistics" });
+      console.error('Error fetching head-to-head data from database:', error);
+      res.status(500).json({ error: "Failed to fetch head-to-head data from database" });
     }
   });
 
@@ -3655,7 +3698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         return {
           id: f.id,
-          status: { short: f.status_short },
+          date: f.date || new Date(f.timestamp * 1000).toISOString(),
           teams: {
             home: { id: f.home_team_id, name: f.home_team_name },
             away: { id: f.away_team_id, name: f.away_team_name }
@@ -3665,7 +3708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             away: goalsData.away ?? null
           },
           fixture: {
-            date: f.date || new Date().toISOString(),
+            date: f.date || new Date(f.timestamp * 1000).toISOString(),
             venue: { 
               name: venueData.name || 'Unknown Venue', 
               city: venueData.city || 'Unknown' 
@@ -3802,14 +3845,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           f.id,
           f.home_team_id,
           f.away_team_id,
-          f.goals_home,
-          f.goals_away,
+          ht.name as home_team_name,
+          ht.logo as home_team_logo,
+          at.name as away_team_name,
+          at.logo as away_team_logo,
+          f.goals,
           f.date,
           f.timestamp,
-          f.venue_name,
-          f.league_id,
-          ht.name as home_team_name,
-          at.name as away_team_name
+          f.venue,
+          f.league_id
         FROM football_fixtures f
         LEFT JOIN football_teams ht ON f.home_team_id = ht.id
         LEFT JOIN football_teams at ON f.away_team_id = at.id
@@ -3817,7 +3861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (f.home_team_id = $1 AND f.away_team_id = $2) OR
           (f.home_team_id = $2 AND f.away_team_id = $1)
         )
-        AND f.status_short = 'FT'
+        AND (f.status->>'short') = 'FT'
         ORDER BY 
           CASE 
             WHEN f.timestamp IS NOT NULL THEN f.timestamp
@@ -3840,17 +3884,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fixtureDate = new Date().toISOString();
         }
 
+        // Parse venue data safely
+        let venueName = 'Unknown Venue';
+        let venueCity = 'Unknown';
+        if (f.venue) {
+          try {
+            const venueData = typeof f.venue === 'string' ? JSON.parse(f.venue) : f.venue;
+            venueName = venueData?.name || venueName;
+            venueCity = venueData?.city || venueCity;
+          } catch (e) {
+            // Venue parsing failed, use defaults
+            console.warn(`Failed to parse venue data for fixture ${f.id}:`, f.venue);
+          }
+        }
+
         return {
           id: f.id,
           date: fixtureDate,
           homeTeam: f.home_team_name || `Team ${f.home_team_id}`,
+          homeTeamLogo: f.home_team_logo,
           awayTeam: f.away_team_name || `Team ${f.away_team_id}`,
-          homeScore: f.goals_home,
-          awayScore: f.goals_away,
+          awayTeamLogo: f.away_team_logo,
+          homeScore: f.goals?.home ?? null,
+          awayScore: f.goals?.away ?? null,
           competition: f.league_id === 39 ? 'Premier League' :
                        f.league_id === 2 ? 'Champions League' :
                        f.league_id === 3 ? 'Europa League' : 'Other',
-          venue: f.venue_name || 'Unknown Venue'
+          venue: { name: venueName, city: venueCity }
         };
       });
 
@@ -3888,25 +3948,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LEFT JOIN football_teams at ON f.away_team_id = at.id
         WHERE (f.home_team_id = $1 OR f.away_team_id = $1)
           AND f.timestamp >= $2
-          AND (f.status_short = 'NS' OR f.status_short = 'TBD')
+          AND (f.status->>'short' = 'NS' OR f.status->>'short' = 'TBD')
         ORDER BY f.timestamp
         LIMIT $3
       `, [teamId, nowTimestamp, limit]);
 
       const transformedFixtures = result.rows.map(f => {
+        let fixtureDate: string;
+        if (f.timestamp) {
+          fixtureDate = new Date(f.timestamp * 1000).toISOString();
+        } else if (f.date) {
+          fixtureDate = new Date(f.date).toISOString();
+        } else {
+          fixtureDate = new Date().toISOString();
+        }
+
         let venueName = 'Unknown Venue';
+        let venueCity = 'Unknown';
         if (f.venue) {
           try {
             const venueData = typeof f.venue === 'string' ? JSON.parse(f.venue) : f.venue;
             venueName = venueData?.name || venueName;
+            venueCity = venueData?.city || venueCity;
           } catch (e) {
             // Use default
           }
         }
-
-        const fixtureDate = f.timestamp 
-          ? new Date(f.timestamp * 1000).toISOString() 
-          : new Date(f.date).toISOString();
 
         return {
           id: f.id,
@@ -3915,7 +3982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           homeTeam: f.home_team_name || `Team ${f.home_team_id}`,
           awayTeam: f.away_team_name || `Team ${f.away_team_id}`,
           league: "Premier League",
-          venue: venueName,
+          venue: { name: venueName, city: venueCity },
           isHome: f.home_team_id === teamId
         };
       });
