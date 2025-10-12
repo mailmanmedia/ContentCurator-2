@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2025-10-12T03:28:58.799Z",
+  "lastUpdated": "2025-10-12T03:36:23.673Z",
   "team": {
     "id": 40,
     "name": "Liverpool",
@@ -2920,29 +2920,29 @@
       }
     },
     {
-      "id": 180317,
-      "name": "C. Bradley",
-      "photo": "https://media.api-sports.io/football/players/180317.png",
+      "id": 290,
+      "name": "V. van Dijk",
+      "photo": "https://media.api-sports.io/football/players/290.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
-        "appearances": 5,
-        "minutes": 235,
-        "rating": "6.3"
+        "appearances": 7,
+        "minutes": 630,
+        "rating": "7.33"
       }
     },
     {
-      "id": 284,
-      "name": "J. Gomez",
-      "photo": "https://media.api-sports.io/football/players/284.png",
+      "id": 1145,
+      "name": "I. Konaté",
+      "photo": "https://media.api-sports.io/football/players/1145.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
-        "appearances": 2,
-        "minutes": 30,
-        "rating": "6.75"
+        "appearances": 7,
+        "minutes": 566,
+        "rating": "6.96"
       }
     },
     {
@@ -2972,16 +2972,16 @@
       }
     },
     {
-      "id": 452685,
-      "name": "R. Ngumoha",
-      "photo": "https://media.api-sports.io/football/players/452685.png",
+      "id": 306,
+      "name": "Mohamed Salah",
+      "photo": "https://media.api-sports.io/football/players/306.png",
       "statistics": {
         "season": 2025,
-        "goals": 1,
-        "assists": 0,
-        "appearances": 3,
-        "minutes": 34,
-        "rating": "6.87"
+        "goals": 2,
+        "assists": 2,
+        "appearances": 7,
+        "minutes": 629,
+        "rating": "6.66"
       }
     },
     {
@@ -2998,16 +2998,29 @@
       }
     },
     {
-      "id": 152654,
-      "name": "J. Frimpong",
-      "photo": "https://media.api-sports.io/football/players/152654.png",
+      "id": 289,
+      "name": "A. Robertson",
+      "photo": "https://media.api-sports.io/football/players/289.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
         "appearances": 3,
-        "minutes": 86,
+        "minutes": 118,
         "rating": "6.6"
+      }
+    },
+    {
+      "id": 284,
+      "name": "J. Gomez",
+      "photo": "https://media.api-sports.io/football/players/284.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 0,
+        "assists": 0,
+        "appearances": 2,
+        "minutes": 30,
+        "rating": "6.75"
       }
     },
     {
@@ -3024,81 +3037,42 @@
       }
     },
     {
-      "id": 1145,
-      "name": "I. Konaté",
-      "photo": "https://media.api-sports.io/football/players/1145.png",
+      "id": 542,
+      "name": "R. Gravenberch",
+      "photo": "https://media.api-sports.io/football/players/542.png",
       "statistics": {
         "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 7,
-        "minutes": 566,
-        "rating": "6.96"
+        "goals": 2,
+        "assists": 1,
+        "appearances": 6,
+        "minutes": 540,
+        "rating": "7.37"
       }
     },
     {
-      "id": 290,
-      "name": "V. van Dijk",
-      "photo": "https://media.api-sports.io/football/players/290.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 0,
-        "assists": 0,
-        "appearances": 7,
-        "minutes": 630,
-        "rating": "7.33"
-      }
-    },
-    {
-      "id": 289,
-      "name": "A. Robertson",
-      "photo": "https://media.api-sports.io/football/players/289.png",
+      "id": 152654,
+      "name": "J. Frimpong",
+      "photo": "https://media.api-sports.io/football/players/152654.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
         "appearances": 3,
-        "minutes": 118,
+        "minutes": 86,
         "rating": "6.6"
       }
     },
     {
-      "id": 306,
-      "name": "Mohamed Salah",
-      "photo": "https://media.api-sports.io/football/players/306.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 2,
-        "assists": 2,
-        "appearances": 7,
-        "minutes": 629,
-        "rating": "6.66"
-      }
-    },
-    {
-      "id": 18889,
-      "name": "F. Woodman",
-      "photo": "https://media.api-sports.io/football/players/18889.png",
+      "id": 180317,
+      "name": "C. Bradley",
+      "photo": "https://media.api-sports.io/football/players/180317.png",
       "statistics": {
         "season": 2025,
         "goals": 0,
         "assists": 0,
-        "appearances": 0,
-        "minutes": 0,
-        "rating": null
-      }
-    },
-    {
-      "id": 30410,
-      "name": "F. Chiesa",
-      "photo": "https://media.api-sports.io/football/players/30410.png",
-      "statistics": {
-        "season": 2025,
-        "goals": 2,
-        "assists": 0,
         "appearances": 5,
-        "minutes": 64,
-        "rating": "6.82"
+        "minutes": 235,
+        "rating": "6.3"
       }
     },
     {
@@ -3115,16 +3089,29 @@
       }
     },
     {
-      "id": 542,
-      "name": "R. Gravenberch",
-      "photo": "https://media.api-sports.io/football/players/542.png",
+      "id": 18889,
+      "name": "F. Woodman",
+      "photo": "https://media.api-sports.io/football/players/18889.png",
       "statistics": {
         "season": 2025,
-        "goals": 2,
-        "assists": 1,
-        "appearances": 6,
-        "minutes": 540,
-        "rating": "7.37"
+        "goals": 0,
+        "assists": 0,
+        "appearances": 0,
+        "minutes": 0,
+        "rating": null
+      }
+    },
+    {
+      "id": 452685,
+      "name": "R. Ngumoha",
+      "photo": "https://media.api-sports.io/football/players/452685.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 1,
+        "assists": 0,
+        "appearances": 3,
+        "minutes": 34,
+        "rating": "6.87"
       }
     },
     {
@@ -3203,6 +3190,19 @@
         "appearances": 7,
         "minutes": 630,
         "rating": "7.01"
+      }
+    },
+    {
+      "id": 30410,
+      "name": "F. Chiesa",
+      "photo": "https://media.api-sports.io/football/players/30410.png",
+      "statistics": {
+        "season": 2025,
+        "goals": 2,
+        "assists": 0,
+        "appearances": 5,
+        "minutes": 64,
+        "rating": "6.82"
       }
     },
     {
