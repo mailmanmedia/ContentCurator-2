@@ -30,34 +30,197 @@ export class ExcelDataImporter {
     console.log('📊 Starting Excel data import...');
     
     try {
-      // Read Excel file
       const workbook = XLSX.readFile(this.filePath);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
+      console.log(`📋 Found ${workbook.SheetNames.length} sheets`);
 
-      console.log(`📄 Found ${data.length} rows in sheet: ${sheetName}`);
-
-      // Determine data type and import accordingly
-      const firstRow = data[0];
-      if (this.isFixtureData(firstRow)) {
-        await this.importFixtures(data);
-      } else if (this.isStandingsData(firstRow)) {
-        await this.importStandings(data);
-      } else if (this.isTeamStatsData(firstRow)) {
-        await this.importTeamStats(data);
+      // Check if there's a manifest sheet
+      const hasManifest = workbook.SheetNames.includes('📋 Manifest');
+      
+      if (hasManifest) {
+        return await this.importFromManifest(workbook);
       } else {
-        console.log('⚠️ Unable to determine data type, attempting generic import...');
-        await this.importGeneric(data);
+        return await this.importDirectSheets(workbook);
       }
-
-      console.log('✅ Excel data import completed successfully!');
-      return { success: true, rowsProcessed: data.length };
 
     } catch (error) {
       console.error('❌ Error importing Excel data:', error);
       throw error;
     }
+  }
+
+  private async importFromManifest(workbook: XLSX.WorkBook) {
+    console.log('📋 Reading manifest-based workbook...');
+    
+    const manifestSheet = workbook.Sheets['📋 Manifest'];
+    const manifest: ExcelRow[] = XLSX.utils.sheet_to_json(manifestSheet);
+    
+    console.log(`📊 Manifest contains ${manifest.length} table definitions`);
+
+    let totalProcessed = 0;
+    const results: any[] = [];
+
+    // Process each table defined in manifest
+    for (const entry of manifest) {
+      const sheetName = entry['Source'] || entry['Name'];
+      const tableName = entry['Name'];
+      const tableType = entry['Type'];
+      
+      if (!sheetName || !workbook.Sheets[sheetName]) {
+        console.log(`⚠️ Skipping ${tableName} - sheet not found`);
+        continue;
+      }
+
+      console.log(`\n📄 Processing: ${tableName} (${tableType})`);
+      
+      const worksheet = workbook.Sheets[sheetName];
+      const data: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
+      
+      const result = await this.processTableByName(tableName, data);
+      if (result) {
+        totalProcessed += result.rowsProcessed || 0;
+        results.push(result);
+      }
+    }
+
+    console.log(`\n✅ Excel import completed! Total rows: ${totalProcessed}`);
+    return { success: true, rowsProcessed: totalProcessed, results };
+  }
+
+  private async importDirectSheets(workbook: XLSX.WorkBook) {
+    console.log('📄 Processing sheets directly...');
+    
+    let totalProcessed = 0;
+
+    for (const sheetName of workbook.SheetNames) {
+      const worksheet = workbook.Sheets[sheetName];
+      const data: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
+
+      console.log(`\n📄 Sheet: ${sheetName} (${data.length} rows)`);
+
+      const firstRow = data[0];
+      if (this.isFixtureData(firstRow)) {
+        await this.importFixtures(data);
+        totalProcessed += data.length;
+      } else if (this.isStandingsData(firstRow)) {
+        await this.importStandings(data);
+        totalProcessed += data.length;
+      } else if (this.isTeamStatsData(firstRow)) {
+        await this.importTeamStats(data);
+        totalProcessed += data.length;
+      }
+    }
+
+    console.log('✅ Excel data import completed!');
+    return { success: true, rowsProcessed: totalProcessed };
+  }
+
+  private async processTableByName(tableName: string, data: ExcelRow[]) {
+    // Match table name patterns
+    if (tableName.includes('Standard Stats')) {
+      return await this.importPlayerStats(tableName, data);
+    } else if (tableName.includes('Scores & Fixtures')) {
+      return await this.importFixturesFromTable(tableName, data);
+    } else if (tableName.includes('Standings') || tableName.includes('League Table')) {
+      return await this.importStandings(data);
+    } else {
+      console.log(`⚠️ Unknown table type: ${tableName}`);
+      return null;
+    }
+  }
+
+  private async importPlayerStats(tableName: string, data: ExcelRow[]) {
+    console.log(`📊 Importing player stats from: ${tableName}`);
+    
+    // Extract team name from table name (e.g., "Standard Stats 2025-2026 Wolverhampton Wanderers Table")
+    const teamMatch = tableName.match(/Standard Stats \d{4}-\d{4} (.+?) Table/);
+    const teamName = teamMatch ? teamMatch[1] : 'Unknown Team';
+    
+    let imported = 0;
+
+    for (const row of data) {
+      try {
+        const playerName = row['Player'] || row['player'] || row['name'];
+        if (!playerName || playerName === 'Squad Total') continue;
+
+        const team = await this.ensureTeamExists(teamName);
+
+        // Import player statistics
+        const statsData: InsertFootballTeamStatistics = {
+          team_id: team.id,
+          league_id: 39, // Premier League
+          games_played: parseInt(row['MP'] || row['Played'] || '0'),
+          games_wins: 0,
+          games_draws: 0,
+          games_losses: 0,
+          goals_for_total: parseInt(row['Gls'] || row['Goals'] || '0'),
+          goals_against_total: 0,
+          clean_sheets_total: 0
+        };
+
+        await db.insert(football_team_statistics)
+          .values(statsData)
+          .onConflictDoNothing();
+
+        imported++;
+      } catch (error) {
+        console.warn(`⚠️ Failed to import player stats:`, error);
+      }
+    }
+
+    console.log(`✅ Imported ${imported} player records`);
+    return { rowsProcessed: imported };
+  }
+
+  private async importFixturesFromTable(tableName: string, data: ExcelRow[]) {
+    console.log(`⚽ Importing fixtures from: ${tableName}`);
+    
+    const teamMatch = tableName.match(/Scores & Fixtures \d{4}-\d{4} (.+?):/);
+    const teamName = teamMatch ? teamMatch[1] : 'Unknown Team';
+    
+    let imported = 0;
+
+    for (const row of data) {
+      try {
+        const dateStr = row['Date'] || row['date'];
+        const opponent = row['Opponent'] || row['opponent'];
+        
+        if (!dateStr || !opponent) continue;
+
+        const team = await this.ensureTeamExists(teamName);
+        const opponentTeam = await this.ensureTeamExists(opponent);
+        const league = await this.ensureLeagueExists('Premier League', 'England');
+
+        const fixtureData: InsertFootballFixture = {
+          league_id: league.id,
+          season: row['Season'] || '2025',
+          round: row['Round'] || null,
+          timestamp: new Date(dateStr),
+          home_team_id: team.id,
+          home_team_name: team.name,
+          home_team_logo: team.logo,
+          away_team_id: opponentTeam.id,
+          away_team_name: opponentTeam.name,
+          away_team_logo: opponentTeam.logo,
+          goals_home: parseInt(row['GF'] || '0'),
+          goals_away: parseInt(row['GA'] || '0'),
+          status_short: 'FT',
+          status_long: 'Match Finished',
+          venue_name: row['Venue'] || null,
+          venue_city: null
+        };
+
+        await db.insert(football_fixtures)
+          .values(fixtureData)
+          .onConflictDoNothing();
+
+        imported++;
+      } catch (error) {
+        console.warn(`⚠️ Failed to import fixture:`, error);
+      }
+    }
+
+    console.log(`✅ Imported ${imported} fixtures`);
+    return { rowsProcessed: imported };
   }
 
   private isFixtureData(row: ExcelRow): boolean {
