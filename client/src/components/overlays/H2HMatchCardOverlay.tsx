@@ -1,12 +1,16 @@
+
 import { motion } from "framer-motion";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useOverlayData } from "@/hooks/useOverlayData";
+import { createScalingSystem } from "@/lib/overlayScaling";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
   OverlayEmptyState,
+  OverlaySourceBadge,
 } from "./OverlayStates";
 
 interface H2HMatchCardOverlayProps {
@@ -29,11 +33,6 @@ interface H2HMatch {
   awayXg?: number;
 }
 
-interface TopScorer {
-  name: string;
-  goals: number;
-}
-
 interface TeamInfo {
   id: number;
   name: string;
@@ -41,10 +40,17 @@ interface TeamInfo {
   code?: string;
 }
 
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+interface H2HResponse {
+  data: {
+    fixtures?: H2HMatch[];
+  } | H2HMatch[];
+  lastUpdated?: string;
+  source?: string;
+  timestamp?: number;
+}
 
 function useTeamBadge(teamId?: number) {
-  return useQuery<TeamInfo>({
+  return useOverlayData<TeamInfo>({
     queryKey: ['teamBadge', teamId],
     queryFn: async () => {
       if (!teamId) throw new Error('Team ID required');
@@ -53,6 +59,7 @@ function useTeamBadge(teamId?: number) {
       return response.json();
     },
     enabled: !!teamId,
+    overlayName: 'Team Badge',
     staleTime: 60 * 60 * 1000,
   });
 }
@@ -69,25 +76,30 @@ export default function H2HMatchCardOverlay({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch all teams with stats
-  const { data: teamsData } = useQuery({
+  const { data: teamsData } = useOverlayData({
     queryKey: ['all-teams-stats'],
     queryFn: async () => {
       const response = await fetch('/api/database/teams/all');
       if (!response.ok) throw new Error('Failed to fetch teams');
       return response.json();
     },
+    overlayName: 'Teams Data',
     staleTime: 30 * 60 * 1000,
   });
 
-  // Fetch H2H data from database
-  const { data, isLoading, error, refetch } = useQuery({
+  // Fetch H2H data using standardized hook
+  const { data, isLoading, error, refetch } = useOverlayData<H2HResponse>({
     queryKey: ['h2h-db', homeTeamId, awayTeamId],
     queryFn: async () => {
       const response = await fetch(`/api/database/head-to-head/${homeTeamId}/${awayTeamId}?limit=50`);
-      if (!response.ok) throw new Error('Failed to fetch H2H data');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch H2H data: ${errorText}`);
+      }
       return response.json();
     },
     enabled: !!homeTeamId && !!awayTeamId,
+    overlayName: 'H2H Match Card',
     staleTime: 10 * 60 * 1000,
     retry: 2,
   });
@@ -99,35 +111,15 @@ export default function H2HMatchCardOverlay({
   const homeTeamStats = teamsData?.data?.find((t: any) => t.id === homeTeamId);
   const awayTeamStats = teamsData?.data?.find((t: any) => t.id === awayTeamId);
 
-  // Scaling system similar to Form Guide
-  const { scale, px } = useMemo(() => {
-    if (!width || !height) {
-      return {
-        scale: 1,
-        px: (value: number) => value,
-      };
-    }
-
-    const baseWidth = 600;
-    const baseHeight = 800;
-    const widthScale = width / baseWidth;
-    const heightScale = height / baseHeight;
-
-    const computed = clamp(Math.min(widthScale, heightScale), 0.3, 2.0);
-
-    const px = (value: number) => {
-      const scaled = value * computed;
-      if (value > 0 && scaled < 1) return 1;
-      return Math.round(scaled);
-    };
-
-    return { scale: computed, px };
-  }, [width, height]);
-
-  // Responsive breakpoints
-  const isCompact = width < 400 || height < 500;
-  const isVeryCompact = width < 320 || height < 400;
-  const isMini = width < 240 || height < 300;
+  // Use standardized scaling system
+  const { scale, px, isMini, isVeryCompact, isCompact } = createScalingSystem({
+    width,
+    height,
+    baseWidth: 600,
+    baseHeight: 800,
+    minScale: 0.3,
+    maxScale: 2.0,
+  });
 
   // Handle refresh of data
   const handleRefresh = async () => {
@@ -212,6 +204,9 @@ export default function H2HMatchCardOverlay({
         error={error as Error}
         width={width}
         height={height}
+        endpoint={`/api/database/head-to-head/${homeTeamId}/${awayTeamId}`}
+        expectedData="{ data: { fixtures: [...] }, lastUpdated: string }"
+        source="H2H Match Card Overlay"
       />
     );
   }
@@ -229,6 +224,8 @@ export default function H2HMatchCardOverlay({
   const h2hData = data.data;
   const allMatches: H2HMatch[] = h2hData?.fixtures || h2hData || [];
   const lastUpdated = data.lastUpdated || new Date().toISOString();
+  const dataSource = data.source || 'database';
+  const dataTimestamp = data.timestamp;
 
   const sortedMatches = [...allMatches].sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -705,6 +702,9 @@ export default function H2HMatchCardOverlay({
           Showing {recentMatches.length} of {totalMatches} total matches
         </div>
       )}
+
+      {/* Source Badge */}
+      <OverlaySourceBadge source={dataSource as any} timestamp={dataTimestamp} />
     </motion.div>
   );
 }

@@ -13,7 +13,7 @@
 
 | Overlay | File | Status | API Endpoint(s) | Issues |
 |---------|------|--------|-----------------|--------|
-| H2H Match Card | FormGuideOverlay.tsx | 🔍 Analyzing | /api/database/head-to-head/{id}/{id} | TBD |
+| H2H Match Card | H2HMatchCardOverlay.tsx | ✅ Refactored | /api/database/head-to-head/{id}/{id} | FIXED |
 | Form Guide | FormGuideOverlay.tsx | 🔍 Analyzing | /api/database/teams/{id}/statistics | TBD |
 | League Table | LeagueTableOverlay.tsx | 🔍 Analyzing | /api/database/standings | TBD |
 | League Position | LeaguePositionOverlay.tsx | 🔍 Analyzing | /api/database/standings | TBD |
@@ -89,7 +89,7 @@ curl -s http://0.0.0.0:5000/api/rss-articles?limit=10 | jq
 - [x] OverlayTestPage.tsx - Testing dashboard created
 
 ### Overlay Refactoring Checklist
-- [ ] H2HMatchCardOverlay.tsx
+- [x] H2HMatchCardOverlay.tsx - ✅ Refactored with standardized hooks
 - [ ] FormGuideOverlay.tsx
 - [ ] LeagueTableOverlay.tsx
 - [ ] LeaguePositionOverlay.tsx
@@ -101,10 +101,31 @@ curl -s http://0.0.0.0:5000/api/rss-articles?limit=10 | jq
 
 ---
 
+## Refactoring Pattern (H2H Template)
+
+### Changes Made:
+1. ✅ Replaced manual useQuery with useOverlayData hook
+2. ✅ Added standardized error handling with detailed error messages
+3. ✅ Implemented createScalingSystem for responsive sizing
+4. ✅ Added OverlaySourceBadge for data source visibility
+5. ✅ Enhanced error states with endpoint and expected data info
+6. ✅ Maintained all existing functionality and styling
+
+### Key Improvements:
+- **Better Error Messages**: Shows endpoint, expected data structure, and error details
+- **Automatic Retry Logic**: Built-in exponential backoff retry
+- **Data Source Visibility**: Badge shows where data came from (database/cache/API)
+- **Consistent Scaling**: All size calculations use px() function
+- **Standardized Loading/Error States**: Reusable components across all overlays
+
+---
+
 ## Issues Found
 
 ### Critical Issues
-- TBD
+- ✅ FIXED: H2H overlay lacks detailed error reporting
+- ✅ FIXED: No visibility into data source (cache vs live)
+- ✅ FIXED: Manual error handling duplicated across overlays
 
 ### Warning Issues
 - TBD
@@ -117,8 +138,9 @@ curl -s http://0.0.0.0:5000/api/rss-articles?limit=10 | jq
 ## Next Steps
 
 1. ✅ Create standardization files
-2. ⏳ Test API endpoints manually
-3. ⏳ Refactor H2HMatchCardOverlay as template
-4. ⏳ Apply pattern to remaining overlays
-5. ⏳ Visual testing at all breakpoints
-6. ⏳ Final validation
+2. ✅ Refactor H2HMatchCardOverlay as template
+3. ⏳ Test API endpoints manually
+4. ⏳ Apply pattern to FormGuideOverlay
+5. ⏳ Apply pattern to remaining overlays
+6. ⏳ Visual testing at all breakpoints
+7. ⏳ Final validation
