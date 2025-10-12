@@ -738,19 +738,19 @@ export default function LivePresentation() {
     select: (response: any) => (response?.sources || []) as RssSource[],
   });
 
-  const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ['/api/cached-stats/teams', selectedLeagueFilter],
+  // Fetch teams data using the new endpoint
+  const { data: teamsDataRaw, isLoading: isLoadingTeams } = useQuery({
+    queryKey: ['/api/database/teams/all'],
     queryFn: async () => {
-      const url = selectedLeagueFilter
-        ? `/api/cached-stats/teams?leagueId=${selectedLeagueFilter}`
-        : '/api/cached-stats/teams';
-      const response = await fetch(url);
+      const response = await fetch('/api/database/teams/all');
       if (!response.ok) throw new Error('Failed to fetch teams');
       return response.json();
     },
     enabled: overlayType === 'metric' && isOverlayDialogOpen,
-    select: (response: any) => response?.teams || [],
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes
   });
+
+  const teamsData = teamsDataRaw?.data || []; // Extract data from the 'data' property
 
   const { data: competitionsData } = useQuery<{ competitions: any[] }>({
     queryKey: ['/api/football/competitions/active'],
@@ -2350,7 +2350,7 @@ export default function LivePresentation() {
           return null;
       }
     }
-    
+
     // For non-metric overlays
     switch (overlayType) {
       case 'rss':
@@ -2506,7 +2506,7 @@ export default function LivePresentation() {
                       </Badge>
                     )}
                     {recordingState === 'stopped' && recordedBlob && (
-                      <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400" data-testid="badge-ready">
+                      <Badge variant="outline" className="bg-green-500/10 text-green-600 dark:text-green-400">
                         READY TO DOWNLOAD
                       </Badge>
                     )}
@@ -3582,31 +3582,19 @@ export default function LivePresentation() {
                               <SelectSeparator />
                               <SelectItem value="39">
                                 <div className="flex items-center gap-2">
-                                  <Trophy className="w-4 h-4 text-purple-600" />
+                                  <Trophy className="w-4 h-4" />
                                   <span>Premier League</span>
                                 </div>
                               </SelectItem>
                               <SelectItem value="2">
                                 <div className="flex items-center gap-2">
-                                  <Trophy className="w-4 h-4 text-blue-600" />
+                                  <Trophy className="w-4 h-4" />
                                   <span>Champions League</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="45">
-                                <div className="flex items-center gap-2">
-                                  <Trophy className="w-4 h-4 text-red-600" />
-                                  <span>FA Cup</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="48">
-                                <div className="flex items-center gap-2">
-                                  <Trophy className="w-4 h-4 text-green-600" />
-                                  <span>EFL Cup</span>
                                 </div>
                               </SelectItem>
                               <SelectItem value="3">
                                 <div className="flex items-center gap-2">
-                                  <Trophy className="w-4 h-4 text-orange-600" />
+                                  <Trophy className="w-4 h-4" />
                                   <span>Europa League</span>
                                 </div>
                               </SelectItem>
@@ -3662,18 +3650,20 @@ export default function LivePresentation() {
                                   <SelectValue placeholder="Select away team" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {teamsData.map((team: any) => (
-                                    <SelectItem key={team.teamId} value={String(team.teamId)}>
-                                      <div className="flex items-center justify-between gap-2 w-full">
-                                        <span>{team.teamName}</span>
-                                        {team.leagueName && (
-                                          <Badge variant="outline" className="text-xs">
-                                            {team.leagueName}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
+                                  {teamsData
+                                    .filter((team: any) => team.teamId !== overlayHomeTeamId)
+                                    .map((team: any) => (
+                                      <SelectItem key={team.teamId} value={String(team.teamId)}>
+                                        <div className="flex items-center justify-between gap-2 w-full">
+                                          <span>{team.teamName}</span>
+                                          {team.leagueName && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {team.leagueName}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
                                 </SelectContent>
                               </Select>
                               <p className="text-xs text-muted-foreground mt-1">
@@ -3682,10 +3672,9 @@ export default function LivePresentation() {
                             </div>
                           </>
                         ) : (
-                          <Alert data-testid="alert-no-teams">
-                            <AlertTriangle className="h-4 w-4" />
+                          <Alert>
                             <AlertDescription>
-                              No teams available. Please ensure teams have cached statistics.
+                              No teams available. Please ensure the database is populated with team data.
                             </AlertDescription>
                           </Alert>
                         )}
@@ -3712,7 +3701,14 @@ export default function LivePresentation() {
                                 <SelectContent>
                                   {teamsData.map((team: any) => (
                                     <SelectItem key={team.teamId} value={String(team.teamId)}>
-                                      {team.teamName}
+                                      <div className="flex items-center justify-between gap-2 w-full">
+                                        <span>{team.teamName}</span>
+                                        {team.leagueName && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {team.leagueName}
+                                          </Badge>
+                                        )}
+                                      </div>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -3815,7 +3811,7 @@ export default function LivePresentation() {
                           <Alert data-testid="alert-no-teams">
                             <AlertTriangle className="h-4 w-4" />
                             <AlertDescription>
-                              No teams available. Please ensure teams have cached statistics.
+                              No teams available. Please ensure the database is populated with team data.
                             </AlertDescription>
                           </Alert>
                         )}

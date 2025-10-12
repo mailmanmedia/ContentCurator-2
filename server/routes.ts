@@ -1130,6 +1130,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all teams with their basic info for dropdowns
+  app.get("/api/database/teams/all", async (req, res) => {
+    try {
+      const teamsQuery = await pool.query(`
+        SELECT DISTINCT
+          t.id as team_id,
+          t.name as team_name,
+          t.logo,
+          t.code
+        FROM football_teams t
+        WHERE t.name IS NOT NULL
+        ORDER BY t.name
+      `);
+
+      const teams = teamsQuery.rows.map((row: any) => ({
+        teamId: row.team_id,
+        teamName: row.team_name,
+        logo: row.logo,
+        code: row.code
+      }));
+
+      res.json({ data: teams });
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+      res.status(500).json({ error: 'Failed to fetch teams' });
+    }
+  });
+
   // Get database status for DatabaseStatus page
   app.get("/api/database-status", async (req, res) => {
     try {
@@ -3768,43 +3796,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team IDs" });
       }
 
-      // Get fixtures between the two teams
-      const fixtures = await db.select()
-        .from(footballFixtures)
-        .where(
-          and(
-            or(
-              and(
-                eq(footballFixtures.home_team_id, homeId),
-                eq(footballFixtures.away_team_id, awayId)
-              ),
-              and(
-                eq(footballFixtures.home_team_id, awayId),
-                eq(footballFixtures.away_team_id, homeId)
-              )
-            ),
-            eq(footballFixtures.status_short, 'FT')
-          )
+      // Get fixtures between the two teams using raw SQL to avoid schema issues
+      const fixturesQuery = await pool.query(`
+        SELECT 
+          f.id,
+          f.home_team_id,
+          f.away_team_id,
+          f.goals_home,
+          f.goals_away,
+          f.date,
+          f.timestamp,
+          f.venue_name,
+          f.league_id,
+          ht.name as home_team_name,
+          at.name as away_team_name
+        FROM football_fixtures f
+        LEFT JOIN football_teams ht ON f.home_team_id = ht.id
+        LEFT JOIN football_teams at ON f.away_team_id = at.id
+        WHERE (
+          (f.home_team_id = $1 AND f.away_team_id = $2) OR
+          (f.home_team_id = $2 AND f.away_team_id = $1)
         )
-        .orderBy(desc(footballFixtures.timestamp))
-        .limit(limit);
+        AND f.status_short = 'FT'
+        ORDER BY 
+          CASE 
+            WHEN f.timestamp IS NOT NULL THEN f.timestamp
+            WHEN f.date IS NOT NULL THEN EXTRACT(EPOCH FROM f.date::timestamp)
+            ELSE 0
+          END DESC
+        LIMIT $3
+      `, [homeId, awayId, limit]);
 
-      const transformedFixtures = fixtures.map(f => ({
-        id: f.id,
-        date: f.timestamp?.toISOString() || new Date().toISOString(),
-        homeTeam: f.homeTeamName || `Team ${f.home_team_id}`,
-        awayTeam: f.awayTeamName || `Team ${f.away_team_id}`,
-        homeScore: f.goalsHome,
-        awayScore: f.goalsAway,
-        competition: f.league_id === 39 ? 'Premier League' :
-                     f.league_id === 2 ? 'Champions League' :
-                     f.league_id === 3 ? 'Europa League' : 'Other',
-        venue: f.venueName
-      }));
+      const fixtures = fixturesQuery.rows || [];
+
+      const transformedFixtures = fixtures.map((f: any) => {
+        // Handle timestamp conversion safely
+        let fixtureDate: string;
+        if (f.timestamp) {
+          fixtureDate = new Date(f.timestamp * 1000).toISOString();
+        } else if (f.date) {
+          fixtureDate = new Date(f.date).toISOString();
+        } else {
+          fixtureDate = new Date().toISOString();
+        }
+
+        return {
+          id: f.id,
+          date: fixtureDate,
+          homeTeam: f.home_team_name || `Team ${f.home_team_id}`,
+          awayTeam: f.away_team_name || `Team ${f.away_team_id}`,
+          homeScore: f.goals_home,
+          awayScore: f.goals_away,
+          competition: f.league_id === 39 ? 'Premier League' :
+                       f.league_id === 2 ? 'Champions League' :
+                       f.league_id === 3 ? 'Europa League' : 'Other',
+          venue: f.venue_name || 'Unknown Venue'
+        };
+      });
 
       res.json({
         data: { fixtures: transformedFixtures },
-        lastUpdated: fixtures[0]?.updatedAt || new Date(),
+        lastUpdated: new Date().toISOString(),
         source: "database"
       });
     } catch (error) {
