@@ -105,6 +105,8 @@ export default function AdminDashboard() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [currentUpdateProgress, setCurrentUpdateProgress] = useState<number>(0);
   const [activeOperation, setActiveOperation] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfGenerationStatus, setPdfGenerationStatus] = useState<string>('');
 
   // Fetch database status
   const { data: dbStatus, isLoading: dbLoading, refetch: refetchDbStatus } = useQuery<DatabaseStatus>({
@@ -335,6 +337,49 @@ export default function AdminDashboard() {
     }
   };
 
+  const generateBlueprintPdf = async () => {
+    setIsGeneratingPdf(true);
+    setPdfGenerationStatus('Scanning codebase...');
+    
+    try {
+      const response = await fetch('/api/admin/generate-blueprint-pdf', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate PDF: ${response.statusText}`);
+      }
+      
+      setPdfGenerationStatus('Generating PDF...');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ContentCurator_Blueprint_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      setPdfGenerationStatus('Complete!');
+      toast({ 
+        title: "Success", 
+        description: "Blueprint PDF generated and downloaded successfully" 
+      });
+    } catch (error: any) {
+      setPdfGenerationStatus('Failed');
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to generate blueprint PDF",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+      setTimeout(() => setPdfGenerationStatus(''), 3000);
+    }
+  };
+
   if (dbLoading || statusLoading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
@@ -448,7 +493,7 @@ export default function AdminDashboard() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview" data-testid="tab-overview">
             <BarChart3 className="h-4 w-4 mr-2" />
             Overview
@@ -472,6 +517,10 @@ export default function AdminDashboard() {
           <TabsTrigger value="export" data-testid="tab-export">
             <Download className="h-4 w-4 mr-2" />
             Export
+          </TabsTrigger>
+          <TabsTrigger value="meta-agent" data-testid="tab-meta-agent">
+            <Settings className="h-4 w-4 mr-2" />
+            Meta Agent
           </TabsTrigger>
         </TabsList>
 
@@ -1274,6 +1323,106 @@ export default function AdminDashboard() {
                       <Archive className="mr-2 h-4 w-4" />
                       Export All as ZIP (CSV)
                     </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Meta Agent Tab */}
+        <TabsContent value="meta-agent" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Blueprint PDF Generator</CardTitle>
+              <CardDescription>
+                Generate a comprehensive PDF report of the entire codebase structure
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Alert>
+                <FileText className="h-4 w-4" />
+                <AlertTitle>Production-Ready Documentation</AlertTitle>
+                <AlertDescription>
+                  The blueprint system scans your codebase and generates a complete technical report including components, API endpoints, data flows, and error tracking.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-4">
+                <div className="p-6 border rounded-lg bg-muted/30">
+                  <h3 className="font-medium mb-3 text-lg">Generate & Download Latest Blueprint</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Creates a fresh scan of all files, components, API endpoints, and error logs. The PDF includes:
+                  </p>
+                  <ul className="text-sm text-muted-foreground space-y-1 mb-6 ml-4 list-disc">
+                    <li>Complete component hierarchy with props, hooks, and dependencies</li>
+                    <li>API endpoint documentation with request/response formats</li>
+                    <li>Error tracking with file locations and severity levels</li>
+                    <li>Data flow diagrams from user action to database</li>
+                    <li>Table of contents and searchable index</li>
+                  </ul>
+
+                  <Button 
+                    onClick={generateBlueprintPdf}
+                    disabled={isGeneratingPdf}
+                    size="lg"
+                    className="w-full"
+                    data-testid="button-generate-blueprint-pdf"
+                  >
+                    {isGeneratingPdf ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {pdfGenerationStatus || 'Generating...'}
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Generate Blueprint PDF
+                      </>
+                    )}
+                  </Button>
+
+                  {pdfGenerationStatus && !isGeneratingPdf && (
+                    <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                      <div className="flex items-center text-sm text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        {pdfGenerationStatus}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Features</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div className="flex items-start space-x-3">
+                      <Database className="h-5 w-5 text-blue-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Real-time Scanning</p>
+                        <p className="text-xs text-muted-foreground">Fresh scan ensures latest code state</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Shield className="h-5 w-5 text-green-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Validation Check</p>
+                        <p className="text-xs text-muted-foreground">Verified before download</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Activity className="h-5 w-5 text-purple-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Version Timestamp</p>
+                        <p className="text-xs text-muted-foreground">Every PDF includes generation date</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <TrendingUp className="h-5 w-5 text-orange-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Change Detection</p>
+                        <p className="text-xs text-muted-foreground">Highlights updates since last export</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
