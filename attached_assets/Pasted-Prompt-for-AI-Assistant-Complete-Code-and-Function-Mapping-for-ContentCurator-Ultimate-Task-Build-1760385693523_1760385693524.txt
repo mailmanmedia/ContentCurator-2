@@ -1,0 +1,81 @@
+Prompt for AI Assistant: Complete Code and Function Mapping for ContentCurator
+
+Ultimate Task:
+Build a “living blueprint report” for this app, from the smallest code line to the largest module.
+This must include:
+
+Every file and sub-file:
+
+List each file, then for each file its exported/imported components, types, functions, constants, and all used props, hooks, helper utilities, context providers, CSS classes.
+
+Every code chunk, logic block, and line:
+
+Document (in plain language for a newbie) what every function, statement, loop, conditional, and hook does.
+
+For each code block, tell me:
+
+The purpose.
+
+The data it expects and passes.
+
+What other files, components, or context it’s connected to.
+
+All side effects (renders, DB queries, API calls, state updates).
+
+Every atomic UI piece:
+
+For every button, label, grid cell, badge, input, dropdown, or icon, map out:
+
+Which parent owns it.
+
+What data or props it needs.
+
+Any interactivity, handler, or event it responds to.
+
+Visual layout/CSS impact.
+
+Nested Graph/Hierarchy:
+
+Build a tree or directed graph (or nested lists/tables if no graphic possible), starting from the smallest function/line up to its enclosing function, up to its component, up to page/module, up to app container.
+
+Data and Control Flow (with error mapping):
+
+Map every instance where data moves: props, API, DB query, context provider, event bus.
+
+If there is ANY error (undefined variable, bad mapping, broken data, blank UI, uncaught exception) document:
+
+Where it happens, which line/block, what type of data goes missing.
+
+What other parts are impacted by this error.
+
+Code Connections Visualized:
+
+For each function, prop, and component, show its direct connections (what calls it, where its data goes next, what triggers it).
+
+Export:
+
+The report must be exportable in Markdown, PDF, and/or CSV, so I can generate visual graphs, treemaps, or diagrams.
+
+Explanations for Beginners:
+
+All technical terms, types, interfaces, errors, and dependencies should be explained for non-experts.
+
+Update Continuously:
+
+Document should stay up to date (with live error, mapping, and dependency status) as code changes.
+
+Sample Output Format:
+
+text
+- File: H2HMatchCardOverlay.tsx
+  - Line 18-25: The Team type defines properties for a soccer team.
+  - Line 70-110: The H2HMatchCardOverlay component renders a card, uses props: teamAId, teamBId, etc.
+    - Connects to: LivePresentation page, pulls data from /api/h2h endpoint via useQuery.
+    - Renders: Team names, scores, date, badges.
+    - Error: If API returns missing score field, overlay renders blank.
+    - Calls: useToast, OverlayLoadingSkeleton, OverlayErrorState as needed.
+  - CSS: Border color set by COLOR_PALETTES; responsive to opacity prop.
+Or tree format, with each small detail connected up through the component hierarchy.
+
+Goal:
+Deliver a living map from code line to app structure, with all errors, weak connections, and atomic dependencies included and beginner-explained, ready for graphing and deep analysis.
