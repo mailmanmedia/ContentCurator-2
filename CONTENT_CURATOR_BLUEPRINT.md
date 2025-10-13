@@ -1166,6 +1166,40 @@ VideoCompositor.tsx,VideoCompositor,Canvas,"activeSources, overlays, resolution"
 }
 ```
 
+### PDF Export (Production-Ready Report)
+
+**Generate & Download Latest Blueprint PDF**
+
+The blueprint system includes automated PDF generation with real-time scanning:
+
+1. **Trigger PDF Generation**
+   - Navigate to Admin Dashboard → Meta Agent tab
+   - Click "Generate Blueprint PDF" button
+   - System performs fresh scan of all files, components, API endpoints, and error logs
+   - Status shows "Scanning codebase..." → "Generating report..." → "Ready for download"
+
+2. **What's Included in PDF**
+   - Complete component hierarchy with all props, hooks, and dependencies
+   - API endpoint documentation with request/response formats
+   - Error tracking with exact file locations and stack traces
+   - Data flow diagrams from user action → database → UI
+   - Database schema with table relationships
+   - Beginner-friendly explanations of all technical terms
+   - Visual connection graphs and dependency trees
+   - Table of contents and searchable index
+
+3. **Download Options**
+   - Full PDF: Complete documentation (recommended)
+   - Quick Reference PDF: Essential components and APIs only
+   - Error Report PDF: Current issues and fixes needed
+
+4. **Reliability Features**
+   - Real-time scan ensures latest code state
+   - Validation check before download
+   - Regeneration option if scan fails
+   - Version timestamp on every PDF
+   - Change detection: highlights what's new since last export
+
 ---
 
 **End of Blueprint Report**  

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,8 +41,10 @@ import {
   AlertCircle,
   Clock,
   XCircle,
-  Info
+  Info,
+  Download
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface SystemHealth {
   database: { status: string; message: string };
@@ -75,6 +77,10 @@ interface AgentTask {
 }
 
 export default function MetaAgentDashboard() {
+  const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [stats, setStats] = useState<any>(null);
   const [chatMessages, setChatMessages] = useState<AgentMessage[]>([]);
   const [userInput, setUserInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -87,7 +93,7 @@ export default function MetaAgentDashboard() {
     refetchInterval: 30000,
   });
 
-  const { data: stats, refetch: refetchStats } = useQuery({
+  const { data: statsData, refetch: refetchStats } = useQuery({
     queryKey: ['/api/statistics'],
     refetchInterval: 30000,
   });
@@ -266,7 +272,7 @@ export default function MetaAgentDashboard() {
   // Prefetch task history when hovering over Logs tab
   const handleTabHover = (tab: string) => {
     if (tab === 'logs') {
-      queryClient.prefetchQuery({ queryKey: ['/api/meta-agent/tasks/history', { limit: 50 }] });
+      // queryClient.prefetchQuery({ queryKey: ['/api/meta-agent/tasks/history', { limit: 50 }] });
     }
   };
 
@@ -287,6 +293,42 @@ export default function MetaAgentDashboard() {
       default: return <Info className="w-4 h-4 text-gray-500" />;
     }
   };
+
+  const handleGeneratePdf = async () => {
+    setIsGenerating(true);
+    setPdfUrl(null);
+
+    try {
+      toast({
+        title: "Scanning codebase...",
+        description: "Analyzing all files, components, and connections"
+      });
+
+      const response = await fetch('/api/blueprint/generate-pdf', {
+        method: 'POST'
+      });
+
+      if (!response.ok) throw new Error('PDF generation failed');
+
+      const result = await response.json();
+      setPdfUrl(result.downloadUrl);
+      setStats(result.stats);
+
+      toast({
+        title: "Blueprint PDF Ready!",
+        description: `Scanned ${result.stats.files} files, ${result.stats.components} components`
+      });
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -384,11 +426,11 @@ export default function MetaAgentDashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{stats?.libraryItems || 0}</span>
+                <span className="text-2xl font-bold">{statsData?.libraryItems || 0}</span>
                 <Badge variant="secondary">Library</Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                {stats?.scenes || 0} scenes, {stats?.frameworks || 0} frameworks
+                {statsData?.scenes || 0} scenes, {statsData?.frameworks || 0} frameworks
               </p>
             </CardContent>
           </Card>
@@ -436,6 +478,68 @@ export default function MetaAgentDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Blueprint PDF Generation Card */}
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Living Blueprint Report
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Generate a comprehensive PDF report documenting every component, API endpoint, 
+              data flow, and error in the codebase. Always reflects the latest state.
+            </p>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleGeneratePdf}
+                disabled={isGenerating}
+                className="gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                {isGenerating ? 'Generating...' : 'Generate Blueprint PDF'}
+              </Button>
+
+              {pdfUrl && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <a href={pdfUrl} download>
+                    <Download className="w-4 h-4" />
+                    Download PDF
+                  </a>
+                </Button>
+              )}
+            </div>
+
+            {stats && (
+              <div className="grid grid-cols-4 gap-4 pt-4 border-t">
+                <div>
+                  <div className="text-2xl font-bold text-primary">{stats.files}</div>
+                  <div className="text-xs text-muted-foreground">Files Scanned</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-primary">{stats.components}</div>
+                  <div className="text-xs text-muted-foreground">Components</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-primary">{stats.apis}</div>
+                  <div className="text-xs text-muted-foreground">API Endpoints</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-destructive">{stats.errors}</div>
+                  <div className="text-xs text-muted-foreground">Errors Found</div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="overview" className="space-y-4">
@@ -534,7 +638,7 @@ export default function MetaAgentDashboard() {
                     <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">RSS Feed Active</p>
-                      <p className="text-xs text-muted-foreground">{stats?.rssArticles || 0} articles indexed</p>
+                      <p className="text-xs text-muted-foreground">{statsData?.rssArticles || 0} articles indexed</p>
                     </div>
                   </div>
                 </CardContent>
@@ -608,7 +712,7 @@ export default function MetaAgentDashboard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      {stats?.libraryItems || 0} items ready to use
+                      {statsData?.libraryItems || 0} items ready to use
                     </p>
                   </CardContent>
                 </Card>
@@ -625,7 +729,7 @@ export default function MetaAgentDashboard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      {stats?.rssArticles || 0} articles analyzed
+                      {statsData?.rssArticles || 0} articles analyzed
                     </p>
                   </CardContent>
                 </Card>
@@ -659,7 +763,7 @@ export default function MetaAgentDashboard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      {stats?.frameworks || 0} frameworks available
+                      {statsData?.frameworks || 0} frameworks available
                     </p>
                   </CardContent>
                 </Card>
@@ -823,7 +927,7 @@ export default function MetaAgentDashboard() {
                       Team Analysis
                     </Badge>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <Textarea
                       placeholder="Try: 'Update player statistics' or 'Create overlay for next match'"
@@ -949,7 +1053,7 @@ export default function MetaAgentDashboard() {
                   <Link href="/frameworks">
                     <Button variant="outline" className="w-full justify-start">
                       <FileText className="w-4 h-4 mr-2" />
-                      View Frameworks ({stats?.frameworks || 0})
+                      View Frameworks ({statsData?.frameworks || 0})
                     </Button>
                   </Link>
                   <Link href="/frameworks/create">
