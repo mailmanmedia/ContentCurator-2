@@ -197,3 +197,7 @@ A specialized data import system for extracting comprehensive Liverpool FC playe
   * `GET /api/database/players?teamId=40&season=2024` - Returns player roster
   * `GET /api/database/stats?playerId=306&season=2024` - Returns player statistics
 - ✅ Data verified in PostgreSQL (passes_accuracy, dribbles_success as decimal/real types)
+- ✅ **Data Preservation**: Football API service now uses `football_player_statistics` table and:
+  * Checks for existing detailed stats before updating (detects FBref imports via passes_total/shots_total)
+  * Uses COALESCE to only fill NULL fields, never overwrites existing data
+  * Skips API updates entirely if detailed HTML-imported data already exists

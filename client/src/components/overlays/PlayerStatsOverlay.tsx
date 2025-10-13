@@ -43,6 +43,28 @@ type PlayerStatLine = {
   xA?: number;
 };
 
+type DatabasePlayerStat = {
+  id: number;
+  player_id: number;
+  player_name: string;
+  player_photo: string | null;
+  team_name: string;
+  games_appearances?: number | null;
+  games_minutes?: number | null;
+  games_position?: string | null;
+  goals_total?: number | null;
+  goals_assists?: number | null;
+  shots_total?: number | null;
+  shots_on?: number | null;
+  passes_total?: number | null;
+  passes_key?: number | null;
+  passes_accuracy?: number | null;
+  tackles_total?: number | null;
+  tackles_interceptions?: number | null;
+  duels_total?: number | null;
+  duels_won?: number | null;
+};
+
 type ApiPayload =
   | {
       data: {
@@ -51,12 +73,21 @@ type ApiPayload =
       };
       source?: string;
       timestamp?: string;
+      lastUpdated?: string;
     }
   | {
       players: Player[];
       stats: PlayerStatLine[];
       source?: string;
       timestamp?: string;
+      lastUpdated?: string;
+    }
+  | {
+      data: {
+        statistics: DatabasePlayerStat[];
+      };
+      source?: string;
+      lastUpdated?: string;
     };
 
 export interface PlayerStatsOverlayProps {
@@ -76,8 +107,10 @@ export interface PlayerStatsOverlayProps {
   opacity?: number;
   /** Theme palette key */
   colorPalette?: ColorPaletteKey;
-  /** API endpoint override. Defaults to /api/player-stats */
+  /** API endpoint override. Defaults to /api/database/stats for database-first approach */
   endpoint?: string;
+  /** Use legacy API endpoint instead of database. Defaults to false (use database) */
+  useLegacyApi?: boolean;
 }
 
 function cssSize(v: Size) {
@@ -95,6 +128,7 @@ export default function PlayerStatsOverlay({
   opacity = 0.95,
   colorPalette = "classic",
   endpoint,
+  useLegacyApi = false,
 }: PlayerStatsOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
   const { toast } = useToast();
@@ -106,10 +140,12 @@ export default function PlayerStatsOverlay({
   if (season != null) params.set("season", String(season));
   if (limit != null) params.set("limit", String(limit));
 
-  const url = `${endpoint || "/api/player-stats"}?${params.toString()}`;
+  const defaultEndpoint = useLegacyApi ? "/api/player-stats" : "/api/database/stats";
+  const resolvedEndpoint = endpoint || defaultEndpoint;
+  const url = `${resolvedEndpoint}?${params.toString()}`;
 
   const { data, isLoading, error, refetch } = useQuery<ApiPayload>({
-    queryKey: ["player-stats", teamId, leagueId, season, limit, endpoint],
+    queryKey: ["player-stats", teamId, leagueId, season, limit, resolvedEndpoint],
     queryFn: async () => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch player stats (${res.status})`);
@@ -142,12 +178,51 @@ export default function PlayerStatsOverlay({
     );
   }
 
-  const payloadPlayers: Player[] =
-    (data as any)?.data?.players ?? (data as any)?.players ?? [];
-  const payloadStats: PlayerStatLine[] =
-    (data as any)?.data?.stats ?? (data as any)?.stats ?? [];
+  // Transform database format to overlay format
+  const transformDatabaseStats = (dbStats: DatabasePlayerStat[]): { players: Player[], stats: PlayerStatLine[] } => {
+    const players: Player[] = dbStats.map(s => ({
+      id: s.player_id,
+      name: s.player_name,
+      position: s.games_position || undefined,
+      photoUrl: s.player_photo || undefined,
+    }));
+
+    const stats: PlayerStatLine[] = dbStats.map(s => ({
+      playerId: s.player_id,
+      appearances: s.games_appearances ?? undefined,
+      minutes: s.games_minutes ?? undefined,
+      goals: s.goals_total ?? undefined,
+      assists: s.goals_assists ?? undefined,
+      shots: s.shots_total ?? undefined,
+      shotsOnTarget: s.shots_on ?? undefined,
+      chancesCreated: s.passes_key ?? undefined,
+      passes: s.passes_total ?? undefined,
+      passAccuracy: s.passes_accuracy ? s.passes_accuracy / 100 : undefined, // Convert 70.4 to 0.704
+      tackles: s.tackles_total ?? undefined,
+      interceptions: s.tackles_interceptions ?? undefined,
+      duelsWon: s.duels_won ?? undefined,
+    }));
+
+    return { players, stats };
+  };
+
+  // Handle both database and legacy API formats
+  let payloadPlayers: Player[];
+  let payloadStats: PlayerStatLine[];
+  
+  if ((data as any)?.data?.statistics) {
+    // Database format
+    const transformed = transformDatabaseStats((data as any).data.statistics);
+    payloadPlayers = transformed.players;
+    payloadStats = transformed.stats;
+  } else {
+    // Legacy API format
+    payloadPlayers = (data as any)?.data?.players ?? (data as any)?.players ?? [];
+    payloadStats = (data as any)?.data?.stats ?? (data as any)?.stats ?? [];
+  }
+  
   const sourceLabel = (data as any)?.source || "Squad";
-  const timestampIso = (data as any)?.timestamp;
+  const timestampIso = (data as any)?.timestamp || (data as any)?.lastUpdated;
 
   if (!payloadPlayers.length || !payloadStats.length) {
     return (
