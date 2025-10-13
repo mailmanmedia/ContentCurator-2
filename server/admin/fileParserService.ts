@@ -159,64 +159,97 @@ export async function parseHTML(buffer: Buffer): Promise<string> {
   }
 }
 
+// Helper function to extract a single FBref stats table
+function extractFBrefTable(content: string, tableId: string): Map<string, any> {
+  const playerData = new Map<string, any>();
+  
+  const tableMatch = content.match(new RegExp(`<table[^>]*id="${tableId}"[^>]*>(.*?)<\/table>`, 's'));
+  if (!tableMatch) {
+    return playerData; // Return empty if table not found
+  }
+  
+  const tableHtml = tableMatch[1];
+  const tbodyMatch = tableHtml.match(/<tbody>(.*?)<\/tbody>/s);
+  
+  if (tbodyMatch) {
+    const rowMatches = tbodyMatch[1].matchAll(/<tr[^>]*>(.*?)<\/tr>/gs);
+    
+    for (const rowMatch of rowMatches) {
+      const rowHtml = rowMatch[1];
+      
+      // Skip header rows
+      if (rowHtml.includes('class="thead"')) continue;
+      
+      const player: any = {};
+      const cellMatches = rowHtml.matchAll(/data-stat="([^"]+)"[^>]*>(.*?)<\/t[dh]>/gs);
+      
+      for (const cellMatch of cellMatches) {
+        const stat = cellMatch[1];
+        const value = cellMatch[2].replace(/<[^>]+>/g, '').trim();
+        player[stat] = value;
+      }
+      
+      // Only include valid player rows with names
+      if (player.player && player.player !== 'Squad Total' && player.player.length > 0) {
+        playerData.set(player.player, player);
+      }
+    }
+  }
+  
+  return playerData;
+}
+
 export async function parseFBrefHTML(buffer: Buffer): Promise<any[]> {
   try {
     const content = buffer.toString('utf-8');
     
-    // Find the stats_standard_combined table
-    const tableMatch = content.match(/<table[^>]*id="stats_standard_combined"[^>]*>(.*?)<\/table>/s);
-    if (!tableMatch) {
-      throw new Error('FBref stats table not found in HTML');
+    // Extract all 11 FBref stats tables
+    const tables = {
+      standard: extractFBrefTable(content, 'stats_standard_combined'),
+      shooting: extractFBrefTable(content, 'stats_shooting_combined'),
+      passing: extractFBrefTable(content, 'stats_passing_combined'),
+      defense: extractFBrefTable(content, 'stats_defense_combined'),
+      possession: extractFBrefTable(content, 'stats_possession_combined'),
+      misc: extractFBrefTable(content, 'stats_misc_combined'),
+      playingTime: extractFBrefTable(content, 'stats_playing_time_combined'),
+      gca: extractFBrefTable(content, 'stats_gca_combined'),
+      passingTypes: extractFBrefTable(content, 'stats_passing_types_combined'),
+      keeper: extractFBrefTable(content, 'stats_keeper_combined'),
+      keeperAdv: extractFBrefTable(content, 'stats_keeper_adv_combined')
+    };
+    
+    // Get all unique player names from standard table (primary source)
+    if (tables.standard.size === 0) {
+      throw new Error('No player data found in FBref standard stats table');
     }
     
-    const tableHtml = tableMatch[1];
+    // Merge all tables by player name
+    const mergedPlayers: any[] = [];
     
-    // Extract headers
-    const headerMatch = tableHtml.match(/<thead>(.*?)<\/thead>/s);
-    const headers: string[] = [];
-    if (headerMatch) {
-      const thMatches = headerMatch[1].matchAll(/data-stat="([^"]+)"/g);
-      for (const match of thMatches) {
-        if (!headers.includes(match[1])) {
-          headers.push(match[1]);
-        }
-      }
-    }
-    
-    // Extract player rows
-    const tbodyMatch = tableHtml.match(/<tbody>(.*?)<\/tbody>/s);
-    const players: any[] = [];
-    
-    if (tbodyMatch) {
-      const rowMatches = tbodyMatch[1].matchAll(/<tr[^>]*>(.*?)<\/tr>/gs);
+    for (const [playerName, standardStats] of tables.standard) {
+      const mergedStats = { ...standardStats };
       
-      for (const rowMatch of rowMatches) {
-        const rowHtml = rowMatch[1];
-        
-        // Skip header rows
-        if (rowHtml.includes('class="thead"')) continue;
-        
-        const player: any = {};
-        const cellMatches = rowHtml.matchAll(/data-stat="([^"]+)"[^>]*>(.*?)<\/t[dh]>/gs);
-        
-        for (const cellMatch of cellMatches) {
-          const stat = cellMatch[1];
-          const value = cellMatch[2].replace(/<[^>]+>/g, '').trim();
-          player[stat] = value;
-        }
-        
-        // Only include valid player rows
-        if (player.player && player.player !== 'Squad Total' && player.player.length > 0) {
-          players.push(player);
-        }
-      }
+      // Merge data from other tables
+      const shootingStats = tables.shooting.get(playerName) || {};
+      const passingStats = tables.passing.get(playerName) || {};
+      const defenseStats = tables.defense.get(playerName) || {};
+      const possessionStats = tables.possession.get(playerName) || {};
+      const miscStats = tables.misc.get(playerName) || {};
+      const playingTimeStats = tables.playingTime.get(playerName) || {};
+      const gcaStats = tables.gca.get(playerName) || {};
+      const passingTypesStats = tables.passingTypes.get(playerName) || {};
+      const keeperStats = tables.keeper.get(playerName) || {};
+      const keeperAdvStats = tables.keeperAdv.get(playerName) || {};
+      
+      // Merge all stats (later values overwrite earlier if key conflicts)
+      Object.assign(mergedStats, shootingStats, passingStats, defenseStats, 
+                    possessionStats, miscStats, playingTimeStats, gcaStats,
+                    passingTypesStats, keeperStats, keeperAdvStats);
+      
+      mergedPlayers.push(mergedStats);
     }
     
-    if (players.length === 0) {
-      throw new Error('No player data found in FBref HTML');
-    }
-    
-    return players;
+    return mergedPlayers;
   } catch (error) {
     throw new Error(`Failed to parse FBref HTML: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }

@@ -6502,6 +6502,43 @@ Return ONLY a JSON object with this structure:
     }
   });
 
+  // POST /api/admin/import-to-database - Import FBref data to database
+  app.post("/api/admin/import-to-database", async (req, res) => {
+    try {
+      const { data, teamName, season, leagueName } = req.body;
+
+      if (!data || !Array.isArray(data)) {
+        return res.status(400).json({ error: "Invalid data format" });
+      }
+
+      if (!teamName || !season) {
+        return res.status(400).json({ error: "Team name and season are required" });
+      }
+
+      // Import to database
+      const { importFBrefPlayers } = await import('./admin/footballDataImporter');
+      const results = await importFBrefPlayers(data, {
+        teamName,
+        season,
+        leagueName: leagueName || 'All Competitions'
+      });
+
+      res.json({
+        success: true,
+        imported: results.imported,
+        updated: results.updated,
+        errors: results.errors,
+        total: data.length
+      });
+    } catch (error: any) {
+      console.error('Error importing to database:', error);
+      res.status(500).json({
+        error: "Database import failed",
+        message: error.message
+      });
+    }
+  });
+
   // GET /api/admin/imports - Get all import/export records
   app.get("/api/admin/imports", async (req, res) => {
     try {
