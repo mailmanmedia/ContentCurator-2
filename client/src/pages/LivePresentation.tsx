@@ -1787,6 +1787,32 @@ export default function LivePresentation() {
       newOverlay.rssShowSource = rssShowSource;
     }
 
+    // Check for H2H duplicates when updating
+    if (editingOverlayId && overlayType === 'metric' && overlayMetricType === 'h2h-card' && metricDataToSave) {
+      const newHomeId = metricDataToSave.homeTeamId;
+      const newAwayId = metricDataToSave.awayTeamId;
+      
+      const isDuplicate = overlays.some(
+        o =>
+          o.id !== editingOverlayId && // Exclude current overlay
+          o.metricType === 'h2h-card' &&
+          o.metricData &&
+          (
+            (o.metricData.homeTeamId === newHomeId && o.metricData.awayTeamId === newAwayId) ||
+            (newAwayId !== null && o.metricData.homeTeamId === newAwayId && o.metricData.awayTeamId === newHomeId)
+          )
+      );
+      
+      if (isDuplicate) {
+        toast({
+          title: 'Duplicate Overlay',
+          description: 'An H2H overlay with these teams already exists. Edit the existing one instead.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     if (editingOverlayId) {
       setOverlays(prev => prev.map(overlay =>
         overlay.id === editingOverlayId
@@ -4870,32 +4896,8 @@ export default function LivePresentation() {
                         category: defaultCategory,
                       };
                       
-                      // Check for H2H duplicates - prevent same team matchup
-                      if (newOverlay.metricType === 'h2h-card' && newOverlay.metricData) {
-                        const newHomeId = newOverlay.metricData.homeTeamId;
-                        const newAwayId = newOverlay.metricData.awayTeamId;
-                        
-                        const isDuplicate = overlays.some(
-                          o =>
-                            o.metricType === 'h2h-card' &&
-                            o.metricData &&
-                            (
-                              (o.metricData.homeTeamId === newHomeId && o.metricData.awayTeamId === newAwayId) ||
-                              (newAwayId !== null && o.metricData.homeTeamId === newAwayId && o.metricData.awayTeamId === newHomeId)
-                            )
-                        );
-                        
-                        if (isDuplicate) {
-                          toast({
-                            title: 'Duplicate Overlay',
-                            description: 'An H2H overlay with these teams already exists. Edit the existing one instead.',
-                            variant: 'destructive',
-                          });
-                          return;
-                        }
-                      }
-                      
-                      setOverlays(prev => [...prev, newOverlay]);
+                      // Use addOverlay helper which includes duplicate checking
+                      addOverlay(newOverlay);
                       setIsTemplatePickerOpen(false);
                       toast({
                         title: 'Overlay Added',
