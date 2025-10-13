@@ -837,7 +837,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
           if (overlay.animationType === 'scroll') {
             const scrollSpeed = overlay.scrollSpeed / 10;
-            const scrollX = scrollPositions.current.get(overlay.id) || overlayWidth;
+            let scrollX = scrollPositions.current.get(overlay.id) || overlayWidth;
             ctx.textAlign = 'left';
             const textWidth = ctx.measureText(tickerText).width;
 

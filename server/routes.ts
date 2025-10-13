@@ -4013,11 +4013,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           p.nationality,
           fps.games_position as position
         FROM football_players p
-        LEFT JOIN football_player_statistics fps ON p.id = fps.player_id
-        WHERE p.team_id = $1
+        LEFT JOIN football_player_statistics fps ON p.id = fps.player_id AND fps.season = $2
+        WHERE fps.team_id = $1
         GROUP BY p.id, p.name, p.photo, p.age, p.nationality, fps.games_position
         ORDER BY p.name
-      `, [teamId]);
+      `, [teamId, season]);
 
       res.json({
         data: { players: result.rows },
