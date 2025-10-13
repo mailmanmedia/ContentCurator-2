@@ -114,13 +114,15 @@ export default function FormGuideOverlay({
     isLoading: isLoadingStats,
     error: statsError,
     refetch: refetchStats,
-  } = useOverlayData({
+  } = useQuery({
     queryKey: ["database-team-stats", teamId, leagueId],
-    endpoint: `/api/database/teams/${teamId}/statistics?leagueId=${leagueId}`,
+    queryFn: async () => {
+      const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}`);
+      if (!response.ok) throw new Error("Failed to fetch team statistics");
+      return response.json();
+    },
     enabled: !!teamId,
-    errorMessage: "Failed to fetch team statistics",
-    expectedDataStructure:
-      '{ data: { statistics: {...}, form: "WWDLW" }, lastUpdated: "..." }',
+    staleTime: 5 * 60 * 1000,
   });
 
   const {
@@ -128,13 +130,15 @@ export default function FormGuideOverlay({
     isLoading: isLoadingFixtures,
     error: fixturesError,
     refetch: refetchFixtures,
-  } = useOverlayData({
+  } = useQuery({
     queryKey: ["database-team-fixtures", teamId, matchLimit],
-    endpoint: `/api/database/teams/${teamId}/fixtures?last=${matchLimit}`,
+    queryFn: async () => {
+      const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}`);
+      if (!response.ok) throw new Error("Failed to fetch team fixtures");
+      return response.json();
+    },
     enabled: !!teamId,
-    errorMessage: "Failed to fetch team fixtures",
-    expectedDataStructure:
-      '{ data: { fixtures: [{...}] }, lastUpdated: "..." }',
+    staleTime: 5 * 60 * 1000,
   });
 
   const handleRefresh = async () => {
