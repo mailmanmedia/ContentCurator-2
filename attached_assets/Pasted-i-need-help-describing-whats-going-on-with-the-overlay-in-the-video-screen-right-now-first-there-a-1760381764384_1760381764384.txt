@@ -1,0 +1,129 @@
+i need help describing whats going on with the overlay in the video screen right now. first, there are multiple H2Hs (should only be one card with the 2 teams of focus). second the dotted line over the overlay looks to be some type of top layer that is somewhat transparent? it also moves depending on where the overlay is dragged. additionally, the dotted line extends outside of the black screen area, which is the broadcast screen. I can also show you the code file of the overlay and presentation window if tht helps
+
+Here's a concise technical AND non-technical description for the H2H overlay issue on your video/broadcast screen:
+
+Technical/Developer Description
+Multiple H2H Overlays Rendered:
+
+There appear to be multiple Head-to-Head (H2H) overlay cards rendered on the video or broadcast canvas, but only one should exist at any given time for the two teams in focus. This could be a state management or overlay deduplication bug where overlays aren’t being filtered or keyed correctly based on the selected teams or the UI state.
+
+Floating Dotted Line Artifact:
+
+A dotted line appears over the overlay and looks like a “top layer” (possibly a bounding/drag border or debugging/selection visual). It is semi-transparent, moves along with the overlay during drag, and is probably a CSS or canvas element for resize/drag interaction.
+
+The dotted line is unintentionally visible in the live/broadcast layer (should be editing-only or hidden in broadcast mode).
+
+The dotted border, or its container, extends outside of the main black screen/broadcast area. This means CSS or absolute positioning isn’t being clipped or masked to the intended container (overflow/clip or z-index issue).
+
+Overlay containment bug:
+
+The overlay card’s border/outline and control handles are not constrained to broadcast-safe boundaries ("the black screen area"), so visual artifacts show outside the intended video output, and might also affect mouse interaction (click, drag, selection) beyond the broadcast region.
+
+In Plain English (For Reporting or Discussion)
+On the video window, there are sometimes several H2H cards showing, but there should only be ONE card displaying the matchup between the two main teams.
+
+There’s a dotted line floating above the overlay, which seems like an editing/dragging border or selection box. This line is semi-transparent and shows up on top of the overlay even when it shouldn’t—it follows the overlay when I move it around.
+
+The dotted line and possibly parts of the overlay stretch outside the actual black area designed for the live broadcast (the “broadcast safe zone”). Ideally, overlays and their borders should always stay inside this area, not extend out or leak visuals past the edge.
+
+How to Move Forward
+Review the overlay mapping/render code: ensure only one unique H2H overlay is created/mounted for the matchup. Use unique keys.
+
+Adjust CSS/logic so the dotted border only shows in edit mode, and can't overflow the canvas or broadcast area.
+
+Add container clipping (CSS overflow: hidden or equivalent masking in your presentation/broadcast wrapper) to keep all overlays, borders, and drag indicators within bounds.
+
+If you share the code for the H2H overlay and/or presentation window, I can give you:
+
+A specific fix for duplicate overlays
+
+Line-by-line adjustments to ensure borders/indicators are only visible/editable when you want, and always stay inside the black canvas area
+
+Let me know if you want an immediate code review for these!
+
+here are a few files that deal with the presentation window
+
+Based on the provided files and your prior overlay code, here’s a focused technical diagnosis and solution plan for the H2H overlay duplication and border/artifact issue in the live presentation window:
+
+Diagnosing Your Problem
+1. Multiple H2H overlays
+In LivePresentation-5.tsx and VideoCompositor.tsx, overlays are kept in an array (e.g., overlays) and rendered via a component lookup.
+
+No deduplication appears for overlays of type 'h2h-card' or with the same pair of teams (homeTeamId, awayTeamId).
+
+The UI or overlay manager might let users add the same overlay multiple times, creating multiple cards for the same matchup.
+
+Each overlay gets rendered as its own component (H2HMatchCardOverlay). Thus, unless you filter overlays “by unique matchup,” you will always have stacking/copies.
+
+Solution:
+
+In the overlays creation logic, especially when adding or toggling overlays, add a check to the handler so an H2H overlay with the same two teams (both orders, as H2H is symmetric in display) does not get added twice.
+
+2. Dotted Line Overlay Artifact
+The dotted line is rendered using conditional classes on component wrapping DOM elements, usually for edit selection/highlighting or drag.
+
+Example (from your code):
+In LivePresentation-5.tsx:
+
+jsx
+<div
+  className={
+    isEditing
+      ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10 bg-white/10 border border-white/30'
+      : ''  
+  }
+/>
+The border/highlight is tied to the overlay’s editing position (isEditing or similar state).
+
+If the overlay can be dragged outside the black canvas, the highlight and card can move out of bounds, because constraints are only enforced via constrainOverlayPosition on overlay reposition.
+
+Solution:
+
+Make sure the drag/resize handlers always clamp overlay x/y so the full card never leaves the bounds (canvas/broadcast region).
+
+Only display the highlight/dotted border in edit mode—not in live output.
+
+3. Border/Artifacts Extending Outside
+Positioning is based on absolute top and left coordinates (in px), which can place the overlay and its borders outside the black screen.
+
+The constrain logic exists, but ensure it runs on EVERY position update (drag, resize, manual coordinate entry).
+
+How to Fix Step-by-Step
+A. Prevent H2H Overlay Duplicates
+
+In the overlay add/toggle handler (often where addOverlay() or setOverlays([...]) occurs), add logic to check existing overlays for an h2h-card with the same homeTeamId and awayTeamId (or vice versa), and block the duplicate.
+
+js
+const isDuplicate = overlays.some(
+  o =>
+    o.metricType === 'h2h-card' &&
+    ((o.metricData.homeTeamId === newHome && o.metricData.awayTeamId === newAway) ||
+     (o.metricData.homeTeamId === newAway && o.metricData.awayTeamId === newHome))
+)
+if (!isDuplicate) {
+  setOverlays(prev => [...prev, newH2HOverlay]);
+}
+B. Clamp Overlay Position Always
+
+Make sure all movement/edit actions run position through constrainOverlayPosition() before committing to state.
+
+This is already in your LivePresentation-5.tsx, but verify ALL entry points (e.g., grid click, dragging, coordinate input) use it.
+
+C. Dotted/Highlight Border:
+
+In all overlay DOM, have a flag for “edit mode” vs “broadcast mode,” and only add editing CSS (border-2, z-10, etc.) if in edit.
+
+In broadcast output, render overlays without any edit/drag highlighting.
+
+D. Bonus: Test for Z-Index and Overflow
+
+Check the parent container for the overlays and ensure it has overflow: hidden so no child element or border can visually bleed past canvas edges.
+
+Summary
+Overlay Deduplication: Only one H2H overlay per matchup (regardless of team order).
+
+Canvas Boundaries: Clamp overlays and all highlights to the inside of the broadcast/canvas area at all times.
+
+Edit vs. Broadcast: Show dotted/selection borders only when overlays are editable, not in final output.
+
+Overflow: Parent containers should hide overflow for overlays and highlight states.
