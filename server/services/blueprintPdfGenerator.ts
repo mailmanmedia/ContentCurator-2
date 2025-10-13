@@ -230,7 +230,8 @@ export class BlueprintPdfGenerator {
       margins: { top: 50, bottom: 50, left: 50, right: 50 }
     });
     
-    const writeStream = require('fs').createWriteStream(outputPath);
+    const { createWriteStream } = await import('fs');
+    const writeStream = createWriteStream(outputPath);
     doc.pipe(writeStream);
     
     // Cover page

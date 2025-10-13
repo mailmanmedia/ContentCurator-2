@@ -6931,18 +6931,16 @@ Return ONLY a JSON object with this structure:
     try {
       console.log('📄 Starting blueprint PDF generation...');
       
-      // Scan the codebase
-      console.log('🔍 Scanning codebase...');
-      const scanResult = await blueprintPdfGenerator.scanCodebase();
-      console.log(`✅ Scan complete: ${scanResult.files.length} files, ${scanResult.components.length} components, ${scanResult.apis.length} APIs`);
+      // Import the simple PDF generator
+      const { generateBlueprintPdf } = await import('./services/simplePdfGenerator');
       
       // Generate temporary file path
       const timestamp = Date.now();
       tempFilePath = path.join('/tmp', `blueprint_${timestamp}.pdf`);
       
-      // Generate PDF
-      console.log('📝 Generating PDF...');
-      await blueprintPdfGenerator.generatePdf(scanResult, tempFilePath);
+      // Generate PDF from the blueprint markdown
+      console.log('📝 Generating PDF from blueprint...');
+      await generateBlueprintPdf(tempFilePath);
       console.log('✅ PDF generated successfully');
       
       // Read the file and send to client
