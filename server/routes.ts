@@ -6924,6 +6924,61 @@ Return ONLY a JSON object with this structure:
     }
   });
 
+  // POST /api/blueprint/generate-pdf - Generate PDF for Meta-Agent Dashboard
+  app.post("/api/blueprint/generate-pdf", async (req, res) => {
+    let tempFilePath: string | null = null;
+    
+    try {
+      console.log('📄 Starting blueprint PDF generation (Meta-Agent)...');
+      
+      // Import the simple PDF generator
+      const { generateBlueprintPdf } = await import('./services/simplePdfGenerator');
+      
+      // Generate temporary file path
+      const timestamp = Date.now();
+      tempFilePath = path.join('/tmp', `blueprint_${timestamp}.pdf`);
+      
+      // Generate PDF from the blueprint markdown
+      console.log('📝 Generating PDF from blueprint...');
+      await generateBlueprintPdf(tempFilePath);
+      console.log('✅ PDF generated successfully');
+      
+      // Read the file and send to client
+      const fileBuffer = await fs.readFile(tempFilePath);
+      const filename = `ContentCurator_Blueprint_${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      // Set response headers for file download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', fileBuffer.length);
+      
+      // Send file
+      res.send(fileBuffer);
+      
+      console.log('✅ Blueprint PDF sent to client');
+      
+      // Clean up temp file (asynchronously, don't await)
+      fs.unlink(tempFilePath).catch(err => 
+        console.error('Error deleting temp PDF:', err)
+      );
+      
+    } catch (error: any) {
+      console.error('❌ Error generating blueprint PDF:', error);
+      
+      // Clean up temp file if it exists
+      if (tempFilePath) {
+        fs.unlink(tempFilePath).catch(err => 
+          console.error('Error deleting temp PDF after error:', err)
+        );
+      }
+      
+      res.status(500).json({
+        error: "Failed to generate blueprint PDF",
+        message: error.message
+      });
+    }
+  });
+
   // POST /api/admin/generate-blueprint-pdf - Generate codebase blueprint PDF
   app.post("/api/admin/generate-blueprint-pdf", async (req, res) => {
     let tempFilePath: string | null = null;

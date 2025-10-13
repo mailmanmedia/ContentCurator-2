@@ -310,18 +310,27 @@ export default function MetaAgentDashboard() {
 
       if (!response.ok) throw new Error('PDF generation failed');
 
-      const result = await response.json();
-      setPdfUrl(result.downloadUrl);
-      setStats(result.stats);
+      // Handle PDF blob response
+      const blob = await response.blob();
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ContentCurator_Blueprint_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
 
       toast({
         title: "Blueprint PDF Ready!",
-        description: `Scanned ${result.stats.files} files, ${result.stats.components} components`
+        description: "PDF has been downloaded successfully"
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Generation Failed",
-        description: error.message,
+        description: error.message || "Failed to generate blueprint PDF",
         variant: "destructive"
       });
     } finally {
