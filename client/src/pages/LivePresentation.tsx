@@ -754,13 +754,13 @@ export default function LivePresentation() {
   });
 
   const teamsData = teamsDataRaw?.data || []; // Extract data from the 'data' property
-  console.log('[LivePresentation] teamsData extracted:', { 
-    rawData: teamsDataRaw, 
+  console.log('[LivePresentation] teamsData extracted:', {
+    rawData: teamsDataRaw,
     teamsCount: teamsData.length,
     overlayType,
     isOverlayDialogOpen,
     overlayHomeTeamId,
-    overlayAwayTeamId 
+    overlayAwayTeamId
   });
 
   const { data: competitionsData } = useQuery<{ competitions: any[] }>({
@@ -1587,6 +1587,34 @@ export default function LivePresentation() {
     });
   };
 
+  const addOverlay = useCallback((overlay: OverlayConfig) => {
+    // Check for duplicate H2H overlays
+    if (overlay.metricType === 'h2h-card' && overlay.metricData) {
+      const newHome = overlay.metricData.homeTeamId;
+      const newAway = overlay.metricData.awayTeamId;
+
+      const isDuplicate = overlays.some(
+        o =>
+          o.metricType === 'h2h-card' &&
+          o.metricData &&
+          ((o.metricData.homeTeamId === newHome && o.metricData.awayTeamId === newAway) ||
+           (o.metricData.homeTeamId === newAway && o.metricData.awayTeamId === newHome))
+      );
+
+      if (isDuplicate) {
+        toast({
+          title: "Overlay Already Exists",
+          description: "This H2H matchup overlay is already on screen",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    setOverlays(prev => [...prev, normalizeOverlay(overlay)]);
+  }, [overlays, toast]);
+
+
   const handleAddOverlay = () => {
     if (!overlayText.trim() && overlayType === 'text') {
       toast({
@@ -1704,122 +1732,75 @@ export default function LivePresentation() {
       }
     }
 
+    const newOverlay: OverlayConfig = {
+      id: editingOverlayId || `overlay-${Date.now()}`,
+      text: overlayText,
+      animationType: overlayAnimationType,
+      templateStyle: preset.templateStyle || 'ticker',
+      backgroundColor: preset.backgroundColor,
+      textColor: preset.textColor,
+      fontSize: overlayFontSize,
+      position: overlayPosition,
+      height: overlayHeight,
+      visible: true,
+      fontFamily: overlayFontFamily,
+      scrollSpeed: overlayScrollSpeed,
+      scrollDirection: overlayScrollDirection,
+      isBold: overlayIsBold,
+      isItalic: overlayIsItalic,
+      overlayType: overlayType,
+      imageUrl: overlayImageUrl || undefined,
+      imageData: overlayImageData || undefined,
+      width: overlayWidth,
+      zIndex: overlayZIndex,
+      opacity: overlayOpacity,
+      videoUrl: overlayVideoUrl || undefined,
+      metricType: overlayMetricType || undefined,
+      metricData: metricDataToSave,
+      x: editingOverlayId ? overlays.find(o => o.id === editingOverlayId)?.x || defaultX : defaultX,
+      y: editingOverlayId ? overlays.find(o => o.id === editingOverlayId)?.y || defaultY : defaultY,
+      category: defaultCategory,
+      borderWidth: overlayBorderWidth,
+      borderColor: overlayBorderColor,
+      colorPalette: overlayColorPalette,
+      formTitleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formTitleSize : undefined,
+      formCircleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formCircleSize : undefined,
+      formLabelSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formLabelSize : undefined,
+      fontWeight: overlayFontWeight,
+      letterSpacing: overlayLetterSpacing,
+      lineHeight: overlayLineHeight,
+      textTransform: overlayTextTransform,
+      textShadow: overlayTextShadow || undefined,
+      backgroundType: overlayBackgroundType,
+      gradientAngle: overlayGradientAngle,
+      gradientColor1: overlayGradientColor1,
+      gradientColor2: overlayGradientColor2,
+      borderRadius: overlayBorderRadius,
+      borderStyle: overlayBorderStyle,
+      boxShadow: overlayBoxShadow || undefined,
+      glowEffect: overlayGlowEffect,
+    };
+
+    if (overlayType === 'rss') {
+      newOverlay.rssSourceIds = selectedRssSourceIds;
+      newOverlay.rssMaxArticles = rssMaxArticles;
+      newOverlay.rssShowSource = rssShowSource;
+    }
+
     if (editingOverlayId) {
       setOverlays(prev => prev.map(overlay =>
         overlay.id === editingOverlayId
-          ? {
-              ...overlay,
-              text: overlayText,
-              backgroundColor: preset.backgroundColor,
-              textColor: preset.textColor,
-              fontSize: overlayFontSize,
-              height: overlayHeight,
-              animationType: overlayAnimationType,
-              position: overlayPosition,
-              fontFamily: overlayFontFamily,
-              scrollSpeed: overlayScrollSpeed,
-              scrollDirection: overlayScrollDirection,
-              isBold: overlayIsBold,
-              isItalic: overlayIsItalic,
-              overlayType: overlayType,
-              imageUrl: overlayImageUrl || undefined,
-              imageData: overlayImageData || undefined,
-              rssSourceIds: overlayType === 'rss' ? selectedRssSourceIds : undefined,
-              rssMaxArticles: overlayType === 'rss' ? rssMaxArticles : undefined,
-              rssShowSource: overlayType === 'rss' ? rssShowSource : undefined,
-              width: overlayWidth,
-              zIndex: overlayZIndex,
-              opacity: overlayOpacity,
-              videoUrl: overlayVideoUrl || undefined,
-              metricType: overlayMetricType || undefined,
-              metricData: metricDataToSave,
-              x: overlay.position !== overlayPosition ? defaultX : overlay.x,
-              y: overlay.position !== overlayPosition ? defaultY : overlay.y,
-              category: defaultCategory,
-              borderWidth: overlayBorderWidth,
-              borderColor: overlayBorderColor,
-              colorPalette: overlayColorPalette,
-              formTitleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formTitleSize : undefined,
-              formCircleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formCircleSize : undefined,
-              formLabelSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formLabelSize : undefined,
-              fontWeight: overlayFontWeight,
-              letterSpacing: overlayLetterSpacing,
-              lineHeight: overlayLineHeight,
-              textTransform: overlayTextTransform,
-              textShadow: overlayTextShadow || undefined,
-              backgroundType: overlayBackgroundType,
-              gradientAngle: overlayGradientAngle,
-              gradientColor1: overlayGradientColor1,
-              gradientColor2: overlayGradientColor2,
-              borderRadius: overlayBorderRadius,
-              borderStyle: overlayBorderStyle,
-              boxShadow: overlayBoxShadow || undefined,
-              glowEffect: overlayGlowEffect,
-            }
+          ? normalizeOverlay({ ...overlay, ...newOverlay })
           : overlay
       ));
       toast({ title: 'Overlay updated' });
     } else {
-      const newOverlay: OverlayConfig = {
-        id: `overlay-${Date.now()}`,
-        text: overlayText,
-        animationType: overlayAnimationType,
-        templateStyle: 'ticker',
-        backgroundColor: preset.backgroundColor,
-        textColor: preset.textColor,
-        fontSize: overlayFontSize,
-        position: overlayPosition,
-        height: overlayHeight,
-        visible: true,
-        fontFamily: overlayFontFamily,
-        scrollSpeed: overlayScrollSpeed,
-        scrollDirection: overlayScrollDirection,
-        isBold: overlayIsBold,
-        isItalic: overlayIsItalic,
-        overlayType: overlayType,
-        imageUrl: overlayImageUrl || undefined,
-        imageData: overlayImageData || undefined,
-        width: overlayWidth,
-        zIndex: overlayZIndex,
-        opacity: overlayOpacity,
-        videoUrl: overlayVideoUrl || undefined,
-        metricType: overlayMetricType || undefined,
-        metricData: metricDataToSave,
-        x: defaultX,
-        y: defaultY,
-        category: defaultCategory,
-        borderWidth: overlayBorderWidth,
-        borderColor: overlayBorderColor,
-        colorPalette: overlayColorPalette,
-        formTitleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formTitleSize : undefined,
-        formCircleSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formCircleSize : undefined,
-        formLabelSize: overlayType === 'metric' && overlayMetricType === 'form-guide' ? formLabelSize : undefined,
-        fontWeight: overlayFontWeight,
-        letterSpacing: overlayLetterSpacing,
-        lineHeight: overlayLineHeight,
-        textTransform: overlayTextTransform,
-        textShadow: overlayTextShadow || undefined,
-        backgroundType: overlayBackgroundType,
-        gradientAngle: overlayGradientAngle,
-        gradientColor1: overlayGradientColor1,
-        gradientColor2: overlayGradientColor2,
-        borderRadius: overlayBorderRadius,
-        borderStyle: overlayBorderStyle,
-        boxShadow: overlayBoxShadow || undefined,
-        glowEffect: overlayGlowEffect,
-      };
-
-      if (overlayType === 'rss') {
-        newOverlay.rssSourceIds = selectedRssSourceIds;
-        newOverlay.rssMaxArticles = rssMaxArticles;
-        newOverlay.rssShowSource = rssShowSource;
-      }
-
-      setOverlays(prev => [...prev, normalizeOverlay(newOverlay)]);
+      addOverlay(newOverlay);
       toast({ title: 'Overlay added', description: preset.name });
     }
 
     setIsOverlayDialogOpen(false);
+    setEditingOverlayId(null);
     setOverlayText('');
     setOverlayImageUrl('');
     setOverlayImageData('');
@@ -1831,7 +1812,6 @@ export default function LivePresentation() {
     setOverlayAwayTeamId(null);
     setOverlayTeamId(null);
     setOverlayMetricType('');
-    setEditingOverlayId(null);
   };
 
   const handleRemoveSource = (sourceId: string) => {
@@ -2236,7 +2216,7 @@ export default function LivePresentation() {
     return Math.max(min, snapped);
   };
 
-  const constrainOverlayPosition = (x: number, y: number, width: number, height: number) => {
+  const constrainOverlayPosition = (x: number, y: number, width: number, height: number): { x: number; y: number } => {
     // Calculate overlay dimensions in pixels
     const overlayWidthPx = (width / 100) * outputResolution.width;
     const overlayHeightPx = height;
@@ -2411,6 +2391,31 @@ export default function LivePresentation() {
       description: "Ready to start a new recording",
     });
   };
+
+  const updateOverlay = useCallback((id: string, updates: Partial<OverlayConfig>) => {
+    setOverlays(prev =>
+      prev.map(overlay => {
+        if (overlay.id === id) {
+          const updated = { ...overlay, ...updates };
+
+          // Constrain position if x or y are being updated
+          if (updates.x !== undefined || updates.y !== undefined) {
+            const constrained = constrainOverlayPosition(
+              updated.x,
+              updated.y,
+              updated.width,
+              updated.height
+            );
+            updated.x = constrained.x;
+            updated.y = constrained.y;
+          }
+
+          return updated;
+        }
+        return overlay;
+      })
+    );
+  }, [constrainOverlayPosition]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -2773,6 +2778,18 @@ export default function LivePresentation() {
                     .filter(overlay => overlay.visible)
                     .map((overlay) => {
                       const OverlayComponent = getOverlayComponent(overlay.overlayType, overlay.metricType);
+                      const isEditing = editingPositionOverlayId === overlay.id;
+
+                      const overlayStyle: React.CSSProperties = {
+                        position: 'absolute',
+                        left: `${(isEditing ? overlayX : overlay.x) / outputResolution.width * 100}%`,
+                        top: `${(isEditing ? overlayY : overlay.y) / outputResolution.height * 100}%`,
+                        width: `${overlay.width}%`,
+                        height: `${overlay.height}px`,
+                        zIndex: overlay.zIndex,
+                        opacity: overlay.opacity,
+                        pointerEvents: isEditing ? 'auto' : 'none', // Allow interaction only when editing position
+                      };
 
                       if (!OverlayComponent) {
                         // Render non-component overlays (text, images)
@@ -2781,17 +2798,18 @@ export default function LivePresentation() {
                             <div
                               key={overlay.id}
                               data-overlay-id={overlay.id}
-                              style={{
-                                position: 'absolute',
-                                left: `${overlay.x}%`,
-                                top: `${overlay.y}px`,
-                                width: `${overlay.width}%`,
-                                height: `${overlay.height}px`,
-                                zIndex: overlay.zIndex,
-                                opacity: overlay.opacity,
-                                pointerEvents: 'none',
-                              }}
+                              className={
+                                isEditing && !isBroadcasting
+                                  ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
+                                  : ''
+                              }
+                              style={overlayStyle}
                             >
+                              {isEditing && (
+                                <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
+                                  ({snapToGrid(overlay.x)}, {snapToGrid(overlay.y)}) - {overlay.width}% × {overlay.height}px
+                                </div>
+                              )}
                               <div
                                 style={{
                                   width: '100%',
@@ -2821,17 +2839,18 @@ export default function LivePresentation() {
                             <div
                               key={overlay.id}
                               data-overlay-id={overlay.id}
-                              style={{
-                                position: 'absolute',
-                                left: `${overlay.x}%`,
-                                top: `${overlay.y}px`,
-                                width: `${overlay.width}%`,
-                                height: `${overlay.height}px`,
-                                zIndex: overlay.zIndex,
-                                opacity: overlay.opacity,
-                                pointerEvents: 'none',
-                              }}
+                              className={
+                                isEditing && !isBroadcasting
+                                  ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
+                                  : ''
+                              }
+                              style={overlayStyle}
                             >
+                              {isEditing && (
+                                <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
+                                  ({snapToGrid(overlay.x)}, {snapToGrid(overlay.y)}) - {overlay.width}% × {overlay.height}px
+                                </div>
+                              )}
                               <img
                                 src={overlay.imageUrl}
                                 alt={overlay.text || 'Overlay image'}
@@ -2848,23 +2867,22 @@ export default function LivePresentation() {
                         return null;
                       }
 
-                      const overlayStyle: React.CSSProperties = {
-                        position: 'absolute',
-                        left: `${overlay.x}%`,
-                        top: `${overlay.y}px`,
-                        width: `${overlay.width}%`,
-                        height: `${overlay.height}px`,
-                        zIndex: overlay.zIndex,
-                        opacity: overlay.opacity,
-                        pointerEvents: 'none',
-                      };
-
                       return (
                         <div
                           key={overlay.id}
                           data-overlay-id={overlay.id}
+                          className={
+                            isEditing && !isBroadcasting
+                              ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
+                              : ''
+                          }
                           style={overlayStyle}
                         >
+                          {isEditing && (
+                            <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
+                              ({snapToGrid(overlay.x)}, {snapToGrid(overlay.y)}) - {overlay.width}% × {overlay.height}px
+                            </div>
+                          )}
                           <OverlayErrorBoundary overlayId={overlay.id}>
                             <OverlayComponent
                               width={Math.round((overlay.width / 100) * outputResolution.width)}
@@ -3959,7 +3977,7 @@ export default function LivePresentation() {
                                  min={1} max={50} />
                         </div>
 
-                        <div className="space-y-2">
+                        <div>
                           <Label>Display Options</Label>
                           <div className="flex items-center gap-2">
                             <Checkbox checked={overlayShowSentiment}
@@ -4964,6 +4982,10 @@ export default function LivePresentation() {
               {/* Render active overlays */}
               {overlays.map((overlay) => {
                 const OverlayComponent = getOverlayComponent(overlay.overlayType); // Use overlayType here
+                const isEditing = overlay.id === editingPositionOverlayId;
+                const x = isEditing ? overlayX : overlay.x;
+                const y = isEditing ? overlayY : overlay.y;
+
                 if (!OverlayComponent) {
                   // Render non-component overlays (text, images)
                   if (overlay.overlayType === 'text') {
@@ -4971,23 +4993,24 @@ export default function LivePresentation() {
                       <div
                         key={overlay.id}
                         data-overlay-id={overlay.id}
-                        className={`absolute rounded pointer-events-none ${
-                          overlay.id === editingPositionOverlayId
-                            ? 'bg-primary/30 border-2 border-primary z-10'
-                            : 'bg-white/10 border border-white/30'
-                        }`}
+                        className={
+                          isEditing && !isBroadcasting
+                            ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
+                            : ''
+                        }
                         style={{
-                          left: `${overlay.id === editingPositionOverlayId ? overlayX : overlay.x}%`,
-                          top: `${overlay.id === editingPositionOverlayId ? overlayY : overlay.y}px`,
+                          left: `${(x / outputResolution.width) * 100}%`,
+                          top: `${(y / outputResolution.height) * 100}%`,
                           width: `${overlay.width}%`,
                           height: `${overlay.height}px`,
                           zIndex: overlay.zIndex,
                           opacity: overlay.opacity,
+                          pointerEvents: isEditing ? 'auto' : 'none',
                         }}
                       >
-                        {overlay.id === editingPositionOverlayId && (
+                        {isEditing && (
                           <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
-                            ({snapToGrid(overlay.id === editingPositionOverlayId ? overlayX : overlay.x)}, {snapToGrid(overlay.id === editingPositionOverlayId ? overlayY : overlay.y)}) - {overlay.width}% × {overlay.height}px
+                            ({snapToGrid(x)}, {snapToGrid(y)}) - {overlay.width}% × {overlay.height}px
                           </div>
                         )}
                       </div>
@@ -4998,23 +5021,24 @@ export default function LivePresentation() {
                       <div
                         key={overlay.id}
                         data-overlay-id={overlay.id}
-                        className={`absolute rounded pointer-events-none ${
-                          overlay.id === editingPositionOverlayId
-                            ? 'bg-primary/30 border-2 border-primary z-10'
-                            : 'bg-white/10 border border-white/30'
-                        }`}
+                        className={
+                          isEditing && !isBroadcasting
+                            ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
+                            : ''
+                        }
                         style={{
-                          left: `${overlay.id === editingPositionOverlayId ? overlayX : overlay.x}%`,
-                          top: `${overlay.id === editingPositionOverlayId ? overlayY : overlay.y}px`,
+                          left: `${(x / outputResolution.width) * 100}%`,
+                          top: `${(y / outputResolution.height) * 100}%`,
                           width: `${overlay.width}%`,
                           height: `${overlay.height}px`,
                           zIndex: overlay.zIndex,
                           opacity: overlay.opacity,
+                          pointerEvents: isEditing ? 'auto' : 'none',
                         }}
                       >
-                        {overlay.id === editingPositionOverlayId && (
+                        {isEditing && (
                           <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
-                            ({snapToGrid(overlay.id === editingPositionOverlayId ? overlayX : overlay.x)}, {snapToGrid(overlay.id === editingPositionOverlayId ? overlayY : overlay.y)}) - {overlay.width}% × {overlay.height}px
+                            ({snapToGrid(x)}, {snapToGrid(y)}) - {overlay.width}% × {overlay.height}px
                           </div>
                         )}
                       </div>
@@ -5024,18 +5048,14 @@ export default function LivePresentation() {
                 }
 
                 // Render component-based overlays
-                const isEditing = overlay.id === editingPositionOverlayId;
-                const x = isEditing ? overlayX : overlay.x;
-                const y = isEditing ? overlayY : overlay.y;
-
                 return (
                   <OverlayErrorBoundary key={overlay.id} overlayId={overlay.id}>
                     <div
-                      className={`absolute rounded pointer-events-none ${
-                        isEditing
-                          ? 'bg-primary/30 border-2 border-primary z-10'
-                          : 'bg-white/10 border border-white/30'
-                      }`}
+                      className={
+                        isEditing && !isBroadcasting
+                          ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
+                          : ''
+                      }
                       style={{
                         left: `${(x / outputResolution.width) * 100}%`,
                         top: `${(y / outputResolution.height) * 100}%`,
@@ -5043,6 +5063,7 @@ export default function LivePresentation() {
                         height: `${overlay.height}px`,
                         zIndex: overlay.zIndex,
                         opacity: overlay.opacity,
+                        pointerEvents: isEditing ? 'auto' : 'none',
                       }}
                     >
                       {isEditing && (

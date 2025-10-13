@@ -184,6 +184,7 @@ export default function H2HMatchCardOverlay({
         display: "flex",
         flexDirection: "column",
         gap: 12,
+        boxSizing: "border-box",
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
