@@ -45,14 +45,17 @@ export class ExcelDataImporter {
       // Check if there's a manifest sheet
       const hasManifest = workbook.SheetNames.includes('📋 Manifest');
       
+      console.log(`📋 Import mode: ${hasManifest ? 'Manifest-based' : 'Direct sheets'}`);
+      
       if (hasManifest) {
         return await this.importFromManifest(workbook);
       } else {
         return await this.importDirectSheets(workbook);
       }
 
-    } catch (error) {
-      console.error('❌ Error importing Excel data:', error);
+    } catch (error: any) {
+      console.error('❌ Error importing Excel data:', error.message);
+      console.error('Stack:', error.stack);
       throw error;
     }
   }
@@ -61,12 +64,17 @@ export class ExcelDataImporter {
     console.log('📋 Reading manifest-based workbook...');
     
     const manifestSheet = workbook.Sheets['📋 Manifest'];
+    if (!manifestSheet) {
+      throw new Error('Manifest sheet not found in workbook');
+    }
+    
     const manifest: ExcelRow[] = XLSX.utils.sheet_to_json(manifestSheet);
     
-    console.log(`📊 Manifest contains ${manifest.length} table definitions`);
+    console.log(`📊 Manifest contains ${manifest.length} table definitions\n`);
 
     let totalProcessed = 0;
     const results: any[] = [];
+    const errors: string[] = [];
 
     // Process each table defined in manifest
     for (const entry of manifest) {
@@ -74,25 +82,47 @@ export class ExcelDataImporter {
       const tableName = entry['Name'];
       const tableType = entry['Type'];
       
-      if (!sheetName || !workbook.Sheets[sheetName]) {
-        console.log(`⚠️ Skipping ${tableName} - sheet not found`);
+      if (!sheetName) {
+        console.log(`⚠️ Skipping entry - no source sheet name`);
+        continue;
+      }
+      
+      if (!workbook.Sheets[sheetName]) {
+        const error = `Sheet '${sheetName}' not found for table '${tableName}'`;
+        console.log(`⚠️ ${error}`);
+        errors.push(error);
         continue;
       }
 
-      console.log(`\n📄 Processing: ${tableName} (${tableType})`);
+      console.log(`📄 Processing: ${tableName} (${tableType})`);
       
-      const worksheet = workbook.Sheets[sheetName];
-      const data: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
-      
-      const result = await this.processTableByName(tableName, data);
-      if (result) {
-        totalProcessed += result.rowsProcessed || 0;
-        results.push(result);
+      try {
+        const worksheet = workbook.Sheets[sheetName];
+        const data: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
+        
+        console.log(`   └─ ${data.length} rows found`);
+        
+        const result = await this.processTableByName(tableName, data);
+        if (result) {
+          totalProcessed += result.rowsProcessed || 0;
+          results.push({ tableName, ...result });
+          console.log(`   ✅ Processed ${result.rowsProcessed} rows`);
+        }
+      } catch (error: any) {
+        const errorMsg = `Failed to process ${tableName}: ${error.message}`;
+        console.error(`   ❌ ${errorMsg}`);
+        errors.push(errorMsg);
       }
     }
 
-    console.log(`\n✅ Excel import completed! Total rows: ${totalProcessed}`);
-    return { success: true, rowsProcessed: totalProcessed, results };
+    console.log(`\n✅ Excel import completed!`);
+    console.log(`📊 Total rows processed: ${totalProcessed}`);
+    if (errors.length > 0) {
+      console.log(`⚠️  ${errors.length} errors encountered:`);
+      errors.forEach(e => console.log(`   - ${e}`));
+    }
+    
+    return { success: true, rowsProcessed: totalProcessed, results, errors };
   }
 
   private async importDirectSheets(workbook: XLSX.WorkBook) {
