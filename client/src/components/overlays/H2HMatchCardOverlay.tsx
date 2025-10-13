@@ -85,24 +85,42 @@ export default function H2HMatchCardOverlay({
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Basic param build
-  const params = new URLSearchParams();
-  params.set("teamAId", String(teamAId));
-  params.set("teamBId", String(teamBId));
-  if (limit) params.set("limit", String(limit));
-
-  const url = `${endpoint || "/api/h2h"}?${params.toString()}`;
+  // Build URL reactively when props change
+  const url = useMemo(() => {
+    console.log('[H2HMatchCardOverlay] Building URL with props:', { teamAId, teamBId, limit, endpoint });
+    const params = new URLSearchParams();
+    params.set("teamAId", String(teamAId));
+    params.set("teamBId", String(teamBId));
+    if (limit) params.set("limit", String(limit));
+    const finalUrl = `${endpoint || "/api/h2h"}?${params.toString()}`;
+    console.log('[H2HMatchCardOverlay] Final URL:', finalUrl);
+    return finalUrl;
+  }, [teamAId, teamBId, limit, endpoint]);
 
   const { data, isLoading, error, refetch } = useQuery<H2HPayload>({
     queryKey: ["h2h", teamAId, teamBId, limit, endpoint],
     queryFn: async () => {
+      console.log('[H2HMatchCardOverlay] Fetching with URL:', url);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch H2H (${res.status})`);
       return res.json();
     },
+    enabled: teamAId != null && teamBId != null && teamAId !== undefined && teamBId !== undefined,
     refetchInterval: 5 * 60_000,
     staleTime: 60_000,
   });
+
+  const sourceLabel = (data as any)?.source || "H2H";
+  const timestampIso = (data as any)?.timestamp;
+  const recent: MatchLite[] =
+    (data as any)?.data?.recent ?? (data as any)?.recent ?? [];
+
+  const [teamAName, teamBName] = useMemo(() => {
+    if (!recent.length) return ["Team A", "Team B"];
+    const a = recent[0]?.home?.id === teamAId ? recent[0].home : recent[0]?.away;
+    const b = recent[0]?.home?.id === teamBId ? recent[0].home : recent[0]?.away;
+    return [a?.shortName || a?.name || "Team A", b?.shortName || b?.name || "Team B"];
+  }, [recent, teamAId, teamBId]);
 
   if (isLoading) {
     return (
@@ -127,11 +145,6 @@ export default function H2HMatchCardOverlay({
     );
   }
 
-  const sourceLabel = (data as any)?.source || "H2H";
-  const timestampIso = (data as any)?.timestamp;
-  const recent: MatchLite[] =
-    (data as any)?.data?.recent ?? (data as any)?.recent ?? [];
-
   if (!recent.length) {
     return (
       <OverlayEmptyState
@@ -141,12 +154,6 @@ export default function H2HMatchCardOverlay({
       />
     );
   }
-
-  const [teamAName, teamBName] = useMemo(() => {
-    const a = recent[0]?.home?.id === teamAId ? recent[0].home : recent[0]?.away;
-    const b = recent[0]?.home?.id === teamBId ? recent[0].home : recent[0]?.away;
-    return [a?.shortName || a?.name || "Team A", b?.shortName || b?.name || "Team B"];
-  }, [recent, teamAId, teamBId]);
 
   function onRefresh() {
     setIsRefreshing(true);

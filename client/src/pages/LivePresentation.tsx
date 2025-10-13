@@ -742,15 +742,26 @@ export default function LivePresentation() {
   const { data: teamsDataRaw, isLoading: isLoadingTeams } = useQuery({
     queryKey: ['/api/database/teams/all'],
     queryFn: async () => {
+      console.log('[LivePresentation] Fetching teams data...');
       const response = await fetch('/api/database/teams/all');
       if (!response.ok) throw new Error('Failed to fetch teams');
-      return response.json();
+      const data = await response.json();
+      console.log('[LivePresentation] Teams data received:', data);
+      return data;
     },
     enabled: overlayType === 'metric' && isOverlayDialogOpen,
     staleTime: 30 * 60 * 1000, // Cache for 30 minutes
   });
 
   const teamsData = teamsDataRaw?.data || []; // Extract data from the 'data' property
+  console.log('[LivePresentation] teamsData extracted:', { 
+    rawData: teamsDataRaw, 
+    teamsCount: teamsData.length,
+    overlayType,
+    isOverlayDialogOpen,
+    overlayHomeTeamId,
+    overlayAwayTeamId 
+  });
 
   const { data: competitionsData } = useQuery<{ competitions: any[] }>({
     queryKey: ['/api/football/competitions/active'],

@@ -4804,6 +4804,105 @@ Return ONLY a JSON object with this structure:
     }
   });
 
+  // H2H Overlay endpoint - matches H2HMatchCardOverlay component expectations
+  app.get("/api/h2h", async (req, res) => {
+    try {
+      const teamAId = req.query.teamAId ? parseInt(req.query.teamAId as string) : undefined;
+      const teamBId = req.query.teamBId ? parseInt(req.query.teamBId as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+
+      if (!teamAId || !teamBId || isNaN(teamAId) || isNaN(teamBId)) {
+        return res.status(400).json({ error: "Both teamAId and teamBId parameters are required" });
+      }
+
+      // Fetch H2H fixtures from service (database first, then API)
+      const fixtures = await footballService.getHeadToHeadStats(teamAId, teamBId, limit);
+
+      // Get team information for both teams
+      const teams = await db
+        .select()
+        .from(footballTeams)
+        .where(or(eq(footballTeams.id, teamAId), eq(footballTeams.id, teamBId)));
+
+      const teamMap = new Map(teams.map(t => [t.id, t]));
+      const teamA = teamMap.get(teamAId);
+      const teamB = teamMap.get(teamBId);
+
+      // Transform fixtures to MatchLite format expected by overlay
+      const recent = fixtures.map(fixture => {
+        const homeTeam = teamMap.get(fixture.home_team_id);
+        const awayTeam = teamMap.get(fixture.away_team_id);
+        
+        // Parse JSON fields
+        const goals = typeof fixture.goals === 'string' ? JSON.parse(fixture.goals) : fixture.goals;
+        const venue = typeof fixture.venue === 'string' ? JSON.parse(fixture.venue) : fixture.venue;
+        
+        return {
+          id: fixture.id,
+          dateUtc: fixture.date.toISOString(),
+          venue: venue?.name || 'Unknown',
+          competition: {
+            name: venue?.city || 'Match',
+            code: fixture.league_id?.toString()
+          },
+          home: {
+            id: fixture.home_team_id,
+            name: homeTeam?.name || 'Unknown',
+            shortName: homeTeam?.name || 'Unknown',
+            logo: homeTeam?.logo || undefined
+          },
+          away: {
+            id: fixture.away_team_id,
+            name: awayTeam?.name || 'Unknown',
+            shortName: awayTeam?.name || 'Unknown',
+            logo: awayTeam?.logo || undefined
+          },
+          score: goals?.home !== undefined && goals?.away !== undefined ? {
+            home: goals.home,
+            away: goals.away
+          } : undefined
+        };
+      });
+
+      // Calculate summary stats
+      let winsA = 0;
+      let winsB = 0;
+      let draws = 0;
+
+      fixtures.forEach(fixture => {
+        const goals = typeof fixture.goals === 'string' ? JSON.parse(fixture.goals) : fixture.goals;
+        const homeScore = goals?.home ?? 0;
+        const awayScore = goals?.away ?? 0;
+
+        if (homeScore > awayScore) {
+          if (fixture.home_team_id === teamAId) winsA++;
+          else winsB++;
+        } else if (awayScore > homeScore) {
+          if (fixture.away_team_id === teamAId) winsA++;
+          else winsB++;
+        } else {
+          draws++;
+        }
+      });
+
+      return res.json({
+        data: {
+          recent,
+          summary: {
+            winsA,
+            winsB,
+            draws
+          }
+        },
+        source: 'Database',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error fetching H2H data:', error);
+      return res.status(500).json({ error: "Failed to fetch H2H data" });
+    }
+  });
+
   // === LIVE PRESENTATION SYSTEM ROUTES ===
 
   // Library Items routes

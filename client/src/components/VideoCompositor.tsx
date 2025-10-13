@@ -1270,10 +1270,20 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
     const overlayComponent = (() => {
       switch (metricType) {
         case 'h2h-card':
+          const teamAIdValue = metricData?.homeTeamId || 40;
+          const teamBIdValue = metricData?.awayTeamId || 47;
+          console.log('[VideoCompositor] H2H Overlay Props:', { 
+            metricData, 
+            homeTeamId: metricData?.homeTeamId,
+            awayTeamId: metricData?.awayTeamId,
+            teamAIdValue, 
+            teamBIdValue,
+            overlayId: overlay.id
+          });
           return (
             <H2HMatchCardOverlay
-              homeTeamId={metricData?.homeTeamId || 40}
-              awayTeamId={metricData?.awayTeamId || 47}
+              teamAId={teamAIdValue}
+              teamBId={teamBIdValue}
               width={pixelWidth}
               height={height}
               opacity={opacity}
