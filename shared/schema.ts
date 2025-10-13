@@ -13,7 +13,6 @@ export const football_leagues = pgTable('football_leagues', {
   name: varchar('name', { length: 255 }).notNull(),
   country: varchar('country', { length: 100 }),
   logo: text('logo'),
-  type: varchar('type', { length: 50 }),
   season: varchar('season', { length: 10 }).notNull()
 }, (table) => ({
   nameSeasonIdx: index('idx_football_leagues_name_season').on(table.name, table.season),

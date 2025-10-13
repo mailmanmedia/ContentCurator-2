@@ -184,13 +184,14 @@ async function findOrCreateLeague(leagueName: string, season: string): Promise<n
   }
 
   // Create new league
+  console.log('💾 Creating league:', { name: leagueName, country: 'England', season, logo: null });
   const inserted = await db.insert(football_leagues).values({
     name: leagueName,
     country: 'England',
     season: season,
-    logo: null,
-    type: null
+    logo: null
   }).returning({ id: football_leagues.id });
+  console.log('✅ League created with ID:', inserted[0]?.id);
 
   if (!inserted[0]) {
     throw new Error('Failed to create league');

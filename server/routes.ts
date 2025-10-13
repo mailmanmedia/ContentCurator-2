@@ -3998,6 +3998,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all players from database
+  app.get("/api/database/players", async (req, res) => {
+    try {
+      const teamId = parseInt(req.query.teamId as string) || 40; // Liverpool
+      const season = req.query.season as string || '2025';
+      
+      const result = await pool.query(`
+        SELECT 
+          p.id,
+          p.name,
+          p.photo,
+          p.age,
+          p.nationality,
+          fps.games_position as position
+        FROM football_players p
+        LEFT JOIN football_player_statistics fps ON p.id = fps.player_id
+        WHERE p.team_id = $1
+        GROUP BY p.id, p.name, p.photo, p.age, p.nationality, fps.games_position
+        ORDER BY p.name
+      `, [teamId]);
+
+      res.json({
+        data: { players: result.rows },
+        lastUpdated: new Date().toISOString(),
+        source: "database"
+      });
+    } catch (error) {
+      console.error('Error fetching players from database:', error);
+      res.status(500).json({ error: "Failed to fetch players from database" });
+    }
+  });
+
+  // Get player statistics from database with filters
+  app.get("/api/database/stats", async (req, res) => {
+    try {
+      const playerId = parseInt(req.query.playerId as string);
+      const teamId = parseInt(req.query.teamId as string) || 40; // Liverpool
+      const season = req.query.season as string || '2025';
+      const competition = req.query.competition as string;
+      
+      let query = `
+        SELECT 
+          fps.*,
+          p.name as player_name,
+          p.photo as player_photo,
+          t.name as team_name
+        FROM football_player_statistics fps
+        JOIN football_players p ON fps.player_id = p.id
+        JOIN football_teams t ON fps.team_id = t.id
+        WHERE 1=1
+      `;
+      
+      const params: any[] = [];
+      let paramIndex = 1;
+      
+      if (playerId) {
+        query += ` AND fps.player_id = $${paramIndex}`;
+        params.push(playerId);
+        paramIndex++;
+      }
+      
+      if (teamId) {
+        query += ` AND fps.team_id = $${paramIndex}`;
+        params.push(teamId);
+        paramIndex++;
+      }
+      
+      if (season) {
+        query += ` AND fps.season = $${paramIndex}`;
+        params.push(season);
+        paramIndex++;
+      }
+      
+      if (competition) {
+        query += ` AND fps.league_name = $${paramIndex}`;
+        params.push(competition);
+        paramIndex++;
+      }
+      
+      query += ` ORDER BY fps.games_appearances DESC`;
+      
+      const result = await pool.query(query, params);
+
+      res.json({
+        data: { statistics: result.rows },
+        lastUpdated: new Date().toISOString(),
+        source: "database"
+      });
+    } catch (error) {
+      console.error('Error fetching stats from database:', error);
+      res.status(500).json({ error: "Failed to fetch stats from database" });
+    }
+  });
+
+  // Get league table from database
+  app.get("/api/database/table", async (req, res) => {
+    try {
+      const leagueId = parseInt(req.query.leagueId as string) || 39; // Premier League
+      const season = req.query.season as string || '2025';
+      
+      const result = await pool.query(`
+        SELECT 
+          fs.*,
+          t.name as team_name,
+          t.logo as team_logo
+        FROM football_standings fs
+        JOIN football_teams t ON fs.team_id = t.id
+        WHERE fs.league_id = $1 AND fs.season = $2
+        ORDER BY fs.rank
+      `, [leagueId, season]);
+
+      res.json({
+        data: { standings: result.rows },
+        lastUpdated: new Date().toISOString(),
+        source: "database"
+      });
+    } catch (error) {
+      console.error('Error fetching table from database:', error);
+      res.status(500).json({ error: "Failed to fetch table from database" });
+    }
+  });
+
   // Refresh endpoint for specific team data
   app.post("/api/admin/update/team/:teamId", async (req, res) => {
     try {
