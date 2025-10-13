@@ -1,10 +1,19 @@
-import { Component, ReactNode, ErrorInfo } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import React, { Component, ReactNode, ErrorInfo } from "react";
+import { AlertTriangle } from "lucide-react";
+
+type FallbackRenderArgs = { error: Error; resetError: () => void };
 
 interface OverlayErrorBoundaryProps {
   children: ReactNode;
   overlayId: string;
+  /** Static fallback node (shown if provided and error occurs) */
   fallback?: ReactNode;
+  /** Function fallback — receives the error and resetError */
+  fallbackRender?: (args: FallbackRenderArgs) => ReactNode;
+  /** Called when an error is caught */
+  onError?: (error: Error, info: ErrorInfo & { overlayId: string }) => void;
+  /** When any of these values change, the boundary will auto-reset */
+  resetKeys?: unknown[];
 }
 
 interface OverlayErrorBoundaryState {
@@ -12,137 +21,89 @@ interface OverlayErrorBoundaryState {
   error?: Error;
 }
 
-class OverlayErrorBoundary extends Component<OverlayErrorBoundaryProps, OverlayErrorBoundaryState> {
+function shallowArrayChanged(a?: unknown[], b?: unknown[]) {
+  if (a === b) return false;
+  if (!a || !b) return !!(a || b);
+  if (a.length !== b.length) return true;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return true;
+  }
+  return false;
+}
+
+export default class OverlayErrorBoundary extends Component<
+  OverlayErrorBoundaryProps,
+  OverlayErrorBoundaryState
+> {
   constructor(props: OverlayErrorBoundaryProps) {
     super(props);
-    this.state = {
-      hasError: false,
-      error: undefined,
-    };
+    this.state = { hasError: false };
   }
 
   static getDerivedStateFromError(error: Error): OverlayErrorBoundaryState {
-    return {
-      hasError: true,
-      error,
-    };
+    return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error(`[OverlayErrorBoundary] Error in overlay "${this.props.overlayId}":`, {
-      error: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-      overlayId: this.props.overlayId,
-    });
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    const { onError, overlayId } = this.props;
+    if (onError) {
+      onError(error, { ...errorInfo, overlayId });
+    }
+    console.error(`[OverlayErrorBoundary:${overlayId}]`, error, errorInfo);
   }
 
-  resetError = (): void => {
-    console.log(`[OverlayErrorBoundary] Resetting error for overlay "${this.props.overlayId}"`);
-    this.setState({
-      hasError: false,
-      error: undefined,
-    });
+  componentDidUpdate(prevProps: OverlayErrorBoundaryProps) {
+    const { resetKeys } = this.props;
+    if (
+      this.state.hasError &&
+      shallowArrayChanged(prevProps.resetKeys, resetKeys)
+    ) {
+      this.reset();
+    }
+  }
+
+  reset = () => {
+    this.setState({ hasError: false, error: undefined });
   };
 
   render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
+    const { hasError, error } = this.state;
+    const { children, fallback, fallbackRender, overlayId } = this.props;
 
-      return (
-        <div
-          data-testid={`error-overlay-${this.props.overlayId}`}
-          style={{
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(17, 17, 17, 0.95)',
-            border: '2px solid rgba(239, 68, 68, 0.5)',
-            borderRadius: '8px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            gap: '12px',
-            color: '#FFFFFF',
-            fontFamily: 'League Spartan, sans-serif',
-          }}
-        >
-          <AlertTriangle
-            data-testid="icon-error-alert"
-            size={48}
-            color="#EF4444"
-            strokeWidth={2}
-          />
-          <div
-            data-testid="text-error-title"
-            style={{
-              fontSize: '20px',
-              fontWeight: 'bold',
-              color: '#EF4444',
-              textAlign: 'center',
-            }}
-          >
-            Overlay Error
-          </div>
-          {this.state.error && (
-            <div
-              data-testid="text-error-message"
-              style={{
-                fontSize: '14px',
-                color: '#D1D5DB',
-                textAlign: 'center',
-                maxWidth: '400px',
-                wordWrap: 'break-word',
-              }}
-            >
-              {this.state.error.message}
-            </div>
-          )}
-          <button
-            data-testid="button-retry-overlay"
-            onClick={this.resetError}
-            style={{
-              marginTop: '8px',
-              padding: '10px 20px',
-              backgroundColor: '#EF4444',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s',
-              fontFamily: 'League Spartan, sans-serif',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#DC2626';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#EF4444';
-            }}
-          >
-            Try Again
-          </button>
-          <div
-            data-testid="text-overlay-id"
-            style={{
-              marginTop: '8px',
-              fontSize: '11px',
-              color: '#6B7280',
-              opacity: 0.7,
-            }}
-          >
-            Overlay ID: {this.props.overlayId}
-          </div>
-        </div>
-      );
+    if (!hasError) {
+      return children;
     }
 
-    return this.props.children;
+    if (fallbackRender && error) {
+      return fallbackRender({ error, resetError: this.reset });
+    }
+
+    if (fallback) {
+      return fallback;
+    }
+
+    // Default fallback UI
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 20,
+          background: "rgba(220, 38, 38, 0.1)",
+          border: "2px solid rgba(220, 38, 38, 0.5)",
+          borderRadius: 8,
+          color: "#dc2626",
+        }}
+      >
+        <AlertTriangle size={20} style={{ marginRight: 8 }} />
+        <div>
+          <div style={{ fontWeight: 600 }}>Overlay Error ({overlayId})</div>
+          <div style={{ fontSize: 12, marginTop: 4 }}>
+            {error?.message || "An error occurred"}
+          </div>
+        </div>
+      </div>
+    );
   }
 }
-
-export default OverlayErrorBoundary;

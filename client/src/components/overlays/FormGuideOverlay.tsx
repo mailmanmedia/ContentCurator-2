@@ -67,7 +67,8 @@ interface FormGuideOverlayProps {
   matchLimit?: 3 | 5 | 10;
 }
 
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
 
 const formatDate = (iso: string) => {
   const date = new Date(iso);
@@ -106,43 +107,41 @@ export default function FormGuideOverlay({
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const leagueId = 39; 
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth() + 1;
-  const season = currentMonth >= 8 ? currentYear : currentYear - 1;
+  const leagueId = 39;
 
-  const { 
-    data: teamStatsData, 
+  const {
+    data: teamStatsData,
     isLoading: isLoadingStats,
     error: statsError,
-    refetch: refetchStats
+    refetch: refetchStats,
   } = useOverlayData({
-    queryKey: ['database-team-stats', teamId, leagueId],
+    queryKey: ["database-team-stats", teamId, leagueId],
     endpoint: `/api/database/teams/${teamId}/statistics?leagueId=${leagueId}`,
     enabled: !!teamId,
-    errorMessage: 'Failed to fetch team statistics',
-    expectedDataStructure: '{ data: { statistics: {...}, form: "WWDLW" }, lastUpdated: "..." }'
+    errorMessage: "Failed to fetch team statistics",
+    expectedDataStructure:
+      '{ data: { statistics: {...}, form: "WWDLW" }, lastUpdated: "..." }',
   });
 
-  const { 
-    data: fixturesData, 
+  const {
+    data: fixturesData,
     isLoading: isLoadingFixtures,
     error: fixturesError,
-    refetch: refetchFixtures
+    refetch: refetchFixtures,
   } = useOverlayData({
-    queryKey: ['database-team-fixtures', teamId, matchLimit],
+    queryKey: ["database-team-fixtures", teamId, matchLimit],
     endpoint: `/api/database/teams/${teamId}/fixtures?last=${matchLimit}`,
     enabled: !!teamId,
-    errorMessage: 'Failed to fetch team fixtures',
-    expectedDataStructure: '{ data: { fixtures: [{...}] }, lastUpdated: "..." }'
+    errorMessage: "Failed to fetch team fixtures",
+    expectedDataStructure:
+      '{ data: { fixtures: [{...}] }, lastUpdated: "..." }',
   });
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const response = await fetch(`/api/admin/update/team/${teamId}`, { 
-        method: 'POST' 
+      const response = await fetch(`/api/admin/update/team/${teamId}`, {
+        method: "POST",
       });
 
       if (response.ok) {
@@ -152,7 +151,7 @@ export default function FormGuideOverlay({
           description: "Team data has been updated successfully.",
         });
       } else {
-        throw new Error('Failed to refresh data');
+        throw new Error("Failed to refresh data");
       }
     } catch (error) {
       toast({
@@ -168,25 +167,37 @@ export default function FormGuideOverlay({
   const isLoading = isLoadingStats || isLoadingFixtures;
   const error = statsError || fixturesError;
 
-  const { teamName, matches, sequence, record, competition, source, lastUpdated } = useMemo(() => {
+  const {
+    teamName,
+    matches,
+    sequence,
+    record,
+    competition,
+    source,
+    lastUpdated,
+  } = useMemo(() => {
     const statsDbData = teamStatsData?.data?.statistics || teamStatsData?.data;
     const fixturesDbData = fixturesData?.data?.fixtures || fixturesData?.data;
 
     const statsLastUpdated = teamStatsData?.lastUpdated;
     const fixturesLastUpdated = fixturesData?.lastUpdated;
-    const mostRecentUpdate = statsLastUpdated || fixturesLastUpdated || new Date().toISOString();
+    const mostRecentUpdate =
+      statsLastUpdated || fixturesLastUpdated || new Date().toISOString();
 
     const teamNameFromStats = statsDbData?.team?.name || "Liverpool";
 
-    const hasFixtures = fixturesDbData && Array.isArray(fixturesDbData) && fixturesDbData.length > 0;
+    const hasFixtures =
+      fixturesDbData &&
+      Array.isArray(fixturesDbData) &&
+      fixturesDbData.length > 0;
 
     if (!hasFixtures) {
       const formString = statsDbData?.form;
-      if (formString && typeof formString === 'string') {
-        const formArray = formString.split('').slice(0, matchLimit);
+      if (formString && typeof formString === "string") {
+        const formArray = formString.split("").slice(0, matchLimit);
         const formRecord = formArray.reduce(
           (acc: any, result: string) => {
-            if (result === 'W' || result === 'D' || result === 'L') {
+            if (result === "W" || result === "D" || result === "L") {
               acc[result] = (acc[result] || 0) + 1;
             }
             return acc;
@@ -201,7 +212,7 @@ export default function FormGuideOverlay({
           record: formRecord,
           competition: "Premier League",
           source: "Database",
-          lastUpdated: mostRecentUpdate
+          lastUpdated: mostRecentUpdate,
         };
       }
 
@@ -212,36 +223,46 @@ export default function FormGuideOverlay({
         record: { W: 0, D: 0, L: 0 },
         competition: "Premier League",
         source: "No Data",
-        lastUpdated: mostRecentUpdate
+        lastUpdated: mostRecentUpdate,
       };
     }
 
     const fixtures = fixturesDbData;
 
     const processedMatches = fixtures
-      .filter((f: any) => f.status?.short === 'FT' && f.goals?.home !== null && f.goals?.away !== null)
+      .filter(
+        (f: any) =>
+          f.status?.short === "FT" &&
+          f.goals?.home !== null &&
+          f.goals?.away !== null
+      )
       .slice(0, matchLimit)
       .map((fixture: any) => {
-        const isHome = fixture.teams?.home?.id === teamId || fixture.homeTeamId === teamId;
+        const isHome =
+          fixture.teams?.home?.id === teamId || fixture.homeTeamId === teamId;
         const homeScore = fixture.goals?.home ?? 0;
         const awayScore = fixture.goals?.away ?? 0;
         const teamScore = isHome ? homeScore : awayScore;
         const opponentScore = isHome ? awayScore : homeScore;
 
-        let result: 'W' | 'D' | 'L';
-        if (teamScore > opponentScore) result = 'W';
-        else if (teamScore < opponentScore) result = 'L';
-        else result = 'D';
+        let result: "W" | "D" | "L";
+        if (teamScore > opponentScore) result = "W";
+        else if (teamScore < opponentScore) result = "L";
+        else result = "D";
 
-        const opponentName = isHome 
-          ? (fixture.teams?.away?.name || fixture.awayTeam?.name || "Opponent")
-          : (fixture.teams?.home?.name || fixture.homeTeam?.name || "Opponent");
+        const opponentName = isHome
+          ? fixture.teams?.away?.name ||
+            fixture.awayTeam?.name ||
+            "Opponent"
+          : fixture.teams?.home?.name ||
+            fixture.homeTeam?.name ||
+            "Opponent";
 
         return {
           opponent: opponentName,
           date: fixture.fixture?.date || fixture.date,
           competition: fixture.league?.name || "Premier League",
-          venue: isHome ? "H" : "A" as "H" | "A",
+          venue: (isHome ? "H" : "A") as "H" | "A",
           score: `${teamScore}-${opponentScore}`,
           result,
         };
@@ -249,8 +270,8 @@ export default function FormGuideOverlay({
 
     const formSequence = processedMatches.map((m: any) => m.result);
     const tally = formSequence.reduce(
-      (acc: any, result: string) => {
-        acc[result] = (acc[result] || 0) + 1;
+      (acc: any, r: string) => {
+        acc[r] = (acc[r] || 0) + 1;
         return acc;
       },
       { W: 0, D: 0, L: 0 }
@@ -263,20 +284,22 @@ export default function FormGuideOverlay({
       record: tally,
       competition: processedMatches[0]?.competition || "Premier League",
       source: "Database",
-      lastUpdated: mostRecentUpdate
+      lastUpdated: mostRecentUpdate,
     };
   }, [teamStatsData, fixturesData, teamId, matchLimit]);
 
   // Standardized scaling system
-  const { scale, px, isMini, isVeryCompact, isCompact } = useMemo(() => 
-    createScalingSystem({
-      width,
-      height,
-      baseWidth: 480,
-      baseHeight: 270,
-      minScale: 0.3,
-      maxScale: 2.0
-    }), [width, height]
+  const { scale, px, isMini, isVeryCompact, isCompact } = useMemo(
+    () =>
+      createScalingSystem({
+        width,
+        height,
+        baseWidth: 480,
+        baseHeight: 270,
+        minScale: 0.3,
+        maxScale: 2.0,
+      }),
+    [width, height]
   );
 
   const isStacked = layout === "vertical" || isCompact;
@@ -302,31 +325,37 @@ export default function FormGuideOverlay({
   if (streakType) {
     let count = 0;
     for (const match of matches) {
-      if (match.result === streakType) {
-        count += 1;
-      } else {
-        break;
-      }
+      if (match.result === streakType) count += 1;
+      else break;
     }
     if (count > 1) {
-      const noun = streakType === "W" ? "winning" : streakType === "L" ? "losing" : "unbeaten";
+      const noun =
+        streakType === "W" ? "winning" : streakType === "L" ? "losing" : "unbeaten";
       streakLabel = `${count}-match ${noun} streak`;
     } else {
-      streakLabel = streakType === "W" ? "Won last" : streakType === "L" ? "Lost last" : "Drew last";
+      streakLabel =
+        streakType === "W" ? "Won last" : streakType === "L" ? "Lost last" : "Drew last";
     }
   }
 
   const badgeText = `${record.W}W-${record.D}D-${record.L}L`;
 
+  // States
   if (isLoading) {
-    return <OverlayLoadingSkeleton width={width} height={height} />;
+    return (
+      <OverlayLoadingSkeleton
+        width={width}
+        height={height}
+        message="Loading recent form…"
+      />
+    );
   }
 
   if (error) {
     return (
-      <OverlayErrorState 
-        width={width} 
-        height={height} 
+      <OverlayErrorState
+        width={width}
+        height={height}
         error={error as Error}
         endpoint={`/api/database/teams/${teamId}/statistics or /fixtures`}
         expectedData="{ data: { statistics: {...}, fixtures: [...] }, lastUpdated: '...' }"
@@ -336,7 +365,13 @@ export default function FormGuideOverlay({
   }
 
   if (!sequence.length) {
-    return <OverlayEmptyState width={width} height={height} message={`No recent form data available for ${teamName}`} />;
+    return (
+      <OverlayEmptyState
+        width={width}
+        height={height}
+        message={`No recent form data available for ${teamName}`}
+      />
+    );
   }
 
   return (
@@ -468,10 +503,10 @@ export default function FormGuideOverlay({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.05, type: "spring", stiffness: 220, damping: 18 }}
-              style={{ 
-                display: "flex", 
-                flexDirection: "column", 
-                alignItems: "center", 
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
                 gap: px(2),
               }}
             >
@@ -480,7 +515,7 @@ export default function FormGuideOverlay({
                   width: circlePx,
                   height: circlePx,
                   borderRadius: "50%",
-                  backgroundColor: palette.resultColors[result as 'W' | 'D' | 'L'],
+                  backgroundColor: palette.resultColors[result as "W" | "D" | "L"],
                   color: result === "L" ? "#1A1A1A" : "#002147",
                   display: "flex",
                   alignItems: "center",
@@ -542,30 +577,36 @@ export default function FormGuideOverlay({
                   lineHeight: 1.3,
                 }}
               >
-                <div style={{ 
-                  display: "flex", 
-                  flexDirection: "column", 
-                  gap: px(1),
-                  flex: 1,
-                  minWidth: 0,
-                }}>
-                  <span style={{ 
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}>
-                    {match.opponent}
-                  </span>
-                  {!isVeryCompact && (
-                    <span style={{ 
-                      color: palette.muted, 
-                      fontSize: smallTextPx,
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: px(1),
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontWeight: 600,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-                      lineHeight: 1.2,
-                    }}>
+                    }}
+                  >
+                    {match.opponent}
+                  </span>
+                  {!isVeryCompact && (
+                    <span
+                      style={{
+                        color: palette.muted,
+                        fontSize: smallTextPx,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        lineHeight: 1.2,
+                      }}
+                    >
                       {match.competition} · {venueLabel(match.venue)}
                     </span>
                   )}
@@ -573,12 +614,14 @@ export default function FormGuideOverlay({
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <span style={{ fontWeight: 700 }}>{match.score}</span>
                   {!isVeryCompact && (
-                    <div style={{
-                      fontSize: smallTextPx,
-                      color: palette.muted,
-                      whiteSpace: "nowrap",
-                      lineHeight: 1.2,
-                    }}>
+                    <div
+                      style={{
+                        fontSize: smallTextPx,
+                        color: palette.muted,
+                        whiteSpace: "nowrap",
+                        lineHeight: 1.2,
+                      }}
+                    >
                       {formatDate(match.date)}
                     </div>
                   )}
@@ -628,7 +671,7 @@ export default function FormGuideOverlay({
               lineHeight: 1.2,
             }}
           >
-            {!isVeryCompact && (
+            {!isVeryCompact && lastUpdated && (
               <span style={{ whiteSpace: "nowrap" }}>
                 {formatDistanceToNow(new Date(lastUpdated))} ago
               </span>
@@ -647,14 +690,16 @@ export default function FormGuideOverlay({
                 border: `1px solid ${palette.text}20`,
                 flexShrink: 0,
               }}
+              title="Refresh team data"
+              aria-label="Refresh team data"
             >
-              <RefreshCw 
-                className={isRefreshing ? "animate-spin" : ""} 
-                style={{ 
-                  width: px(12), 
+              <RefreshCw
+                className={isRefreshing ? "animate-spin" : ""}
+                style={{
+                  width: px(12),
                   height: px(12),
-                  color: palette.text
-                }} 
+                  color: palette.text,
+                }}
               />
             </Button>
           </div>
@@ -662,9 +707,9 @@ export default function FormGuideOverlay({
       )}
 
       {/* Data Source Badge */}
-      <OverlaySourceBadge 
-        source={source === "Database" ? "database" : "none"} 
-        timestamp={lastUpdated ? new Date(lastUpdated).getTime() : undefined}
+      <OverlaySourceBadge
+        label={source || "Database"}
+        timestampIso={lastUpdated}
       />
     </div>
   );

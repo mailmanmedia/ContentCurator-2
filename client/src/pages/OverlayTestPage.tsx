@@ -1,200 +1,156 @@
+import React, { useMemo, useState } from "react";
+import OverlayErrorBoundary from "@/components/overlays/OverlayErrorBoundary";
 
-/**
- * Visual testing page for all overlays
- * Access at: /overlay-test
- */
-import { useState } from 'react';
-import H2HMatchCardOverlay from '@/components/overlays/H2HMatchCardOverlay';
-import FormGuideOverlay from '@/components/overlays/FormGuideOverlay';
-import LeagueTableOverlay from '@/components/overlays/LeagueTableOverlay';
-import LeaguePositionOverlay from '@/components/overlays/LeaguePositionOverlay';
-import PlayerComparisonOverlay from '@/components/overlays/PlayerComparisonOverlay';
-import PlayerStatsOverlay from '@/components/overlays/PlayerStatsOverlay';
-import RssSentimentOverlay from '@/components/overlays/RssSentimentOverlay';
-import RssTickerEnhancedOverlay from '@/components/overlays/RssTickerEnhancedOverlay';
-import UpcomingFixturesOverlay from '@/components/overlays/UpcomingFixturesOverlay';
+// Import the overlays you want to preview
+import UpcomingFixturesOverlay from "@/components/overlays/UpcomingFixturesOverlay";
+import LeagueTableOverlay from "@/components/overlays/LeagueTableOverlay";
+import PlayerStatsOverlay from "@/components/overlays/PlayerStatsOverlay";
+import PlayerComparisonOverlay from "@/components/overlays/PlayerComparisonOverlay";
+import RssTickerEnhancedOverlay from "@/components/overlays/RssTickerEnhancedOverlay";
+import RssSentimentOverlay from "@/components/overlays/RssSentimentOverlay";
+import H2HMatchCardOverlay from "@/components/overlays/H2HMatchCardOverlay";
 
-const OVERLAY_CONFIGS: Record<string, any> = {
-  h2h: {
-    component: H2HMatchCardOverlay,
-    props: { homeTeamId: 40, awayTeamId: 47 },
-    name: 'H2H Match Card',
-    sizes: [
-      { width: 240, height: 300, label: 'Mini' },
-      { width: 320, height: 400, label: 'Very Compact' },
-      { width: 400, height: 500, label: 'Compact' },
-      { width: 600, height: 800, label: 'Normal' },
-    ],
-  },
-  formGuide: {
-    component: FormGuideOverlay,
-    props: { teamId: 40, leagueId: 39 },
-    name: 'Form Guide',
-    sizes: [
-      { width: 240, height: 300, label: 'Mini' },
-      { width: 320, height: 400, label: 'Very Compact' },
-      { width: 400, height: 500, label: 'Compact' },
-      { width: 600, height: 800, label: 'Normal' },
-    ],
-  },
-  leagueTable: {
-    component: LeagueTableOverlay,
-    props: { leagueId: 39, season: 2025 },
-    name: 'League Table',
-    sizes: [
-      { width: 400, height: 600, label: 'Compact' },
-      { width: 600, height: 800, label: 'Normal' },
-      { width: 800, height: 1000, label: 'Large' },
-    ],
-  },
-  leaguePosition: {
-    component: LeaguePositionOverlay,
-    props: { teamId: 40, leagueId: 39, season: 2025 },
-    name: 'League Position',
-    sizes: [
-      { width: 240, height: 300, label: 'Mini' },
-      { width: 320, height: 400, label: 'Very Compact' },
-      { width: 400, height: 500, label: 'Compact' },
-    ],
-  },
-  playerStats: {
-    component: PlayerStatsOverlay,
-    props: { teamId: 40, leagueId: 39, season: 2025 },
-    name: 'Player Stats',
-    sizes: [
-      { width: 400, height: 600, label: 'Compact' },
-      { width: 600, height: 800, label: 'Normal' },
-    ],
-  },
-  playerComparison: {
-    component: PlayerComparisonOverlay,
-    props: { player1Id: 1, player2Id: 2 },
-    name: 'Player Comparison',
-    sizes: [
-      { width: 500, height: 700, label: 'Compact' },
-      { width: 700, height: 900, label: 'Normal' },
-    ],
-  },
-  rssSentiment: {
-    component: RssSentimentOverlay,
-    props: {},
-    name: 'RSS Sentiment',
-    sizes: [
-      { width: 400, height: 300, label: 'Compact' },
-      { width: 600, height: 400, label: 'Normal' },
-    ],
-  },
-  rssTicker: {
-    component: RssTickerEnhancedOverlay,
-    props: {},
-    name: 'RSS Ticker',
-    sizes: [
-      { width: 800, height: 100, label: 'Standard' },
-      { width: 1200, height: 120, label: 'Wide' },
-    ],
-  },
-  upcomingFixtures: {
-    component: UpcomingFixturesOverlay,
-    props: { teamId: 40 },
-    name: 'Upcoming Fixtures',
-    sizes: [
-      { width: 400, height: 600, label: 'Compact' },
-      { width: 600, height: 800, label: 'Normal' },
-    ],
-  },
-};
+type OverlayKey =
+  | "fixtures"
+  | "table"
+  | "playerStats"
+  | "playerComparison"
+  | "rssTicker"
+  | "rssSentiment"
+  | "h2h";
+
+const overlayOptions: { key: OverlayKey; label: string }[] = [
+  { key: "fixtures", label: "Upcoming Fixtures" },
+  { key: "table", label: "League Table" },
+  { key: "playerStats", label: "Player Stats" },
+  { key: "playerComparison", label: "Player Comparison" },
+  { key: "rssTicker", label: "RSS Ticker" },
+  { key: "rssSentiment", label: "RSS Sentiment" },
+  { key: "h2h", label: "Head-to-Head" },
+];
 
 export default function OverlayTestPage() {
-  const [selectedOverlay, setSelectedOverlay] = useState('h2h');
-  const [selectedSize, setSelectedSize] = useState(3); // Default to "Normal"
+  const [selected, setSelected] = useState<OverlayKey>("fixtures");
+  const [size, setSize] = useState({ width: 960, height: 540 });
 
-  const config = OVERLAY_CONFIGS[selectedOverlay];
-  const size = config.sizes[selectedSize] || config.sizes[0];
-  const OverlayComponent = config.component;
+  const overlayEl = useMemo(() => {
+    switch (selected) {
+      case "fixtures":
+        return (
+          <UpcomingFixturesOverlay
+            width={size.width}
+            height={size.height}
+            fixtureCount={5}
+          />
+        );
+      case "table":
+        return (
+          <LeagueTableOverlay
+            width={size.width}
+            height={size.height}
+            leagueId={39}
+            season={2025}
+          />
+        );
+      case "playerStats":
+        return (
+          <PlayerStatsOverlay
+            width={size.width}
+            height={size.height}
+            teamId={40}
+            season={2025}
+            sortBy="goals"
+            limit={12}
+          />
+        );
+      case "playerComparison":
+        return (
+          <PlayerComparisonOverlay
+            width={size.width}
+            height={size.height}
+            playerIds={[123, 456]}
+            season={2025}
+          />
+        );
+      case "rssTicker":
+        return (
+          <RssTickerEnhancedOverlay
+            width={size.width}
+            height={size.height}
+            maxArticles={12}
+            showSource
+            showSentiment
+          />
+        );
+      case "rssSentiment":
+        return (
+          <RssSentimentOverlay
+            width={size.width}
+            height={size.height}
+            timeframe="24h"
+          />
+        );
+      case "h2h":
+        return (
+          <H2HMatchCardOverlay
+            width={size.width}
+            height={size.height}
+            teamAId={40}
+            teamBId={50}
+            limit={6}
+          />
+        );
+      default:
+        return null;
+    }
+  }, [selected, size]);
 
   return (
-    <div style={{ padding: '20px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-      <h1 style={{ color: 'white', marginBottom: '20px', fontFamily: 'League Spartan, sans-serif' }}>
-        Overlay Testing Dashboard
-      </h1>
-      
-      {/* Overlay selector */}
-      <div style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-        {Object.entries(OVERLAY_CONFIGS).map(([key, cfg]) => (
-          <button
-            key={key}
-            onClick={() => {
-              setSelectedOverlay(key);
-              setSelectedSize(0);
-            }}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: selectedOverlay === key ? '#C8102E' : '#333',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontFamily: 'League Spartan, sans-serif',
-            }}
+    <div style={{ padding: 20, color: "#fff", fontFamily: "system-ui, sans-serif" }}>
+      <h2 style={{ marginBottom: 12 }}>Overlay Test Page</h2>
+
+      {/* Controls */}
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
+        <label>
+          Overlay:
+          <select
+            value={selected}
+            onChange={(e) => setSelected(e.target.value as OverlayKey)}
+            style={{ marginLeft: 8 }}
           >
-            {cfg.name}
-          </button>
-        ))}
+            {overlayOptions.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Width:
+          <input
+            type="number"
+            value={size.width}
+            onChange={(e) => setSize((s) => ({ ...s, width: Number(e.target.value) }))}
+            style={{ width: 100, marginLeft: 6 }}
+          />
+        </label>
+
+        <label>
+          Height:
+          <input
+            type="number"
+            value={size.height}
+            onChange={(e) => setSize((s) => ({ ...s, height: Number(e.target.value) }))}
+            style={{ width: 100, marginLeft: 6 }}
+          />
+        </label>
       </div>
 
-      {/* Size selector */}
-      <div style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-        {config.sizes.map((s: any, i: number) => (
-          <button
-            key={i}
-            onClick={() => setSelectedSize(i)}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: selectedSize === i ? '#0891A8' : '#333',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontFamily: 'League Spartan, sans-serif',
-            }}
-          >
-            {s.label} ({s.width}×{s.height})
-          </button>
-        ))}
-      </div>
-
-      {/* Overlay preview */}
-      <div style={{
-        border: '2px solid #C8102E',
-        display: 'inline-block',
-        backgroundColor: '#000',
-        marginBottom: '20px',
-      }}>
-        <OverlayComponent
-          {...config.props}
-          width={size.width}
-          height={size.height}
-        />
-      </div>
-
-      {/* Debug info */}
-      <div style={{
-        padding: '20px',
-        backgroundColor: '#2a2a2a',
-        borderRadius: '8px',
-        color: 'white',
-        fontFamily: 'monospace',
-        fontSize: '14px',
-      }}>
-        <h3 style={{ marginBottom: '10px', fontFamily: 'League Spartan, sans-serif' }}>Debug Info:</h3>
-        <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-          {JSON.stringify({ 
-            overlay: selectedOverlay, 
-            size, 
-            props: config.props 
-          }, null, 2)}
-        </pre>
-      </div>
+      {/* Preview with error boundary */}
+      <OverlayErrorBoundary overlayId={selected}>
+        {overlayEl}
+      </OverlayErrorBoundary>
     </div>
   );
 }

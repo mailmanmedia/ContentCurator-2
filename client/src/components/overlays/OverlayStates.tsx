@@ -1,241 +1,161 @@
-import { motion } from "framer-motion";
-import { AlertTriangle, Database, Loader2, RefreshCw, XCircle, AlertCircle } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import React from "react";
 
-interface OverlayLoadingSkeletonProps {
-  width: number | string;
-  height: number | string;
+type Size = number | string;
+
+function toCssSize(v: Size) {
+  return typeof v === "number" ? `${v}px` : v;
 }
 
-export function OverlayLoadingSkeleton({ width, height }: OverlayLoadingSkeletonProps) {
-  const widthValue = typeof width === 'number' ? `${width}%` : width;
-  const heightValue = typeof height === 'number' ? `${height}px` : height;
-
+export function OverlayLoadingSkeleton({
+  width,
+  height,
+  message = "Loading overlay…",
+}: {
+  width: Size;
+  height: Size;
+  message?: string;
+}) {
+  const w = toCssSize(width);
+  const h = toCssSize(height);
   return (
     <div
-      className="flex items-center justify-center bg-card"
-      style={{ width: widthValue, height: heightValue }}
-      role="status"
-      aria-label="Loading overlay content"
-      data-testid="overlay-loading"
+      style={{
+        width: w,
+        height: h,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background:
+          "repeating-linear-gradient( 90deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 12px, rgba(255,255,255,0.10) 12px, rgba(255,255,255,0.10) 24px )",
+        color: "#fff",
+        border: "2px solid rgba(200,16,46,0.5)",
+        boxShadow: "0 0 0 1px rgba(0,0,0,0.25) inset",
+        fontFamily: "League Spartan, system-ui, sans-serif",
+      }}
+      data-testid="overlay-loading-skeleton"
     >
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-      >
-        <Loader2 className="w-12 h-12 text-primary" data-testid="icon-loading-spinner" />
-      </motion.div>
+      <span style={{ opacity: 0.85 }}>{message}</span>
     </div>
   );
 }
 
-interface OverlayErrorStateProps {
-  error: Error | string;
-  onRetry?: () => void;
-  width: number | string;
-  height: number | string;
-  source?: string;
-  endpoint?: string;
-  expectedData?: string;
-  databaseInfo?: string;
-}
-
-export function OverlayErrorState({ 
-  error, 
-  onRetry, 
-  width, 
-  height, 
-  source,
+export function OverlayErrorState({
+  width,
+  height,
+  error,
   endpoint,
   expectedData,
-  databaseInfo,
-}: OverlayErrorStateProps) {
-  const widthValue = typeof width === 'number' ? `${width}%` : width;
-  const heightValue = typeof height === 'number' ? `${height}px` : height;
-  const errorMessage = typeof error === 'string' ? error : error.message;
+  source,
+}: {
+  width: Size;
+  height: Size;
+  error: Error;
+  endpoint?: string;
+  expectedData?: string;
+  source?: string;
+}) {
+  const w = toCssSize(width);
+  const h = toCssSize(height);
 
   return (
     <div
-      className="flex flex-col items-center justify-center gap-4 bg-card p-6"
-      style={{ width: widthValue, height: heightValue }}
-      role="alert"
-      aria-live="assertive"
-      data-testid="overlay-error"
+      style={{
+        width: w,
+        height: h,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(0,0,0,0.95)",
+        color: "#fff",
+        border: "2px solid rgba(255, 76, 76, 0.7)",
+        fontFamily: "League Spartan, system-ui, sans-serif",
+        padding: 16,
+        textAlign: "center",
+      }}
+      data-testid="overlay-error-state"
     >
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", duration: 0.5 }}
-      >
-        <AlertTriangle 
-          className="w-16 h-16 text-destructive" 
-          data-testid="icon-error-alert"
-        />
-      </motion.div>
-
-      <div className="flex flex-col items-center gap-2 text-center max-w-md">
-        {source && (
-          <p className="text-sm text-muted-foreground" data-testid="text-error-source">
-            {source}
-          </p>
-        )}
-        <p className="text-lg font-semibold text-destructive" data-testid="text-error-message">
-          {errorMessage}
-        </p>
-        {endpoint && (
-          <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7, wordBreak: 'break-all' }}>
-            Endpoint: {endpoint}
-          </p>
-        )}
-        {expectedData && (
-          <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7 }}>
-            Expected: {expectedData}
-          </p>
-        )}
-        {databaseInfo && (
-          <p style={{ marginTop: '8px', fontSize: '12px', opacity: 0.7 }}>
-            Database: {databaseInfo}
-          </p>
-        )}
+      <div style={{ fontWeight: 700, color: "#FF5C5C" }}>
+        {source || "Overlay"} error
       </div>
-
-      {onRetry && (
-        <Button
-          onClick={onRetry}
-          variant="destructive"
-          size="default"
-          className="gap-2"
-          data-testid="button-retry"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Retry
-        </Button>
+      <div style={{ opacity: 0.85, maxWidth: 640 }}>
+        {error?.message || "Unknown error"}
+      </div>
+      {endpoint && (
+        <div style={{ opacity: 0.6, fontSize: 12 }}>Endpoint: {endpoint}</div>
+      )}
+      {expectedData && (
+        <div style={{ opacity: 0.6, fontSize: 12 }}>
+          Expected: <code>{expectedData}</code>
+        </div>
       )}
     </div>
   );
 }
 
-interface OverlayEmptyStateProps {
+export function OverlayEmptyState({
+  width,
+  height,
+  message = "No data available",
+}: {
+  width: Size;
+  height: Size;
   message?: string;
-  width: number | string;
-  height: number | string;
-}
-
-export function OverlayEmptyState({ message, width, height }: OverlayEmptyStateProps) {
-  const widthValue = typeof width === 'number' ? `${width}%` : width;
-  const heightValue = typeof height === 'number' ? `${height}px` : height;
+}) {
+  const w = toCssSize(width);
+  const h = toCssSize(height);
 
   return (
     <div
       style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.95)',
-        color: '#FFFFFF',
-        fontFamily: 'League Spartan, sans-serif',
-        padding: '20px',
-        textAlign: 'center',
+        width: w,
+        height: h,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(0, 0, 0, 0.95)",
+        color: "#FFFFFF",
+        fontFamily: "League Spartan, sans-serif",
+        padding: 20,
+        textAlign: "center",
+        border: "2px dashed rgba(255,255,255,0.25)",
       }}
       data-testid="overlay-empty-state"
     >
-      <div>
-        <AlertCircle size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-        <div style={{ 
-          fontSize: '16px', 
-          opacity: 0.8,
-          whiteSpace: 'pre-line',
-          lineHeight: '1.5'
-        }}>
-          {message}
-        </div>
-      </div>
+      <span style={{ opacity: 0.85 }}>{message}</span>
     </div>
   );
 }
 
-interface OverlayCachedDataBadgeProps {
-  timestamp: number;
-  source: 'cache';
-}
-
-export function OverlayCachedDataBadge({ timestamp }: OverlayCachedDataBadgeProps) {
-  const timeAgo = formatDistanceToNow(new Date(timestamp), { addSuffix: true });
-
+export function OverlaySourceBadge({
+  label,
+  timestampIso,
+}: {
+  label: string;
+  timestampIso?: string;
+}) {
+  const ts =
+    timestampIso &&
+    new Date(timestampIso).toLocaleString(undefined, {
+      hour12: false,
+    });
   return (
-    <div className="absolute top-4 right-4 z-10" data-testid="badge-cached-data">
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Badge 
-          variant="outline" 
-          className="bg-yellow-500/20 border-yellow-500/50 text-yellow-600 dark:text-yellow-400 gap-1.5"
-        >
-          <span className="inline-block w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-          <span className="font-semibold">Cached</span>
-          <span className="opacity-80">• {timeAgo}</span>
-        </Badge>
-      </motion.div>
-    </div>
-  );
-}
-
-interface OverlaySourceBadgeProps {
-  source: 'thefishy' | 'fbref' | 'cache' | 'none' | 'database';
-  timestamp?: number;
-}
-
-export function OverlaySourceBadge({ source, timestamp }: OverlaySourceBadgeProps) {
-  if (source === 'none') return null;
-
-  const sourceConfig = {
-    thefishy: {
-      label: 'The Fishy',
-      color: 'bg-green-500/20 border-green-500/50 text-green-600 dark:text-green-400',
-      dotColor: 'bg-green-500'
-    },
-    fbref: {
-      label: 'FBRef',
-      color: 'bg-blue-500/20 border-blue-500/50 text-blue-600 dark:text-blue-400',
-      dotColor: 'bg-blue-500'
-    },
-    cache: {
-      label: 'Cache',
-      color: 'bg-amber-500/20 border-amber-500/50 text-amber-600 dark:text-amber-400',
-      dotColor: 'bg-amber-500'
-    },
-    database: {
-      label: 'Database',
-      color: 'bg-purple-500/20 border-purple-500/50 text-purple-600 dark:text-purple-400',
-      dotColor: 'bg-purple-500'
-    }
-  };
-
-  const config = sourceConfig[source] || sourceConfig['database'];
-  const timeAgo = timestamp ? formatDistanceToNow(new Date(timestamp), { addSuffix: true }) : null;
-
-  return (
-    <div className="absolute bottom-4 right-4 z-10" data-testid={`badge-source-${source}`}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Badge 
-          variant="outline" 
-          className={`${config.color} gap-1.5`}
-        >
-          <span className={`inline-block w-2 h-2 rounded-full ${config.dotColor}`} />
-          <span className="font-semibold">{config.label}</span>
-          {timeAgo && <span className="opacity-80">• {timeAgo}</span>}
-        </Badge>
-      </motion.div>
+    <div
+      style={{
+        position: "absolute",
+        right: 8,
+        bottom: 8,
+        fontSize: 10,
+        padding: "4px 8px",
+        background: "rgba(0,0,0,0.55)",
+        color: "#fff",
+        borderRadius: 6,
+        border: "1px solid rgba(255,255,255,0.2)",
+      }}
+    >
+      {label}
+      {ts ? ` • ${ts}` : ""}
     </div>
   );
 }

@@ -1,292 +1,341 @@
+import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, Target, TrendingUp, RefreshCw } from "lucide-react";
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
   OverlayEmptyState,
   OverlaySourceBadge,
 } from "./OverlayStates";
+import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
 
-interface PlayerStatsOverlayProps {
-  playerId?: number;
-  width: number;
-  height: number;
-  opacity?: number;
-}
+type Size = number | string;
 
-interface Player {
-  id?: number;
+type Player = {
+  id: string | number;
   name: string;
-  photo?: string;
-  goals: number;
-  assists: number;
+  shortName?: string;
+  position?: string;
+  number?: number;
+  nationality?: string;
+  photoUrl?: string;
+};
+
+type PlayerStatLine = {
+  playerId: string | number;
   appearances?: number;
   minutes?: number;
-  rating?: string;
+  goals?: number;
+  assists?: number;
+  shots?: number;
+  shotsOnTarget?: number;
+  chancesCreated?: number;
+  passes?: number;
+  passAccuracy?: number; // 0..1
+  tackles?: number;
+  interceptions?: number;
+  clearances?: number;
+  duelsWon?: number;
+  xG?: number;
+  xA?: number;
+};
+
+type ApiPayload =
+  | {
+      data: {
+        players: Player[];
+        stats: PlayerStatLine[];
+      };
+      source?: string;
+      timestamp?: string;
+    }
+  | {
+      players: Player[];
+      stats: PlayerStatLine[];
+      source?: string;
+      timestamp?: string;
+    };
+
+export interface PlayerStatsOverlayProps {
+  width: Size;
+  height: Size;
+  /** Team or squad identifier to fetch stats for */
+  teamId?: string | number;
+  /** League identifier (optional) */
+  leagueId?: string | number;
+  /** Season used for both query and subtitle (e.g., 2025) */
+  season?: string | number;
+  /** Limit of players to show; defaults to 12 */
+  limit?: number;
+  /** Sort key (e.g., "goals", "assists", "xG") */
+  sortBy?: keyof PlayerStatLine;
+  /** Opacity of the card container */
+  opacity?: number;
+  /** Theme palette key */
+  colorPalette?: ColorPaletteKey;
+  /** API endpoint override. Defaults to /api/player-stats */
+  endpoint?: string;
+}
+
+function cssSize(v: Size) {
+  return typeof v === "number" ? `${v}px` : v;
 }
 
 export default function PlayerStatsOverlay({
-  playerId,
   width,
   height,
-  opacity = 0.92,
+  teamId,
+  leagueId,
+  season = 2025,
+  limit = 12,
+  sortBy = "goals",
+  opacity = 0.95,
+  colorPalette = "classic",
+  endpoint,
 }: PlayerStatsOverlayProps) {
+  const palette = COLOR_PALETTES[colorPalette];
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Fetch player statistics from database
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['player-stats-db', 40, 2025],
+
+  const params = new URLSearchParams();
+  if (teamId != null) params.set("teamId", String(teamId));
+  if (leagueId != null) params.set("leagueId", String(leagueId));
+  if (season != null) params.set("season", String(season));
+  if (limit != null) params.set("limit", String(limit));
+
+  const url = `${endpoint || "/api/player-stats"}?${params.toString()}`;
+
+  const { data, isLoading, error, refetch } = useQuery<ApiPayload>({
+    queryKey: ["player-stats", teamId, leagueId, season, limit, endpoint],
     queryFn: async () => {
-      const response = await fetch('/api/database/players/top-scorers?season=2025&teamId=40&limit=50');
-      if (!response.ok) throw new Error('Failed to fetch player stats');
-      return response.json();
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch player stats (${res.status})`);
+      return res.json();
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: 5 * 60_000, // 5 minutes
+    staleTime: 60_000,
   });
-  
-  // Handle refresh of data
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      const response = await fetch('/api/admin/update/players', { method: 'POST' });
-      if (response.ok) {
-        await refetch();
-        toast({
-          title: "Data refreshed",
-          description: "Player statistics have been updated.",
-        });
-      } else {
-        throw new Error('Failed to refresh data');
-      }
-    } catch (error) {
-      toast({
-        title: "Refresh failed",
-        description: "Could not update player stats. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
 
   if (isLoading) {
-    return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;
+    return (
+      <OverlayLoadingSkeleton
+        width={width}
+        height={height}
+        message="Loading player stats…"
+      />
+    );
   }
 
   if (error) {
     return (
       <OverlayErrorState
-        error={error}
-        onRetry={refetch}
-        width={`${width}%`}
-        height={`${height}px`}
-        source="Player statistics"
+        width={width}
+        height={height}
+        error={error as Error}
+        endpoint={url}
+        expectedData="{ data: { players: Player[], stats: PlayerStatLine[] } } or { players: Player[], stats: PlayerStatLine[] }"
+        source="Player Stats"
       />
     );
   }
 
-  if (!data?.data || data.data.length === 0) {
+  const payloadPlayers: Player[] =
+    (data as any)?.data?.players ?? (data as any)?.players ?? [];
+  const payloadStats: PlayerStatLine[] =
+    (data as any)?.data?.stats ?? (data as any)?.stats ?? [];
+  const sourceLabel = (data as any)?.source || "Squad";
+  const timestampIso = (data as any)?.timestamp;
+
+  if (!payloadPlayers.length || !payloadStats.length) {
     return (
       <OverlayEmptyState
-        message="No player statistics available"
-        width={`${width}%`}
-        height={`${height}px`}
+        width={width}
+        height={height}
+        message="No player stats available"
       />
     );
   }
 
-  const players: Player[] = data.data;
-  const selectedPlayer = playerId 
-    ? players.find((p: Player) => p.id === playerId) 
-    : players[0];
+  // Join players + stat lines
+  const rows = useMemo(() => {
+    const byId = new Map<string | number, Player>();
+    payloadPlayers.forEach((p) => byId.set(p.id, p));
 
-  if (!selectedPlayer) {
-    return (
-      <OverlayEmptyState
-        message="Player not found"
-        width={`${width}%`}
-        height={`${height}px`}
-      />
-    );
+    const joined = payloadStats
+      .map((s) => ({
+        player: byId.get(s.playerId),
+        stats: s,
+      }))
+      .filter((r) => r.player);
+
+    // Sort by selected metric (desc if numeric)
+    const sorted = [...joined].sort((a, b) => {
+      const av = (a.stats as any)?.[sortBy];
+      const bv = (b.stats as any)?.[sortBy];
+
+      // if values absent, push to bottom
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+
+      // numeric desc
+      if (typeof av === "number" && typeof bv === "number") {
+        return bv - av;
+      }
+
+      // fallback: string compare asc
+      return String(av).localeCompare(String(bv));
+    });
+
+    return limit ? sorted.slice(0, limit) : sorted;
+  }, [payloadPlayers, payloadStats, sortBy, limit]);
+
+  function onRefresh() {
+    setIsRefreshing(true);
+    refetch()
+      .then(() => {
+        toast({ title: "Player stats updated", description: "Data refreshed." });
+      })
+      .catch((e) =>
+        toast({
+          title: "Refresh failed",
+          description: String(e),
+          variant: "destructive",
+        })
+      )
+      .finally(() => setIsRefreshing(false));
   }
-
-  const goalsPer90 = selectedPlayer.minutes && selectedPlayer.minutes > 0 
-    ? (selectedPlayer.goals / (selectedPlayer.minutes / 90)).toFixed(2) 
-    : '0.00';
-  
-  const assistsPer90 = selectedPlayer.minutes && selectedPlayer.minutes > 0 
-    ? (selectedPlayer.assists / (selectedPlayer.minutes / 90)).toFixed(2) 
-    : '0.00';
-
-  const goalsAndAssists = selectedPlayer.goals + selectedPlayer.assists;
 
   return (
     <motion.div
-      initial={{ x: -50, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
       style={{
-        width: '100%',
-        height: '100%',
-        backgroundColor: `rgba(246, 235, 97, ${opacity})`,
-        color: '#002147',
-        fontFamily: 'League Spartan, sans-serif',
-        padding: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        borderRadius: '8px',
-        border: '3px solid #C8102E',
-        position: 'relative',
+        width: cssSize(width),
+        height: cssSize(height),
+        background: palette.background,
+        color: palette.text,
+        border: `2px solid ${palette.border}`,
+        borderRadius: 12,
+        padding: 16,
+        fontFamily: "League Spartan, system-ui, sans-serif",
+        opacity,
+        position: "relative",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
       }}
-      data-testid="overlay-player-stats"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+      data-testid="player-stats-overlay"
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-        {selectedPlayer.photo && (
-          <img
-            src={selectedPlayer.photo}
-            alt={selectedPlayer.name}
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <User size={18} />
+            <div style={{ fontWeight: 700 }}>Player Stats</div>
+          </div>
+          <div style={{ fontSize: 12, color: "#C8102E" }}>
+            Liverpool FC • {season} Season
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <RefreshCw size={14} />
+            {isRefreshing ? "Refreshing…" : "Refresh"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Table header */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(150px, 2fr) repeat(3, minmax(60px, 1fr))",
+          gap: 8,
+          padding: "8px 12px",
+          borderRadius: 8,
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          fontSize: 12,
+          fontWeight: 700,
+          opacity: 0.9,
+        }}
+      >
+        <div>Player</div>
+        <div>Apps</div>
+        <div>Goals</div>
+        <div>Assists</div>
+      </div>
+
+      {/* Rows */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          overflowY: "auto",
+          flex: 1,
+        }}
+      >
+        {rows.map((row) => (
+          <div
+            key={row.player?.id || row.player?.name}
             style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              border: '2px solid #C8102E',
-              objectFit: 'cover',
+              display: "grid",
+              gridTemplateColumns: "minmax(150px, 2fr) repeat(3, minmax(60px, 1fr))",
+              gap: 8,
+              alignItems: "center",
+              padding: "10px 12px",
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 8,
             }}
-            data-testid="player-photo"
-          />
+          >
+            <div style={{ fontWeight: 600 }}>
+              {row.player?.name || "Unknown"}
+            </div>
+            <div>{row.stats?.appearances ?? 0}</div>
+            <div>{row.stats?.goals ?? 0}</div>
+            <div>{row.stats?.assists ?? 0}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingTop: 8,
+          borderTop: `1px solid ${palette.border}`,
+          fontSize: 11,
+          opacity: 0.7,
+        }}
+      >
+        <OverlaySourceBadge label={sourceLabel} />
+        {timestampIso && (
+          <div>Updated: {new Date(timestampIso).toLocaleString()}</div>
         )}
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '20px', fontWeight: 'bold' }} data-testid="player-name">
-            {selectedPlayer.name}
-          </div>
-          <div style={{ fontSize: '12px', color: '#C8102E', marginTop: '2px' }}>
-            Liverpool FC • 2024 Season
-          </div>
-        </div>
       </div>
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '8px',
-        marginBottom: '12px',
-      }}>
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          style={{
-            backgroundColor: 'rgba(0, 33, 71, 0.1)',
-            padding: '8px',
-            borderRadius: '6px',
-            textAlign: 'center',
-          }}
-          data-testid="stat-goals"
-        >
-          <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-            <Target size={14} style={{ display: 'inline', marginRight: '4px' }} />
-            GOALS
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#C8102E' }}>
-            {selectedPlayer.goals}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          style={{
-            backgroundColor: 'rgba(0, 33, 71, 0.1)',
-            padding: '8px',
-            borderRadius: '6px',
-            textAlign: 'center',
-          }}
-          data-testid="stat-assists"
-        >
-          <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-            <Activity size={14} style={{ display: 'inline', marginRight: '4px' }} />
-            ASSISTS
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#002147' }}>
-            {selectedPlayer.assists}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          style={{
-            backgroundColor: 'rgba(0, 33, 71, 0.1)',
-            padding: '8px',
-            borderRadius: '6px',
-            textAlign: 'center',
-          }}
-          data-testid="stat-g+a"
-        >
-          <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-            G+A
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00D977' }}>
-            {goalsAndAssists}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          style={{
-            backgroundColor: 'rgba(0, 33, 71, 0.1)',
-            padding: '8px',
-            borderRadius: '6px',
-            textAlign: 'center',
-          }}
-          data-testid="stat-apps"
-        >
-          <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-            APPEARANCES
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#002147' }}>
-            {selectedPlayer.appearances || 0}
-          </div>
-        </motion.div>
-      </div>
-
-      <div style={{
-        backgroundColor: 'rgba(0, 33, 71, 0.05)',
-        padding: '10px',
-        borderRadius: '6px',
-        display: 'flex',
-        justifyContent: 'space-around',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', color: '#666', marginBottom: '3px' }}>GOALS/90</div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#C8102E' }}>
-            <TrendingUp size={12} style={{ display: 'inline', marginRight: '3px' }} />
-            {goalsPer90}
-          </div>
-        </div>
-        <div style={{ width: '1px', backgroundColor: 'rgba(0, 33, 71, 0.2)' }} />
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '10px', color: '#666', marginBottom: '3px' }}>ASSISTS/90</div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#002147' }}>
-            <TrendingUp size={12} style={{ display: 'inline', marginRight: '3px' }} />
-            {assistsPer90}
-          </div>
-        </div>
-      </div>
-
-      {/* Source Badge */}
-      <OverlaySourceBadge source={data.source as any} timestamp={data.timestamp} />
     </motion.div>
   );
 }

@@ -1,31 +1,36 @@
-import { motion } from "framer-motion";
-import { Trophy, TrendingDown, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import { Trophy, RefreshCw } from "lucide-react";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
   OverlayEmptyState,
   OverlaySourceBadge,
 } from "./OverlayStates";
+import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
-interface LeagueTableOverlayProps {
-  width: number;
-  height: number;
-  opacity?: number;
-  highlightTeamId?: number;
-  maxTeams?: number;
-  showFullTable?: boolean;
-  teamCount?: 5 | 10 | 20 | 'full';
+type Size = number | string;
+
+export interface LeagueTableOverlayProps {
+  width: Size;
+  height: Size;
+  leagueId: string | number;
+  season?: string | number;         // e.g. 2025
+  limit?: number;                   // limit rows displayed (optional)
+  opacity?: number;                 // default 0.95
+  colorPalette?: ColorPaletteKey;   // theme key from FormGuideOverlay
+  showForm?: boolean;               // show recent form bubbles
+  showGD?: boolean;                 // show goal difference
+  endpoint?: string;                // override fetch endpoint (defaults below)
 }
 
-interface TeamStanding {
+/** API models (kept broad to avoid coupling) */
+type TableRow = {
   position: number;
-  team: string;
-  points: number;
+  team: { id?: number | string; name: string; shortName?: string; logo?: string };
   played: number;
   won: number;
   drawn: number;
@@ -33,259 +38,300 @@ interface TeamStanding {
   goalsFor: number;
   goalsAgainst: number;
   goalDifference: number;
-  form?: string[];
+  points: number;
+  form?: string; // e.g. "WDLDW"
+};
+
+type TablePayload =
+  | { data: { standings: TableRow[] }; source?: string; timestamp?: string }
+  | { standings: TableRow[]; source?: string; timestamp?: string };
+
+function cssSize(v: Size) {
+  return typeof v === "number" ? `${v}px` : v;
 }
 
 export default function LeagueTableOverlay({
   width,
   height,
-  opacity = 0.92,
-  highlightTeamId = 40,
-  maxTeams,
-  showFullTable,
-  teamCount = 10,
+  leagueId,
+  season,
+  limit,
+  opacity = 0.95,
+  colorPalette = "classic",
+  showForm = true,
+  showGD = true,
+  endpoint,
 }: LeagueTableOverlayProps) {
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Fetch standings from database
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['league-table-db', 39, 2025],
+  const palette = COLOR_PALETTES[colorPalette];
+
+  const params = new URLSearchParams();
+  params.set("leagueId", String(leagueId));
+  if (season != null) params.set("season", String(season));
+  const url = `${endpoint || "/api/league-table"}?${params.toString()}`;
+
+  const { data, isLoading, error, refetch } = useQuery<TablePayload>({
+    queryKey: ["league-table", leagueId, season, endpoint],
     queryFn: async () => {
-      const response = await fetch('/api/database/standings?leagueId=39&season=2025');
-      if (!response.ok) throw new Error('Failed to fetch standings');
-      return response.json();
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch league table (${res.status})`);
+      return res.json();
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchInterval: 5 * 60_000, // 5 minutes
+    staleTime: 60_000,
   });
-  
-  // Handle refresh of data
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      const response = await fetch('/api/admin/update/standings', { method: 'POST' });
-      if (response.ok) {
-        await refetch();
-        toast({
-          title: "Data refreshed",
-          description: "League table has been updated.",
-        });
-      } else {
-        throw new Error('Failed to refresh data');
-      }
-    } catch (error) {
-      toast({
-        title: "Refresh failed",
-        description: "Could not update league table. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-  
-  // Determine effective team count
-  let effectiveTeamCount: number | 'full';
-  if (showFullTable !== undefined) {
-    effectiveTeamCount = showFullTable ? 'full' : (maxTeams || 10);
-  } else if (maxTeams !== undefined) {
-    effectiveTeamCount = maxTeams;
-  } else {
-    effectiveTeamCount = teamCount;
-  }
 
   if (isLoading) {
-    return <OverlayLoadingSkeleton width={`${width}%`} height={`${height}px`} />;
+    return (
+      <OverlayLoadingSkeleton
+        width={width}
+        height={height}
+        message="Loading league table…"
+      />
+    );
   }
 
   if (error) {
     return (
       <OverlayErrorState
-        error={error}
-        onRetry={refetch}
-        width={`${width}%`}
-        height={`${height}px`}
-        source="League table data"
+        width={width}
+        height={height}
+        error={error as Error}
+        endpoint={url}
+        expectedData="{ data: { standings: TableRow[] } } or { standings: TableRow[] }"
+        source="League Table"
       />
     );
   }
 
-  if (!data?.data || data.data.length === 0) {
+  const sourceLabel = (data as any)?.source;
+  const timestampIso = (data as any)?.timestamp;
+  const rows: TableRow[] =
+    (data as any)?.data?.standings ?? (data as any)?.standings ?? [];
+
+  const visibleRows = useMemo(
+    () => (limit ? rows.slice(0, limit) : rows),
+    [rows, limit]
+  );
+
+  if (!visibleRows.length) {
     return (
       <OverlayEmptyState
-        message="No league table data available"
-        width={`${width}%`}
-        height={`${height}px`}
+        width={width}
+        height={height}
+        message="No table data available"
       />
     );
   }
 
-  const standings: TeamStanding[] = data.data;
-  
-  // Apply team count filtering
-  const displayTeams = effectiveTeamCount === 'full' 
-    ? standings 
-    : standings.slice(0, effectiveTeamCount);
-
-  const getPositionColor = (position: number) => {
-    if (position <= 4) return '#00FF87';
-    if (position === 5) return '#4CA9E0';
-    if (position === 6) return '#F6EB61';
-    if (position >= 18) return '#FF4444';
-    return '#FFFFFF';
-  };
-
-  const getPositionIcon = (position: number) => {
-    if (position <= 4) return <Trophy size={12} color="#00FF87" />;
-    if (position >= 18) return <TrendingDown size={12} color="#FF4444" />;
-    return null;
-  };
+  function onRefresh() {
+    setIsRefreshing(true);
+    refetch()
+      .then(() => {
+        toast({ title: "Table updated", description: "Data refreshed." });
+      })
+      .catch((e) =>
+        toast({
+          title: "Refresh failed",
+          description: String(e),
+          variant: "destructive",
+        })
+      )
+      .finally(() => setIsRefreshing(false));
+  }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
       style={{
-        width: `${width}%`,
-        height: `${height}px`,
-        backgroundColor: `rgba(0, 33, 71, ${opacity})`,
-        color: '#FFFFFF',
-        fontFamily: 'League Spartan, sans-serif',
-        padding: '14px',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: '8px',
-        border: '2px solid #C8102E',
-        overflow: 'hidden',
-        position: 'relative',
+        width: cssSize(width),
+        height: cssSize(height),
+        background: palette.background,
+        color: palette.text,
+        border: `2px solid ${palette.border}`,
+        borderRadius: 12,
+        padding: 16,
+        fontFamily: "League Spartan, system-ui, sans-serif",
+        opacity,
+        position: "relative",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
       }}
-      data-testid="overlay-league-table"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+      data-testid="league-table-overlay"
     >
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '12px',
-      }}>
-        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#F6EB61' }}>
-          PREMIER LEAGUE TABLE
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Trophy size={18} />
+          <div style={{ fontWeight: 700 }}>
+            League Table{season ? ` • ${season}` : ""}
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <RefreshCw size={14} />
+            {isRefreshing ? "Refreshing…" : "Refresh"}
+          </Button>
         </div>
       </div>
 
-      {/* Table Header */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '30px 1fr 30px 30px 30px 35px 40px',
-        gap: '8px',
-        padding: '6px 0',
-        borderBottom: '1px solid rgba(246, 235, 97, 0.3)',
-        fontSize: '10px',
-        color: '#CCCCCC',
-        fontWeight: 'bold',
-      }}>
-        <span>POS</span>
-        <span>TEAM</span>
-        <span style={{ textAlign: 'center' }}>P</span>
-        <span style={{ textAlign: 'center' }}>W</span>
-        <span style={{ textAlign: 'center' }}>D</span>
-        <span style={{ textAlign: 'center' }}>GD</span>
-        <span style={{ textAlign: 'center' }}>PTS</span>
+      {/* Table header */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `48px minmax(160px, 1.4fr) 48px 48px 48px 48px 64px ${showGD ? "64px " : ""}64px ${showForm ? "minmax(120px, 1fr)" : ""}`,
+          gap: 8,
+          padding: "8px 12px",
+          borderRadius: 8,
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          fontSize: 12,
+          fontWeight: 700,
+          opacity: 0.9,
+        }}
+      >
+        <div>#</div>
+        <div>Team</div>
+        <div>P</div>
+        <div>W</div>
+        <div>D</div>
+        <div>L</div>
+        <div>GF</div>
+        {showGD && <div>GD</div>}
+        <div>Pts</div>
+        {showForm && <div style={{ textAlign: "right" }}>Form</div>}
       </div>
 
-      {/* Table Body */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        marginTop: '8px',
-      }}>
-        {displayTeams.map((team, index) => {
-          const isLiverpool = team.team.toLowerCase().includes('liverpool');
-          
+      {/* Rows */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          overflowY: "auto",
+        }}
+      >
+        {visibleRows.map((r) => {
+          const teamName = r.team?.shortName || r.team?.name;
+          const crest = r.team?.logo;
+
           return (
-            <motion.div
-              key={team.position}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
+            <div
+              key={teamName + r.position}
               style={{
-                display: 'grid',
-                gridTemplateColumns: '30px 1fr 30px 30px 30px 35px 40px',
-                gap: '8px',
-                padding: '8px 4px',
-                backgroundColor: isLiverpool
-                  ? 'rgba(200, 16, 46, 0.3)'
-                  : index % 2 === 0
-                  ? 'rgba(255, 255, 255, 0.03)'
-                  : 'transparent',
-                borderLeft: isLiverpool
-                  ? '3px solid #C8102E'
-                  : '3px solid transparent',
-                fontSize: '12px',
-                alignItems: 'center',
-                borderRadius: '4px',
+                display: "grid",
+                gridTemplateColumns: `48px minmax(160px, 1.4fr) 48px 48px 48px 48px 64px ${showGD ? "64px " : ""}64px ${showForm ? "minmax(120px, 1fr)" : ""}`,
+                gap: 8,
+                alignItems: "center",
+                padding: "10px 12px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 8,
               }}
-              data-testid={`table-row-${team.position}`}
             >
-              <span style={{
-                color: getPositionColor(team.position),
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '2px',
-              }}>
-                {team.position}
-                {getPositionIcon(team.position)}
-              </span>
-              <span style={{
-                fontWeight: isLiverpool ? 'bold' : 'normal',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}>
-                {team.team}
-              </span>
-              <span style={{ textAlign: 'center', opacity: 0.8 }}>{team.played}</span>
-              <span style={{ textAlign: 'center', color: '#00FF87' }}>{team.won}</span>
-              <span style={{ textAlign: 'center', color: '#F6EB61' }}>{team.drawn}</span>
-              <span style={{
-                textAlign: 'center',
-                color: team.goalDifference > 0 ? '#00FF87' : team.goalDifference < 0 ? '#FF4444' : '#FFFFFF',
-              }}>
-                {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
-              </span>
-              <span style={{
-                textAlign: 'center',
-                fontWeight: 'bold',
-                color: isLiverpool ? '#F6EB61' : '#FFFFFF',
-              }}>
-                {team.points}
-              </span>
-            </motion.div>
+              <div style={{ fontWeight: 700 }}>{r.position}</div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  minWidth: 0,
+                }}
+                title={teamName}
+              >
+                {crest && (
+                  <img
+                    src={crest}
+                    alt={teamName}
+                    style={{ width: 20, height: 20, objectFit: "contain" }}
+                  />
+                )}
+                <div
+                  style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {teamName}
+                </div>
+              </div>
+
+              <div>{r.played}</div>
+              <div>{r.won}</div>
+              <div>{r.drawn}</div>
+              <div>{r.lost}</div>
+              <div>{r.goalsFor}</div>
+              {showGD && <div>{r.goalDifference}</div>}
+              <div style={{ fontWeight: 700 }}>{r.points}</div>
+
+              {showForm && (
+                <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                  <FormBubbles form={r.form} />
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
 
-      {/* Footer Legend */}
-      <div style={{
-        borderTop: '1px solid rgba(246, 235, 97, 0.3)',
-        paddingTop: '8px',
-        marginTop: '8px',
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '10px',
-        fontSize: '9px',
-        color: '#CCCCCC',
-      }}>
-        <span><span style={{ color: '#00FF87' }}>●</span> UCL</span>
-        <span><span style={{ color: '#4CA9E0' }}>●</span> UEL</span>
-        <span><span style={{ color: '#F6EB61' }}>●</span> UECL</span>
-        <span><span style={{ color: '#FF4444' }}>●</span> REL</span>
-      </div>
-
-      {/* Source Badge */}
-      <OverlaySourceBadge source={data.source as any} timestamp={data.timestamp} />
+      <OverlaySourceBadge label={sourceLabel || "Standings"} timestampIso={timestampIso} />
     </motion.div>
+  );
+}
+
+function FormBubbles({ form }: { form?: string }) {
+  if (!form) return null;
+  const lastFive = form.trim().split("").slice(-5);
+  return (
+    <>
+      {lastFive.map((t, i) => {
+        const bg =
+          t === "W"
+            ? "rgba(0,200,83,0.9)"
+            : t === "D"
+            ? "rgba(255,205,0,0.9)"
+            : "rgba(244,67,54,0.9)";
+        const label = t === "W" ? "Win" : t === "D" ? "Draw" : "Loss";
+        return (
+          <span
+            key={`${t}-${i}`}
+            title={label}
+            style={{
+              width: 16,
+              height: 16,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 700,
+              background: bg,
+              color: "#000",
+            }}
+          >
+            {t}
+          </span>
+        );
+      })}
+    </>
   );
 }

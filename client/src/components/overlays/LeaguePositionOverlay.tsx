@@ -1,15 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Minus, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
-import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import {
+  OverlayLoadingSkeleton,
+  OverlayEmptyState,
+  OverlayErrorState,
+  OverlaySourceBadge,
+} from "./OverlayStates";
+
+type Size = number | string;
 
 interface LeaguePositionOverlayProps {
-  width: number;
-  height: number;
+  width: number;                 // numeric for layout math
+  height: number;                // numeric for layout math
   opacity?: number;
+  leagueId?: number | string;    // default 39
+  season?: number | string;      // default 2025
+  endpoint?: string;             // default "/api/database/standings"
+  adminEndpoint?: string;        // default "/api/admin/update/standings"
 }
 
 interface ComparativeMetrics {
@@ -22,42 +33,78 @@ interface ComparativeMetrics {
   };
 }
 
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+type ApiPayload =
+  | {
+      data: Array<{
+        position: number;
+        team: string;
+        points: number;
+      }>;
+      lastUpdated?: string;
+      source?: string;
+    }
+  | {
+      standings: Array<{
+        position: number;
+        team: string;
+        points: number;
+      }>;
+      lastUpdated?: string;
+      source?: string;
+    };
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+function cssSize(v: Size) {
+  return typeof v === "number" ? `${v}px` : v;
+}
 
 export default function LeaguePositionOverlay({
   width,
   height,
   opacity = 0.88,
+  leagueId = 39,
+  season = 2025,
+  endpoint = "/api/database/standings",
+  adminEndpoint = "/api/admin/update/standings",
 }: LeaguePositionOverlayProps) {
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Fetch standings data from database
-  const { data: standingsData, isLoading, refetch } = useQuery({
-    queryKey: ['standings-db', 39, 2025],
+
+  // ---- Data Fetch ----
+  const params = new URLSearchParams();
+  params.set("leagueId", String(leagueId));
+  params.set("season", String(season));
+  const url = `${endpoint}?${params.toString()}`;
+
+  const {
+    data: standingsData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<ApiPayload>({
+    queryKey: ["standings-db", leagueId, season, endpoint],
     queryFn: async () => {
-      const response = await fetch('/api/database/standings?leagueId=39&season=2025');
-      if (!response.ok) throw new Error('Failed to fetch standings');
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to fetch standings (${response.status})`);
       return response.json();
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
-  
-  // Handle refresh of data
+
+  // ---- Refresh handler ----
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const response = await fetch('/api/admin/update/standings', { method: 'POST' });
-      if (response.ok) {
-        await refetch();
-        toast({
-          title: "Data refreshed",
-          description: "League standings have been updated.",
-        });
-      } else {
-        throw new Error('Failed to refresh data');
-      }
-    } catch (error) {
+      const response = await fetch(adminEndpoint, { method: "POST" });
+      if (!response.ok) throw new Error("Failed to refresh data");
+      await refetch();
+      toast({
+        title: "Data refreshed",
+        description: "League standings have been updated.",
+      });
+    } catch (e) {
       toast({
         title: "Refresh failed",
         description: "Could not update standings. Please try again.",
@@ -67,41 +114,49 @@ export default function LeaguePositionOverlay({
       setIsRefreshing(false);
     }
   };
-  
-  // Process standings data to get Liverpool position and metrics
+
+  // ---- Transform ----
   const comparative = useMemo(() => {
-    if (!standingsData?.data) return null;
-    
-    const standings = standingsData.data;
-    const liverpoolData = standings.find((t: any) => t.team === 'Liverpool' || t.team.includes('Liverpool'));
-    const top6 = standings.slice(0, 6);
-    
+    const rows: Array<{ position: number; team: string; points: number }> =
+      (standingsData as any)?.data ??
+      (standingsData as any)?.standings ??
+      [];
+
+    if (!rows || !rows.length) return null;
+
+    const liverpoolData = rows.find(
+      (t) => t.team === "Liverpool" || t.team?.includes?.("Liverpool")
+    );
+    const top6 = rows.slice(0, 6);
+
     if (!liverpoolData) return null;
-    
-    const leaderPoints = standings[0]?.points || 0;
-    const top4Points = standings[3]?.points || 0;
-    
+
+    const leaderPoints = rows[0]?.points || 0;
+    const top4Points = rows[3]?.points || 0;
+
     return {
       standings: {
         liverpoolPosition: liverpoolData.position,
         liverpoolPoints: liverpoolData.points,
         pointsFromLeader: leaderPoints - liverpoolData.points,
         pointsFromTop4: Math.max(0, top4Points - liverpoolData.points),
-        top6Standings: top6.map((t: any) => ({
+        top6Standings: top6.map((t) => ({
           position: t.position,
           name: t.team,
-          points: t.points
-        }))
+          points: t.points,
+        })),
       },
-      lastUpdated: standingsData.lastUpdated
-    };
+      lastUpdated: (standingsData as any)?.lastUpdated,
+      source: (standingsData as any)?.source,
+    } as ComparativeMetrics & { lastUpdated?: string; source?: string };
   }, [standingsData]);
 
+  // ---- Scale helpers ----
   const { scale, scaleValue } = useMemo(() => {
     // Use actual container dimensions
     const containerWidth = width || 100;
     const containerHeight = height || 100;
-    
+
     // Smaller baseline for better scaling
     const baseWidth = 280;
     const baseHeight = 220;
@@ -109,7 +164,7 @@ export default function LeaguePositionOverlay({
     const scaleWidth = containerWidth / baseWidth;
     const scaleHeight = containerHeight / baseHeight;
     const calculatedScale = Math.min(scaleWidth, scaleHeight);
-    
+
     // More flexible scale range
     const finalScale = clamp(calculatedScale, 0.3, 2.5);
 
@@ -123,23 +178,37 @@ export default function LeaguePositionOverlay({
     return { scale: finalScale, scaleValue: valueFn };
   }, [width, height]);
 
-  if (isLoading || !comparative) {
+  // ---- States ----
+  if (isLoading) {
     return (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          backgroundColor: `rgba(0, 33, 71, ${opacity})`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#F6EB61",
-          fontFamily: "League Spartan, sans-serif",
-          fontSize: `${scaleValue(14, { min: 8, max: 18 })}px`,
-        }}
-      >
-        Loading...
-      </div>
+      <OverlayLoadingSkeleton
+        width={width}
+        height={height}
+        message="Loading league position…"
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <OverlayErrorState
+        width={width}
+        height={height}
+        error={error as Error}
+        endpoint={url}
+        expectedData="{ data: Array<{position, team, points}> } or { standings: Array<{...}> }"
+        source="League Position"
+      />
+    );
+  }
+
+  if (!comparative) {
+    return (
+      <OverlayEmptyState
+        width={width}
+        height={height}
+        message="No standings data available"
+      />
     );
   }
 
@@ -162,239 +231,106 @@ export default function LeaguePositionOverlay({
   const teamCount = Math.min(top6Teams.length, Math.min(6, availableRows));
 
   const containerPadding = scaleValue(16, { min: 6, max: 24 });
-  const sectionGap = scaleValue(14, { min: 4, max: 22 });
-  const headerFontSize = scaleValue(14, { min: 9, max: 18 });
-  const primaryFontSize = scaleValue(isCompact ? 24 : 28, { min: 12, max: 34 });
-  const subtitleFontSize = scaleValue(12, { min: 7, max: 16 });
-  const badgeSize = scaleValue(isCompact ? 56 : 72, {
-    min: isUltraCompact ? 36 : 44,
-    max: 88,
-  });
-  const badgeFontSize = scaleValue(isCompact ? 24 : 32, {
-    min: isUltraCompact ? 16 : 18,
-    max: 42,
-  });
-  const borderRadius = scaleValue(8, { min: 4, max: 14 });
-  const borderWidth = clamp(2 * scale, 1, 4);
-  const badgeBorderWidth = clamp(3 * scale, 1, 5);
+  const sectionGap = scaleValue(12, { min: 4, max: 16 });
 
-  const topRaceLabelSize = scaleValue(11, { min: 8, max: 14 });
-  const topRaceValueSize = scaleValue(12, { min: 9, max: 16 });
-  const standingsLabelSize = scaleValue(10, { min: 7, max: 14 });
-
-  const getPositionTrend = () => {
-    if (liverpoolPosition <= 2) return "up" as const;
-    if (liverpoolPosition > 4) return "down" as const;
-    return "stable" as const;
-  };
-
-  const trend = getPositionTrend();
+  const sourceLabel = comparative?.source || "Database";
+  const timestampIso = comparative?.lastUpdated;
 
   return (
     <motion.div
-      initial={{ y: -50, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
       style={{
-        width: "100%",
-        height: "100%",
-        backgroundColor: `rgba(0, 33, 71, ${opacity})`,
-        color: "#F6EB61",
-        fontFamily: "League Spartan, sans-serif",
-        padding: `${containerPadding}px`,
+        width: cssSize(width),
+        height: cssSize(height),
+        background: "rgba(0,0,0,0.85)",
+        color: "#fff",
+        border: "2px solid rgba(200,16,46,0.5)",
+        borderRadius: 12,
+        padding: containerPadding,
+        fontFamily: "League Spartan, system-ui, sans-serif",
+        opacity,
+        position: "relative",
+        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        gap: `${sectionGap}px`,
-        borderRadius: `${borderRadius}px`,
-        border: `${borderWidth}px solid #F6EB61`,
-        overflow: "hidden",
-        minHeight: 0,
+        gap: sectionGap,
       }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+      data-testid="league-position-overlay"
     >
-      <div
-        style={{
-          fontSize: `${headerFontSize}px`,
-          fontWeight: "bold",
-          color: "#FFFFFF",
-          letterSpacing: "0.08em",
-        }}
-      >
-        LEAGUE POSITION
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Trophy size={18} />
+          <div style={{ fontWeight: 700 }}>League Position</div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          style={{ display: "flex", alignItems: "center", gap: 6 }}
+        >
+          <RefreshCw size={14} />
+          {isRefreshing ? "Refreshing…" : "Refresh"}
+        </Button>
       </div>
 
+      {/* Position Info */}
+      <div style={{ fontSize: 32, fontWeight: 700 }}>
+        #{liverpoolPosition}
+      </div>
+      <div style={{ fontSize: 14 }}>
+        {liverpoolPoints} points
+      </div>
+
+      {showTopRace && pointsFromLeader > 0 && (
+        <div style={{ fontSize: 12, opacity: 0.8 }}>
+          {pointsFromLeader} pts from leader
+        </div>
+      )}
+
+      {/* Top 6 Teams */}
+      {teamCount > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+          {top6Teams.slice(0, teamCount).map((team, idx) => (
+            <div
+              key={team.name || idx}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: 8,
+                background: team.name?.includes("Liverpool") ? "rgba(200,16,46,0.2)" : "rgba(255,255,255,0.05)",
+                borderRadius: 6,
+              }}
+            >
+              <div style={{ fontWeight: team.name?.includes("Liverpool") ? 700 : 400 }}>
+                {team.position}. {team.name}
+              </div>
+              <div style={{ fontWeight: 600 }}>{team.points} pts</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: `${scaleValue(16, { min: 6, max: 24 })}px`,
-          minHeight: badgeSize,
+          justifyContent: "space-between",
+          paddingTop: 8,
+          borderTop: "1px solid rgba(200,16,46,0.5)",
+          fontSize: 11,
+          opacity: 0.7,
         }}
       >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200 }}
-          style={{
-            width: `${badgeSize}px`,
-            height: `${badgeSize}px`,
-            borderRadius: "50%",
-            backgroundColor: "#F6EB61",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: `${badgeFontSize}px`,
-            fontWeight: "bold",
-            color: "#002147",
-            border: `${badgeBorderWidth}px solid #C8102E`,
-            flexShrink: 0,
-          }}
-        >
-          {liverpoolPosition}
-        </motion.div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: `${primaryFontSize}px`,
-              fontWeight: "bold",
-              color: "#FFFFFF",
-            }}
-          >
-            {liverpoolPoints} PTS
-          </div>
-          <div
-            style={{
-              fontSize: `${subtitleFontSize}px`,
-              color: "#CCCCCC",
-              marginTop: `${scaleValue(4, { min: 2, max: 8 })}px`,
-              display: "flex",
-              alignItems: "center",
-              gap: `${scaleValue(4, { min: 2, max: 6 })}px`,
-            }}
-          >
-            {trend === "up" && <TrendingUp size={scaleValue(14, { min: 10, max: 18 })} color="#00FF87" />}
-            {trend === "down" && <TrendingDown size={scaleValue(14, { min: 10, max: 18 })} color="#FF4444" />}
-            {trend === "stable" && <Minus size={scaleValue(14, { min: 10, max: 18 })} color="#F6EB61" />}
-            <span style={{ whiteSpace: "nowrap" }}>
-              {trend === "up" && "Strong Position"}
-              {trend === "down" && "Need Improvement"}
-              {trend === "stable" && "Stable"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {showTopRace && (
-        <div
-          style={{
-            borderTop: `${clamp(1 * scale, 0.5, 2)}px solid rgba(246, 235, 97, 0.3)`,
-            paddingTop: `${scaleValue(12, { min: 6, max: 18 })}px`,
-            display: "flex",
-            flexDirection: "column",
-            gap: `${scaleValue(6, { min: 4, max: 12 })}px`,
-          }}
-        >
-          <div
-            style={{
-              fontSize: `${topRaceLabelSize}px`,
-              color: "#CCCCCC",
-              fontWeight: 600,
-            }}
-          >
-            TOP 4 RACE
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: `${topRaceValueSize}px`,
-            }}
-          >
-            <span style={{ color: "#FFFFFF" }}>Points from Leader</span>
-            <span
-              style={{
-                fontWeight: "bold",
-                color: pointsFromLeader === 0 ? "#00FF87" : "#FFFFFF",
-              }}
-            >
-              {pointsFromLeader === 0 ? "1st Place" : `-${pointsFromLeader}`}
-            </span>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: `${topRaceValueSize}px`,
-            }}
-          >
-            <span style={{ color: "#FFFFFF" }}>Gap to 4th Place</span>
-            <span
-              style={{
-                fontWeight: "bold",
-                color: pointsFromTop4 <= 0 ? "#00FF87" : "#FF4444",
-              }}
-            >
-              {pointsFromTop4 <= 0 ? `+${Math.abs(pointsFromTop4)}` : `-${pointsFromTop4}`}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div
-        style={{
-          backgroundColor: "rgba(246, 235, 97, 0.1)",
-          padding: `${scaleValue(isCompact ? 6 : 8, { min: 3, max: 12 })}px`,
-          borderRadius: `${scaleValue(6, { min: 4, max: 10 })}px`,
-          display: "flex",
-          flexDirection: "column",
-          gap: `${scaleValue(4, { min: 2, max: 8 })}px`,
-          flex: "1 1 0%",
-          minHeight: 0,
-        }}
-      >
-        <div
-          style={{
-            fontSize: `${standingsLabelSize}px`,
-            color: "#CCCCCC",
-            fontWeight: 600,
-          }}
-        >
-          TOP 6 STANDINGS
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: `${scaleValue(isUltraCompact ? 2 : 4, { min: 1, max: 6 })}px`,
-            overflowY: "auto",
-          }}
-        >
-          {top6Teams.slice(0, teamCount).map((team, index) => (
-            <div
-              key={`${team.position}-${team.name}-${index}`}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: `${standingsLabelSize}px`,
-                color: team.position === liverpoolPosition ? "#F6EB61" : "#FFFFFF",
-                fontWeight: team.position === liverpoolPosition ? "bold" : 500,
-                gap: `${scaleValue(6, { min: 2, max: 10 })}px`,
-              }}
-            >
-              <span
-                style={{
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
-                  overflow: "hidden",
-                  flex: 1,
-                }}
-              >
-                {team.position}. {team.name.substring(0, maxChars)}
-              </span>
-              <span style={{ flexShrink: 0 }}>{team.points} pts</span>
-            </div>
-          ))}
-        </div>
+        <OverlaySourceBadge label={sourceLabel} />
+        {timestampIso && (
+          <div>Updated: {new Date(timestampIso).toLocaleString()}</div>
+        )}
       </div>
     </motion.div>
   );
