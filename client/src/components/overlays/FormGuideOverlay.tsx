@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { RefreshCw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { useOverlayData } from "@/hooks/useOverlayData";
 import { createScalingSystem } from "@/lib/overlayScaling";
 import {
   OverlayLoadingSkeleton,
