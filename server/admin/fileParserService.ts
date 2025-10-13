@@ -58,12 +58,12 @@ export async function parseCSV(buffer: Buffer): Promise<any[]> {
     };
     
     // Get headers from first line
-    const headers = parseCSVLine(lines[0]);
+    const headers = parseCSVLine(lines[0] || '');
     
     // Parse data rows
     const data: any[] = [];
     for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
+      const values = parseCSVLine(lines[i] || '');
       const row: any = {};
       
       headers.forEach((header, index) => {
@@ -85,7 +85,13 @@ export async function parseXLSX(buffer: Buffer): Promise<any[]> {
     
     // Get first sheet
     const firstSheetName = workbook.SheetNames[0];
+    if (!firstSheetName) {
+      throw new Error('No sheets found in XLSX file');
+    }
     const worksheet = workbook.Sheets[firstSheetName];
+    if (!worksheet) {
+      throw new Error('Failed to load worksheet');
+    }
     
     // Convert to JSON with headers as keys
     const data = XLSX.utils.sheet_to_json(worksheet);
@@ -153,6 +159,69 @@ export async function parseHTML(buffer: Buffer): Promise<string> {
   }
 }
 
+export async function parseFBrefHTML(buffer: Buffer): Promise<any[]> {
+  try {
+    const content = buffer.toString('utf-8');
+    
+    // Find the stats_standard_combined table
+    const tableMatch = content.match(/<table[^>]*id="stats_standard_combined"[^>]*>(.*?)<\/table>/s);
+    if (!tableMatch) {
+      throw new Error('FBref stats table not found in HTML');
+    }
+    
+    const tableHtml = tableMatch[1];
+    
+    // Extract headers
+    const headerMatch = tableHtml.match(/<thead>(.*?)<\/thead>/s);
+    const headers: string[] = [];
+    if (headerMatch) {
+      const thMatches = headerMatch[1].matchAll(/data-stat="([^"]+)"/g);
+      for (const match of thMatches) {
+        if (!headers.includes(match[1])) {
+          headers.push(match[1]);
+        }
+      }
+    }
+    
+    // Extract player rows
+    const tbodyMatch = tableHtml.match(/<tbody>(.*?)<\/tbody>/s);
+    const players: any[] = [];
+    
+    if (tbodyMatch) {
+      const rowMatches = tbodyMatch[1].matchAll(/<tr[^>]*>(.*?)<\/tr>/gs);
+      
+      for (const rowMatch of rowMatches) {
+        const rowHtml = rowMatch[1];
+        
+        // Skip header rows
+        if (rowHtml.includes('class="thead"')) continue;
+        
+        const player: any = {};
+        const cellMatches = rowHtml.matchAll(/data-stat="([^"]+)"[^>]*>(.*?)<\/t[dh]>/gs);
+        
+        for (const cellMatch of cellMatches) {
+          const stat = cellMatch[1];
+          const value = cellMatch[2].replace(/<[^>]+>/g, '').trim();
+          player[stat] = value;
+        }
+        
+        // Only include valid player rows
+        if (player.player && player.player !== 'Squad Total' && player.player.length > 0) {
+          players.push(player);
+        }
+      }
+    }
+    
+    if (players.length === 0) {
+      throw new Error('No player data found in FBref HTML');
+    }
+    
+    return players;
+  } catch (error) {
+    throw new Error(`Failed to parse FBref HTML: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 export async function parseImage(buffer: Buffer, mimeType: string): Promise<{width: number, height: number, format: string}> {
   try {
     const metadata = await sharp(buffer).metadata();
@@ -189,6 +258,11 @@ export async function parseFile(buffer: Buffer, fileType: string, mimeType?: str
       
       case 'html':
       case 'htm':
+        // Check if it's a FBref HTML file with player stats
+        const htmlContent = buffer.toString('utf-8');
+        if (htmlContent.includes('FBref.com') && htmlContent.includes('stats_standard_combined')) {
+          return { data: await parseFBrefHTML(buffer) };
+        }
         return { text: await parseHTML(buffer) };
       
       case 'image':
