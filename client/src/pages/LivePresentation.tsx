@@ -2798,18 +2798,9 @@ export default function LivePresentation() {
                             <div
                               key={overlay.id}
                               data-overlay-id={overlay.id}
-                              className={
-                                isEditing && !isBroadcasting
-                                  ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
-                                  : ''
-                              }
+                              className="absolute pointer-events-none"
                               style={overlayStyle}
                             >
-                              {isEditing && (
-                                <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
-                                  ({snapToGrid(overlay.x)}, {snapToGrid(overlay.y)}) - {overlay.width}% × {overlay.height}px
-                                </div>
-                              )}
                               <div
                                 style={{
                                   width: '100%',
@@ -2839,18 +2830,9 @@ export default function LivePresentation() {
                             <div
                               key={overlay.id}
                               data-overlay-id={overlay.id}
-                              className={
-                                isEditing && !isBroadcasting
-                                  ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
-                                  : ''
-                              }
+                              className="absolute pointer-events-none"
                               style={overlayStyle}
                             >
-                              {isEditing && (
-                                <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
-                                  ({snapToGrid(overlay.x)}, {snapToGrid(overlay.y)}) - {overlay.width}% × {overlay.height}px
-                                </div>
-                              )}
                               <img
                                 src={overlay.imageUrl}
                                 alt={overlay.text || 'Overlay image'}
@@ -2871,18 +2853,9 @@ export default function LivePresentation() {
                         <div
                           key={overlay.id}
                           data-overlay-id={overlay.id}
-                          className={
-                            isEditing && !isBroadcasting
-                              ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
-                              : 'absolute'
-                          }
+                          className="absolute pointer-events-none"
                           style={overlayStyle}
                         >
-                          {isEditing && !isBroadcasting && (
-                            <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
-                              ({snapToGrid(overlay.x)}, {snapToGrid(overlay.y)}) - {overlay.width}% × {overlay.height}px
-                            </div>
-                          )}
                           <OverlayErrorBoundary overlayId={overlay.id}>
                             <OverlayComponent
                               width={Math.round((overlay.width / 100) * outputResolution.width)}
@@ -4867,6 +4840,7 @@ export default function LivePresentation() {
                         template.overlayType,
                         template.metricType
                       );
+                      
                       const newOverlay: OverlayConfig = {
                         id: Date.now().toString(),
                         text: template.name,
@@ -4895,6 +4869,32 @@ export default function LivePresentation() {
                         y: defaultY,
                         category: defaultCategory,
                       };
+                      
+                      // Check for H2H duplicates - prevent same team matchup
+                      if (newOverlay.metricType === 'h2h-card' && newOverlay.metricData) {
+                        const newHomeId = newOverlay.metricData.homeTeamId;
+                        const newAwayId = newOverlay.metricData.awayTeamId;
+                        
+                        const isDuplicate = overlays.some(
+                          o =>
+                            o.metricType === 'h2h-card' &&
+                            o.metricData &&
+                            (
+                              (o.metricData.homeTeamId === newHomeId && o.metricData.awayTeamId === newAwayId) ||
+                              (newAwayId !== null && o.metricData.homeTeamId === newAwayId && o.metricData.awayTeamId === newHomeId)
+                            )
+                        );
+                        
+                        if (isDuplicate) {
+                          toast({
+                            title: 'Duplicate Overlay',
+                            description: 'An H2H overlay with these teams already exists. Edit the existing one instead.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+                      }
+                      
                       setOverlays(prev => [...prev, newOverlay]);
                       setIsTemplatePickerOpen(false);
                       toast({
