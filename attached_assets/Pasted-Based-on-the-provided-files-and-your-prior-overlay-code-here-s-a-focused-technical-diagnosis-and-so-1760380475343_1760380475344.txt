@@ -1,0 +1,88 @@
+Based on the provided files and your prior overlay code, here’s a focused technical diagnosis and solution plan for the H2H overlay duplication and border/artifact issue in the live presentation window:
+
+***
+
+## Diagnosing Your Problem
+
+### **1. Multiple H2H overlays**
+
+- In `LivePresentation-5.tsx` and `VideoCompositor.tsx`, overlays are kept in an array (e.g., `overlays`) and rendered via a component lookup.
+- No deduplication appears for overlays of type `'h2h-card'` or with the same pair of teams (`homeTeamId`, `awayTeamId`).
+- The UI or overlay manager might let users add the same overlay multiple times, creating multiple cards for the same matchup.
+- Each overlay gets rendered as its own component (`H2HMatchCardOverlay`). Thus, unless you filter overlays “by unique matchup,” you will always have stacking/copies.
+
+**Solution:**  
+- In the overlays creation logic, especially when adding or toggling overlays, add a check to the handler so an H2H overlay with the same two teams (both orders, as H2H is symmetric in display) does not get added twice.
+
+### **2. Dotted Line Overlay Artifact**
+
+- The dotted line is rendered using conditional classes on component wrapping DOM elements, usually for edit selection/highlighting or drag.
+- Example (from your code):  
+  In `LivePresentation-5.tsx`:  
+  ```jsx
+  <div
+    className={
+      isEditing
+        ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10 bg-white/10 border border-white/30'
+        : ''  
+    }
+  />
+  ```
+- The border/highlight is tied to the overlay’s editing position (`isEditing` or similar state).
+- If the overlay can be dragged outside the black canvas, the highlight and card can move out of bounds, because constraints are only enforced via `constrainOverlayPosition` on overlay reposition.
+
+**Solution:**  
+- Make sure the drag/resize handlers always clamp overlay x/y so the full card never leaves the bounds (canvas/broadcast region).
+- Only display the highlight/dotted border in edit mode—not in live output.
+
+### **3. Border/Artifacts Extending Outside**
+
+- Positioning is based on absolute `top` and `left` coordinates (in px), which can place the overlay and its borders outside the black screen.
+- The constrain logic exists, but **ensure it runs on EVERY position update** (drag, resize, manual coordinate entry).
+
+***
+
+## How to Fix Step-by-Step
+
+**A. Prevent H2H Overlay Duplicates**
+- In the overlay add/toggle handler (often where `addOverlay()` or `setOverlays([...])` occurs), add logic to check existing overlays for an `h2h-card` with the same `homeTeamId` and `awayTeamId` (or vice versa), and block the duplicate.
+  ```js
+  const isDuplicate = overlays.some(
+    o =>
+      o.metricType === 'h2h-card' &&
+      ((o.metricData.homeTeamId === newHome && o.metricData.awayTeamId === newAway) ||
+       (o.metricData.homeTeamId === newAway && o.metricData.awayTeamId === newHome))
+  )
+  if (!isDuplicate) {
+    setOverlays(prev => [...prev, newH2HOverlay]);
+  }
+  ```
+
+**B. Clamp Overlay Position Always**
+- Make sure all movement/edit actions run position through `constrainOverlayPosition()` before committing to state.
+- This is already in your `LivePresentation-5.tsx`, but verify ALL entry points (e.g., grid click, dragging, coordinate input) use it.
+
+**C. Dotted/Highlight Border:**
+- In all overlay DOM, have a flag for “edit mode” vs “broadcast mode,” and only add editing CSS (`border-2`, `z-10`, etc.) if in edit.
+- In broadcast output, render overlays without any edit/drag highlighting.
+
+**D. Bonus: Test for Z-Index and Overflow**
+- Check the parent container for the overlays and ensure it has `overflow: hidden` so no child element or border can visually bleed past canvas edges.
+
+***
+
+## Summary
+
+- **Overlay Deduplication:** Only one H2H overlay per matchup (regardless of team order).
+- **Canvas Boundaries:** Clamp overlays and all highlights to the inside of the broadcast/canvas area at all times.
+- **Edit vs. Broadcast:** Show dotted/selection borders only when overlays are editable, not in final output.
+- **Overflow:** Parent containers should hide overflow for overlays and highlight states.
+
+If you want an **exact patch** for deduplication or border/overflow fixes, let me know the relevant handler/component and I will provide the code.
+
+[1](https://replit.com/@jsmithinthesith/ContentCurator#client/src/pages/LivePresentation.tsx)
+[2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/80734950/9b01a09c-c137-4217-901e-4ece3f202f61/VideoCompositor.tsx)
+[3](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/80734950/e8beb9d6-fe6d-4ae1-a4f6-0c0b1557c307/LivePresentation-5.tsx)
+[4](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/80734950/32991af6-18c8-465e-a462-0db2a0e54b9d/PresentationSetManager.tsx)
+[5](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/80734950/44a62ae3-012e-4769-a3f2-8f9ada1b6e06/UserControlsPanel.tsx)
+[6](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/80734950/5260c4a4-657b-40e4-b5ca-ab2090ef711b/PresentationViewer.tsx)
