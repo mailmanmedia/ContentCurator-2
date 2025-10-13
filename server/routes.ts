@@ -49,6 +49,7 @@ import { insertVideoProjectSchema, insertVideoClipSchema } from "@shared/schema"
 import { historicalDataService } from "./services/historicalDataService";
 import { parseFile } from "./admin/fileParserService";
 import * as XLSX from 'xlsx';
+import { blueprintPdfGenerator } from "./services/blueprintPdfGenerator";
 
 // Initialize OpenAI with error handling
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
@@ -6918,6 +6919,63 @@ Return ONLY a JSON object with this structure:
 
       res.status(500).json({
         error: "Export failed",
+        message: error.message
+      });
+    }
+  });
+
+  // POST /api/admin/generate-blueprint-pdf - Generate codebase blueprint PDF
+  app.post("/api/admin/generate-blueprint-pdf", async (req, res) => {
+    let tempFilePath: string | null = null;
+    
+    try {
+      console.log('📄 Starting blueprint PDF generation...');
+      
+      // Scan the codebase
+      console.log('🔍 Scanning codebase...');
+      const scanResult = await blueprintPdfGenerator.scanCodebase();
+      console.log(`✅ Scan complete: ${scanResult.files.length} files, ${scanResult.components.length} components, ${scanResult.apis.length} APIs`);
+      
+      // Generate temporary file path
+      const timestamp = Date.now();
+      tempFilePath = path.join('/tmp', `blueprint_${timestamp}.pdf`);
+      
+      // Generate PDF
+      console.log('📝 Generating PDF...');
+      await blueprintPdfGenerator.generatePdf(scanResult, tempFilePath);
+      console.log('✅ PDF generated successfully');
+      
+      // Read the file and send to client
+      const fileBuffer = await fs.readFile(tempFilePath);
+      const filename = `ContentCurator_Blueprint_${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      // Set response headers for file download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', fileBuffer.length);
+      
+      // Send file
+      res.send(fileBuffer);
+      
+      console.log('✅ Blueprint PDF sent to client');
+      
+      // Clean up temp file (asynchronously, don't await)
+      fs.unlink(tempFilePath).catch(err => 
+        console.error('Error deleting temp PDF:', err)
+      );
+      
+    } catch (error: any) {
+      console.error('❌ Error generating blueprint PDF:', error);
+      
+      // Clean up temp file if it exists
+      if (tempFilePath) {
+        fs.unlink(tempFilePath).catch(err => 
+          console.error('Error deleting temp PDF after error:', err)
+        );
+      }
+      
+      res.status(500).json({
+        error: "Failed to generate blueprint PDF",
         message: error.message
       });
     }
