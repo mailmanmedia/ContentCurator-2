@@ -2788,7 +2788,7 @@ export default function LivePresentation() {
                         height: `${overlay.height}px`,
                         zIndex: overlay.zIndex,
                         opacity: overlay.opacity,
-                        pointerEvents: isEditing ? 'auto' : 'none', // Allow interaction only when editing position
+                        pointerEvents: isEditing ? 'auto' : 'none',
                       };
 
                       if (!OverlayComponent) {
@@ -2874,11 +2874,11 @@ export default function LivePresentation() {
                           className={
                             isEditing && !isBroadcasting
                               ? 'absolute rounded pointer-events-none bg-primary/30 border-2 border-primary z-10'
-                              : ''
+                              : 'absolute'
                           }
                           style={overlayStyle}
                         >
-                          {isEditing && (
+                          {isEditing && !isBroadcasting && (
                             <div className="absolute -top-6 left-0 text-xs text-primary font-mono bg-black/70 px-1 rounded whitespace-nowrap">
                               ({snapToGrid(overlay.x)}, {snapToGrid(overlay.y)}) - {overlay.width}% × {overlay.height}px
                             </div>

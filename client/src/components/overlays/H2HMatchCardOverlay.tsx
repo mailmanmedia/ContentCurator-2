@@ -77,8 +77,8 @@ export default function H2HMatchCardOverlay({
   teamAId,
   teamBId,
   limit = 5,
-  opacity = 0.95,
-  colorPalette = "classic",
+  opacity = 0.98,
+  colorPalette = 'navy',
   endpoint,
 }: H2HMatchCardOverlayProps) {
   const palette = COLOR_PALETTES[colorPalette];
