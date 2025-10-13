@@ -87,20 +87,16 @@ export default function H2HMatchCardOverlay({
 
   // Build URL reactively when props change
   const url = useMemo(() => {
-    console.log('[H2HMatchCardOverlay] Building URL with props:', { teamAId, teamBId, limit, endpoint });
     const params = new URLSearchParams();
     params.set("teamAId", String(teamAId));
     params.set("teamBId", String(teamBId));
     if (limit) params.set("limit", String(limit));
-    const finalUrl = `${endpoint || "/api/h2h"}?${params.toString()}`;
-    console.log('[H2HMatchCardOverlay] Final URL:', finalUrl);
-    return finalUrl;
+    return `${endpoint || "/api/h2h"}?${params.toString()}`;
   }, [teamAId, teamBId, limit, endpoint]);
 
   const { data, isLoading, error, refetch } = useQuery<H2HPayload>({
     queryKey: ["h2h", teamAId, teamBId, limit, endpoint],
     queryFn: async () => {
-      console.log('[H2HMatchCardOverlay] Fetching with URL:', url);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch H2H (${res.status})`);
       return res.json();

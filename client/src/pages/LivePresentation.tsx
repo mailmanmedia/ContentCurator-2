@@ -4870,7 +4870,7 @@ export default function LivePresentation() {
                         zIndex: template.zIndex,
                         opacity: template.opacity,
                         metricType: template.metricType,
-                        metricData: template.metricType === 'h2h-card' ? { homeTeamId: 40, awayTeamId: 47 }
+                        metricData: template.metricType === 'h2h-card' ? { homeTeamId: 40, awayTeamId: null }
                                   : template.metricType === 'player-stats' ? { playerId: 1 }
                                   : {},
                         x: defaultX,

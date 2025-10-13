@@ -31,7 +31,7 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'metric',
     width: 35,
     height: 220,
-    position: 'bottom',
+    position: 'top',
     zIndex: 100,
     opacity: 0.95,
     backgroundColor: '#002147',
