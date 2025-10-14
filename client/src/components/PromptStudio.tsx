@@ -1468,7 +1468,7 @@ export default function PromptStudio() {
                             <div className="flex-1">
                               <h4 className="font-semibold text-sm">{report.title}</h4>
                               <p className="text-xs text-muted-foreground">
-                                Created {new Date(report.createdAt).toLocaleDateString()} • Status: {report.status}
+                                Created {new Date(report.created_at).toLocaleDateString()} • Status: {report.status}
                               </p>
                             </div>
                             <Button

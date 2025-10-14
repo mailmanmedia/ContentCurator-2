@@ -804,9 +804,9 @@ export default function RssControlPanel() {
                             {article.author && (
                               <span data-testid={`text-author-${article.id}`}>by {article.author}</span>
                             )}
-                            {article.publishedAt && (
+                            {article.published_at && (
                               <span data-testid={`text-published-${article.id}`}>
-                                {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
+                                {formatDistanceToNow(new Date(article.published_at), { addSuffix: true })}
                               </span>
                             )}
                           </div>

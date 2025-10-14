@@ -45,7 +45,7 @@ export default function QuickLibraryControls({ onItemSelect }: QuickLibraryContr
 
   const recentItems = libraryItems
     .filter(item => item.isActive && !item.isStarred)
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, 2);
 
   const quickAccessItems = [...starredItems, ...recentItems].slice(0, 4);

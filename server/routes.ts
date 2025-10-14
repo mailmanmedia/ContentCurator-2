@@ -2704,7 +2704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get team fixtures
   app.get("/api/football/teams/:teamId/fixtures", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
       const last = parseInt(req.query.last as string) || 10;
       const season = parseInt(req.query.season as string) || 2025;
 
@@ -2739,7 +2739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get team statistics for a specific competition/season
   app.get("/api/football/teams/:teamId/statistics", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
       const leagueId = parseInt(req.query.league_id as string);
       const season = parseInt(req.query.season as string);
 
@@ -2758,7 +2758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get team squad for a specific season
   app.get("/api/football/teams/:teamId/squad", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
       const season = parseInt(req.query.season as string);
 
       if (isNaN(teamId)) {
@@ -2780,7 +2780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get team data by ID (name, badge, etc.)
   app.get("/api/football/team/:teamId", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
 
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
@@ -3534,7 +3534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get team statistics from database for FormGuideOverlay
   app.get("/api/database/teams/:teamId/statistics", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
       const leagueId = parseInt(req.query.league_id as string) || 39;
 
       if (isNaN(teamId)) {
@@ -3658,7 +3658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get team fixtures from database for FormGuideOverlay
   app.get("/api/database/teams/:teamId/fixtures", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
       const last = parseInt(req.query.last as string) || 5;
 
       if (isNaN(teamId)) {
@@ -4124,7 +4124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Refresh endpoint for specific team data
   app.post("/api/admin/update/team/:teamId", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
 
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
@@ -4203,7 +4203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team statistics endpoint for match preview
   app.get("/api/team-stats/:teamId", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
       const season = new Date().getFullYear(); // Current season
       const leagueId = 39; // Premier League
 
@@ -4350,7 +4350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Analysis endpoint for team statistics
   app.post("/api/football/teams/:teamId/analyze", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
       const { teamName, statistics, isLiverpool } = req.body;
 
       if (isNaN(teamId)) {
@@ -4475,7 +4475,7 @@ Return ONLY a JSON object with this structure:
   // Get latest team statistics from cache
   app.get("/api/cached-stats/team/:teamId/:leagueId", async (req, res) => {
     try {
-      const teamId = parseInt(req.params.team_id);
+      const teamId = parseInt(req.params.teamId);
       const leagueId = parseInt(req.params.league_id);
       const seasonYear = req.query.seasonYear ? parseInt(req.query.seasonYear as string) : undefined;
 
