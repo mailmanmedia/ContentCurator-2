@@ -59,7 +59,7 @@ export default function RssIntelligence() {
     onSuccess: (data, sourceId) => {
       queryClient.invalidateQueries({ queryKey: ['/api/rss-articles'] });
       queryClient.invalidateQueries({ queryKey: ['/api/rss-dashboard'] });
-      const source = sourcesData?.find(s => s.id === sourceId);
+      const source = sourcesData?.find(s => s.id === Number(sourceId));
       toast({
         title: "Feed Updated",
         description: `${source?.name}: ${data.articlesAdded} new articles fetched`
@@ -101,7 +101,7 @@ export default function RssIntelligence() {
   const filteredSources = sourcesData?.filter(source => {
     const matchesSearch = searchQuery === "" || 
       source.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      source.description.toLowerCase().includes(searchQuery.toLowerCase());
+      (source.description && source.description.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesCategory = selectedCategory === "all" || source.category === selectedCategory;
     
@@ -154,10 +154,10 @@ export default function RssIntelligence() {
     
     // Source filter
     const matchesSource = selectedSourceIds.length === 0 || 
-      selectedSourceIds.includes(article.sourceId);
+      (article.source_id !== null && selectedSourceIds.includes(article.source_id.toString()));
     
     // Date range filter
-    const articleDate = article.publishedAt ? new Date(article.publishedAt) : null;
+    const articleDate = article.published_at ? new Date(article.published_at) : null;
     const matchesDateRange = 
       (!startDate || !articleDate || isAfter(articleDate, startOfDay(startDate)) || articleDate.getTime() === startOfDay(startDate).getTime()) &&
       (!endDate || !articleDate || isBefore(articleDate, endOfDay(endDate)) || articleDate.getTime() === endOfDay(endDate).getTime());
@@ -183,8 +183,9 @@ export default function RssIntelligence() {
   };
 
   // Get source name by ID
-  const getSourceName = (sourceId: string) => {
-    return sourcesData?.find(s => s.id === sourceId)?.name || "Unknown Source";
+  const getSourceName = (sourceId: string | number) => {
+    const id = typeof sourceId === 'string' ? Number(sourceId) : sourceId;
+    return sourcesData?.find(s => s.id === id)?.name || "Unknown Source";
   };
 
   // Toggle source selection
@@ -336,17 +337,16 @@ export default function RssIntelligence() {
                           {article.description}
                         </p>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{formatTimeAgo(article.publishedAt ? article.publishedAt.toString() : null)}</span>
+                          <span>{formatTimeAgo(article.published_at ? article.published_at.toString() : null)}</span>
                           {article.author && <span>By {article.author}</span>}
-                          {article.readingTime && <span>{article.readingTime} min read</span>}
                         </div>
                       </div>
-                      {article.sentiment && (
+                      {article.sentiment_score !== null && (
                         <Badge variant={
-                          article.sentiment === 'positive' ? 'default' : 
-                          article.sentiment === 'negative' ? 'destructive' : 'secondary'
+                          article.sentiment_score > 0.3 ? 'default' : 
+                          article.sentiment_score < -0.3 ? 'destructive' : 'secondary'
                         }>
-                          {article.sentiment}
+                          {article.sentiment_score > 0.3 ? 'positive' : article.sentiment_score < -0.3 ? 'negative' : 'neutral'}
                         </Badge>
                       )}
                     </div>
@@ -397,9 +397,9 @@ export default function RssIntelligence() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${getCategoryColor(source.category)}`}></div>
+                        <div className={`w-3 h-3 rounded-full ${getCategoryColor(source.category || '')}`}></div>
                         {source.name}
-                        {source.isVerified && (
+                        {source.is_verified && (
                           <Badge variant="secondary" className="text-xs">
                             Verified
                           </Badge>
@@ -414,22 +414,18 @@ export default function RssIntelligence() {
                 <CardContent className="pt-0">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Articles:</span>
-                      <span className="font-medium">{source.totalArticles}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Last Updated:</span>
-                      <span className="font-medium">{formatTimeAgo(source.lastFetchedAt ? source.lastFetchedAt.toString() : null)}</span>
+                      <span className="font-medium">{formatTimeAgo(source.last_fetched_at ? source.last_fetched_at.toString() : null)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Update Frequency:</span>
-                      <span className="font-medium">{source.updateFrequency}m</span>
+                      <span className="text-muted-foreground">Category:</span>
+                      <span className="font-medium">{source.category || 'Uncategorized'}</span>
                     </div>
                     
                     <div className="flex items-center gap-2 pt-2">
                       <Button 
                         size="sm" 
-                        onClick={() => fetchSourceMutation.mutate(source.id)}
+                        onClick={() => fetchSourceMutation.mutate(source.id.toString())}
                         disabled={fetchSourceMutation.isPending}
                         data-testid={`button-fetch-${source.id}`}
                       >
@@ -438,10 +434,10 @@ export default function RssIntelligence() {
                       </Button>
                       
                       <Badge variant="outline">
-                        {getCategoryLabel(source.category)}
+                        {getCategoryLabel(source.category || '')}
                       </Badge>
                       
-                      {!source.isActive && (
+                      {!source.is_active && (
                         <Badge variant="destructive">
                           Inactive
                         </Badge>
@@ -509,12 +505,12 @@ export default function RssIntelligence() {
                       <PopoverContent className="w-80 max-h-80 overflow-auto">
                         <div className="space-y-2">
                           <h4 className="font-medium text-sm mb-3">Filter by Source</h4>
-                          {sourcesData?.filter(s => s.isActive).map((source) => (
+                          {sourcesData?.filter(s => s.is_active).map((source) => (
                             <div key={source.id} className="flex items-center space-x-2">
                               <Checkbox
                                 id={`source-${source.id}`}
-                                checked={selectedSourceIds.includes(source.id)}
-                                onCheckedChange={() => toggleSourceSelection(source.id)}
+                                checked={selectedSourceIds.includes(source.id.toString())}
+                                onCheckedChange={() => toggleSourceSelection(source.id.toString())}
                               />
                               <label
                                 htmlFor={`source-${source.id}`}
@@ -692,7 +688,7 @@ export default function RssIntelligence() {
                         <div className="flex items-start justify-between gap-4">
                           <h3 className="text-lg font-semibold line-clamp-2 flex-1">
                             <a 
-                              href={article.link} 
+                              href={article.link || '#'} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="hover:text-primary transition-colors"
@@ -700,12 +696,12 @@ export default function RssIntelligence() {
                               {article.title}
                             </a>
                           </h3>
-                          {article.sentiment && (
+                          {article.sentiment_score !== null && (
                             <Badge variant={
-                              article.sentiment === 'positive' ? 'default' : 
-                              article.sentiment === 'negative' ? 'destructive' : 'secondary'
+                              article.sentiment_score > 0.3 ? 'default' : 
+                              article.sentiment_score < -0.3 ? 'destructive' : 'secondary'
                             }>
-                              {article.sentiment}
+                              {article.sentiment_score > 0.3 ? 'positive' : article.sentiment_score < -0.3 ? 'negative' : 'neutral'}
                             </Badge>
                           )}
                         </div>
@@ -719,20 +715,17 @@ export default function RssIntelligence() {
                         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Globe className="w-3 h-3" />
-                            <span className="font-medium">{getSourceName(article.sourceId)}</span>
+                            <span className="font-medium">{getSourceName(article.source_id || '')}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {article.publishedAt 
-                              ? format(new Date(article.publishedAt), "MMM d, yyyy 'at' h:mm a")
+                            {article.published_at 
+                              ? format(new Date(article.published_at), "MMM d, yyyy 'at' h:mm a")
                               : "No date"
                             }
                           </div>
                           {article.author && (
                             <span>By {article.author}</span>
-                          )}
-                          {article.readingTime && (
-                            <span>{article.readingTime} min read</span>
                           )}
                         </div>
                         
@@ -747,12 +740,12 @@ export default function RssIntelligence() {
                           </div>
                         )}
 
-                        {/* Topics from article */}
-                        {article.topics && article.topics.length > 0 && !article.keywords && (
+                        {/* Categories from article */}
+                        {article.categories && article.categories.length > 0 && !article.keywords && (
                           <div className="flex flex-wrap gap-1">
-                            {article.topics.slice(0, 4).map((topic) => (
-                              <Badge key={topic} variant="outline" className="text-xs">
-                                {topic}
+                            {article.categories.slice(0, 4).map((category: string) => (
+                              <Badge key={category} variant="outline" className="text-xs">
+                                {category}
                               </Badge>
                             ))}
                           </div>
