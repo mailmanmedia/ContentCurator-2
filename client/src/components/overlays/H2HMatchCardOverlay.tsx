@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
 import { Users2, RefreshCw, Calendar, MapPin, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +10,7 @@ import {
   OverlaySourceBadge,
 } from "./OverlayStates";
 import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
+import { useOverlayData } from "@/hooks/useOverlayData";
 
 type Size = number | string;
 
@@ -94,7 +94,7 @@ export default function H2HMatchCardOverlay({
     return `${endpoint || "/api/h2h"}?${params.toString()}`;
   }, [teamAId, teamBId, limit, endpoint]);
 
-  const { data, isLoading, error, refetch } = useQuery<H2HPayload>({
+  const { data, isLoading, error, refetch } = useOverlayData<H2HPayload>({
     queryKey: ["h2h", teamAId, teamBId, limit, endpoint],
     queryFn: async () => {
       const res = await fetch(url);
@@ -102,7 +102,7 @@ export default function H2HMatchCardOverlay({
       return res.json();
     },
     enabled: teamAId != null && teamBId != null && teamAId !== undefined && teamBId !== undefined,
-    refetchInterval: 5 * 60_000,
+    overlayName: "Head-to-Head",
     staleTime: 60_000,
   });
 
