@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   OverlayLoadingSkeleton,
   OverlayErrorState,
   OverlayEmptyState,
   OverlaySourceBadge,
 } from "./OverlayStates";
+import { useOverlayData } from "@/hooks/useOverlayData";
 
 type Size = number | string;
 
@@ -43,20 +43,21 @@ export default function RssTickerEnhancedOverlay({
   speedSeconds = 40,
   pauseOnHover = true,
 }: Props) {
-  const params = new URLSearchParams();
-  if (sourceIds.length) params.set("sourceIds", sourceIds.join(","));
-  params.set("limit", String(maxArticles));
+  const url = useMemo(() => {
+    const params = new URLSearchParams();
+    if (sourceIds.length) params.set("sourceIds", sourceIds.join(","));
+    params.set("limit", String(maxArticles));
+    return `${endpoint || "/api/rss-articles"}?${params.toString()}`;
+  }, [sourceIds, maxArticles, endpoint]);
 
-  const url = `${endpoint || "/api/rss-articles"}?${params.toString()}`;
-
-  const { data, isLoading, error } = useQuery<{ articles: Article[]; lastUpdated?: string }>({
+  const { data, isLoading, error } = useOverlayData<{ articles: Article[]; lastUpdated?: string }>({
     queryKey: ["rss-articles", sourceIds, maxArticles, endpoint],
     queryFn: async () => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch RSS articles (${res.status})`);
       return res.json();
     },
-    refetchInterval: 120_000,
+    overlayName: "RSS Ticker",
     staleTime: 60_000,
   });
 

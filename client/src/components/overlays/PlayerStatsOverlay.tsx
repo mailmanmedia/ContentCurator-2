@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
 import { User, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +10,7 @@ import {
   OverlaySourceBadge,
 } from "./OverlayStates";
 import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
+import { useOverlayData } from "@/hooks/useOverlayData";
 
 type Size = number | string;
 
@@ -134,24 +134,26 @@ export default function PlayerStatsOverlay({
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const params = new URLSearchParams();
-  if (teamId != null) params.set("teamId", String(teamId));
-  if (leagueId != null) params.set("leagueId", String(leagueId));
-  if (season != null) params.set("season", String(season));
-  if (limit != null) params.set("limit", String(limit));
+  const url = useMemo(() => {
+    const params = new URLSearchParams();
+    if (teamId != null) params.set("teamId", String(teamId));
+    if (leagueId != null) params.set("leagueId", String(leagueId));
+    if (season != null) params.set("season", String(season));
+    if (limit != null) params.set("limit", String(limit));
 
-  const defaultEndpoint = useLegacyApi ? "/api/player-stats" : "/api/database/stats";
-  const resolvedEndpoint = endpoint || defaultEndpoint;
-  const url = `${resolvedEndpoint}?${params.toString()}`;
+    const defaultEndpoint = useLegacyApi ? "/api/player-stats" : "/api/database/stats";
+    const resolvedEndpoint = endpoint || defaultEndpoint;
+    return `${resolvedEndpoint}?${params.toString()}`;
+  }, [teamId, leagueId, season, limit, endpoint, useLegacyApi]);
 
-  const { data, isLoading, error, refetch } = useQuery<ApiPayload>({
-    queryKey: ["player-stats", teamId, leagueId, season, limit, resolvedEndpoint],
+  const { data, isLoading, error, refetch } = useOverlayData<ApiPayload>({
+    queryKey: ["player-stats", teamId, leagueId, season, limit, url],
     queryFn: async () => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch player stats (${res.status})`);
       return res.json();
     },
-    refetchInterval: 5 * 60_000, // 5 minutes
+    overlayName: "Player Stats",
     staleTime: 60_000,
   });
 

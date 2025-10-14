@@ -1,6 +1,6 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useMemo } from "react";
 import { OverlayLoadingSkeleton, OverlayErrorState, OverlayEmptyState, OverlaySourceBadge } from "./OverlayStates";
+import { useOverlayData } from "@/hooks/useOverlayData";
 
 type Size = number | string;
 
@@ -26,14 +26,16 @@ export default function RssSentimentOverlay({
   timeframe?: "1h" | "6h" | "12h" | "24h" | "7d";
   opacity?: number;
 }) {
-  const { data, isLoading, error } = useQuery<Summary>({
-    queryKey: ["/api/rss/sentiment-summary", timeframe],
+  const url = useMemo(() => `/api/rss/sentiment-summary?timeframe=${timeframe}`, [timeframe]);
+
+  const { data, isLoading, error } = useOverlayData<Summary>({
+    queryKey: ["rss-sentiment-summary", timeframe],
     queryFn: async () => {
-      const res = await fetch(`/api/rss/sentiment-summary?timeframe=${timeframe}`);
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch RSS sentiment summary (${res.status})`);
       return res.json();
     },
-    refetchInterval: 60_000,
+    overlayName: "RSS Sentiment",
     staleTime: 30_000,
   });
 
