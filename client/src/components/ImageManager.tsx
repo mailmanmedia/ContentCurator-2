@@ -37,7 +37,7 @@ interface ImageCategory {
 
 export default function ImageManager() {
   // Use React Query to fetch images
-  const { data: imagesData, isLoading: isLoadingImages } = useQuery({
+  const { data: imagesData, isLoading: isLoadingImages } = useQuery<{ images: ImageFile[] }>({
     queryKey: ['/api/images'],
     refetchOnWindowFocus: false
   });
@@ -129,10 +129,11 @@ export default function ImageManager() {
     { name: "Training", count: images.filter((img: any) => img.category === "Training").length, icon: "" }
   ];
 
-  const filteredImages = images.filter(image => {
+  const filteredImages = images.filter((image: ImageFile) => {
     const matchesSearch = searchQuery === "" || 
-      image.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      image.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      (image.filename && image.filename.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (image.alt_text && image.alt_text.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (image.caption && image.caption.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesCategory = selectedCategory === "All" || image.category === selectedCategory;
     
@@ -147,6 +148,7 @@ export default function ImageManager() {
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      if (!file) continue;
       
       try {
         // Create FormData for real file upload
@@ -237,32 +239,30 @@ export default function ImageManager() {
     }
   };
 
-  const toggleStar = (imageId: string) => {
-    const image = images.find(img => img.id === imageId);
-    if (image) {
-      updateImageMutation.mutate({
-        id: imageId,
-        updates: { isStarred: !image.isStarred }
-      });
-    }
+  const toggleStar = (imageId: number) => {
+    // Star functionality not implemented in current schema
+    toast({
+      title: "Feature Not Available",
+      description: "Image starring feature is not yet implemented"
+    });
   };
 
-  const deleteImage = (imageId: string) => {
-    deleteImageMutation.mutate(imageId);
+  const deleteImage = (imageId: number) => {
+    deleteImageMutation.mutate(imageId.toString());
   };
 
   const downloadImage = (image: ImageFile) => {
     // Create download link
     const link = document.createElement('a');
     link.href = image.url;
-    link.download = image.name;
+    link.download = image.filename || `image-${image.id}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
     toast({
       title: "Download Started",
-      description: `Downloading ${image.name}`
+      description: `Downloading ${image.filename || 'image'}`
     });
   };
 
@@ -329,8 +329,8 @@ export default function ImageManager() {
                   <Card key={image.id} className="group hover-elevate bg-card border-card-border overflow-hidden">
                     <div className="aspect-square relative overflow-hidden">
                       <img
-                        src={image.thumbnail}
-                        alt={image.name}
+                        src={image.url}
+                        alt={image.alt_text || image.filename || 'Image'}
                         className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                       />
                       
@@ -343,7 +343,7 @@ export default function ImageManager() {
                           data-testid={`button-star-${image.id}`}
                           className="h-8 w-8 sm:h-9 sm:w-9"
                         >
-                          <Star className={`w-3 h-3 sm:w-4 sm:h-4 ${image.isStarred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                          <Star className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                         <Button
                           size="icon"
@@ -364,41 +364,30 @@ export default function ImageManager() {
                           <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                       </div>
-                      
-                      {/* Star indicator */}
-                      {image.isStarred && (
-                        <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
-                          <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400" />
-                        </div>
-                      )}
+
                     </div>
                     
                     <CardContent className="p-2 sm:p-4">
                       <h4 className="font-league-spartan font-bold text-xs sm:text-sm text-card-foreground truncate mb-1 sm:mb-2">
-                        {image.name}
+                        {image.filename || image.alt_text || `Image ${image.id}`}
                       </h4>
                       
                       <div className="hidden sm:flex items-center justify-between text-xs text-muted-foreground mb-2">
-                        <span>{image.size}</span>
-                        <span>{image.type}</span>
+                        <span>{image.size ? `${Math.round(image.size / 1024)}KB` : 'N/A'}</span>
+                        <span>{image.width && image.height ? `${image.width}x${image.height}` : 'N/A'}</span>
                       </div>
                       
-                      <Badge variant="outline" className="text-xs">
-                        {image.category}
-                      </Badge>
+                      {image.category && (
+                        <Badge variant="outline" className="text-xs">
+                          {image.category}
+                        </Badge>
+                      )}
                       
-                      <div className="hidden sm:flex flex-wrap gap-1 mt-2">
-                        {image.tags.slice(0, 2).map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {image.tags.length > 2 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{image.tags.length - 2}
-                          </Badge>
-                        )}
-                      </div>
+                      {image.caption && (
+                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                          {image.caption}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

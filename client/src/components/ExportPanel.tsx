@@ -113,7 +113,7 @@ export default function ExportPanel() {
             </div>
             <Slider
               value={[settings.quality]}
-              onValueChange={([value]) => updateSetting('quality', value)}
+              onValueChange={([value]) => value !== undefined && updateSetting('quality', value)}
               min={50}
               max={100}
               step={5}
