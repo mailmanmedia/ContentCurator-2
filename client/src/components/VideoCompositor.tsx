@@ -231,7 +231,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
     // Filter articles by selected sources
     const filteredArticles = articles
-      .filter(a => overlay.rssSourceIds?.includes(a.sourceId))
+      .filter(a => overlay.rssSourceIds?.includes(a.source_id))
       .slice(0, overlay.rssMaxArticles || 10);
 
     if (filteredArticles.length === 0) {
@@ -240,7 +240,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
     // Format: "SOURCE: Headline - Description • SOURCE: Headline - Description • ..."
     const tickerItems = filteredArticles.map(article => {
-      const sourceName = sourceNameMap.get(article.sourceId) || article.sourceId;
+      const sourceName = sourceNameMap.get(article.source_id) || article.source_id;
       const headline = article.title;
       // Include first 80 chars of description as "important detail"
       const description = article.description 

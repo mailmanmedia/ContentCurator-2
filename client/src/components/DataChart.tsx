@@ -153,7 +153,7 @@ export default function DataChart({ title, subtitle, data, type, color = 'primar
       </CardHeader>
       <CardContent>
         {renderChart()}
-        {selectedPoint !== null && (
+        {selectedPoint !== null && data[selectedPoint] && (
           <div className="mt-4 p-3 bg-accent/10 rounded-lg border border-accent/20">
             <p className="text-sm font-libre-franklin text-card-foreground">
               <span className="font-semibold">Selected:</span> {data[selectedPoint].label} - {data[selectedPoint].value}

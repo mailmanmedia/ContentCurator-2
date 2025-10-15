@@ -110,7 +110,7 @@ export default function ProjectsList({ onOpenProject }: ProjectsListProps) {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="w-4 h-4" />
               <span data-testid={`text-date-${project.id}`}>
-                Created {formatDate(project.createdAt)}
+                Created {formatDate(project.created_at)}
               </span>
             </div>
             {project.duration && (

@@ -1109,7 +1109,7 @@ export default function MetaAgentDashboard() {
                                   </div>
                                   <p className="text-sm font-medium mt-2">{task.action}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    Started: {new Date(task.createdAt).toLocaleString()}
+                                    Started: {new Date(task.created_at).toLocaleString()}
                                   </p>
                                 </div>
                                 {task.status === 'completed' && (

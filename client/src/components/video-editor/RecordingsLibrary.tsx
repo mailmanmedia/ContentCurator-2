@@ -236,7 +236,7 @@ export default function RecordingsLibrary({ onCreateProject }: RecordingsLibrary
               )}
             </div>
             <CardTitle className="text-base" data-testid={`text-recording-label-${recording.id}`}>
-              {formatRecordingLabel(recording.createdAt)}
+              {formatRecordingLabel(recording.created_at)}
             </CardTitle>
             <p className="text-xs text-muted-foreground truncate mt-1" data-testid={`text-filename-${recording.id}`}>
               {recording.filename}

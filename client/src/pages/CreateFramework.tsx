@@ -77,7 +77,7 @@ export default function CreateFramework() {
       const frameworkData = {
         name: data.name,
         description: data.description,
-        categoryId: data.categoryId,
+        categoryId: data.category_id,
         tags: data.tags,
         isPublic: data.isPublic,
         isStarred: data.isStarred
@@ -168,11 +168,11 @@ export default function CreateFramework() {
     console.log('Form validation state:', form.formState.errors);
     
     // Additional client-side validation check
-    if (!data.name || !data.description || !data.categoryId) {
+    if (!data.name || !data.description || !data.category_id) {
       console.error('Validation failed: Required fields missing', {
         name: !data.name,
         description: !data.description,
-        categoryId: !data.categoryId
+        categoryId: !data.category_id
       });
       toast({
         title: "Validation Error",

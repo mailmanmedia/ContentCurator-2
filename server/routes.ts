@@ -1714,8 +1714,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         articles = allArticles.flat()
           .sort((a, b) => {
-            const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-            const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+            const dateA = a.published_at ? new Date(a.published_at).getTime() : 0;
+            const dateB = b.published_at ? new Date(b.published_at).getTime() : 0;
             return dateB - dateA; // Most recent first
           })
           .slice(0, limit ? parseInt(limit as string) : 100);
@@ -2466,7 +2466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const competitionsFromFixtures = await db
         .selectDistinct({
-          id: footballFixtures.leagueId,
+          id: footballFixtures.league_id,
           season: footballFixtures.season,
         })
         .from(footballFixtures);
@@ -2531,7 +2531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get league standings for a specific league and season
   app.get("/api/football/standings/:leagueId/:season", async (req, res) => {
     try {
-      const leagueId = parseInt(req.params.leagueId);
+      const leagueId = parseInt(req.params.league_id);
       const season = parseInt(req.params.season);
 
       if (isNaN(leagueId) || isNaN(season)) {
@@ -2740,7 +2740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/football/teams/:teamId/statistics", async (req, res) => {
     try {
       const teamId = parseInt(req.params.teamId);
-      const leagueId = parseInt(req.query.leagueId as string);
+      const leagueId = parseInt(req.query.league_id as string);
       const season = parseInt(req.query.season as string);
 
       if (isNaN(teamId) || isNaN(leagueId) || isNaN(season)) {
@@ -2907,7 +2907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/football/players/liverpool/top-scorers", async (req, res) => {
     try {
       const season = parseInt(req.query.season as string) || new Date().getFullYear();
-      const leagueId = parseInt(req.query.leagueId as string) || 39; // Premier League
+      const leagueId = parseInt(req.query.league_id as string) || 39; // Premier League
       const limit = parseInt(req.query.limit as string) || 5;
 
       const topScorers = await db
@@ -2925,8 +2925,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(footballPlayers, eq(playerSeasonStatistics.playerId, footballPlayers.id))
         .where(
           and(
-            eq(playerSeasonStatistics.teamId, 40), // Liverpool
-            eq(playerSeasonStatistics.leagueId, leagueId),
+            eq(playerSeasonStatistics.team_id, 40), // Liverpool
+            eq(playerSeasonStatistics.league_id, leagueId),
             eq(playerSeasonStatistics.season, season)
           )
         )
@@ -3072,7 +3072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('🧹 Data cleaning requested: populate player IDs');
       const { dataCleaningService } = await import('./football/dataCleaningService');
       const season = req.body.season || 2025;
-      const teamId = req.body.teamId || 40;
+      const teamId = req.body.team_id || 40;
 
       // Count players that need updating
       const playersWithoutId = await db
@@ -3114,7 +3114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('🖼️ Data cleaning requested: fix player photos');
       const { dataCleaningService } = await import('./football/dataCleaningService');
       const season = req.body.season || 2025;
-      const teamId = req.body.teamId || 40;
+      const teamId = req.body.team_id || 40;
 
       // Count players that need photo fixes
       const playersWithoutPhotos = await db
@@ -3535,7 +3535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/database/teams/:teamId/statistics", async (req, res) => {
     try {
       const teamId = parseInt(req.params.teamId);
-      const leagueId = parseInt(req.query.leagueId as string) || 39;
+      const leagueId = parseInt(req.query.league_id as string) || 39;
 
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
@@ -3742,26 +3742,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const standings = await db
         .select({
-          position: footballStandings.rank,
-          team: footballStandings.team_name,
-          played: footballStandings.all_played,
-          won: footballStandings.all_win,
-          drawn: footballStandings.all_draw,
-          lost: footballStandings.all_lose,
-          goalsFor: footballStandings.all_goals_for,
-          goalsAgainst: footballStandings.all_goals_against,
-          goalDifference: footballStandings.goals_diff,
-          points: footballStandings.points,
-          form: footballStandings.form,
+          position: football_standings.rank,
+          team: football_standings.team_name,
+          played: football_standings.all_played,
+          won: football_standings.all_win,
+          drawn: football_standings.all_draw,
+          lost: football_standings.all_lose,
+          goalsFor: football_standings.all_goals_for,
+          goalsAgainst: football_standings.all_goals_against,
+          goalDifference: football_standings.goals_diff,
+          points: football_standings.points,
+          form: football_standings.form,
         })
-        .from(footballStandings)
+        .from(football_standings)
         .where(
           and(
-            eq(footballStandings.league_id, Number(leagueId)),
-            eq(footballStandings.season, String(season))
+            eq(football_standings.league_id, Number(leagueId)),
+            eq(football_standings.season, String(season))
           )
         )
-        .orderBy(footballStandings.rank);
+        .orderBy(football_standings.rank);
 
       res.json({
         data: standings,
@@ -3779,8 +3779,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/database/players/top-scorers", async (req, res) => {
     try {
       const season = parseInt(req.query.season as string) || 2025;
-      const leagueId = parseInt(req.query.leagueId as string) || 39;
-      const teamId = parseInt(req.query.teamId as string) || 40; // Liverpool
+      const leagueId = parseInt(req.query.league_id as string) || 39;
+      const teamId = parseInt(req.query.team_id as string) || 40; // Liverpool
       const limit = parseInt(req.query.limit as string) || 10;
 
       const players = await db.select({
@@ -3798,8 +3798,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .innerJoin(footballPlayers, eq(playerSeasonStatistics.playerId, footballPlayers.id))
       .where(
         and(
-          eq(playerSeasonStatistics.teamId, teamId),
-          eq(playerSeasonStatistics.leagueId, leagueId),
+          eq(playerSeasonStatistics.team_id, teamId),
+          eq(playerSeasonStatistics.league_id, leagueId),
           eq(playerSeasonStatistics.season, season.toString())
         )
       )
@@ -3929,7 +3929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get upcoming fixtures from database for UpcomingFixturesOverlay (using raw SQL)
   app.get("/api/database/fixtures/upcoming", async (req, res) => {
     try {
-      const teamId = parseInt(req.query.teamId as string) || 40; // Liverpool
+      const teamId = parseInt(req.query.team_id as string) || 40; // Liverpool
       const limit = parseInt(req.query.limit as string) || 5;
       const nowTimestamp = Math.floor(Date.now() / 1000);
 
@@ -4002,7 +4002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all players from database
   app.get("/api/database/players", async (req, res) => {
     try {
-      const teamId = parseInt(req.query.teamId as string) || 40; // Liverpool
+      const teamId = parseInt(req.query.team_id as string) || 40; // Liverpool
       const season = req.query.season as string || '2025';
       
       const result = await pool.query(`
@@ -4035,7 +4035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/database/stats", async (req, res) => {
     try {
       const playerId = parseInt(req.query.playerId as string);
-      const teamId = parseInt(req.query.teamId as string) || 40; // Liverpool
+      const teamId = parseInt(req.query.team_id as string) || 40; // Liverpool
       const season = req.query.season as string || '2025';
       const competition = req.query.competition as string;
       
@@ -4096,7 +4096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get league table from database
   app.get("/api/database/table", async (req, res) => {
     try {
-      const leagueId = parseInt(req.query.leagueId as string) || 39; // Premier League
+      const leagueId = parseInt(req.query.league_id as string) || 39; // Premier League
       const season = req.query.season as string || '2025';
       
       const result = await pool.query(`
@@ -4476,7 +4476,7 @@ Return ONLY a JSON object with this structure:
   app.get("/api/cached-stats/team/:teamId/:leagueId", async (req, res) => {
     try {
       const teamId = parseInt(req.params.teamId);
-      const leagueId = parseInt(req.params.leagueId);
+      const leagueId = parseInt(req.params.league_id);
       const seasonYear = req.query.seasonYear ? parseInt(req.query.seasonYear as string) : undefined;
 
       if (isNaN(teamId) || isNaN(leagueId)) {
@@ -4490,8 +4490,8 @@ Return ONLY a JSON object with this structure:
         .from(teamSeasonStatistics)
         .where(
           and(
-            eq(teamSeasonStatistics.teamId, teamId),
-            eq(teamSeasonStatistics.leagueId, leagueId),
+            eq(teamSeasonStatistics.team_id, teamId),
+            eq(teamSeasonStatistics.league_id, leagueId),
             eq(teamSeasonStatistics.season, currentSeason)
           )
         )
@@ -4561,7 +4561,7 @@ Return ONLY a JSON object with this structure:
   app.get("/api/cached-stats/teams", async (req, res) => {
     try {
       const currentSeason = new Date().getFullYear();
-      const leagueIdParam = req.query.leagueId ? parseInt(req.query.leagueId as string) : null;
+      const leagueIdParam = req.query.league_id ? parseInt(req.query.league_id as string) : null;
 
       // Supported leagues for multi-league support
       const supportedLeagues = [39, 2, 45, 48, 3]; // Premier League, Champions League, FA Cup, EFL Cup, Europa League
@@ -4571,9 +4571,9 @@ Return ONLY a JSON object with this structure:
 
       const teamsWithStats = await db
         .select({
-          teamId: teamSeasonStatistics.teamId,
+          teamId: teamSeasonStatistics.team_id,
           teamName: footballTeams.name,
-          leagueId: teamSeasonStatistics.leagueId,
+          leagueId: teamSeasonStatistics.league_id,
           leagueName: footballCompetitions.name,
           season: teamSeasonStatistics.season,
           lastUpdated: teamSeasonStatistics.lastUpdated,
@@ -4581,18 +4581,18 @@ Return ONLY a JSON object with this structure:
           form: teamSeasonStatistics.form
         })
         .from(teamSeasonStatistics)
-        .innerJoin(footballTeams, eq(teamSeasonStatistics.teamId, footballTeams.id))
+        .innerJoin(footballTeams, eq(teamSeasonStatistics.team_id, footballTeams.id))
         .leftJoin(footballCompetitions, and(
-          eq(teamSeasonStatistics.leagueId, footballCompetitions.id),
+          eq(teamSeasonStatistics.league_id, footballCompetitions.id),
           eq(teamSeasonStatistics.season, footballCompetitions.season)
         ))
         .where(
           and(
-            inArray(teamSeasonStatistics.leagueId, leaguesToQuery),
+            inArray(teamSeasonStatistics.league_id, leaguesToQuery),
             eq(teamSeasonStatistics.season, currentSeason)
           )
         )
-        .orderBy(teamSeasonStatistics.leagueId, footballTeams.name);
+        .orderBy(teamSeasonStatistics.league_id, footballTeams.name);
 
       res.json({ teams: teamsWithStats });
     } catch (error) {
@@ -4664,7 +4664,7 @@ Return ONLY a JSON object with this structure:
       const conditions = [];
 
       if (competitionId !== undefined && !isNaN(competitionId)) {
-        conditions.push(eq(footballFixtures.leagueId, competitionId));
+        conditions.push(eq(footballFixtures.league_id, competitionId));
       }
 
       if (seasonYear !== undefined && !isNaN(seasonYear)) {
@@ -4686,7 +4686,7 @@ Return ONLY a JSON object with this structure:
           date: footballFixtures.date,
           homeTeamId: footballFixtures.homeTeamId,
           awayTeamId: footballFixtures.awayTeamId,
-          leagueId: footballFixtures.leagueId,
+          leagueId: footballFixtures.league_id,
           season: footballFixtures.season,
           round: footballFixtures.round,
           goals: footballFixtures.goals,

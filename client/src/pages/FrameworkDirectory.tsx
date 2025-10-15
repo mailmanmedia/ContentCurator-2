@@ -267,7 +267,7 @@ export default function FrameworkDirectory() {
                 </div>
                 <h3 className="font-semibold text-sm">{category.name}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {frameworksData?.filter(f => f.categoryId === category.id).length || 0} frameworks
+                  {frameworksData?.filter(f => f.category_id === category.id).length || 0} frameworks
                 </p>
               </CardContent>
             </Card>
@@ -314,7 +314,7 @@ export default function FrameworkDirectory() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {frameworksData?.map((framework) => {
-            const category = getCategoryById(framework.categoryId);
+            const category = getCategoryById(framework.category_id);
             return (
               <Card key={framework.id} className="hover-elevate" data-testid={`card-framework-${framework.id}`}>
                 <CardHeader className="pb-3">
@@ -363,7 +363,7 @@ export default function FrameworkDirectory() {
                   
                   <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
                     <span>{framework.totalDownloads} downloads</span>
-                    <span>{new Date(framework.updatedAt).toLocaleDateString()}</span>
+                    <span>{new Date(framework.updated_at).toLocaleDateString()}</span>
                   </div>
                   
                   <div className="flex gap-2">
@@ -477,7 +477,7 @@ export default function FrameworkDirectory() {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {(() => {
-                    const category = getCategoryById(selectedFramework.categoryId);
+                    const category = getCategoryById(selectedFramework.category_id);
                     return category ? (
                       <Badge 
                         variant="secondary"
@@ -509,7 +509,7 @@ export default function FrameworkDirectory() {
                     Last Updated
                   </h3>
                   <p className="text-lg font-bold text-foreground">
-                    {new Date(selectedFramework.updatedAt).toLocaleDateString()}
+                    {new Date(selectedFramework.updated_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>

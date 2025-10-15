@@ -246,7 +246,7 @@ export function PresentationViewer({
             {/* Presentation Metadata */}
             <Card className="mt-6 p-4">
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <span>Generated: {new Date(renderData.rendering.createdAt).toLocaleString()}</span>
+                <span>Generated: {new Date(renderData.rendering.created_at).toLocaleString()}</span>
                 {(renderData.rendering.metaJson as any)?.wordCount && (
                   <span>Words: {(renderData.rendering.metaJson as any).wordCount}</span>
                 )}

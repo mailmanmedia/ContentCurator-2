@@ -2694,7 +2694,7 @@ export default function LivePresentation() {
                             {recording.filename}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {recording.duration || 0}s · {(recording.size / 1024 / 1024).toFixed(1)}MB · {new Date(recording.createdAt).toLocaleDateString()}
+                            {recording.duration || 0}s · {(recording.size / 1024 / 1024).toFixed(1)}MB · {new Date(recording.created_at).toLocaleDateString()}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">

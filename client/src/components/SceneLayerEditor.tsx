@@ -65,7 +65,7 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
         height: newElement.height,
       },
       content: newElement.content,
-      sourceId: newElement.sourceId || undefined,
+      sourceId: newElement.source_id || undefined,
       style: {},
     };
     onChange([...elements, element]);
@@ -88,7 +88,7 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
               height: newElement.height,
             },
             content: newElement.content,
-            sourceId: newElement.sourceId || undefined,
+            sourceId: newElement.source_id || undefined,
           }
         : el
     );
@@ -112,7 +112,7 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
       width: element.position.width,
       height: element.position.height,
       content: element.content || '',
-      sourceId: element.sourceId || undefined,
+      sourceId: element.source_id || undefined,
     });
     setIsAddDialogOpen(true);
   };
@@ -211,7 +211,7 @@ export default function SceneLayerEditor({ elements, onChange }: SceneLayerEdito
                   <div>
                     <Label>Video Source</Label>
                     <Select
-                      value={newElement.sourceId || undefined}
+                      value={newElement.source_id || undefined}
                       onValueChange={(value) => setNewElement({ ...newElement, sourceId: value })}
                     >
                       <SelectTrigger data-testid="select-video-source">

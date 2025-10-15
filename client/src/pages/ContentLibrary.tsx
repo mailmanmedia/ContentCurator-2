@@ -194,8 +194,8 @@ export default function ContentLibrary() {
       type: 'report' as const,
       description: item.status,
       tags: [],
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
       status: item.status,
       metadata: { bodyJson: item.bodyJson, contextJson: item.contextJson }
     })),
@@ -209,7 +209,7 @@ export default function ContentLibrary() {
       tags: item.tags || [],
       category: item.category,
       isStarred: item.isStarred,
-      createdAt: item.createdAt,
+      createdAt: item.created_at,
       metadata: { size: item.size, type: item.type, mimeType: item.mimeType }
     })),
     ...(frameworksData || []).map((item: any) => ({
@@ -219,9 +219,9 @@ export default function ContentLibrary() {
       description: item.description,
       tags: item.tags || [],
       isStarred: item.isStarred,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-      metadata: { totalDownloads: item.totalDownloads, categoryId: item.categoryId }
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      metadata: { totalDownloads: item.totalDownloads, categoryId: item.category_id }
     })),
     ...(rssArticlesData || []).map((item: any) => ({
       id: item.id,
@@ -232,8 +232,8 @@ export default function ContentLibrary() {
       url: item.link,
       tags: item.keywords || [],
       category: item.categories?.[0],
-      createdAt: item.createdAt,
-      metadata: { author: item.author, publishedAt: item.publishedAt, sentiment: item.sentiment }
+      createdAt: item.created_at,
+      metadata: { author: item.author, publishedAt: item.published_at, sentiment: item.sentiment }
     })),
     ...(presentationSetsData || []).map((item: any) => ({
       id: item.id,
@@ -241,8 +241,8 @@ export default function ContentLibrary() {
       type: 'presentation_set' as const,
       description: item.description,
       tags: item.tags || [],
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
       metadata: { sceneIds: item.sceneIds, isActive: item.isActive }
     })),
     ...(scenesData || []).map((item: any) => ({
@@ -251,8 +251,8 @@ export default function ContentLibrary() {
       type: 'scene' as const,
       description: item.description,
       tags: item.tags || [],
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
       metadata: { layout: item.layout, aspectRatio: item.aspectRatio, isTemplate: item.isTemplate }
     })),
     ...(libraryItemsData || []).map((item: any) => ({
@@ -265,8 +265,8 @@ export default function ContentLibrary() {
       tags: item.tags || [],
       category: item.category,
       isStarred: item.isStarred,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
       metadata: { type: item.type, mimeType: item.mimeType, fileSize: item.fileSize }
     })),
     ...(tickerPlaylistsData || []).map((item: any) => ({
@@ -275,8 +275,8 @@ export default function ContentLibrary() {
       type: 'ticker_playlist' as const,
       description: item.description,
       tags: [],
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
       metadata: { mode: item.mode, speed: item.speed, isActive: item.isActive }
     })),
     ...(recordingsData || []).map((item: any) => ({
@@ -287,7 +287,7 @@ export default function ContentLibrary() {
       thumbnail: item.thumbnailPath,
       url: `/api/recordings/${item.id}/video`,
       tags: item.resolution ? [item.resolution] : [],
-      createdAt: item.createdAt,
+      createdAt: item.created_at,
       metadata: { 
         duration: item.duration, 
         size: item.size, 
@@ -319,9 +319,9 @@ export default function ContentLibrary() {
     return [...filteredContent].sort((a, b) => {
       switch (sortBy) {
         case "newest":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case "oldest":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         case "name":
           return a.title.localeCompare(b.title);
         case "type":
@@ -345,7 +345,7 @@ export default function ContentLibrary() {
   const totalItems = allContent.length;
   const starredItems = allContent.filter(item => item.isStarred).length;
   const recentItems = allContent.filter(item => 
-    new Date(item.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    new Date(item.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   ).length;
 
   const starMutation = useMutation({
@@ -632,7 +632,7 @@ export default function ContentLibrary() {
                         )}
                         
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{format(new Date(item.createdAt), "MMM d, yyyy")}</span>
+                          <span>{format(new Date(item.created_at), "MMM d, yyyy")}</span>
                           {item.category && <span>{item.category}</span>}
                         </div>
                         
@@ -737,7 +737,7 @@ export default function ContentLibrary() {
                             )}
                             
                             <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>{format(new Date(item.createdAt), "MMM d, yyyy")}</span>
+                              <span>{format(new Date(item.created_at), "MMM d, yyyy")}</span>
                               {item.category && <span>{item.category}</span>}
                             </div>
                           </div>
@@ -830,15 +830,15 @@ export default function ContentLibrary() {
                   <div>
                     <h4 className="font-semibold mb-2">Created</h4>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(selectedContent.createdAt), "PPpp")}
+                      {format(new Date(selectedContent.created_at), "PPpp")}
                     </p>
                   </div>
                   
-                  {selectedContent.updatedAt && (
+                  {selectedContent.updated_at && (
                     <div>
                       <h4 className="font-semibold mb-2">Updated</h4>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(selectedContent.updatedAt), "PPpp")}
+                        {format(new Date(selectedContent.updated_at), "PPpp")}
                       </p>
                     </div>
                   )}
