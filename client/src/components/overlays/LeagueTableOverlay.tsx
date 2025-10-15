@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Trophy, RefreshCw } from "lucide-react";
 import {
@@ -11,6 +10,7 @@ import {
 import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useOverlayData } from "@/hooks/useOverlayData";
 
 type Size = number | string;
 
@@ -66,19 +66,21 @@ export default function LeagueTableOverlay({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const palette = COLOR_PALETTES[colorPalette];
 
-  const params = new URLSearchParams();
-  params.set("leagueId", String(leagueId));
-  if (season != null) params.set("season", String(season));
-  const url = `${endpoint || "/api/league-table"}?${params.toString()}`;
+  const url = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("leagueId", String(leagueId));
+    if (season != null) params.set("season", String(season));
+    return `${endpoint || "/api/league-table"}?${params.toString()}`;
+  }, [leagueId, season, endpoint]);
 
-  const { data, isLoading, error, refetch } = useQuery<TablePayload>({
+  const { data, isLoading, error, refetch } = useOverlayData<TablePayload>({
     queryKey: ["league-table", leagueId, season, endpoint],
     queryFn: async () => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch league table (${res.status})`);
       return res.json();
     },
-    refetchInterval: 5 * 60_000, // 5 minutes
+    overlayName: "League Table",
     staleTime: 60_000,
   });
 

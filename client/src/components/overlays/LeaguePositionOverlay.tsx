@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Minus, RefreshCw, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -10,6 +9,7 @@ import {
   OverlayErrorState,
   OverlaySourceBadge,
 } from "./OverlayStates";
+import { useOverlayData } from "@/hooks/useOverlayData";
 
 type Size = number | string;
 
@@ -72,24 +72,26 @@ export default function LeaguePositionOverlay({
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // ---- Data Fetch ----
-  const params = new URLSearchParams();
-  params.set("leagueId", String(leagueId));
-  params.set("season", String(season));
-  const url = `${endpoint}?${params.toString()}`;
+  const url = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("leagueId", String(leagueId));
+    params.set("season", String(season));
+    return `${endpoint}?${params.toString()}`;
+  }, [leagueId, season, endpoint]);
 
   const {
     data: standingsData,
     isLoading,
     error,
     refetch,
-  } = useQuery<ApiPayload>({
+  } = useOverlayData<ApiPayload>({
     queryKey: ["standings-db", leagueId, season, endpoint],
     queryFn: async () => {
       const response = await fetch(url);
       if (!response.ok) throw new Error(`Failed to fetch standings (${response.status})`);
       return response.json();
     },
+    overlayName: "League Position",
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 

@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Clock, MapPin, RefreshCw } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +11,7 @@ import {
   OverlaySourceBadge,
 } from "./OverlayStates";
 import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
+import { useOverlayData } from "@/hooks/useOverlayData";
 
 type Size = number | string;
 
@@ -87,22 +87,22 @@ export default function UpcomingFixturesOverlay({
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Build params
-  const params = new URLSearchParams();
-  if (fixtureCount) params.set("limit", String(fixtureCount));
-  if (teamId != null) params.set("teamId", String(teamId));
-  if (leagueId != null) params.set("leagueId", String(leagueId));
+  const url = useMemo(() => {
+    const params = new URLSearchParams();
+    if (fixtureCount) params.set("limit", String(fixtureCount));
+    if (teamId != null) params.set("teamId", String(teamId));
+    if (leagueId != null) params.set("leagueId", String(leagueId));
+    return `${endpoint || "/api/upcoming-fixtures"}?${params.toString()}`;
+  }, [fixtureCount, teamId, leagueId, endpoint]);
 
-  const url = `${endpoint || "/api/upcoming-fixtures"}?${params.toString()}`;
-
-  const { data, isLoading, error, refetch } = useQuery<ApiShape>({
+  const { data, isLoading, error, refetch } = useOverlayData<ApiShape>({
     queryKey: ["upcoming-fixtures", fixtureCount, teamId, leagueId, endpoint],
     queryFn: async () => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch upcoming fixtures (${res.status})`);
       return res.json();
     },
-    refetchInterval: 5 * 60_000, // 5 minutes
+    overlayName: "Upcoming Fixtures",
     staleTime: 60_000,
   });
 

@@ -89,15 +89,15 @@ curl -s http://0.0.0.0:5000/api/rss-articles?limit=10 | jq
 - [x] OverlayTestPage.tsx - Testing dashboard created
 
 ### Overlay Refactoring Checklist
-- [x] H2HMatchCardOverlay.tsx - ✅ Refactored with standardized hooks
-- [x] FormGuideOverlay.tsx - ✅ Refactored with standardized hooks
-- [ ] LeagueTableOverlay.tsx
-- [ ] LeaguePositionOverlay.tsx
-- [ ] PlayerComparisonOverlay.tsx
-- [ ] PlayerStatsOverlay.tsx
-- [ ] RssSentimentOverlay.tsx
-- [ ] RssTickerEnhancedOverlay.tsx
-- [ ] UpcomingFixturesOverlay.tsx
+- [x] H2HMatchCardOverlay.tsx - ✅ Refactored with useOverlayData hook
+- [x] FormGuideOverlay.tsx - ✅ Refactored with useOverlayData hook (2 queries)
+- [x] LeagueTableOverlay.tsx - ✅ Refactored with useOverlayData hook
+- [x] LeaguePositionOverlay.tsx - ✅ Refactored with useOverlayData hook
+- [x] PlayerComparisonOverlay.tsx - ✅ Refactored with useOverlayData hook
+- [x] PlayerStatsOverlay.tsx - ✅ Refactored with useOverlayData hook
+- [x] RssSentimentOverlay.tsx - ✅ Refactored with useOverlayData hook
+- [x] RssTickerEnhancedOverlay.tsx - ✅ Refactored with useOverlayData hook
+- [x] UpcomingFixturesOverlay.tsx - ✅ Refactored with useOverlayData hook
 
 ---
 
@@ -126,6 +126,8 @@ curl -s http://0.0.0.0:5000/api/rss-articles?limit=10 | jq
 - ✅ FIXED: H2H overlay lacks detailed error reporting
 - ✅ FIXED: No visibility into data source (cache vs live)
 - ✅ FIXED: Manual error handling duplicated across overlays
+- ✅ FIXED: useOverlayData hook used deprecated onError callback
+- ✅ FIXED: All overlays refactored to use standardized useOverlayData hook
 
 ### Warning Issues
 - TBD
@@ -139,8 +141,9 @@ curl -s http://0.0.0.0:5000/api/rss-articles?limit=10 | jq
 
 1. ✅ Create standardization files
 2. ✅ Refactor H2HMatchCardOverlay as template
-3. ⏳ Test API endpoints manually
-4. ⏳ Apply pattern to FormGuideOverlay
-5. ⏳ Apply pattern to remaining overlays
-6. ⏳ Visual testing at all breakpoints
-7. ⏳ Final validation
+3. ✅ Apply pattern to FormGuideOverlay
+4. ✅ Apply pattern to remaining overlays (ALL 9 overlays completed)
+5. ✅ Fix deprecated onError callback in useOverlayData hook
+6. ⏳ Test API endpoints manually (requires server)
+7. ⏳ Visual testing at all breakpoints (requires server)
+8. ⏳ Final validation (requires server)

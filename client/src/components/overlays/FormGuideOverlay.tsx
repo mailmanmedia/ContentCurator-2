@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { RefreshCw } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { createScalingSystem } from "@/lib/overlayScaling";
@@ -12,6 +11,7 @@ import {
   OverlayEmptyState,
   OverlaySourceBadge,
 } from "./OverlayStates";
+import { useOverlayData } from "@/hooks/useOverlayData";
 
 export const COLOR_PALETTES = {
   classic: {
@@ -114,7 +114,7 @@ export default function FormGuideOverlay({
     isLoading: isLoadingStats,
     error: statsError,
     refetch: refetchStats,
-  } = useQuery({
+  } = useOverlayData({
     queryKey: ["database-team-stats", teamId, leagueId],
     queryFn: async () => {
       const response = await fetch(`/api/database/teams/${teamId}/statistics?leagueId=${leagueId}`);
@@ -122,6 +122,7 @@ export default function FormGuideOverlay({
       return response.json();
     },
     enabled: !!teamId,
+    overlayName: "Form Guide (Stats)",
     staleTime: 5 * 60 * 1000,
   });
 
@@ -130,7 +131,7 @@ export default function FormGuideOverlay({
     isLoading: isLoadingFixtures,
     error: fixturesError,
     refetch: refetchFixtures,
-  } = useQuery({
+  } = useOverlayData({
     queryKey: ["database-team-fixtures", teamId, matchLimit],
     queryFn: async () => {
       const response = await fetch(`/api/database/teams/${teamId}/fixtures?last=${matchLimit}`);
@@ -138,6 +139,7 @@ export default function FormGuideOverlay({
       return response.json();
     },
     enabled: !!teamId,
+    overlayName: "Form Guide (Fixtures)",
     staleTime: 5 * 60 * 1000,
   });
 

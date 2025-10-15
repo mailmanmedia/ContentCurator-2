@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
 import { Users, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +10,7 @@ import {
   OverlaySourceBadge,
 } from "./OverlayStates";
 import { COLOR_PALETTES, type ColorPaletteKey } from "./FormGuideOverlay";
+import { useOverlayData } from "@/hooks/useOverlayData";
 
 type Size = number | string;
 
@@ -122,14 +122,16 @@ export default function PlayerComparisonOverlay({
   // Guard: require exactly two players
   const twoPlayersValid = Array.isArray(playerIds) && playerIds.length === 2;
 
-  const params = new URLSearchParams();
-  if (twoPlayersValid) params.set("playerIds", playerIds.join(","));
-  if (teamId != null) params.set("teamId", String(teamId));
-  if (leagueId != null) params.set("leagueId", String(leagueId));
-  if (season != null) params.set("season", String(season));
-  const url = `${endpoint || "/api/player-comparison"}?${params.toString()}`;
+  const url = useMemo(() => {
+    const params = new URLSearchParams();
+    if (twoPlayersValid) params.set("playerIds", playerIds.join(","));
+    if (teamId != null) params.set("teamId", String(teamId));
+    if (leagueId != null) params.set("leagueId", String(leagueId));
+    if (season != null) params.set("season", String(season));
+    return `${endpoint || "/api/player-comparison"}?${params.toString()}`;
+  }, [playerIds, teamId, leagueId, season, endpoint, twoPlayersValid]);
 
-  const { data, isLoading, error, refetch } = useQuery<ApiPayload>({
+  const { data, isLoading, error, refetch } = useOverlayData<ApiPayload>({
     queryKey: ["player-comparison", playerIds, teamId, leagueId, season, endpoint],
     queryFn: async () => {
       if (!twoPlayersValid) {
@@ -140,7 +142,7 @@ export default function PlayerComparisonOverlay({
       if (!res.ok) throw new Error(`Failed to fetch player comparison (${res.status})`);
       return res.json();
     },
-    refetchInterval: 5 * 60_000,
+    overlayName: "Player Comparison",
     staleTime: 60_000,
   });
 

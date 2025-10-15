@@ -4,6 +4,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { useEffect, useRef } from 'react';
 
 interface UseOverlayDataOptions<T> {
   queryKey: string[];
@@ -23,8 +24,9 @@ export function useOverlayData<T>({
   retry = 3,
 }: UseOverlayDataOptions<T>) {
   const { toast } = useToast();
+  const prevErrorRef = useRef<Error | null>(null);
 
-  return useQuery<T>({
+  const result = useQuery<T>({
     queryKey,
     queryFn: async () => {
       try {
@@ -43,13 +45,22 @@ export function useOverlayData<T>({
     staleTime,
     retry,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    onError: (error: Error) => {
-      console.error(`[useOverlayData] ${overlayName} error:`, error);
+  });
+
+  // Handle errors using useEffect to avoid toast spam
+  useEffect(() => {
+    if (result.error && result.error !== prevErrorRef.current) {
+      prevErrorRef.current = result.error;
+      console.error(`[useOverlayData] ${overlayName} error:`, result.error);
       toast({
         title: `${overlayName} Error`,
-        description: error.message,
+        description: result.error.message,
         variant: 'destructive',
       });
-    },
-  });
+    } else if (!result.error) {
+      prevErrorRef.current = null;
+    }
+  }, [result.error, overlayName, toast]);
+
+  return result;
 }
