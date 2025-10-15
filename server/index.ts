@@ -68,7 +68,7 @@ app.use((req, res, next) => {
     const { startIncrementalSyncSchedule } = await import('./football/scheduledIncrementalSync');
     startIncrementalSyncSchedule();
   } catch (error) {
-    log('Warning: Could not start incremental sync scheduler', error);
+    log('Warning: Could not start incremental sync scheduler', String(error));
   }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -1,3 +1,4 @@
+import '../config'; // Load environment variables first
 import fs from 'fs/promises';
 import path from 'path';
 import { db } from '../db';
@@ -120,7 +121,7 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
     // If insufficient database data, try API
     let allMatches = dbMatches;
     if (dbMatches.length < 10) {
-      console.log(`Fetching additional H2H data from API for Liverpool vs ${opponent.name}`);
+      console.log(`Fetching additional H2H data from API for Liverpool vs ${opponent?.name || 'Unknown Team'}`);
       try {
         const currentSeason = getCurrentSeason();
         // Fetch data for the current season and the 3 preceding seasons
@@ -184,7 +185,7 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
           .orderBy(desc(footballFixtures.timestamp))
           .limit(30);
       } catch (apiError) {
-        console.error(`API fetch failed for ${opponent.name}:`, apiError);
+        console.error(`API fetch failed for ${opponent?.name || 'Unknown Team'}:`, apiError);
       }
     }
 
@@ -246,9 +247,9 @@ async function fetchH2HData(liverpoolId: number, opponentId: number): Promise<Op
     });
 
     return {
-      opponentId: opponent.id,
-      opponentName: opponent.name,
-      opponentLogo: opponent.logo,
+      opponentId: opponent?.id || 0,
+      opponentName: opponent?.name || 'Unknown Team',
+      opponentLogo: opponent?.logo || '',
       matches,
       record: { wins, draws, losses }
     };
