@@ -172,10 +172,34 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [initialOverlayState, setInitialOverlayState] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [showGrid, setShowGrid] = useState(false);
+  const [gridSize] = useState(20); // Grid size in pixels
 
   useImperativeHandle(ref, () => ({
     canvasRef
   }), []);
+
+  // Snap to grid helper function
+  const snapToGrid = useCallback((value: number, gridSize: number): number => {
+    return Math.round(value / gridSize) * gridSize;
+  }, []);
+
+  // Constrain value within bounds with padding for borders
+  const constrain = useCallback((value: number, min: number, max: number, borderPadding: number = 0): number => {
+    return Math.max(min + borderPadding, Math.min(max - borderPadding, value));
+  }, []);
+
+  // Toggle grid visibility with keyboard shortcut (G key)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'g' || e.key === 'G') {
+        setShowGrid(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Fetch RSS articles when RSS overlay exists
   const rssOverlays = overlays.filter(o => o.overlayType === 'rss');
@@ -1142,69 +1166,100 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
       const deltaY = (e.clientY - dragStart.y) * scaleY;
 
       if (isDragging && selectedOverlayId && onUpdateOverlay) {
-        const newX = Math.max(0, Math.min(canvas.width - (canvas.width * initialOverlayState.width / 100), initialOverlayState.x + deltaX));
-        const newY = Math.max(0, Math.min(canvas.height - initialOverlayState.height, initialOverlayState.y + deltaY));
+        const overlay = overlays.find(o => o.id === selectedOverlayId);
+        if (!overlay) return;
 
-        onUpdateOverlay(selectedOverlayId, { 
-          x: newX, 
-          y: newY 
+        // Calculate overlay width in pixels
+        const overlayWidthPx = canvas.width * (initialOverlayState.width / 100);
+
+        // Border padding to keep border inside canvas
+        const borderPadding = (overlay.borderWidth || 0) * 2;
+
+        // Calculate new position with delta
+        let rawX = initialOverlayState.x + deltaX;
+        let rawY = initialOverlayState.y + deltaY;
+
+        // Apply snap-to-grid
+        const snappedX = snapToGrid(rawX, gridSize);
+        const snappedY = snapToGrid(rawY, gridSize);
+
+        // Constrain within canvas bounds (accounting for overlay size and border)
+        const newX = constrain(snappedX, 0, canvas.width - overlayWidthPx, borderPadding);
+        const newY = constrain(snappedY, 0, canvas.height - initialOverlayState.height, borderPadding);
+
+        onUpdateOverlay(selectedOverlayId, {
+          x: newX,
+          y: newY
         });
       } else if (isResizing && selectedOverlayId && resizeHandle && onUpdateOverlay) {
         const overlay = overlays.find(o => o.id === selectedOverlayId);
         if (!overlay) return;
 
         const canvasWidthPx = canvas.width * (initialOverlayState.width / 100);
+        const borderPadding = (overlay.borderWidth || 0) * 2;
+
         let newX = initialOverlayState.x;
         let newY = initialOverlayState.y;
         let newWidth = initialOverlayState.width;
         let newHeight = initialOverlayState.height;
 
+        // Apply deltas with snap-to-grid for position changes
         switch (resizeHandle) {
           case 'nw':
-            newX = initialOverlayState.x + deltaX;
-            newY = initialOverlayState.y + deltaY;
-            newWidth = Math.max(10, (canvasWidthPx - deltaX) / canvas.width * 100);
-            newHeight = Math.max(30, initialOverlayState.height - deltaY);
+            newX = snapToGrid(initialOverlayState.x + deltaX, gridSize);
+            newY = snapToGrid(initialOverlayState.y + deltaY, gridSize);
+            newWidth = Math.max(10, ((canvasWidthPx - (newX - initialOverlayState.x)) / canvas.width) * 100);
+            newHeight = Math.max(30, initialOverlayState.height - (newY - initialOverlayState.y));
             break;
           case 'n':
-            newY = initialOverlayState.y + deltaY;
-            newHeight = Math.max(30, initialOverlayState.height - deltaY);
+            newY = snapToGrid(initialOverlayState.y + deltaY, gridSize);
+            newHeight = Math.max(30, initialOverlayState.height - (newY - initialOverlayState.y));
             break;
           case 'ne':
-            newY = initialOverlayState.y + deltaY;
+            newY = snapToGrid(initialOverlayState.y + deltaY, gridSize);
             newWidth = Math.max(10, (canvasWidthPx + deltaX) / canvas.width * 100);
-            newHeight = Math.max(30, initialOverlayState.height - deltaY);
+            newHeight = Math.max(30, initialOverlayState.height - (newY - initialOverlayState.y));
             break;
           case 'e':
             newWidth = Math.max(10, (canvasWidthPx + deltaX) / canvas.width * 100);
             break;
           case 'se':
             newWidth = Math.max(10, (canvasWidthPx + deltaX) / canvas.width * 100);
-            newHeight = Math.max(30, initialOverlayState.height + deltaY);
+            newHeight = Math.max(30, snapToGrid(initialOverlayState.height + deltaY, gridSize));
             break;
           case 's':
-            newHeight = Math.max(30, initialOverlayState.height + deltaY);
+            newHeight = Math.max(30, snapToGrid(initialOverlayState.height + deltaY, gridSize));
             break;
           case 'sw':
-            newX = initialOverlayState.x + deltaX;
-            newWidth = Math.max(10, (canvasWidthPx - deltaX) / canvas.width * 100);
-            newHeight = Math.max(30, initialOverlayState.height + deltaY);
+            newX = snapToGrid(initialOverlayState.x + deltaX, gridSize);
+            newWidth = Math.max(10, ((canvasWidthPx - (newX - initialOverlayState.x)) / canvas.width) * 100);
+            newHeight = Math.max(30, snapToGrid(initialOverlayState.height + deltaY, gridSize));
             break;
           case 'w':
-            newX = initialOverlayState.x + deltaX;
-            newWidth = Math.max(10, (canvasWidthPx - deltaX) / canvas.width * 100);
+            newX = snapToGrid(initialOverlayState.x + deltaX, gridSize);
+            newWidth = Math.max(10, ((canvasWidthPx - (newX - initialOverlayState.x)) / canvas.width) * 100);
             break;
         }
 
-        // Ensure overlay stays within canvas bounds
-        newX = Math.max(0, Math.min(canvas.width - (canvas.width * newWidth / 100), newX));
-        newY = Math.max(0, Math.min(canvas.height - newHeight, newY));
+        // Calculate new overlay width in pixels
+        const newOverlayWidthPx = canvas.width * (newWidth / 100);
 
-        onUpdateOverlay(selectedOverlayId, { 
-          x: newX, 
-          y: newY, 
-          width: newWidth, 
-          height: newHeight 
+        // Constrain overlay within canvas bounds (accounting for border)
+        newX = constrain(newX, 0, canvas.width - newOverlayWidthPx, borderPadding);
+        newY = constrain(newY, 0, canvas.height - newHeight, borderPadding);
+
+        // Ensure width doesn't push overlay out of bounds
+        const maxWidth = ((canvas.width - newX - borderPadding * 2) / canvas.width) * 100;
+        newWidth = Math.min(newWidth, maxWidth);
+
+        // Ensure height doesn't push overlay out of bounds
+        newHeight = Math.min(newHeight, canvas.height - newY - borderPadding * 2);
+
+        onUpdateOverlay(selectedOverlayId, {
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight
         });
       }
     };
@@ -1459,6 +1514,59 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         className="w-full h-full object-contain"
         data-testid="canvas-video-compositor"
       />
+
+      {/* Visual Grid Overlay (Toggle with 'G' key) */}
+      {showGrid && canvasRef.current && (
+        <svg
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 999
+          }}
+          viewBox={`0 0 ${outputResolution.width} ${outputResolution.height}`}
+        >
+          {/* Vertical grid lines */}
+          {Array.from({ length: Math.ceil(outputResolution.width / gridSize) }).map((_, i) => (
+            <line
+              key={`v-${i}`}
+              x1={i * gridSize}
+              y1={0}
+              x2={i * gridSize}
+              y2={outputResolution.height}
+              stroke="rgba(200, 16, 46, 0.3)"
+              strokeWidth="1"
+            />
+          ))}
+          {/* Horizontal grid lines */}
+          {Array.from({ length: Math.ceil(outputResolution.height / gridSize) }).map((_, i) => (
+            <line
+              key={`h-${i}`}
+              x1={0}
+              y1={i * gridSize}
+              x2={outputResolution.width}
+              y2={i * gridSize}
+              stroke="rgba(200, 16, 46, 0.3)"
+              strokeWidth="1"
+            />
+          ))}
+          {/* Grid size indicator */}
+          <text
+            x={outputResolution.width - 10}
+            y={20}
+            textAnchor="end"
+            fill="rgba(200, 16, 46, 0.8)"
+            fontSize="14"
+            fontFamily="monospace"
+          >
+            Grid: {gridSize}px (Press 'G' to toggle)
+          </text>
+        </svg>
+      )}
+
       {metricOverlays.map(overlay => renderMetricOverlay(overlay))}
     </div>
   );

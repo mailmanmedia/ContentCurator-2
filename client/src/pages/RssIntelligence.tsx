@@ -156,11 +156,35 @@ export default function RssIntelligence() {
     const matchesSource = selectedSourceIds.length === 0 || 
       selectedSourceIds.includes(article.sourceId);
     
-    // Date range filter
+    // Date range filter (FIXED: proper AND logic for range)
     const articleDate = article.publishedAt ? new Date(article.publishedAt) : null;
-    const matchesDateRange = 
-      (!startDate || !articleDate || isAfter(articleDate, startOfDay(startDate)) || articleDate.getTime() === startOfDay(startDate).getTime()) &&
-      (!endDate || !articleDate || isBefore(articleDate, endOfDay(endDate)) || articleDate.getTime() === endOfDay(endDate).getTime());
+
+    // Check if article falls within date range
+    const matchesDateRange = (() => {
+      // If no date filter is active, match all
+      if (!startDate && !endDate) return true;
+
+      // If article has no date, exclude it when filters are active
+      if (!articleDate) return false;
+
+      // Check start date boundary (inclusive)
+      if (startDate) {
+        const startOfStartDate = startOfDay(startDate);
+        const isAfterStart = isAfter(articleDate, startOfStartDate) ||
+                            articleDate.getTime() === startOfStartDate.getTime();
+        if (!isAfterStart) return false;
+      }
+
+      // Check end date boundary (inclusive)
+      if (endDate) {
+        const endOfEndDate = endOfDay(endDate);
+        const isBeforeEnd = isBefore(articleDate, endOfEndDate) ||
+                           articleDate.getTime() === endOfEndDate.getTime();
+        if (!isBeforeEnd) return false;
+      }
+
+      return true;
+    })();
     
     return matchesKeyword && matchesSource && matchesDateRange;
   }) || [];

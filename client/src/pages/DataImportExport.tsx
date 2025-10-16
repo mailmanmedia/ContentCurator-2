@@ -64,22 +64,52 @@ export default function DataImportExport() {
     },
   });
 
-  // Upload mutation
+  // Upload mutation with file validation
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
+      // File validation before upload (SECURITY FIX)
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const VALID_MIME_TYPES = [
+        'application/json',
+        'text/csv',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/html',
+        'image/jpeg',
+        'image/png'
+      ];
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+      }
+
+      // Validate file type
+      if (!VALID_MIME_TYPES.includes(file.type) && !file.name.endsWith('.web')) {
+        throw new Error('Invalid file type. Only JSON, CSV, Excel, PDF, Word, HTML, JPEG, and PNG files are allowed.');
+      }
+
+      // Additional filename validation (prevent path traversal)
+      const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      if (file.name !== safeFilename) {
+        console.warn(`Filename sanitized from "${file.name}" to "${safeFilename}"`);
+      }
+
       const formData = new FormData();
       formData.append('file', file);
-      
+
       const response = await fetch('/api/admin/import', {
         method: 'POST',
         body: formData,
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Upload failed');
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {

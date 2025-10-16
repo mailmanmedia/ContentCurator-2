@@ -798,11 +798,18 @@ export default function VideoEditor() {
     return () => clearInterval(interval);
   }, [renderJobs.length]);
 
+  // FIXED: Proper blob URL cleanup with error handling
   useEffect(() => {
     return () => {
       uploadedClips.forEach((clip) => {
-        if (clip.url.startsWith("blob:")) {
-          URL.revokeObjectURL(clip.url);
+        try {
+          // Check if URL exists and is a blob URL
+          if (clip.url && typeof clip.url === 'string' && clip.url.startsWith("blob:")) {
+            URL.revokeObjectURL(clip.url);
+          }
+        } catch (error) {
+          // URL may have already been revoked or invalid
+          console.warn(`Failed to revoke blob URL for clip ${clip.id}:`, error);
         }
       });
     };

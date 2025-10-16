@@ -1574,76 +1574,104 @@ class FootballService {
         .limit(last);
 
       if (dbFixtures.length > 0) {
-        console.log(`Found ${dbFixtures.length} H2H fixtures in database across all seasons`);
+        console.log(`✅ Found ${dbFixtures.length} H2H fixtures in database across all seasons`);
         return dbFixtures;
       }
     } catch (dbError) {
-      console.error('Database H2H query failed, falling back to API:', dbError);
+      console.error('⚠️ Database H2H query failed, falling back to API:', dbError);
     }
 
-    // PHASE 2: If no database fixtures, fetch from API
-    return await smartFootballCache.getHeadToHead(home_team_id, away_team_id, () => 
+    // PHASE 2: If no database fixtures, fetch from API and STORE to DB first
+    console.log(`📡 No DB data found for teams ${home_team_id} vs ${away_team_id}, fetching from API...`);
+
+    // Use cache wrapper that ensures DB storage before returning
+    return await smartFootballCache.getHeadToHead(home_team_id, away_team_id, () =>
       this.fetchHeadToHeadRaw(home_team_id, away_team_id, last)
     );
   }
 
   // Raw uncached fetch method to prevent recursion
+  // CRITICAL: This method MUST store all API data to database BEFORE returning
   async fetchHeadToHeadRaw(home_team_id: number, away_team_id: number, last: number = 10): Promise<FootballFixture[]> {
     try {
+      console.log(`🔄 Fetching H2H from API: ${home_team_id} vs ${away_team_id}...`);
+
       const response = await this.fetchFromAPI<APIFixture>('/fixtures/headtohead', {
         h2h: `${home_team_id}-${away_team_id}`,
         last: last
       });
 
+      if (!response.response || response.response.length === 0) {
+        console.log(`⚠️ API returned no H2H fixtures for teams ${home_team_id} vs ${away_team_id}`);
+        return this.getFallbackFixtures(home_team_id, away_team_id);
+      }
+
       const fixtures: FootballFixture[] = [];
+      let storedCount = 0;
+
+      // Store each fixture to database BEFORE adding to return array
       for (const item of response.response) {
-        const fixtureDate = new Date(item.fixture.date);
-        const fixtureData = {
-          id: item.fixture.id,
-          referee: item.fixture.referee || null,
-          timezone: item.fixture.timezone || 'UTC',
-          date: fixtureDate,
-          timestamp: toUnixTimestamp(item.fixture.timestamp, fixtureDate),
-          periods: JSON.stringify(item.fixture.periods),
-          venue: JSON.stringify(item.fixture.venue),
-          status: JSON.stringify(item.fixture.status),
-          league_id: item.league.id,
-          season: item.league.season,
-          round: item.league.round || null,
-          home_team_id: item.teams.home.id,
-          away_team_id: item.teams.away.id,
-          goals: JSON.stringify(item.goals),
-          score: JSON.stringify(item.score),
-          status_short: item.fixture.status?.short || null,
-          last_updated: new Date()
-        };
+        try {
+          const fixtureDate = new Date(item.fixture.date);
+          const fixtureData = {
+            id: item.fixture.id,
+            referee: item.fixture.referee || null,
+            timezone: item.fixture.timezone || 'UTC',
+            date: fixtureDate,
+            timestamp: toUnixTimestamp(item.fixture.timestamp, fixtureDate),
+            periods: JSON.stringify(item.fixture.periods),
+            venue: JSON.stringify(item.fixture.venue),
+            status: JSON.stringify(item.fixture.status),
+            league_id: item.league.id,
+            season: item.league.season,
+            round: item.league.round || null,
+            home_team_id: item.teams.home.id,
+            away_team_id: item.teams.away.id,
+            goals: JSON.stringify(item.goals),
+            score: JSON.stringify(item.score),
+            status_short: item.fixture.status?.short || null,
+            last_updated: new Date()
+          };
 
-        await db.insert(footballFixtures)
-          .values(fixtureData)
-          .onConflictDoUpdate({
-            target: footballFixtures.id,
-            set: {
-              goals: fixtureData.goals,
-              score: fixtureData.score,
-              status: fixtureData.status,
-              status_short: fixtureData.status_short,
-              last_updated: fixtureData.last_updated
-            }
-          });
+          // CRITICAL: Store to database using upsert
+          await db.insert(footballFixtures)
+            .values(fixtureData)
+            .onConflictDoUpdate({
+              target: footballFixtures.id,
+              set: {
+                goals: fixtureData.goals,
+                score: fixtureData.score,
+                status: fixtureData.status,
+                status_short: fixtureData.status_short,
+                last_updated: fixtureData.last_updated
+              }
+            });
 
-        const fixture = await db.select()
-          .from(footballFixtures)
-          .where(eq(footballFixtures.id, item.fixture.id))
-          .limit(1);
-        
-        if (fixture.length > 0) {
-          fixtures.push(fixture[0]);
+          storedCount++;
+
+          // CRITICAL: Read back from database to ensure data consistency
+          const storedFixture = await db.select()
+            .from(footballFixtures)
+            .where(eq(footballFixtures.id, item.fixture.id))
+            .limit(1);
+
+          if (storedFixture.length > 0) {
+            fixtures.push(storedFixture[0]);
+          } else {
+            console.error(`⚠️ Failed to read back fixture ${item.fixture.id} from database`);
+          }
+        } catch (fixtureError) {
+          console.error(`⚠️ Failed to store fixture ${item.fixture.id} to database:`, fixtureError);
+          // Continue processing other fixtures
         }
       }
 
+      console.log(`✅ Stored ${storedCount}/${response.response.length} H2H fixtures to database`);
+
+      // Only return fixtures that were successfully stored to database
       return fixtures;
     } catch (error) {
-      console.error(`Failed to get head-to-head stats:`, error);
+      console.error(`❌ Failed to fetch H2H stats from API:`, error);
       // Provide fallback fixture data for popular matchups
       return this.getFallbackFixtures(home_team_id, away_team_id);
     }

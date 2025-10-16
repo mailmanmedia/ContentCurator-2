@@ -100,6 +100,16 @@ interface SyncLog {
   duration_seconds?: number;
 }
 
+// FIXED: Type-safe error message extraction
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String(error.message);
+  }
+  return fallback;
+};
+
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -268,20 +278,26 @@ export default function AdminDashboard() {
     },
   });
 
-  // Simulate progress for active operations
+  // Simulate progress for active operations (FIXED: proper cleanup with dependencies)
   useEffect(() => {
-    if (updateStatus?.isUpdating && activeOperation) {
-      const interval = setInterval(() => {
-        setCurrentUpdateProgress((prev) => {
-          const next = prev + Math.random() * 15;
-          return next > 95 ? 95 : next;
-        });
-      }, 1000);
-
-      return () => clearInterval(interval);
-    } else {
+    // Reset progress when not updating
+    if (!updateStatus?.isUpdating || !activeOperation) {
       setCurrentUpdateProgress(0);
+      return;
     }
+
+    // Create interval for progress simulation
+    const interval = setInterval(() => {
+      setCurrentUpdateProgress((prev) => {
+        const next = prev + Math.random() * 15;
+        return next > 95 ? 95 : next;
+      });
+    }, 1000);
+
+    // Cleanup interval on unmount or when dependencies change
+    return () => {
+      clearInterval(interval);
+    };
   }, [updateStatus?.isUpdating, activeOperation]);
 
   // Helper functions

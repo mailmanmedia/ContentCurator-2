@@ -325,7 +325,7 @@ class APIFootballService {
       requestsThisMinute: 0,
       minuteResetTime: Date.now() + 60000,
       dailyRequests: 0,
-      dailyLimit: 100, // Default, will be updated from API
+      dailyLimit: 7500, // Updated to actual subscription limit (was 100)
       lastRequestTime: 0
     };
 

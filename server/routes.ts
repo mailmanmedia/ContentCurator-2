@@ -4806,6 +4806,19 @@ Return ONLY a JSON object with this structure:
   });
 
   // H2H Overlay endpoint - matches H2HMatchCardOverlay component expectations
+  /**
+   * H2H (Head-to-Head) Overlay Endpoint
+   *
+   * DATA FLOW ARCHITECTURE:
+   * 1. Frontend (H2HMatchCardOverlay) calls this endpoint
+   * 2. This endpoint queries footballService.getHeadToHeadStats()
+   * 3. footballService checks database FIRST for existing H2H data
+   * 4. If no DB data exists, it fetches from API-Football
+   * 5. CRITICAL: API data is STORED TO DATABASE before being returned
+   * 6. This endpoint ALWAYS returns data from the database (never directly from API)
+   *
+   * This ensures the H2H overlay is connected to DB-stored data, not directly to the API.
+   */
   app.get("/api/h2h", async (req, res) => {
     try {
       const teamAId = req.query.teamAId ? parseInt(req.query.teamAId as string) : undefined;
@@ -4816,7 +4829,9 @@ Return ONLY a JSON object with this structure:
         return res.status(400).json({ error: "Both teamAId and teamBId parameters are required" });
       }
 
-      // Fetch H2H fixtures from service (database first, then API)
+      // Fetch H2H fixtures from service
+      // IMPORTANT: This method queries database first, then API if needed
+      // All API data is stored to database before being returned to this endpoint
       const fixtures = await footballService.getHeadToHeadStats(teamAId, teamBId, limit);
 
       // Get team information for both teams
@@ -4901,6 +4916,184 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error('Error fetching H2H data:', error);
       return res.status(500).json({ error: "Failed to fetch H2H data" });
+    }
+  });
+
+  /**
+   * H2H Upcoming Match Endpoint
+   *
+   * Automatically finds the next upcoming match between any two teams
+   * and returns H2H data for that matchup. This enables the overlay to
+   * display the next match without requiring manual team selection.
+   *
+   * Query params:
+   * - teamId (optional): Focus on upcoming matches for a specific team
+   * - limit (optional): Number of H2H records to return (default: 5)
+   */
+  app.get("/api/h2h/upcoming", async (req, res) => {
+    try {
+      const teamId = req.query.teamId ? parseInt(req.query.teamId as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+
+      // Query for next upcoming fixture
+      let upcomingFixtureQuery = db
+        .select()
+        .from(footballFixtures)
+        .where(gte(footballFixtures.date, new Date()))
+        .orderBy(footballFixtures.date)
+        .limit(1);
+
+      // If teamId specified, filter to that team
+      if (teamId && !isNaN(teamId)) {
+        upcomingFixtureQuery = db
+          .select()
+          .from(footballFixtures)
+          .where(
+            and(
+              or(
+                eq(footballFixtures.home_team_id, teamId),
+                eq(footballFixtures.away_team_id, teamId)
+              ),
+              gte(footballFixtures.date, new Date())
+            )
+          )
+          .orderBy(footballFixtures.date)
+          .limit(1);
+      }
+
+      const upcomingFixtures = await upcomingFixtureQuery;
+
+      if (upcomingFixtures.length === 0) {
+        return res.status(404).json({
+          error: "No upcoming matches found",
+          teamId: teamId || null
+        });
+      }
+
+      const upcomingMatch = upcomingFixtures[0];
+      const teamAId = upcomingMatch.home_team_id;
+      const teamBId = upcomingMatch.away_team_id;
+
+      // Fetch H2H fixtures from service (database first, then API)
+      const fixtures = await footballService.getHeadToHeadStats(teamAId, teamBId, limit);
+
+      // Get team information for both teams
+      const teams = await db
+        .select()
+        .from(footballTeams)
+        .where(or(eq(footballTeams.id, teamAId), eq(footballTeams.id, teamBId)));
+
+      const teamMap = new Map(teams.map(t => [t.id, t]));
+      const teamA = teamMap.get(teamAId);
+      const teamB = teamMap.get(teamBId);
+
+      // Get league/competition info
+      const league = await db
+        .select()
+        .from(footballCompetitions)
+        .where(eq(footballCompetitions.id, upcomingMatch.league_id))
+        .limit(1);
+
+      // Transform upcoming match to MatchLite format
+      const venue = typeof upcomingMatch.venue === 'string'
+        ? JSON.parse(upcomingMatch.venue)
+        : upcomingMatch.venue;
+
+      const upcomingMatchData = {
+        id: upcomingMatch.id,
+        dateUtc: upcomingMatch.date.toISOString(),
+        venue: venue?.name || 'TBD',
+        competition: {
+          name: league[0]?.name || 'Match',
+          code: league[0]?.id?.toString()
+        },
+        home: {
+          id: teamAId,
+          name: teamA?.name || 'Unknown',
+          shortName: teamA?.name || 'Unknown',
+          logo: teamA?.logo || undefined
+        },
+        away: {
+          id: teamBId,
+          name: teamB?.name || 'Unknown',
+          shortName: teamB?.name || 'Unknown',
+          logo: teamB?.logo || undefined
+        },
+        score: undefined // Upcoming match has no score yet
+      };
+
+      // Transform H2H fixtures to MatchLite format
+      const recent = fixtures.map(fixture => {
+        const homeTeam = teamMap.get(fixture.home_team_id);
+        const awayTeam = teamMap.get(fixture.away_team_id);
+
+        const goals = typeof fixture.goals === 'string' ? JSON.parse(fixture.goals) : fixture.goals;
+        const fixtureVenue = typeof fixture.venue === 'string' ? JSON.parse(fixture.venue) : fixture.venue;
+
+        return {
+          id: fixture.id,
+          dateUtc: fixture.date.toISOString(),
+          venue: fixtureVenue?.name || 'Unknown',
+          competition: {
+            name: fixtureVenue?.city || 'Match',
+            code: fixture.league_id?.toString()
+          },
+          home: {
+            id: fixture.home_team_id,
+            name: homeTeam?.name || 'Unknown',
+            shortName: homeTeam?.name || 'Unknown',
+            logo: homeTeam?.logo || undefined
+          },
+          away: {
+            id: fixture.away_team_id,
+            name: awayTeam?.name || 'Unknown',
+            shortName: awayTeam?.name || 'Unknown',
+            logo: awayTeam?.logo || undefined
+          },
+          score: goals?.home !== undefined && goals?.away !== undefined ? {
+            home: goals.home,
+            away: goals.away
+          } : undefined
+        };
+      });
+
+      // Calculate summary stats
+      let winsA = 0;
+      let winsB = 0;
+      let draws = 0;
+
+      fixtures.forEach(fixture => {
+        const goals = typeof fixture.goals === 'string' ? JSON.parse(fixture.goals) : fixture.goals;
+        const homeScore = goals?.home ?? 0;
+        const awayScore = goals?.away ?? 0;
+
+        if (homeScore > awayScore) {
+          if (fixture.home_team_id === teamAId) winsA++;
+          else winsB++;
+        } else if (awayScore > homeScore) {
+          if (fixture.away_team_id === teamAId) winsA++;
+          else winsB++;
+        } else {
+          draws++;
+        }
+      });
+
+      return res.json({
+        data: {
+          upcomingMatch: upcomingMatchData,
+          recent,
+          summary: {
+            winsA,
+            winsB,
+            draws
+          }
+        },
+        source: 'Database',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error fetching upcoming H2H data:', error);
+      return res.status(500).json({ error: "Failed to fetch upcoming H2H data" });
     }
   });
 
