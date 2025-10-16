@@ -1772,10 +1772,10 @@ class FootballService {
             if (dbStats.length > 0) {
               const stats = dbStats[0];
               console.log(`Using database statistics for team ${teamId}`);
-              
+
               // Convert database format to API format
               return {
-                form: "N/A",
+                form: stats.form || "N/A",
                 fixtures: {
                   played: { total: stats.matches_played },
                   wins: { total: stats.wins },
@@ -1783,16 +1783,20 @@ class FootballService {
                   losses: { total: stats.losses }
                 },
                 goals: {
-                  for: { 
+                  for: {
                     total: { total: stats.goals_for },
                     average: { total: ((stats.goals_for || 0) / Math.max(stats.matches_played || 1, 1)).toFixed(1) }
                   },
-                  against: { 
+                  against: {
                     total: { total: stats.goals_against },
                     average: { total: ((stats.goals_against || 0) / Math.max(stats.matches_played || 1, 1)).toFixed(1) }
                   }
                 },
-                clean_sheet: { total: 0 },
+                clean_sheet: { total: stats.clean_sheets || 0 },
+                cards: {
+                  yellow: { total: stats.cards_yellow || 0 },
+                  red: { total: stats.cards_red || 0 }
+                },
                 updated_at: stats.updated_at
               };
             }

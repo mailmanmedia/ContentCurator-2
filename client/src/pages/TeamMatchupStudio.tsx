@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Shield, Users, TrendingUp, Calendar, MapPin, Trophy, Target, Zap, Activity, Award, Timer, AlertCircle } from "lucide-react";
+import { Shield, Users, TrendingUp, Calendar, MapPin, Trophy, Target, Zap, Activity, Award, Timer, AlertCircle, RefreshCw } from "lucide-react";
 import { ChartContainer } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { queryClient } from "@/lib/queryClient";
@@ -112,6 +112,19 @@ export default function TeamMatchupStudio() {
   const statsLoading = singleTeamQueries[0]?.isLoading || false;
   const squadLoading = singleTeamQueries[1]?.isLoading || false;
 
+  // Debug log to see what data we're actually receiving
+  useEffect(() => {
+    if (teamStatsData?.statistics) {
+      console.log('📊 Team Stats Data:', {
+        form: teamStatsData.statistics.form,
+        goalsFor: teamStatsData.statistics.goals?.for?.total?.total,
+        cleanSheets: teamStatsData.statistics.clean_sheet?.total,
+        fixturesPlayed: teamStatsData.statistics.fixtures?.played?.total,
+        fixturesWins: teamStatsData.statistics.fixtures?.wins?.total
+      });
+    }
+  }, [teamStatsData]);
+
   // Initialize football data mutation
   const initializeDataMutation = useMutation({
     mutationFn: async () => {
@@ -149,8 +162,8 @@ export default function TeamMatchupStudio() {
       const response = await fetch(`/api/football/teams/${teamId}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          teamName, 
+        body: JSON.stringify({
+          teamName,
           statistics,
           isLiverpool: teamId === 40
         }),
@@ -162,6 +175,16 @@ export default function TeamMatchupStudio() {
       setAiAnalysis(data.analysis);
     },
   });
+
+  // Function to refresh team statistics (invalidate React Query cache)
+  const handleRefreshStats = () => {
+    console.log('🔄🔄🔄 REFRESH BUTTON CLICKED! Invalidating cache for team:', selectedTeam1);
+    queryClient.invalidateQueries({
+      queryKey: ['/api/football/teams', selectedTeam1, 'statistics']
+    });
+    console.log('✅ Cache invalidated. React Query will now fetch fresh data from API.');
+    alert(`Refreshing stats for team ${selectedTeam1}. Check the browser console for debug logs!`);
+  };
 
   const competitions: Competition[] = (competitionsData as any) || [];
   const teams: Team[] = (teamsData as any) || [];
@@ -706,12 +729,25 @@ export default function TeamMatchupStudio() {
                         <Activity className="w-5 h-5" />
                         Performance Metrics
                       </h4>
-                      {teamStatsData?.statistics?.lastUpdated && (
-                        <Badge variant="outline" className="text-xs" data-testid="badge-last-updated">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          Updated {formatDistanceToNow(new Date(teamStatsData.statistics.lastUpdated), { addSuffix: true })}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {teamStatsData?.statistics?.lastUpdated && (
+                          <Badge variant="outline" className="text-xs" data-testid="badge-last-updated">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            Updated {formatDistanceToNow(new Date(teamStatsData.statistics.lastUpdated), { addSuffix: true })}
+                          </Badge>
+                        )}
+                        <Button
+                          onClick={handleRefreshStats}
+                          disabled={statsLoading}
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2"
+                          data-testid="button-refresh-stats"
+                        >
+                          <RefreshCw className={`w-4 h-4 ${statsLoading ? 'animate-spin' : ''}`} />
+                          Refresh Stats
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {renderStatCard("Form", teamStatsData.statistics.form || "N/A", TrendingUp)}

@@ -434,6 +434,7 @@ export type PlayerSeasonStatistics = typeof player_season_statistics.$inferSelec
 export const team_season_statistics = pgTable('team_season_statistics', {
   id: serial('id').primaryKey(),
   team_id: integer('team_id'),
+  league_id: integer('league_id'), // API-Football league ID (e.g., 39 for Premier League)
   season: varchar('season', { length: 10 }),
   competition: varchar('competition', { length: 255 }),
   matches_played: integer('matches_played'),
@@ -445,6 +446,10 @@ export const team_season_statistics = pgTable('team_season_statistics', {
   goal_difference: integer('goal_difference'),
   points: integer('points'),
   position: integer('position'),
+  form: varchar('form', { length: 50 }), // Recent form string (e.g., "WWDWL")
+  clean_sheets: integer('clean_sheets'), // Number of clean sheets
+  cards_yellow: integer('cards_yellow'), // Yellow cards
+  cards_red: integer('cards_red'), // Red cards
   created_at: timestamp('created_at').defaultNow(),
   updated_at: timestamp('updated_at').defaultNow()
 });
