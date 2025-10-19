@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start Dev Server (PORT=3000)",
+			"type": "shell",
+			"command": "PORT=3000 npm run dev",
+			"isBackground": true,
+			"group": "build"
+		}
+	]
+}

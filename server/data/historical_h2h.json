@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2025-10-18T20:27:14.806Z",
+  "lastUpdated": "2025-10-19T01:49:30.282Z",
   "team": {
     "id": 40,
     "name": "Liverpool",
@@ -77,11 +77,11 @@
           "round": "Regular Season - 20"
         },
         {
-          "fixtureId": 1208218,
+          "fixtureId": 11,
           "date": "2025-01-05T16:30:00.000Z",
           "season": 2024,
-          "competition": "Premier League",
-          "competitionId": 39,
+          "competition": "Unknown",
+          "competitionId": 1,
           "venue": "Anfield",
           "homeTeamId": 40,
           "homeTeamName": "Home Team",
@@ -93,11 +93,11 @@
           "round": "Regular Season - 20"
         },
         {
-          "fixtureId": 11,
+          "fixtureId": 1208218,
           "date": "2025-01-05T16:30:00.000Z",
           "season": 2024,
-          "competition": "Unknown",
-          "competitionId": 1,
+          "competition": "Premier League",
+          "competitionId": 39,
           "venue": "Anfield",
           "homeTeamId": 40,
           "homeTeamName": "Home Team",
@@ -173,6 +173,38 @@
           "round": "Regular Season - 3"
         },
         {
+          "fixtureId": 13,
+          "date": "2024-08-03T23:45:00.000Z",
+          "season": 2024,
+          "competition": "Unknown",
+          "competitionId": 1,
+          "venue": "Williams Brice Stadium",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 3,
+          "status": "FT",
+          "round": "Club Friendlies 1"
+        },
+        {
+          "fixtureId": 1225638,
+          "date": "2024-08-03T23:45:00.000Z",
+          "season": 2024,
+          "competition": "Unknown",
+          "competitionId": 667,
+          "venue": "Williams Brice Stadium",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 0,
+          "awayScore": 3,
+          "status": "FT",
+          "round": "Club Friendlies 1"
+        },
+        {
           "fixtureId": 53,
           "date": "2024-08-03T23:45:00.000Z",
           "season": 2024,
@@ -205,38 +237,6 @@
           "round": "Club Friendlies 1"
         },
         {
-          "fixtureId": 1225638,
-          "date": "2024-08-03T23:45:00.000Z",
-          "season": 2024,
-          "competition": "Unknown",
-          "competitionId": 667,
-          "venue": "Williams Brice Stadium",
-          "homeTeamId": 33,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 40,
-          "awayTeamName": "Away Team",
-          "homeScore": 0,
-          "awayScore": 3,
-          "status": "FT",
-          "round": "Club Friendlies 1"
-        },
-        {
-          "fixtureId": 13,
-          "date": "2024-08-03T23:45:00.000Z",
-          "season": 2024,
-          "competition": "Unknown",
-          "competitionId": 1,
-          "venue": "Williams Brice Stadium",
-          "homeTeamId": 33,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 40,
-          "awayTeamName": "Away Team",
-          "homeScore": 0,
-          "awayScore": 3,
-          "status": "FT",
-          "round": "Club Friendlies 1"
-        },
-        {
           "fixtureId": 1001,
           "date": "2024-05-15T00:00:00.000Z",
           "season": 2024,
@@ -251,22 +251,6 @@
           "awayScore": 0,
           "status": "FT",
           "round": "Regular Season - 38"
-        },
-        {
-          "fixtureId": 1035490,
-          "date": "2024-04-07T14:30:00.000Z",
-          "season": 2023,
-          "competition": "Premier League",
-          "competitionId": 39,
-          "venue": "Old Trafford",
-          "homeTeamId": 33,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 40,
-          "awayTeamName": "Away Team",
-          "homeScore": 2,
-          "awayScore": 2,
-          "status": "FT",
-          "round": "Regular Season - 32"
         },
         {
           "fixtureId": 34,
@@ -285,7 +269,7 @@
           "round": "Regular Season - 32"
         },
         {
-          "fixtureId": 14,
+          "fixtureId": 54,
           "date": "2024-04-07T14:30:00.000Z",
           "season": 2024,
           "competition": "Unknown",
@@ -301,7 +285,23 @@
           "round": "Regular Season - 32"
         },
         {
-          "fixtureId": 54,
+          "fixtureId": 1035490,
+          "date": "2024-04-07T14:30:00.000Z",
+          "season": 2023,
+          "competition": "Premier League",
+          "competitionId": 39,
+          "venue": "Old Trafford",
+          "homeTeamId": 33,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 2,
+          "awayScore": 2,
+          "status": "FT",
+          "round": "Regular Season - 32"
+        },
+        {
+          "fixtureId": 14,
           "date": "2024-04-07T14:30:00.000Z",
           "season": 2024,
           "competition": "Unknown",
@@ -397,7 +397,7 @@
           "round": "Regular Season - 22"
         },
         {
-          "fixtureId": 36,
+          "fixtureId": 16,
           "date": "2023-12-17T16:30:00.000Z",
           "season": 2024,
           "competition": "Unknown",
@@ -413,7 +413,7 @@
           "round": "Regular Season - 17"
         },
         {
-          "fixtureId": 56,
+          "fixtureId": 36,
           "date": "2023-12-17T16:30:00.000Z",
           "season": 2024,
           "competition": "Unknown",
@@ -445,7 +445,7 @@
           "round": "Regular Season - 17"
         },
         {
-          "fixtureId": 16,
+          "fixtureId": 56,
           "date": "2023-12-17T16:30:00.000Z",
           "season": 2024,
           "competition": "Unknown",
@@ -477,7 +477,7 @@
           "round": "Regular Season - 26"
         },
         {
-          "fixtureId": 37,
+          "fixtureId": 17,
           "date": "2023-03-05T16:30:00.000Z",
           "season": 2024,
           "competition": "Unknown",
@@ -1041,22 +1041,6 @@
           "round": "Regular Season - 35"
         },
         {
-          "fixtureId": 4,
-          "date": "2025-05-04T15:30:00.000Z",
-          "season": 2024,
-          "competition": "Unknown",
-          "competitionId": 1,
-          "venue": "Stamford Bridge",
-          "homeTeamId": 49,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 40,
-          "awayTeamName": "Away Team",
-          "homeScore": 3,
-          "awayScore": 1,
-          "status": "FT",
-          "round": "Regular Season - 35"
-        },
-        {
           "fixtureId": 44,
           "date": "2025-05-04T15:30:00.000Z",
           "season": 2024,
@@ -1074,6 +1058,22 @@
         },
         {
           "fixtureId": 24,
+          "date": "2025-05-04T15:30:00.000Z",
+          "season": 2024,
+          "competition": "Unknown",
+          "competitionId": 1,
+          "venue": "Stamford Bridge",
+          "homeTeamId": 49,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 40,
+          "awayTeamName": "Away Team",
+          "homeScore": 3,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 35"
+        },
+        {
+          "fixtureId": 4,
           "date": "2025-05-04T15:30:00.000Z",
           "season": 2024,
           "competition": "Unknown",
@@ -1261,23 +1261,7 @@
           "round": "Regular Season - 17"
         },
         {
-          "fixtureId": 1208357,
-          "date": "2025-04-27T15:30:00.000Z",
-          "season": 2024,
-          "competition": "Premier League",
-          "competitionId": 39,
-          "venue": "Anfield",
-          "homeTeamId": 40,
-          "homeTeamName": "Home Team",
-          "awayTeamId": 47,
-          "awayTeamName": "Away Team",
-          "homeScore": 5,
-          "awayScore": 1,
-          "status": "FT",
-          "round": "Regular Season - 34"
-        },
-        {
-          "fixtureId": 5,
+          "fixtureId": 45,
           "date": "2025-04-27T15:30:00.000Z",
           "season": 2024,
           "competition": "Unknown",
@@ -1309,11 +1293,27 @@
           "round": "Regular Season - 34"
         },
         {
-          "fixtureId": 45,
+          "fixtureId": 5,
           "date": "2025-04-27T15:30:00.000Z",
           "season": 2024,
           "competition": "Unknown",
           "competitionId": 1,
+          "venue": "Anfield",
+          "homeTeamId": 40,
+          "homeTeamName": "Home Team",
+          "awayTeamId": 47,
+          "awayTeamName": "Away Team",
+          "homeScore": 5,
+          "awayScore": 1,
+          "status": "FT",
+          "round": "Regular Season - 34"
+        },
+        {
+          "fixtureId": 1208357,
+          "date": "2025-04-27T15:30:00.000Z",
+          "season": 2024,
+          "competition": "Premier League",
+          "competitionId": 39,
           "venue": "Anfield",
           "homeTeamId": 40,
           "homeTeamName": "Home Team",
