@@ -9,6 +9,7 @@ import RssSentimentOverlay from "./overlays/RssSentimentOverlay";
 import RssTickerEnhancedOverlay from "./overlays/RssTickerEnhancedOverlay";
 import UpcomingFixturesOverlay from "./overlays/UpcomingFixturesOverlay";
 import PlayerComparisonOverlay from "./overlays/PlayerComparisonOverlay";
+import UpcomingMatchOverlay from "./overlays/UpcomingMatchOverlay";
 import OverlayErrorBoundary from "./overlays/OverlayErrorBoundary";
 
 // Mailman Media Color Palettes for Tickers
@@ -174,6 +175,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   const [initialOverlayState, setInitialOverlayState] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showGrid, setShowGrid] = useState(false);
   const [gridSize] = useState(20); // Grid size in pixels
+  const [canvasBounds, setCanvasBounds] = useState<{width: number, height: number}>({width: 0, height: 0});
 
   useImperativeHandle(ref, () => ({
     canvasRef
@@ -187,6 +189,22 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
   // Constrain value within bounds with padding for borders
   const constrain = useCallback((value: number, min: number, max: number, borderPadding: number = 0): number => {
     return Math.max(min + borderPadding, Math.min(max - borderPadding, value));
+  }, []);
+
+  // Update canvas bounds when canvas size changes
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const updateBounds = () => {
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        setCanvasBounds({ width: rect.width, height: rect.height });
+      }
+    };
+
+    updateBounds();
+    window.addEventListener('resize', updateBounds);
+    return () => window.removeEventListener('resize', updateBounds);
   }, []);
 
   // Toggle grid visibility with keyboard shortcut (G key)
@@ -606,7 +624,7 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
 
           // Skip canvas rendering for metric overlays that have dedicated React components
           // These are rendered as DOM elements instead (see metricOverlays rendering below)
-          const hasReactComponent = ['h2h-card', 'form-guide', 'player-stats', 'league-table', 'rss-sentiment', 'rss-ticker-enhanced', 'upcoming-fixtures', 'player-comparison'].includes(metricType);
+          const hasReactComponent = ['h2h-card', 'form-guide', 'player-stats', 'league-table', 'rss-sentiment', 'rss-ticker-enhanced', 'upcoming-fixtures', 'player-comparison', 'upcoming-match'].includes(metricType);
           if (hasReactComponent) {
             ctx.globalAlpha = 1;
             return;
@@ -1291,8 +1309,13 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
     const canvas = canvasRef.current;
     const canvasRect = canvas.getBoundingClientRect();
 
-    // Calculate actual pixel width from percentage
-    const pixelWidth = (width / 100) * canvas.width;
+    // Calculate scale factor between canvas resolution and display size
+    const scaleX = canvasRect.width / canvas.width;
+    const scaleY = canvasRect.height / canvas.height;
+
+    // Calculate display dimensions (percentage of canvas width, in display pixels)
+    const displayWidthPx = (width / 100) * canvasRect.width;
+    const displayHeightPx = height * scaleY;
 
     // Calculate adjusted y position to prevent clipping at bottom
     let adjustedY = y;
@@ -1306,14 +1329,29 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
     // Ensure overlay doesn't go above canvas
     adjustedY = Math.max(0, adjustedY);
 
+    // Constrain overlay to stay within canvas bounds (in canvas coordinates)
+    const canvasWidthPx = (width / 100) * canvas.width;
+    const maxX = canvas.width - canvasWidthPx;
+    const maxY = canvas.height - height;
+    const constrainedX = Math.max(0, Math.min(x, maxX));
+    const constrainedY = Math.max(0, Math.min(adjustedY, maxY));
+
     const isSelected = selectedOverlayId === overlay.id;
+
+    // Convert canvas coordinates to display coordinates
+    let displayLeft = constrainedX * scaleX;
+    let displayTop = constrainedY * scaleY;
+
+    // Final safety clamp: ensure overlay stays within clipping container
+    displayLeft = Math.max(0, Math.min(displayLeft, canvasBounds.width - displayWidthPx));
+    displayTop = Math.max(0, Math.min(displayTop, canvasBounds.height - displayHeightPx));
 
     const style: React.CSSProperties = {
       position: 'absolute',
-      width: `${width}%`,
-      height: `${height}px`,
-      left: `${x}px`,
-      top: `${adjustedY}px`,
+      left: `${displayLeft}px`,
+      top: `${displayTop}px`,
+      width: `${displayWidthPx}px`,
+      height: `${displayHeightPx}px`,
       zIndex: overlay.zIndex || 100,
       pointerEvents: 'auto',
       cursor: isDragging ? 'grabbing' : 'grab',
@@ -1327,10 +1365,12 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         case 'h2h-card':
           return (
             <H2HMatchCardOverlay
-              teamAId={metricData?.homeTeamId || 40}
-              teamBId={metricData?.awayTeamId || 47}
-              width={pixelWidth}
-              height={height}
+              teamAId={metricData?.homeTeamId}
+              teamBId={metricData?.awayTeamId}
+              auto={metricData?.auto}
+              autoTeamId={metricData?.autoTeamId}
+              width="100%"
+              height="100%"
               opacity={opacity}
               colorPalette={overlay.colorPalette || 'classic'}
             />
@@ -1338,8 +1378,8 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         case 'form-guide':
           return (
             <FormGuideOverlay
-              width={pixelWidth}
-              height={height}
+              width="100%"
+              height="100%"
               opacity={opacity}
               layout={metricData?.layout || 'horizontal'}
               colorPalette={overlay.colorPalette || 'classic'}
@@ -1352,25 +1392,25 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
           return (
             <PlayerStatsOverlay
               playerId={metricData?.playerId || 1}
-              width={pixelWidth}
-              height={height}
+              width="100%"
+              height="100%"
               opacity={opacity}
             />
           );
         case 'league-table':
           return (
             <LeaguePositionOverlay
-              width={pixelWidth}
-              height={height}
+              width="100%"
+              height="100%"
               opacity={opacity}
             />
           );
         case 'rss-sentiment':
           return (
             <RssSentimentOverlay
-              width={pixelWidth}
-              height={overlay.height}
-              opacity={overlay.opacity}
+              width="100%"
+              height="100%"
+              opacity={opacity}
               timeframe={metricData?.timeframe || '24h'}
               showTrendingTopics={metricData?.showTrendingTopics}
               showSentimentBreakdown={metricData?.showSentimentBreakdown}
@@ -1380,8 +1420,8 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         case 'rss-ticker-enhanced':
           return (
             <RssTickerEnhancedOverlay
-              width={pixelWidth}
-              height={overlay.height}
+              width="100%"
+              height="100%"
               opacity={overlay.opacity}
               rssSourceIds={metricData?.rssSourceIds || []}
               maxArticles={metricData?.maxArticles}
@@ -1395,8 +1435,8 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
         case 'upcoming-fixtures':
           return (
             <UpcomingFixturesOverlay
-              width={pixelWidth}
-              height={overlay.height}
+              width="100%"
+              height="100%"
               opacity={overlay.opacity}
               fixtureCount={metricData?.fixtureCount}
               showCountdown={metricData?.showCountdown}
@@ -1409,12 +1449,22 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
             <PlayerComparisonOverlay
               player1Id={metricData?.player1Id}
               player2Id={metricData?.player2Id}
-              width={pixelWidth}
-              height={overlay.height}
+              width="100%"
+              height="100%"
               opacity={overlay.opacity}
               viewMode={metricData?.viewMode}
               statCategories={metricData?.statCategories}
               colorPalette={overlay.colorPalette}
+            />
+          );
+        case 'upcoming-match':
+          return (
+            <UpcomingMatchOverlay
+              teamId={metricData?.teamId || metricData?.autoTeamId}
+              width="100%"
+              height="100%"
+              opacity={overlay.opacity}
+              colorPalette={overlay.colorPalette || 'navy'}
             />
           );
         default:
@@ -1499,75 +1549,92 @@ const VideoCompositor = forwardRef<VideoCompositorRef, VideoCompositorProps>(({
     );
   };
 
-  const metricOverlays = overlays.filter(o => 
-    o.visible && 
-    o.overlayType === 'metric' && 
-    ['h2h-card', 'form-guide', 'player-stats', 'league-table', 'rss-sentiment', 'rss-ticker-enhanced', 'upcoming-fixtures', 'player-comparison'].includes(o.metricType || '')
+  const metricOverlays = overlays.filter(o =>
+    o.visible &&
+    o.overlayType === 'metric' &&
+    ['h2h-card', 'form-guide', 'player-stats', 'league-table', 'rss-sentiment', 'rss-ticker-enhanced', 'upcoming-fixtures', 'player-comparison', 'upcoming-match'].includes(o.metricType || '')
   );
 
   return (
-    <div className={`bg-black ${className}`} style={{ position: 'relative' }}>
+    <div className={`bg-black ${className}`} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <canvas
         ref={canvasRef}
         width={outputResolution.width}
         height={outputResolution.height}
         className="w-full h-full object-contain"
         data-testid="canvas-video-compositor"
+        style={{ display: 'block' }}
       />
 
-      {/* Visual Grid Overlay (Toggle with 'G' key) */}
-      {showGrid && canvasRef.current && (
-        <svg
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'none',
-            zIndex: 999
-          }}
-          viewBox={`0 0 ${outputResolution.width} ${outputResolution.height}`}
-        >
-          {/* Vertical grid lines */}
-          {Array.from({ length: Math.ceil(outputResolution.width / gridSize) }).map((_, i) => (
-            <line
-              key={`v-${i}`}
-              x1={i * gridSize}
-              y1={0}
-              x2={i * gridSize}
-              y2={outputResolution.height}
-              stroke="rgba(200, 16, 46, 0.3)"
-              strokeWidth="1"
-            />
-          ))}
-          {/* Horizontal grid lines */}
-          {Array.from({ length: Math.ceil(outputResolution.height / gridSize) }).map((_, i) => (
-            <line
-              key={`h-${i}`}
-              x1={0}
-              y1={i * gridSize}
-              x2={outputResolution.width}
-              y2={i * gridSize}
-              stroke="rgba(200, 16, 46, 0.3)"
-              strokeWidth="1"
-            />
-          ))}
-          {/* Grid size indicator */}
-          <text
-            x={outputResolution.width - 10}
-            y={20}
-            textAnchor="end"
-            fill="rgba(200, 16, 46, 0.8)"
-            fontSize="14"
-            fontFamily="monospace"
+      {/* Overlay container that matches canvas display bounds */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: canvasBounds.width > 0 ? `${canvasBounds.width}px` : '100%',
+          height: canvasBounds.height > 0 ? `${canvasBounds.height}px` : '100%',
+          pointerEvents: 'none',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Visual Grid Overlay (Toggle with 'G' key) */}
+        {showGrid && canvasRef.current && (
+          <svg
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              zIndex: 999
+            }}
+            viewBox={`0 0 ${outputResolution.width} ${outputResolution.height}`}
           >
-            Grid: {gridSize}px (Press 'G' to toggle)
-          </text>
-        </svg>
-      )}
+            {/* Vertical grid lines */}
+            {Array.from({ length: Math.ceil(outputResolution.width / gridSize) }).map((_, i) => (
+              <line
+                key={`v-${i}`}
+                x1={i * gridSize}
+                y1={0}
+                x2={i * gridSize}
+                y2={outputResolution.height}
+                stroke="rgba(200, 16, 46, 0.3)"
+                strokeWidth="1"
+              />
+            ))}
+            {/* Horizontal grid lines */}
+            {Array.from({ length: Math.ceil(outputResolution.height / gridSize) }).map((_, i) => (
+              <line
+                key={`h-${i}`}
+                x1={0}
+                y1={i * gridSize}
+                x2={outputResolution.width}
+                y2={i * gridSize}
+                stroke="rgba(200, 16, 46, 0.3)"
+                strokeWidth="1"
+              />
+            ))}
+            {/* Grid size indicator */}
+            <text
+              x={outputResolution.width - 10}
+              y={20}
+              textAnchor="end"
+              fill="rgba(200, 16, 46, 0.8)"
+              fontSize="14"
+              fontFamily="monospace"
+            >
+              Grid: {gridSize}px (Press 'G' to toggle)
+            </text>
+          </svg>
+        )}
 
-      {metricOverlays.map(overlay => renderMetricOverlay(overlay))}
+        <div style={{ position: 'relative', width: '100%', height: '100%', pointerEvents: 'auto', overflow: 'hidden' }}>
+          {metricOverlays.map(overlay => renderMetricOverlay(overlay))}
+        </div>
+      </div>
     </div>
   );
 });

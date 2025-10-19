@@ -116,38 +116,25 @@ export default function H2HMatchCardOverlay({
     }
   }, [isAutoMode, autoTeamId, teamAId, teamBId, limit, endpoint]);
 
-  // Calculate time until match and dynamic refresh interval
-  const { refetchInterval, hoursUntilMatch } = useMemo(() => {
-    if (!isAutoMode || !upcomingMatch) {
-      return { refetchInterval: 5 * 60_000, hoursUntilMatch: null };
-    }
+  const { data, isLoading, error, refetch } = useQuery<H2HPayload>({
+    queryKey: isAutoMode
+      ? ["h2h-auto", autoTeamId, limit, endpoint]
+      : ["h2h", teamAId, teamBId, limit, endpoint],
+    queryFn: async () => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch H2H (${res.status})`);
+      return res.json();
+    },
+    enabled: isAutoMode || (teamAId != null && teamBId != null && teamAId !== undefined && teamBId !== undefined),
+    refetchInterval: 5 * 60_000, // Default 5 minutes, will be updated dynamically
+    staleTime: 60_000,
+  });
 
-    const now = new Date();
-    const matchTime = new Date(upcomingMatch.dateUtc);
-    const msUntilMatch = matchTime.getTime() - now.getTime();
-    const hoursLeft = msUntilMatch / (1000 * 60 * 60);
-
-    // Dynamic refresh based on proximity to match
-    let interval: number;
-    if (hoursLeft < 0) {
-      // Match has started or finished - check every 30 seconds
-      interval = 30_000;
-    } else if (hoursLeft < 1) {
-      // Within 1 hour - check every minute
-      interval = 60_000;
-    } else if (hoursLeft < 6) {
-      // Within 6 hours - check every 5 minutes
-      interval = 5 * 60_000;
-    } else if (hoursLeft < 24) {
-      // Within 24 hours - check every 15 minutes
-      interval = 15 * 60_000;
-    } else {
-      // More than 24 hours - check every 30 minutes
-      interval = 30 * 60_000;
-    }
-
-    return { refetchInterval: interval, hoursUntilMatch: hoursLeft };
-  }, [isAutoMode, upcomingMatch]);
+  const sourceLabel = (data as any)?.source || "H2H";
+  const timestampIso = (data as any)?.timestamp;
+  const upcomingMatch: MatchLite | undefined = (data as any)?.data?.upcomingMatch;
+  const recent: MatchLite[] =
+    (data as any)?.data?.recent ?? (data as any)?.recent ?? [];
 
   // Countdown timer for upcoming match
   useEffect(() => {
@@ -182,26 +169,6 @@ export default function H2HMatchCardOverlay({
 
     return () => clearInterval(interval);
   }, [upcomingMatch]);
-
-  const { data, isLoading, error, refetch } = useQuery<H2HPayload>({
-    queryKey: isAutoMode
-      ? ["h2h-auto", autoTeamId, limit, endpoint]
-      : ["h2h", teamAId, teamBId, limit, endpoint],
-    queryFn: async () => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to fetch H2H (${res.status})`);
-      return res.json();
-    },
-    enabled: isAutoMode || (teamAId != null && teamBId != null && teamAId !== undefined && teamBId !== undefined),
-    refetchInterval,
-    staleTime: 60_000,
-  });
-
-  const sourceLabel = (data as any)?.source || "H2H";
-  const timestampIso = (data as any)?.timestamp;
-  const upcomingMatch: MatchLite | undefined = (data as any)?.data?.upcomingMatch;
-  const recent: MatchLite[] =
-    (data as any)?.data?.recent ?? (data as any)?.recent ?? [];
 
   const [teamAName, teamBName] = useMemo(() => {
     // In auto mode, get names from upcoming match

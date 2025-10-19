@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -80,6 +80,7 @@ import { useToast } from "@/hooks/use-toast";
 import VideoCompositor, { type VideoCompositorRef } from "@/components/VideoCompositor";
 import { useCameraStreams, ScreenShareError, ScreenShareErrorType } from "@/contexts/CameraStreamContext";
 import UpcomingFixturesOverlay from "@/components/overlays/UpcomingFixturesOverlay";
+import UpcomingMatchOverlay from "@/components/overlays/UpcomingMatchOverlay";
 import PlayerComparisonOverlay from "@/components/overlays/PlayerComparisonOverlay";
 import RssTickerEnhancedOverlay from "@/components/overlays/RssTickerEnhancedOverlay";
 import FormGuideOverlay from "@/components/overlays/FormGuideOverlay";
@@ -644,6 +645,7 @@ export default function LivePresentation() {
   const [overlayHomeTeamId, setOverlayHomeTeamId] = useState<number | null>(null);
   const [overlayAwayTeamId, setOverlayAwayTeamId] = useState<number | null>(null);
   const [overlayTeamId, setOverlayTeamId] = useState<number | null>(null);
+  const [overlayAutoMode, setOverlayAutoMode] = useState(false);
   const [selectedLeagueFilter, setSelectedLeagueFilter] = useState<number | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [showClearConfirmDialog, setShowClearConfirmDialog] = useState(false);
@@ -753,7 +755,20 @@ export default function LivePresentation() {
     staleTime: 30 * 60 * 1000, // Cache for 30 minutes
   });
 
-  const teamsData = teamsDataRaw?.data || []; // Extract data from the 'data' property
+  // Deduplicate teams by team name, keeping the first occurrence
+  const teamsData = useMemo(() => {
+    const rawTeams = teamsDataRaw?.data || [];
+    const uniqueTeams = new Map();
+
+    rawTeams.forEach((team: any) => {
+      if (!uniqueTeams.has(team.teamName)) {
+        uniqueTeams.set(team.teamName, team);
+      }
+    });
+
+    return Array.from(uniqueTeams.values());
+  }, [teamsDataRaw]);
+
   console.log('[LivePresentation] teamsData extracted:', {
     rawData: teamsDataRaw,
     teamsCount: teamsData.length,
@@ -762,6 +777,48 @@ export default function LivePresentation() {
     overlayHomeTeamId,
     overlayAwayTeamId
   });
+
+  // Fetch next match for the selected team to auto-populate opponent
+  const { data: nextMatchData } = useQuery({
+    queryKey: ['/api/football/fixtures/next', overlayTeamId || overlayHomeTeamId],
+    queryFn: async () => {
+      const teamId = overlayTeamId || overlayHomeTeamId;
+      if (!teamId) return null;
+
+      const response = await fetch(`/api/football/fixtures/next?teamId=${teamId}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!(overlayTeamId || overlayHomeTeamId) && overlayMetricType === 'h2h-card' && isOverlayDialogOpen,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Auto-populate opponent when next match is loaded
+  useEffect(() => {
+    if (nextMatchData && nextMatchData.fixture) {
+      const selectedTeamId = overlayTeamId || overlayHomeTeamId;
+      const fixture = nextMatchData.fixture;
+
+      // Determine if selected team is home or away
+      const isHome = fixture.teams?.home?.id === selectedTeamId;
+      const opponent = isHome ? fixture.teams?.away : fixture.teams?.home;
+
+      if (opponent && opponent.id) {
+        // Find the opponent in our teams data
+        const opponentTeam = teamsData.find((t: any) => t.teamId === opponent.id);
+
+        if (opponentTeam) {
+          if (isHome && !overlayHomeTeamId) {
+            setOverlayHomeTeamId(selectedTeamId);
+            setOverlayAwayTeamId(opponent.id);
+          } else if (!isHome && !overlayAwayTeamId) {
+            setOverlayAwayTeamId(selectedTeamId);
+            setOverlayHomeTeamId(opponent.id);
+          }
+        }
+      }
+    }
+  }, [nextMatchData, overlayTeamId, overlayHomeTeamId, overlayAwayTeamId, teamsData]);
 
   const { data: competitionsData } = useQuery<{ competitions: any[] }>({
     queryKey: ['/api/football/competitions/active'],
@@ -1633,10 +1690,11 @@ export default function LivePresentation() {
     }
 
     if (overlayType === 'metric') {
-      if (overlayMetricType === 'h2h-card' && (!overlayHomeTeamId || !overlayAwayTeamId)) {
+      // In auto mode, teams are optional. In manual mode, both teams are required.
+      if (overlayMetricType === 'h2h-card' && !overlayAutoMode && (!overlayHomeTeamId || !overlayAwayTeamId)) {
         toast({
-          title: 'Select both teams',
-          description: 'Please select both home and away teams for the H2H card.',
+          title: 'Select both teams or enable Auto Mode',
+          description: 'Please select both home and away teams, or enable Auto Mode to show the next upcoming match.',
           variant: 'destructive'
         });
         return;
@@ -1682,6 +1740,8 @@ export default function LivePresentation() {
         metricDataToSave = {
           homeTeamId: overlayHomeTeamId,
           awayTeamId: overlayAwayTeamId,
+          auto: overlayAutoMode,
+          autoTeamId: overlayAutoMode ? overlayTeamId : undefined,
           competitionFilter: overlayCompetitionId,
           venueFilter: overlayVenueFilter,
           seasonFilter: overlaySeasonFilter,
@@ -1699,6 +1759,10 @@ export default function LivePresentation() {
           leagueId: overlayCompetitionId || 39,
           season: overlaySeasonFilter || new Date().getFullYear(),
           teamCount: overlayTeamCount,
+        };
+      } else if (overlayMetricType === 'upcoming-match') {
+        metricDataToSave = {
+          teamId: overlayTeamId || undefined,
         };
       } else if (overlayMetricType === 'upcoming-fixtures') {
         metricDataToSave = {
@@ -2361,6 +2425,8 @@ export default function LivePresentation() {
           return PlayerComparisonOverlay;
         case 'upcoming-fixtures':
           return UpcomingFixturesOverlay;
+        case 'upcoming-match':
+          return UpcomingMatchOverlay;
         case 'rss-ticker-enhanced':
           return RssTickerEnhancedOverlay;
         case 'rss-sentiment':
@@ -3582,9 +3648,10 @@ export default function LivePresentation() {
                           <SelectItem value="h2h">Head-to-Head (Legacy)</SelectItem>
                           <SelectItem value="form-guide">Form Guide</SelectItem>
                           <SelectItem value="league-table">League Table</SelectItem>
+                          <SelectItem value="upcoming-match">Upcoming Match (Single)</SelectItem>
+                          <SelectItem value="upcoming-fixtures">Upcoming Fixtures (Multiple)</SelectItem>
                           <SelectItem value="rss-sentiment">RSS Sentiment</SelectItem>
                           <SelectItem value="rss-ticker-enhanced">RSS Ticker (Enhanced)</SelectItem>
-                          <SelectItem value="upcoming-fixtures">Upcoming Fixtures</SelectItem>
                           <SelectItem value="player-comparison">Player Comparison</SelectItem>
                         </SelectContent>
                       </Select>
@@ -3595,6 +3662,29 @@ export default function LivePresentation() {
 
                     {overlayMetricType === 'h2h-card' && (
                       <>
+                        <div className="flex items-center space-x-2 p-3 border rounded-md bg-muted/50">
+                          <Checkbox
+                            id="auto-mode"
+                            checked={overlayAutoMode}
+                            onCheckedChange={(checked) => {
+                              setOverlayAutoMode(!!checked);
+                              if (checked) {
+                                // Clear team selections when enabling auto mode
+                                setOverlayHomeTeamId(null);
+                                setOverlayAwayTeamId(null);
+                              }
+                            }}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor="auto-mode" className="cursor-pointer font-semibold">
+                              Auto Mode - Show Next Upcoming Match
+                            </Label>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Automatically displays the next upcoming match (optionally filtered by team)
+                            </p>
+                          </div>
+                        </div>
+
                         <div>
                           <Label htmlFor="league-filter">League Filter</Label>
                           <Select
@@ -3641,14 +3731,105 @@ export default function LivePresentation() {
                           </p>
                         </div>
 
+                        {overlayAutoMode ? (
+                          <div className="p-4 border rounded-md bg-green-50 dark:bg-green-950/20">
+                            <p className="text-sm font-medium text-green-700 dark:text-green-400 mb-2">
+                              Auto Mode Enabled
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              The overlay will automatically show the next upcoming match. You can optionally select a team below to filter to that team's next match.
+                            </p>
+                          </div>
+                        ) : null}
+
                         {isLoadingTeams ? (
                           <div className="text-center py-4">
                             <p className="text-sm text-muted-foreground">Loading teams...</p>
                           </div>
                         ) : teamsData && Array.isArray(teamsData) && teamsData.length > 0 ? (
                           <>
+                            {overlayAutoMode ? (
+                              <div>
+                                <Label htmlFor="primary-team">Filter by Team (Optional)</Label>
+                                <Select
+                                  value={overlayTeamId ? String(overlayTeamId) : undefined}
+                                  onValueChange={(v) => {
+                                    setOverlayTeamId(v === 'all' || !v ? null : parseInt(v));
+                                  }}
+                                >
+                                  <SelectTrigger id="primary-team" data-testid="select-primary-team">
+                                    <SelectValue placeholder="All teams (show any upcoming match)" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">All teams</SelectItem>
+                                    {teamsData.map((team: any) => (
+                                      <SelectItem key={team.teamId} value={String(team.teamId)}>
+                                        {team.teamName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Optionally filter to show only this team's next match
+                                </p>
+                              </div>
+                            ) : (
+                              <>
+                                <div>
+                                  <Label htmlFor="primary-team">Select Team (Auto-fills opponent)</Label>
+                              <Select
+                                value={overlayTeamId ? String(overlayTeamId) : undefined}
+                                onValueChange={(v) => {
+                                  setOverlayTeamId(parseInt(v));
+                                  // Clear previous selections to trigger auto-population
+                                  setOverlayHomeTeamId(null);
+                                  setOverlayAwayTeamId(null);
+                                }}
+                              >
+                                <SelectTrigger id="primary-team" data-testid="select-primary-team">
+                                  <SelectValue placeholder="Select a team to auto-fill next match" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {teamsData.map((team: any) => (
+                                    <SelectItem key={team.teamId} value={String(team.teamId)}>
+                                      {team.teamName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Select a team to automatically load their next match
+                              </p>
+                            </div>
+
+                            {nextMatchData && nextMatchData.fixture && (
+                              <Alert>
+                                <Calendar className="h-4 w-4" />
+                                <AlertDescription>
+                                  <div className="space-y-1">
+                                    <p className="font-semibold">Next Match</p>
+                                    <p className="text-sm">
+                                      <strong>{nextMatchData.fixture.teams?.home?.name}</strong> (Home) vs <strong>{nextMatchData.fixture.teams?.away?.name}</strong> (Away)
+                                    </p>
+                                    {nextMatchData.fixture.fixture?.date && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {new Date(nextMatchData.fixture.fixture.date).toLocaleString()}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-green-600 mt-1">
+                                      Teams auto-populated below
+                                    </p>
+                                  </div>
+                                </AlertDescription>
+                              </Alert>
+                            )}
+
+                            <div className="text-xs text-muted-foreground text-center py-2">
+                              Or manually select teams:
+                            </div>
+
                             <div>
-                              <Label htmlFor="home-team">Home Team</Label>
+                              <Label htmlFor="home-team">Home Team (Manual)</Label>
                               <Select
                                 value={overlayHomeTeamId ? String(overlayHomeTeamId) : undefined}
                                 onValueChange={(v) => setOverlayHomeTeamId(parseInt(v))}
@@ -3677,7 +3858,7 @@ export default function LivePresentation() {
                             </div>
 
                             <div>
-                              <Label htmlFor="away-team">Away Team</Label>
+                              <Label htmlFor="away-team">Away Team (Manual)</Label>
                               <Select
                                 value={overlayAwayTeamId ? String(overlayAwayTeamId) : undefined}
                                 onValueChange={(v) => setOverlayAwayTeamId(parseInt(v))}
@@ -3706,6 +3887,8 @@ export default function LivePresentation() {
                                 The away team in the matchup
                               </p>
                             </div>
+                              </>
+                            )}
                           </>
                         ) : (
                           <Alert>
@@ -3862,6 +4045,45 @@ export default function LivePresentation() {
                             : 'RSS Sentiment displays aggregated news sentiment - no team selection needed.'}
                         </AlertDescription>
                       </Alert>
+                    )}
+
+                    {overlayMetricType === 'upcoming-match' && (
+                      <div className="space-y-3">
+                        <Alert>
+                          <Calendar className="h-4 w-4" />
+                          <AlertDescription>
+                            This overlay shows a single upcoming match. Optionally filter by team below, or leave blank to show any upcoming match.
+                          </AlertDescription>
+                        </Alert>
+                        {isLoadingTeams ? (
+                          <div className="text-center py-4">
+                            <p className="text-sm text-muted-foreground">Loading teams...</p>
+                          </div>
+                        ) : teamsData && Array.isArray(teamsData) && teamsData.length > 0 ? (
+                          <div>
+                            <Label htmlFor="upcoming-team-filter">Filter by Team (Optional)</Label>
+                            <Select
+                              value={overlayTeamId ? String(overlayTeamId) : undefined}
+                              onValueChange={(v) => setOverlayTeamId(v === 'any' || !v ? null : parseInt(v))}
+                            >
+                              <SelectTrigger id="upcoming-team-filter">
+                                <SelectValue placeholder="Any team (show next upcoming match)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="any">Any team</SelectItem>
+                                {teamsData.map((team: any) => (
+                                  <SelectItem key={team.teamId} value={String(team.teamId)}>
+                                    {team.teamName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Leave blank to show any upcoming match, or select a specific team
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
                     )}
 
                     {overlayMetricType === 'upcoming-fixtures' && (
