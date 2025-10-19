@@ -54,10 +54,13 @@ export const LeaguePositionOverlay: React.FC<Props> = ({
     ),
   [containerWidth, containerHeight]);
 
+  // Responsive tuning
+  const compact = containerHeight < 200 || scale < 0.5;
+
   // Layout metrics
-  const padding = 12;
-  const gap = 8;
-  const rowHeight = 28; // base row height before scaling
+  const padding = compact ? 8 : 12;
+  const gap = compact ? 6 : 8;
+  const rowHeight = compact ? 24 : 28; // base row height before scaling
 
   const reserved = useMemo(() => {
     const header = measures.header || 46; // fallback if RO not yet measured
@@ -66,11 +69,12 @@ export const LeaguePositionOverlay: React.FC<Props> = ({
   }, [measures.header, measures.footer]);
 
   const listHeight = Math.max(0, containerHeight - reserved);
-  const scaledRow = Math.max(18, Math.round(rowHeight * scale));
+  const scaledRow = Math.max(compact ? 16 : 18, Math.round(rowHeight * scale));
   const maxVisibleRows = Math.max(3, Math.floor(listHeight / scaledRow));
 
   const rows = standings.slice(0, standings.length);
-  const showTopRace = maxVisibleRows >= 6; // only show extra section if we truly have room
+  const showTopRace = !compact && maxVisibleRows >= 8; // only show extra section if we truly have room
+  const isScrollable = rows.length > maxVisibleRows;
 
   useEffect(() => {
     devOverlayDiagnostics('league-position', {
@@ -105,8 +109,10 @@ export const LeaguePositionOverlay: React.FC<Props> = ({
       }}
     >
       <div ref={headerRef} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: Math.round(16 * scale), fontWeight: 800, letterSpacing: 0.3 }}>{title}</div>
-        <div style={{ fontSize: Math.round(12 * scale), opacity: 0.85 }}>{subtitle}</div>
+        <div style={{ fontSize: Math.max(12, Math.min(22, Math.round(16 * scale))), fontWeight: 800, letterSpacing: 0.3 }}>{title}</div>
+        {!compact && (
+          <div style={{ fontSize: Math.max(10, Math.min(16, Math.round(12 * scale))), opacity: 0.85 }}>{subtitle}</div>
+        )}
       </div>
 
       {showTopRace && (
@@ -119,17 +125,20 @@ export const LeaguePositionOverlay: React.FC<Props> = ({
           borderRadius: 8,
           background: 'rgba(246,235,97,0.06)'
         }}>
-          <div style={{ fontSize: Math.round(13 * scale), fontWeight: 700 }}>Top 4 Race</div>
-          <div style={{ fontSize: Math.round(12 * scale), opacity: 0.9 }}>Pts</div>
-          <div style={{ fontSize: Math.round(12 * scale), opacity: 0.9 }}>GD</div>
+          <div style={{ fontSize: Math.max(11, Math.min(18, Math.round(13 * scale))), fontWeight: 700 }}>Top 4 Race</div>
+          <div style={{ fontSize: Math.max(10, Math.min(16, Math.round(12 * scale))), opacity: 0.9 }}>Pts</div>
+          <div style={{ fontSize: Math.max(10, Math.min(16, Math.round(12 * scale))), opacity: 0.9 }}>GD</div>
         </div>
       )}
 
       <div
+        className="lp-list"
         style={{
           flex: 1,
           overflowY: 'auto', // allow internal scrolling instead of overflowing the overlay
           paddingRight: 4,
+          WebkitMaskImage: isScrollable ? 'linear-gradient(180deg, rgba(0,0,0,0.9) 0, #000 16px, #000 calc(100% - 16px), rgba(0,0,0,0.9) 100%)' : undefined,
+          maskImage: isScrollable ? 'linear-gradient(180deg, rgba(0,0,0,0.9) 0, #000 16px, #000 calc(100% - 16px), rgba(0,0,0,0.9) 100%)' : undefined,
         }}
       >
         {rows.slice(0, maxVisibleRows).map((t, idx) => (
@@ -137,25 +146,37 @@ export const LeaguePositionOverlay: React.FC<Props> = ({
             key={t.team + idx}
             style={{
               display: 'grid',
-              gridTemplateColumns: '32px 1fr auto auto',
+              gridTemplateColumns: compact ? '28px 1fr auto' : '32px 1fr auto auto',
               gap: 8,
               alignItems: 'center',
               height: scaledRow,
               borderBottom: '1px dashed rgba(255,255,255,0.08)'
             }}
           >
-            <div style={{ fontWeight: 800, fontSize: Math.round(12 * scale) }}>{t.position}</div>
-            <div style={{ fontWeight: 700, fontSize: Math.round(13 * scale), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.team}</div>
-            <div style={{ textAlign: 'right', fontSize: Math.round(12 * scale) }}>{t.points}</div>
-            <div style={{ textAlign: 'right', fontSize: Math.round(12 * scale), opacity: 0.9 }}>{t.gd ?? 0}</div>
+            <div style={{ fontWeight: 800, fontSize: Math.max(10, Math.min(16, Math.round(12 * scale))) }}>{t.position}</div>
+            <div style={{ fontWeight: 700, fontSize: Math.max(11, Math.min(18, Math.round(13 * scale))), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.team}</div>
+            <div style={{ textAlign: 'right', fontSize: Math.max(10, Math.min(16, Math.round(12 * scale))) }}>{t.points}</div>
+            {!compact && (
+              <div style={{ textAlign: 'right', fontSize: Math.max(10, Math.min(16, Math.round(12 * scale))), opacity: 0.9 }}>{t.gd ?? 0}</div>
+            )}
           </div>
         ))}
       </div>
 
       <div ref={footerRef} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.85 }}>
-        <div style={{ fontSize: Math.round(11 * scale) }}>Updated just now</div>
-        <div style={{ fontSize: Math.round(11 * scale) }}>Showing {Math.min(rows.length, maxVisibleRows)} of {rows.length}</div>
+        <div style={{ fontSize: Math.max(9, Math.min(14, Math.round(11 * scale))) }}>Updated just now</div>
+        <div style={{ fontSize: Math.max(9, Math.min(14, Math.round(11 * scale))) }}>Showing {Math.min(rows.length, maxVisibleRows)} of {rows.length}</div>
       </div>
+
+      {/* Minimal scrollbar styling for WebKit browsers */}
+      <style>{`
+        .lp-list::-webkit-scrollbar { width: 8px; }
+        .lp-list::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(246,235,97,0.35), rgba(246,235,97,0.15));
+          border-radius: 8px;
+        }
+        .lp-list::-webkit-scrollbar-track { background: transparent; }
+      `}</style>
     </div>
   );
 };
