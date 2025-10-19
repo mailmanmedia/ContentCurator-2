@@ -309,6 +309,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upcoming fixtures (JSON) for overlays
+  app.get("/api/upcoming-fixtures", async (req, res) => {
+    try {
+      const limit = Number.parseInt((req.query.limit as string) || '5', 10);
+      const teamIdParam = req.query.teamId as string | undefined;
+      const leagueIdParam = req.query.leagueId as string | undefined;
+
+      const teamId = teamIdParam ? Number.parseInt(teamIdParam, 10) : undefined;
+      const leagueId = leagueIdParam ? Number.parseInt(leagueIdParam, 10) : undefined;
+
+      let rawFixtures: any[] = [];
+      let source = 'server';
+
+      // Prefer specific team when provided; fallback to Liverpool helper when absent or teamId=40
+      if (!teamId || teamId === 40) {
+        rawFixtures = await footballService.getLiverpoolUpcomingFixtures(limit);
+        source = 'liverpool-helper';
+      } else {
+        try {
+          // Generic fetch via API for arbitrary team if key is configured
+          const apiResp = await footballService.fetchFromAPI<any>("/fixtures", {
+            team: teamId,
+            next: limit,
+            season: 2025,
+            timezone: 'UTC'
+          });
+          rawFixtures = (apiResp?.response || []).map((item: any) => ({
+            id: item.fixture?.id,
+            date: item.fixture?.date ? new Date(item.fixture.date) : undefined,
+            status: item.fixture?.status,
+            venue: item.fixture?.venue,
+            league: item.league,
+            homeTeam: item.teams?.home,
+            awayTeam: item.teams?.away
+          }));
+          source = 'api';
+        } catch (err) {
+          // If API fails, fallback to Liverpool upcoming to keep overlay functional
+          rawFixtures = await footballService.getLiverpoolUpcomingFixtures(limit);
+          source = 'fallback-liverpool';
+        }
+      }
+
+      const fixtures = (rawFixtures || []).map((fx: any) => {
+        const date: Date | undefined = fx.date ? new Date(fx.date) : undefined;
+        const status = fx.status?.short || fx.status?.long || undefined;
+        const venueName = typeof fx.venue === 'string' ? fx.venue : fx.venue?.name;
+        const league = fx.league || fx.competition;
+        const home = fx.homeTeam || fx.teams?.home;
+        const away = fx.awayTeam || fx.teams?.away;
+        return {
+          id: fx.id,
+          utcDate: (date || new Date()).toISOString(),
+          status,
+          venue: venueName,
+          homeTeam: home ? { id: home.id, name: home.name, logo: home.logo } : undefined,
+          awayTeam: away ? { id: away.id, name: away.name, logo: away.logo } : undefined,
+          competition: league ? { name: league.name, code: String(league.id ?? '') } : undefined,
+          round: league?.round
+        };
+      });
+
+      res.json({ fixtures, source, timestamp: new Date().toISOString() });
+    } catch (error) {
+      console.error('Error in /api/upcoming-fixtures:', error);
+      res.status(500).json({ error: 'Failed to fetch upcoming fixtures', details: String(error) });
+    }
+  });
+
   // AI Suggestions endpoint
   app.post("/api/ai/suggestions", async (req, res) => {
     try {
