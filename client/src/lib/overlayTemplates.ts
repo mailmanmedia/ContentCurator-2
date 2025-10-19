@@ -4,8 +4,11 @@ export interface OverlayTemplate {
   description: string;
   category: 'match' | 'stats' | 'analytics' | 'social';
   overlayType: 'text' | 'image' | 'rss' | 'video' | 'metric';
+  // By convention, width is a percent of canvas and height is pixels unless otherwise specified
   width: number;
   height: number;
+  widthUnit?: '%' | 'px';
+  heightUnit?: 'px' | '%';
   position: 'top' | 'bottom';
   zIndex: number;
   opacity: number;
@@ -31,6 +34,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'metric',
     width: 30,
     height: 200,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'top',
     zIndex: 100,
     opacity: 0.98,
@@ -44,7 +49,7 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     metricType: 'h2h-card',
     templateStyle: 'banner',
   },
-  
+
   'form-guide': {
     id: 'form-guide',
     name: 'Form Guide',
@@ -53,6 +58,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'metric',
     width: 30,
     height: 120,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'top',
     zIndex: 150,
     opacity: 0.9,
@@ -66,7 +73,7 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     metricType: 'form-guide',
     templateStyle: 'corner',
   },
-  
+
   'player-stat-card': {
     id: 'player-stat-card',
     name: 'Player Stat Card',
@@ -75,6 +82,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'metric',
     width: 28,
     height: 180,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'bottom',
     zIndex: 120,
     opacity: 0.92,
@@ -88,7 +97,7 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     metricType: 'player-stats',
     templateStyle: 'banner',
   },
-  
+
   'league-position': {
     id: 'league-position',
     name: 'League Position Chart',
@@ -97,6 +106,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'metric',
     width: 40,
     height: 450,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'top',
     zIndex: 110,
     opacity: 0.88,
@@ -119,6 +130,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'metric',
     width: 35,
     height: 280,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'bottom',
     zIndex: 130,
     opacity: 0.9,
@@ -132,7 +145,7 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     metricType: 'upcoming-fixtures',
     templateStyle: 'banner',
   },
-  
+
   'metric-ticker': {
     id: 'metric-ticker',
     name: 'Metric Ticker',
@@ -141,6 +154,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'metric',
     width: 100,
     height: 60,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'bottom',
     zIndex: 200,
     opacity: 0.85,
@@ -165,6 +180,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'video',
     width: 25,
     height: 140,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'top',
     zIndex: 300,
     opacity: 1,
@@ -186,6 +203,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'text',
     width: 60,
     height: 50,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'bottom',
     zIndex: 180,
     opacity: 0.95,
@@ -209,6 +228,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'metric',
     width: 20,
     height: 80,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'top',
     zIndex: 250,
     opacity: 0.9,
@@ -231,6 +252,8 @@ export const overlayTemplates: Record<string, OverlayTemplate> = {
     overlayType: 'metric',
     width: 35,
     height: 240,
+    widthUnit: '%',
+    heightUnit: 'px',
     position: 'top',
     zIndex: 140,
     opacity: 0.9,
@@ -257,3 +280,18 @@ export const getTemplateById = (id: string) => {
 export const getAllTemplateCategories = () => {
   return Array.from(new Set(Object.values(overlayTemplates).map(t => t.category)));
 };
+
+// Helper: resolve a template's width/height into concrete pixels for a given canvas size
+export function resolveTemplateSize(
+  template: OverlayTemplate,
+  canvas: { width: number; height: number }
+) {
+  const widthPx = template.widthUnit === '%'
+    ? Math.round((template.width / 100) * canvas.width)
+    : Math.round(template.width);
+  const heightPx = template.heightUnit === '%'
+    ? Math.round((template.height / 100) * canvas.height)
+    : Math.round(template.height);
+  return { width: widthPx, height: heightPx };
+}
+
