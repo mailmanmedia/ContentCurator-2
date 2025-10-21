@@ -1076,10 +1076,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate secure HTML with CSP headers
-      const secureHtml = wrapWithSecurityHeaders(rendering.contentHtml, report.title);
+      const secureHtml = wrapWithSecurityHeaders(rendering.content_html || "", report.name);
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${report.title.replace(/[^a-zA-Z0-9]/g, '-')}-${styleKey}.html"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${report.name.replace(/[^a-zA-Z0-9]/g, '-')}-${styleKey}.html"`);
       res.send(secureHtml);
     } catch (error) {
       console.error('Error exporting report:', error);
@@ -1166,17 +1166,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/frameworks/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const framework = await storage.getFramework(id);
+      const framework = await storage.getFramework(id!);
 
       if (!framework) {
         return res.status(404).json({ error: "Framework not found" });
       }
 
       // Get current version and category details
-      const currentVersion = framework.currentVersionId 
-        ? await storage.getFrameworkVersion(framework.currentVersionId)
+      const currentVersion = framework.current_version_id 
+        ? await storage.getFrameworkVersion(String(framework.current_version_id))
         : null;
-      const category = await storage.getFrameworkCategory(framework.categoryId);
+      const category = await storage.getFrameworkCategory(String(framework.category_id || ""));
 
       res.json({ 
         framework,
@@ -1339,7 +1339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const validatedData = insertFrameworkVersionSchema.parse({
         ...req.body,
-        frameworkId: id
+        framework_id: id
       });
       const version = await storage.createFrameworkVersion(validatedData);
       res.json({ version });
@@ -1389,19 +1389,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { versionId } = req.body;
 
       // Increment download counts
-      const framework = await storage.getFramework(id);
+      const framework = await storage.getFramework(id!);
       if (!framework) {
         return res.status(404).json({ error: "Framework not found" });
       }
 
-      const currentDownloads = parseInt(framework.totalDownloads) + 1;
-      await storage.updateFramework(id, { totalDownloads: currentDownloads.toString() });
+      const currentDownloads = parseInt(framework.total_downloads) + 1;
+      await storage.updateFramework(id, { total_downloads: currentDownloads.toString() });
 
       if (versionId) {
         const version = await storage.getFrameworkVersion(versionId);
         if (version) {
-          const versionDownloads = parseInt(version.downloadCount) + 1;
-          await storage.updateFrameworkVersion(versionId, { downloadCount: versionDownloads.toString() });
+          const versionDownloads = parseInt(version.download_count) + 1;
+          await storage.updateFrameworkVersion(versionId, { download_count: versionDownloads.toString() });
         }
       }
 
@@ -1448,7 +1448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tags: framework.suggestedTags,
         isPublic: false,
         isStarred: false,
-        totalDownloads: '0',
+        total_downloads: '0',
         apiCapabilities: framework.apiCapabilities,
         apiConfig: {}
       });
@@ -1459,32 +1459,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create initial version with extracted content
       const versionData = {
-        frameworkId: createdFramework.id,
+        framework_id: createdFramework.id,
         version: '1.0.0',
-        title: 'Imported from ' + file.originalname,
-        contentJson: {
+        template: JSON.stringify({
           sections: framework.sections,
           extractedMetrics: framework.extractedMetrics || [],
           extractedQueries: framework.extractedQueries || []
-        },
-        templateStructure: {},
-        changelogMarkdown: `Automatically generated from ${file.originalname} using ${aiProvider}`,
-        isActive: true,
-        downloadCount: '0',
-        fileSize: `${fileSizeKB} KB`,
-        sourceType: 'upload',
-        sourceFileName: file.originalname,
-        sourceFileUrl: `/uploads/documents/${file.filename}`,
-        processingStatus: 'completed',
-        extractedText: extractedText,
-        extractionError: null
+        }),
+        changes: `Automatically generated from ${file.originalname} using ${aiProvider}`,
+        download_count: 0
       };
 
       const version = await storage.createFrameworkVersion(versionData);
 
       // Update framework with current version
-      await storage.updateFramework(createdFramework.id, {
-        currentVersionId: version.id
+      await storage.updateFramework(String(createdFramework.id), {
+        current_version_id: version.id
       });
 
       res.json({
@@ -1513,7 +1503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      const framework = await storage.getFramework(id);
+      const framework = await storage.getFramework(id!);
       if (!framework) {
         // Clean up uploaded file
         await fs.unlink(file.path).catch(console.error);
@@ -1553,7 +1543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create framework version from extracted text
       const versionData = {
-        frameworkId: id,
+        framework_id: id,
         version: '1.0.0', // Default version, can be incremented
         title: file.originalname.replace(/\.[^/.]+$/, ''), // Remove file extension
         contentJson: {
@@ -1564,7 +1554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         templateStructure: {},
         changelogMarkdown: `Uploaded from ${file.originalname}`,
         isActive: true,
-        downloadCount: '0',
+        download_count: '0',
         fileSize: `${fileSizeKB} KB`,
         sourceType: 'upload',
         sourceFileName: file.originalname,
@@ -1608,7 +1598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const inputData = req.body;
 
-      const framework = await storage.getFramework(id);
+      const framework = await storage.getFramework(id!);
       if (!framework) {
         return res.status(404).json({ error: "Framework not found" });
       }
@@ -1629,7 +1619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
 
-      const framework = await storage.getFramework(id);
+      const framework = await storage.getFramework(id!);
       if (!framework) {
         return res.status(404).json({ error: "Framework not found" });
       }
@@ -1688,7 +1678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertRssSourceSchema.parse(req.body);
 
       // Check if source already exists
-      const existingSource = await storage.getRssSourceByUrl(validatedData.feedUrl);
+      const existingSource = await storage.getRssSourceByUrl(validatedData.feed_url);
       if (existingSource) {
         return res.status(400).json({ error: "RSS source with this URL already exists" });
       }
@@ -1783,8 +1773,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         articles = allArticles.flat()
           .sort((a, b) => {
-            const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-            const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+            const dateA = a.published_at ? new Date(a.published_at).getTime() : 0;
+            const dateB = b.published_at ? new Date(b.published_at).getTime() : 0;
             return dateB - dateA; // Most recent first
           })
           .slice(0, limit ? parseInt(limit as string) : 100);
@@ -1816,7 +1806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const minSentimentValue = parseFloat(minSentiment as string);
         articles = articles.filter(article => {
           // If sentiment data exists in rawDataJson
-          const sentimentData = (article.rawDataJson as any)?.sentiment;
+          const sentimentData = (article.raw_data_json as any)?.sentiment;
           if (sentimentData && typeof sentimentData.score === 'number') {
             return sentimentData.score >= minSentimentValue;
           }
@@ -1832,7 +1822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const articlesWithSentiment = await Promise.all(
           articles.map(async (article) => {
             // Check if sentiment exists in rawDataJson
-            let sentimentData = (article.rawDataJson as any)?.sentiment;
+            let sentimentData = (article.raw_data_json as any)?.sentiment;
 
             // If not, analyze it
             if (!sentimentData) {
@@ -1844,9 +1834,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               // Update rawDataJson with sentiment
               if (sentimentData) {
-                await storage.updateRssArticle(article.id, {
+                await storage.updateRssArticle(String(article.id), {
                   rawDataJson: {
-                    ...(article.rawDataJson || {}),
+                    ...(article.raw_data_json || {}),
                     sentiment: sentimentData
                   } as any
                 });
@@ -1960,7 +1950,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Save analysis
         const analysis = await storage.createRssAnalysis({
-          articleId: id,
+          article_id: id,
           analysisType: 'sentiment',
           resultJson: sentimentResult,
           confidence: sentimentResult.confidence,
@@ -2188,7 +2178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const article of articles) {
         // Get or analyze sentiment
-        let sentimentData = (article.rawDataJson as any)?.sentiment;
+        let sentimentData = (article.raw_data_json as any)?.sentiment;
 
         if (!sentimentData) {
           console.log(`Analyzing sentiment for article: ${article.title}`);
@@ -2200,9 +2190,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Update article with sentiment
           if (sentimentData) {
-            await storage.updateRssArticle(article.id, {
+            await storage.updateRssArticle(String(article.id), {
               rawDataJson: {
-                ...(article.rawDataJson || {}),
+                ...(article.raw_data_json || {}),
                 sentiment: sentimentData
               } as any
             });
@@ -2294,7 +2284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const timeRangeMs = timeframeMap[timeframe as string] || timeframeMap['24h'];
-      const since = new Date(Date.now() - timeRangeMs);
+      const since = new Date(Date.now() - (timeRangeMs || 86400000));
 
       // Get articles in timeframe
       const articles = await storage.getRssArticlesByDateRange(since, new Date());
@@ -2321,7 +2311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const article of articles) {
         // Get or analyze sentiment
-        let sentimentData = (article.rawDataJson as any)?.sentiment;
+        let sentimentData = (article.raw_data_json as any)?.sentiment;
 
         if (!sentimentData) {
           sentimentData = await sentimentAnalysisService.analyzeSentiment(
@@ -2332,9 +2322,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Update article with sentiment
           if (sentimentData) {
-            await storage.updateRssArticle(article.id, {
+            await storage.updateRssArticle(String(article.id), {
               rawDataJson: {
-                ...(article.rawDataJson || {}),
+                ...(article.raw_data_json || {}),
                 sentiment: sentimentData
               } as any
             });
@@ -2430,10 +2420,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: source.id,
           name: source.name,
           category: source.category,
-          totalArticles: source.totalArticles,
-          lastFetchedAt: source.lastFetchedAt,
-          fetchErrors: source.fetchErrors,
-          isActive: source.isActive
+          // // totalArticles: source.totalArticles // TODO: Add total_articles column to rss_sources table // TODO: Add total_articles column to rss_sources table,
+          lastFetchedAt: source.last_fetched_at,
+          // // fetchErrors: source.fetchErrors // TODO: Add fetch_errors column to rss_sources table // TODO: Add fetch_errors column to rss_sources table,
+          isActive: source.is_active
         }))
       };
 
@@ -2535,7 +2525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const competitionsFromFixtures = await db
         .selectDistinct({
-          id: footballFixtures.leagueId,
+          id: footballFixtures.league_id,
           season: footballFixtures.season,
         })
         .from(footballFixtures);
@@ -2723,7 +2713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { historicalDataService } = await import('./services/historicalDataService');
 
-      await historicalDataService.initializeHistoricalData();
+      // // await historicalDataService.initializeHistoricalData(); // TODO: Implement initializeHistoricalData method // TODO: Implement initializeHistoricalData method
       await historicalDataService.initializeUpdateSchedules();
 
       const summary = historicalDataService.getUpdateStrategySummary();
@@ -2788,8 +2778,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             or(
-              eq(footballFixtures.homeTeamId, teamId),
-              eq(footballFixtures.awayTeamId, teamId)
+              eq(footballFixtures.home_team_id, teamId),
+              eq(footballFixtures.away_team_id, teamId)
             ),
             eq(footballFixtures.season, season),
             sql`${footballFixtures.status}->>'short' = 'FT'`
@@ -3647,8 +3637,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const opponentGoals = isHome ? fixture.goals_away : fixture.goals_home;
 
         if (teamGoals !== null && opponentGoals !== null) {
-          if (teamGoals > opponentGoals) formString = 'W' + formString;
-          else if (teamGoals < opponentGoals) formString = 'L' + formString;
+          if ((teamGoals || 0) > (opponentGoals || 0)) formString = 'W' + formString;
+          else if ((teamGoals || 0) < (opponentGoals || 0)) formString = 'L' + formString;
           else formString = 'D' + formString;
         }
       }
@@ -4733,7 +4723,7 @@ Return ONLY a JSON object with this structure:
       const conditions = [];
 
       if (competitionId !== undefined && !isNaN(competitionId)) {
-        conditions.push(eq(footballFixtures.leagueId, competitionId));
+        conditions.push(eq(footballFixtures.league_id, competitionId));
       }
 
       if (seasonYear !== undefined && !isNaN(seasonYear)) {
@@ -4753,9 +4743,9 @@ Return ONLY a JSON object with this structure:
         .select({
           id: footballFixtures.id,
           date: footballFixtures.date,
-          homeTeamId: footballFixtures.homeTeamId,
-          awayTeamId: footballFixtures.awayTeamId,
-          leagueId: footballFixtures.leagueId,
+          homeTeamId: footballFixtures.home_team_id,
+          awayTeamId: footballFixtures.away_team_id,
+          leagueId: footballFixtures.league_id,
           season: footballFixtures.season,
           round: footballFixtures.round,
           goals: footballFixtures.goals,

@@ -525,6 +525,10 @@ export const rss_articles = pgTable('rss_articles', {
   categories: text('categories').array(),
   sentiment_score: real('sentiment_score'),
   keywords: text('keywords').array(),
+  raw_data_json: jsonb('raw_data_json'),
+  topics: text('topics').array(),
+  content: text('content'),
+  sentiment: jsonb('sentiment'),
   created_at: timestamp('created_at').defaultNow()
 });
 
@@ -848,6 +852,8 @@ export const frameworks = pgTable('frameworks', {
   variables: text('variables'),
   example: text('example'),
   is_public: boolean('is_public').default(false),
+  total_downloads: integer('total_downloads').default(0),
+  current_version_id: integer('current_version_id'),
   created_at: timestamp('created_at').defaultNow(),
   updated_at: timestamp('updated_at').defaultNow()
 });
@@ -863,6 +869,7 @@ export const framework_versions = pgTable('framework_versions', {
   version: varchar('version', { length: 20 }),
   changes: text('changes'),
   template: text('template'),
+  download_count: integer('download_count').default(0),
   created_at: timestamp('created_at').defaultNow()
 });
 
@@ -909,6 +916,7 @@ export const images = pgTable('images', {
   width: integer('width'),
   height: integer('height'),
   size: integer('size'),
+  thumbnail: text('thumbnail'),
   created_at: timestamp('created_at').defaultNow(),
   updated_at: timestamp('updated_at').defaultNow()
 });
@@ -952,9 +960,10 @@ export type Report = typeof reports.$inferSelect;
 export const reportRenderings = pgTable('report_renderings', {
   id: serial('id').primaryKey(),
   report_id: integer('report_id').references(() => reports.id),
-  format: varchar('format', { length: 50 }),
-  url: text('url'),
-  status: varchar('status', { length: 50 }),
+  style_key: varchar('style_key', { length: 100 }),
+  content_html: text('content_html'),
+  blocks_json: jsonb('blocks_json'),
+  meta_json: jsonb('meta_json'),
   created_at: timestamp('created_at').defaultNow()
 });
 
